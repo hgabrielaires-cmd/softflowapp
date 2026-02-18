@@ -34,14 +34,31 @@ import {
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Link } from "lucide-react";
 
-// ─── Planos Tab ─────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function fmtBRL(v: number) {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+// ─── Planos Tab ─────────────────────────────────────────────────────────────────
+
+interface PlanoForm {
+  nome: string;
+  descricao: string;
+  ativo: boolean;
+  valor_implantacao_padrao: string;
+  valor_mensalidade_padrao: string;
+}
 
 function PlanosTab() {
-  const [planos, setPlanos] = useState<Plano[]>([]);
+  const [planos, setPlanos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Plano | null>(null);
-  const [form, setForm] = useState({ nome: "", descricao: "", ativo: true });
+  const [editing, setEditing] = useState<any | null>(null);
+  const [form, setForm] = useState<PlanoForm>({
+    nome: "", descricao: "", ativo: true,
+    valor_implantacao_padrao: "0", valor_mensalidade_padrao: "0",
+  });
   const [saving, setSaving] = useState(false);
 
   async function fetch() {
@@ -55,20 +72,32 @@ function PlanosTab() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ nome: "", descricao: "", ativo: true });
+    setForm({ nome: "", descricao: "", ativo: true, valor_implantacao_padrao: "0", valor_mensalidade_padrao: "0" });
     setDialogOpen(true);
   }
 
-  function openEdit(p: Plano) {
+  function openEdit(p: any) {
     setEditing(p);
-    setForm({ nome: p.nome, descricao: p.descricao || "", ativo: p.ativo });
+    setForm({
+      nome: p.nome,
+      descricao: p.descricao || "",
+      ativo: p.ativo,
+      valor_implantacao_padrao: (p.valor_implantacao_padrao ?? 0).toString(),
+      valor_mensalidade_padrao: (p.valor_mensalidade_padrao ?? 0).toString(),
+    });
     setDialogOpen(true);
   }
 
   async function handleSave() {
     if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
     setSaving(true);
-    const payload = { nome: form.nome.trim(), descricao: form.descricao.trim() || null, ativo: form.ativo };
+    const payload = {
+      nome: form.nome.trim(),
+      descricao: form.descricao.trim() || null,
+      ativo: form.ativo,
+      valor_implantacao_padrao: parseFloat(form.valor_implantacao_padrao) || 0,
+      valor_mensalidade_padrao: parseFloat(form.valor_mensalidade_padrao) || 0,
+    };
     if (editing) {
       const { error } = await supabase.from("planos").update(payload).eq("id", editing.id);
       if (error) { toast.error("Erro ao salvar"); setSaving(false); return; }
@@ -83,7 +112,7 @@ function PlanosTab() {
     fetch();
   }
 
-  async function handleDelete(p: Plano) {
+  async function handleDelete(p: any) {
     if (!confirm(`Excluir o plano "${p.nome}"?`)) return;
     const { error } = await supabase.from("planos").delete().eq("id", p.id);
     if (error) { toast.error("Erro ao excluir"); return; }
@@ -91,7 +120,7 @@ function PlanosTab() {
     fetch();
   }
 
-  async function toggleAtivo(p: Plano) {
+  async function toggleAtivo(p: any) {
     await supabase.from("planos").update({ ativo: !p.ativo }).eq("id", p.id);
     setPlanos((prev) => prev.map((x) => x.id === p.id ? { ...x, ativo: !x.ativo } : x));
   }
@@ -107,19 +136,23 @@ function PlanosTab() {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Descrição</TableHead>
+              <TableHead className="text-right">Implantação</TableHead>
+              <TableHead className="text-right">Mensalidade</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-28">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={4} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
             ) : planos.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="text-center py-10 text-muted-foreground">Nenhum plano cadastrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">Nenhum plano cadastrado</TableCell></TableRow>
             ) : planos.map((p) => (
               <TableRow key={p.id}>
                 <TableCell className="font-medium">{p.nome}</TableCell>
                 <TableCell className="text-muted-foreground text-sm">{p.descricao || "—"}</TableCell>
+                <TableCell className="text-right font-mono text-sm">{fmtBRL(p.valor_implantacao_padrao ?? 0)}</TableCell>
+                <TableCell className="text-right font-mono text-sm">{fmtBRL(p.valor_mensalidade_padrao ?? 0)}</TableCell>
                 <TableCell><Switch checked={p.ativo} onCheckedChange={() => toggleAtivo(p)} /></TableCell>
                 <TableCell>
                   <div className="flex gap-1">
@@ -134,7 +167,7 @@ function PlanosTab() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{editing ? "Editar plano" : "Novo plano"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
@@ -143,7 +176,25 @@ function PlanosTab() {
             </div>
             <div className="space-y-1.5">
               <Label>Descrição</Label>
-              <Textarea value={form.descricao} onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))} placeholder="Descrição opcional do plano" rows={3} />
+              <Textarea value={form.descricao} onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))} placeholder="Descrição opcional do plano" rows={2} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Implantação padrão (R$)</Label>
+                <Input
+                  type="number" min="0" step="0.01"
+                  value={form.valor_implantacao_padrao}
+                  onChange={(e) => setForm((f) => ({ ...f, valor_implantacao_padrao: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Mensalidade padrão (R$)</Label>
+                <Input
+                  type="number" min="0" step="0.01"
+                  value={form.valor_mensalidade_padrao}
+                  onChange={(e) => setForm((f) => ({ ...f, valor_mensalidade_padrao: e.target.value }))}
+                />
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <Switch checked={form.ativo} onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))} />
@@ -160,14 +211,21 @@ function PlanosTab() {
   );
 }
 
-// ─── Módulos Tab ─────────────────────────────────────────────────────────────
+// ─── Módulos Tab ─────────────────────────────────────────────────────────────────
+
+interface ModuloForm {
+  nome: string;
+  ativo: boolean;
+  valor_implantacao_modulo: string;
+  valor_mensalidade_modulo: string;
+}
 
 function ModulosTab() {
-  const [modulos, setModulos] = useState<Modulo[]>([]);
+  const [modulos, setModulos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Modulo | null>(null);
-  const [form, setForm] = useState({ nome: "", ativo: true });
+  const [editing, setEditing] = useState<any | null>(null);
+  const [form, setForm] = useState<ModuloForm>({ nome: "", ativo: true, valor_implantacao_modulo: "", valor_mensalidade_modulo: "" });
   const [saving, setSaving] = useState(false);
 
   async function fetch() {
@@ -181,20 +239,30 @@ function ModulosTab() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ nome: "", ativo: true });
+    setForm({ nome: "", ativo: true, valor_implantacao_modulo: "", valor_mensalidade_modulo: "" });
     setDialogOpen(true);
   }
 
-  function openEdit(m: Modulo) {
+  function openEdit(m: any) {
     setEditing(m);
-    setForm({ nome: m.nome, ativo: m.ativo });
+    setForm({
+      nome: m.nome,
+      ativo: m.ativo,
+      valor_implantacao_modulo: m.valor_implantacao_modulo != null ? m.valor_implantacao_modulo.toString() : "",
+      valor_mensalidade_modulo: m.valor_mensalidade_modulo != null ? m.valor_mensalidade_modulo.toString() : "",
+    });
     setDialogOpen(true);
   }
 
   async function handleSave() {
     if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
     setSaving(true);
-    const payload = { nome: form.nome.trim(), ativo: form.ativo };
+    const payload = {
+      nome: form.nome.trim(),
+      ativo: form.ativo,
+      valor_implantacao_modulo: form.valor_implantacao_modulo !== "" ? parseFloat(form.valor_implantacao_modulo) : null,
+      valor_mensalidade_modulo: form.valor_mensalidade_modulo !== "" ? parseFloat(form.valor_mensalidade_modulo) : null,
+    };
     if (editing) {
       const { error } = await supabase.from("modulos").update(payload).eq("id", editing.id);
       if (error) { toast.error("Erro ao salvar"); setSaving(false); return; }
@@ -209,7 +277,7 @@ function ModulosTab() {
     fetch();
   }
 
-  async function handleDelete(m: Modulo) {
+  async function handleDelete(m: any) {
     if (!confirm(`Excluir o módulo "${m.nome}"?`)) return;
     const { error } = await supabase.from("modulos").delete().eq("id", m.id);
     if (error) { toast.error("Erro ao excluir"); return; }
@@ -217,7 +285,7 @@ function ModulosTab() {
     fetch();
   }
 
-  async function toggleAtivo(m: Modulo) {
+  async function toggleAtivo(m: any) {
     await supabase.from("modulos").update({ ativo: !m.ativo }).eq("id", m.id);
     setModulos((prev) => prev.map((x) => x.id === m.id ? { ...x, ativo: !x.ativo } : x));
   }
@@ -232,18 +300,26 @@ function ModulosTab() {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
+              <TableHead className="text-right">Implantação</TableHead>
+              <TableHead className="text-right">Mensalidade</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-28">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={3} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
             ) : modulos.length === 0 ? (
-              <TableRow><TableCell colSpan={3} className="text-center py-10 text-muted-foreground">Nenhum módulo cadastrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Nenhum módulo cadastrado</TableCell></TableRow>
             ) : modulos.map((m) => (
               <TableRow key={m.id}>
                 <TableCell className="font-medium">{m.nome}</TableCell>
+                <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                  {m.valor_implantacao_modulo != null ? fmtBRL(m.valor_implantacao_modulo) : "—"}
+                </TableCell>
+                <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                  {m.valor_mensalidade_modulo != null ? fmtBRL(m.valor_mensalidade_modulo) : "—"}
+                </TableCell>
                 <TableCell><Switch checked={m.ativo} onCheckedChange={() => toggleAtivo(m)} /></TableCell>
                 <TableCell>
                   <div className="flex gap-1">
@@ -258,12 +334,32 @@ function ModulosTab() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{editing ? "Editar módulo" : "Novo módulo"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Nome *</Label>
               <Input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Ex: PDV, iFood, Gestão Estoque" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Implantação (R$)</Label>
+                <Input
+                  type="number" min="0" step="0.01"
+                  value={form.valor_implantacao_modulo}
+                  onChange={(e) => setForm((f) => ({ ...f, valor_implantacao_modulo: e.target.value }))}
+                  placeholder="Opcional"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Mensalidade (R$)</Label>
+                <Input
+                  type="number" min="0" step="0.01"
+                  value={form.valor_mensalidade_modulo}
+                  onChange={(e) => setForm((f) => ({ ...f, valor_mensalidade_modulo: e.target.value }))}
+                  placeholder="Opcional"
+                />
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <Switch checked={form.ativo} onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))} />
@@ -280,13 +376,13 @@ function ModulosTab() {
   );
 }
 
-// ─── Vínculos Tab ─────────────────────────────────────────────────────────────
+// ─── Vínculos Tab ─────────────────────────────────────────────────────────────────
 
 function VinculosTab() {
-  const [planos, setPlanos] = useState<Plano[]>([]);
-  const [modulos, setModulos] = useState<Modulo[]>([]);
+  const [planos, setPlanos] = useState<any[]>([]);
+  const [modulos, setModulos] = useState<any[]>([]);
   const [selectedPlano, setSelectedPlano] = useState("");
-  const [vinculos, setVinculos] = useState<PlanoModulo[]>([]);
+  const [vinculos, setVinculos] = useState<any[]>([]);
   const [loadingVinculos, setLoadingVinculos] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({
@@ -295,6 +391,7 @@ function VinculosTab() {
     ordem: 0,
     duracao_minutos: "",
     obrigatorio: false,
+    incluso_no_plano: true,
   });
   const [saving, setSaving] = useState(false);
 
@@ -314,7 +411,7 @@ function VinculosTab() {
       .select("*, modulo:modulos(*)")
       .eq("plano_id", planoId)
       .order("ordem");
-    setVinculos((data as PlanoModulo[]) || []);
+    setVinculos(data || []);
     setLoadingVinculos(false);
   }
 
@@ -338,16 +435,17 @@ function VinculosTab() {
       ordem: Number(form.ordem) || 0,
       duracao_minutos: form.duracao_minutos ? Number(form.duracao_minutos) : null,
       obrigatorio: form.obrigatorio,
+      incluso_no_plano: form.incluso_no_plano,
     });
     if (error) { toast.error("Erro ao vincular módulo"); setSaving(false); return; }
     toast.success("Módulo vinculado ao plano");
     setSaving(false);
     setDialogOpen(false);
-    setForm({ modulo_id: "", inclui_treinamento: false, ordem: 0, duracao_minutos: "", obrigatorio: false });
+    setForm({ modulo_id: "", inclui_treinamento: false, ordem: 0, duracao_minutos: "", obrigatorio: false, incluso_no_plano: true });
     fetchVinculos(selectedPlano);
   }
 
-  async function handleRemover(v: PlanoModulo) {
+  async function handleRemover(v: any) {
     if (!confirm(`Remover "${v.modulo?.nome}" deste plano?`)) return;
     const { error } = await supabase.from("plano_modulos").delete().eq("id", v.id);
     if (error) { toast.error("Erro ao remover"); return; }
@@ -385,6 +483,7 @@ function VinculosTab() {
               <TableRow>
                 <TableHead className="w-12">Ordem</TableHead>
                 <TableHead>Módulo</TableHead>
+                <TableHead>Incluso no plano</TableHead>
                 <TableHead>Treinamento</TableHead>
                 <TableHead>Duração</TableHead>
                 <TableHead>Obrigatório</TableHead>
@@ -393,13 +492,18 @@ function VinculosTab() {
             </TableHeader>
             <TableBody>
               {loadingVinculos ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : vinculos.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum módulo vinculado a este plano</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum módulo vinculado a este plano</TableCell></TableRow>
               ) : vinculos.map((v) => (
                 <TableRow key={v.id}>
                   <TableCell className="text-center text-muted-foreground">{v.ordem}</TableCell>
                   <TableCell className="font-medium">{v.modulo?.nome}</TableCell>
+                  <TableCell>
+                    <Badge variant={v.incluso_no_plano ? "default" : "secondary"}>
+                      {v.incluso_no_plano ? "Incluso" : "Opcional"}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     <Badge variant={v.inclui_treinamento ? "default" : "secondary"}>
                       {v.inclui_treinamento ? "Sim" : "Não"}
@@ -449,6 +553,10 @@ function VinculosTab() {
                 <Label>Duração (minutos)</Label>
                 <Input type="number" min={0} value={form.duracao_minutos} onChange={(e) => setForm((f) => ({ ...f, duracao_minutos: e.target.value }))} placeholder="Opcional" />
               </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={form.incluso_no_plano} onCheckedChange={(v) => setForm((f) => ({ ...f, incluso_no_plano: v }))} />
+              <Label>Incluso no plano (desmarcado = módulo opcional/adicional)</Label>
             </div>
             <div className="flex items-center gap-3">
               <Switch checked={form.inclui_treinamento} onCheckedChange={(v) => setForm((f) => ({ ...f, inclui_treinamento: v }))} />

@@ -94,18 +94,24 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          valor_implantacao_modulo: number | null
+          valor_mensalidade_modulo: number | null
         }
         Insert: {
           ativo?: boolean
           created_at?: string
           id?: string
           nome: string
+          valor_implantacao_modulo?: number | null
+          valor_mensalidade_modulo?: number | null
         }
         Update: {
           ativo?: boolean
           created_at?: string
           id?: string
           nome?: string
+          valor_implantacao_modulo?: number | null
+          valor_mensalidade_modulo?: number | null
         }
         Relationships: []
       }
@@ -116,18 +122,27 @@ export type Database = {
           comissao_valor: number
           contrato_liberado: boolean
           created_at: string
+          desconto_implantacao_tipo: string
+          desconto_implantacao_valor: number
+          desconto_mensalidade_tipo: string
+          desconto_mensalidade_valor: number
           filial_id: string
           financeiro_aprovado_em: string | null
           financeiro_aprovado_por: string | null
           financeiro_motivo: string | null
           financeiro_status: string
           id: string
+          modulos_adicionais: Json | null
           observacoes: string | null
           plano_id: string
           status_pedido: string
           updated_at: string
           valor_implantacao: number
+          valor_implantacao_final: number
+          valor_implantacao_original: number
           valor_mensalidade: number
+          valor_mensalidade_final: number
+          valor_mensalidade_original: number
           valor_total: number
           vendedor_id: string
         }
@@ -137,18 +152,27 @@ export type Database = {
           comissao_valor?: number
           contrato_liberado?: boolean
           created_at?: string
+          desconto_implantacao_tipo?: string
+          desconto_implantacao_valor?: number
+          desconto_mensalidade_tipo?: string
+          desconto_mensalidade_valor?: number
           filial_id: string
           financeiro_aprovado_em?: string | null
           financeiro_aprovado_por?: string | null
           financeiro_motivo?: string | null
           financeiro_status?: string
           id?: string
+          modulos_adicionais?: Json | null
           observacoes?: string | null
           plano_id: string
           status_pedido?: string
           updated_at?: string
           valor_implantacao?: number
+          valor_implantacao_final?: number
+          valor_implantacao_original?: number
           valor_mensalidade?: number
+          valor_mensalidade_final?: number
+          valor_mensalidade_original?: number
           valor_total?: number
           vendedor_id: string
         }
@@ -158,18 +182,27 @@ export type Database = {
           comissao_valor?: number
           contrato_liberado?: boolean
           created_at?: string
+          desconto_implantacao_tipo?: string
+          desconto_implantacao_valor?: number
+          desconto_mensalidade_tipo?: string
+          desconto_mensalidade_valor?: number
           filial_id?: string
           financeiro_aprovado_em?: string | null
           financeiro_aprovado_por?: string | null
           financeiro_motivo?: string | null
           financeiro_status?: string
           id?: string
+          modulos_adicionais?: Json | null
           observacoes?: string | null
           plano_id?: string
           status_pedido?: string
           updated_at?: string
           valor_implantacao?: number
+          valor_implantacao_final?: number
+          valor_implantacao_original?: number
           valor_mensalidade?: number
+          valor_mensalidade_final?: number
+          valor_mensalidade_original?: number
           valor_total?: number
           vendedor_id?: string
         }
@@ -202,6 +235,7 @@ export type Database = {
           duracao_minutos: number | null
           id: string
           inclui_treinamento: boolean
+          incluso_no_plano: boolean
           modulo_id: string
           obrigatorio: boolean
           ordem: number
@@ -211,6 +245,7 @@ export type Database = {
           duracao_minutos?: number | null
           id?: string
           inclui_treinamento?: boolean
+          incluso_no_plano?: boolean
           modulo_id: string
           obrigatorio?: boolean
           ordem?: number
@@ -220,6 +255,7 @@ export type Database = {
           duracao_minutos?: number | null
           id?: string
           inclui_treinamento?: boolean
+          incluso_no_plano?: boolean
           modulo_id?: string
           obrigatorio?: boolean
           ordem?: number
@@ -249,6 +285,8 @@ export type Database = {
           descricao: string | null
           id: string
           nome: string
+          valor_implantacao_padrao: number
+          valor_mensalidade_padrao: number
         }
         Insert: {
           ativo?: boolean
@@ -256,6 +294,8 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome: string
+          valor_implantacao_padrao?: number
+          valor_mensalidade_padrao?: number
         }
         Update: {
           ativo?: boolean
@@ -263,6 +303,8 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome?: string
+          valor_implantacao_padrao?: number
+          valor_mensalidade_padrao?: number
         }
         Relationships: []
       }
@@ -360,6 +402,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "financeiro" | "vendedor" | "operacional" | "tecnico"
+      desconto_tipo: "R$" | "%"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -488,6 +531,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "financeiro", "vendedor", "operacional", "tecnico"],
+      desconto_tipo: ["R$", "%"],
     },
   },
 } as const
