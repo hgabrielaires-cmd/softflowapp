@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -40,10 +41,23 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, FileX } from "lucide-react";
+import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+const UF_LIST = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+
+const emptyClienteForm = {
+  nome_fantasia: "",
+  razao_social: "",
+  cnpj_cpf: "",
+  contato_nome: "",
+  telefone: "",
+  email: "",
+  cidade: "",
+  uf: "",
+};
 
 const STATUS_OPTIONS = ["Aguardando Financeiro", "Aprovado Financeiro", "Reprovado Financeiro", "Cancelado"] as const;
 
@@ -113,11 +127,51 @@ export default function Pedidos() {
   const [filterDe, setFilterDe] = useState("");
   const [filterAte, setFilterAte] = useState("");
 
-  // Dialog
+  // Dialog pedido
   const [openDialog, setOpenDialog] = useState(false);
   const [editingPedido, setEditingPedido] = useState<PedidoWithJoins | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
+
+  // Dialog novo cliente rápido
+  const [openClienteDialog, setOpenClienteDialog] = useState(false);
+  const [clienteForm, setClienteForm] = useState(emptyClienteForm);
+  const [savingCliente, setSavingCliente] = useState(false);
+
+  async function handleSaveCliente(e: React.FormEvent) {
+    e.preventDefault();
+    if (!clienteForm.nome_fantasia.trim() || !clienteForm.cnpj_cpf.trim()) {
+      toast.error("Nome fantasia e CNPJ/CPF são obrigatórios");
+      return;
+    }
+    setSavingCliente(true);
+    const filial_id = profile?.filial_id || (isAdmin ? form.filial_id || null : null);
+    const { data, error } = await supabase.from("clientes").insert({
+      nome_fantasia: clienteForm.nome_fantasia.trim(),
+      razao_social: clienteForm.razao_social.trim() || null,
+      cnpj_cpf: clienteForm.cnpj_cpf.trim(),
+      contato_nome: clienteForm.contato_nome.trim() || null,
+      telefone: clienteForm.telefone.trim() || null,
+      email: clienteForm.email.trim() || null,
+      cidade: clienteForm.cidade.trim() || null,
+      uf: clienteForm.uf || null,
+      filial_id,
+      ativo: true,
+    }).select().single();
+    if (error) {
+      toast.error("Erro ao cadastrar cliente: " + error.message);
+      setSavingCliente(false);
+      return;
+    }
+    toast.success("Cliente cadastrado! Já selecionado no pedido.");
+    // Recarregar lista de clientes e selecionar o novo
+    const { data: novosClientes } = await supabase.from("clientes").select("*").eq("ativo", true).order("nome_fantasia");
+    setClientes((novosClientes || []) as Cliente[]);
+    if (data) setForm((f) => ({ ...f, cliente_id: data.id }));
+    setClienteForm(emptyClienteForm);
+    setOpenClienteDialog(false);
+    setSavingCliente(false);
+  }
 
   // Computed
   const valorTotal = (parseFloat(form.valor_implantacao) || 0) + (parseFloat(form.valor_mensalidade) || 0);
@@ -527,7 +581,19 @@ export default function Pedidos() {
             <div className="grid grid-cols-2 gap-3">
               {/* Cliente */}
               <div className="col-span-2 space-y-1.5">
-                <Label>Cliente *</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Cliente *</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs gap-1 text-primary hover:text-primary"
+                    onClick={() => { setClienteForm(emptyClienteForm); setOpenClienteDialog(true); }}
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Novo cliente
+                  </Button>
+                </div>
                 <Select value={form.cliente_id} onValueChange={(v) => setForm((f) => ({ ...f, cliente_id: v }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o cliente..." />
@@ -670,6 +736,102 @@ export default function Pedidos() {
                 {editingPedido ? "Salvar alterações" : "Criar pedido"}
               </Button>
             </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog rápido de novo cliente */}
+      <Dialog open={openClienteDialog} onOpenChange={setOpenClienteDialog}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-4 w-4" /> Cadastrar Novo Cliente
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSaveCliente} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2 space-y-1.5">
+                <Label>Nome Fantasia *</Label>
+                <Input
+                  placeholder="Nome fantasia..."
+                  value={clienteForm.nome_fantasia}
+                  onChange={(e) => setClienteForm((f) => ({ ...f, nome_fantasia: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label>Razão Social</Label>
+                <Input
+                  placeholder="Razão social..."
+                  value={clienteForm.razao_social}
+                  onChange={(e) => setClienteForm((f) => ({ ...f, razao_social: e.target.value }))}
+                />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label>CNPJ / CPF *</Label>
+                <Input
+                  placeholder="00.000.000/0000-00"
+                  value={clienteForm.cnpj_cpf}
+                  onChange={(e) => setClienteForm((f) => ({ ...f, cnpj_cpf: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Contato</Label>
+                <Input
+                  placeholder="Nome do contato"
+                  value={clienteForm.contato_nome}
+                  onChange={(e) => setClienteForm((f) => ({ ...f, contato_nome: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Telefone</Label>
+                <Input
+                  placeholder="(00) 00000-0000"
+                  value={clienteForm.telefone}
+                  onChange={(e) => setClienteForm((f) => ({ ...f, telefone: e.target.value }))}
+                />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label>E-mail</Label>
+                <Input
+                  type="email"
+                  placeholder="email@empresa.com"
+                  value={clienteForm.email}
+                  onChange={(e) => setClienteForm((f) => ({ ...f, email: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Cidade</Label>
+                <Input
+                  placeholder="Cidade"
+                  value={clienteForm.cidade}
+                  onChange={(e) => setClienteForm((f) => ({ ...f, cidade: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>UF</Label>
+                <Select value={clienteForm.uf} onValueChange={(v) => setClienteForm((f) => ({ ...f, uf: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="UF" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {UF_LIST.map((uf) => (
+                      <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => setOpenClienteDialog(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={savingCliente}>
+                {savingCliente && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Cadastrar e selecionar
+              </Button>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
