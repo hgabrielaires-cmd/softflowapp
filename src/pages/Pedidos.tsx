@@ -118,6 +118,16 @@ export default function Pedidos() {
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [vendedores, setVendedores] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filialFavoritaId, setFilialFavoritaId] = useState<string | null>(null);
+
+  // Carregar filial favorita
+  useEffect(() => {
+    if (profile?.user_id) {
+      supabase.from("profiles").select("filial_favorita_id").eq("user_id", profile.user_id).single().then(({ data }) => {
+        if (data) setFilialFavoritaId((data as any).filial_favorita_id || null);
+      });
+    }
+  }, [profile?.user_id]);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -217,7 +227,8 @@ export default function Pedidos() {
 
   function openCreate() {
     const defaultComissao = profile?.comissao_percentual?.toString() ?? "5";
-    const defaultFilial = profile?.filial_id ?? "";
+    // Prioridade: filial favorita > filial vinculada ao perfil
+    const defaultFilial = filialFavoritaId || profile?.filial_id || "";
     const defaultVendedor = profile?.user_id ?? "";
     setForm({
       ...emptyForm,

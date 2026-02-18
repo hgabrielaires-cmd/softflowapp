@@ -1,27 +1,37 @@
 import { useAuth } from "@/context/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
-import { ROLE_LABELS, ROLE_COLORS, AppRole } from "@/lib/supabase-types";
+import { ROLE_LABELS, ROLE_COLORS, AppRole, Filial } from "@/lib/supabase-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, User, Building2, Shield } from "lucide-react";
+import { Loader2, User, Building2, Shield, Star } from "lucide-react";
 
 export default function Perfil() {
   const { profile, roles } = useAuth();
   const [name, setName] = useState(profile?.full_name || "");
   const [saving, setSaving] = useState(false);
-  const [filialNome, setFilialNome] = useState<string | null>(null);
+  const [filiais, setFiliais] = useState<Filial[]>([]);
+  const [filialFavoritaId, setFilialFavoritaId] = useState<string | null>(null);
+  const [savingFavorita, setSavingFavorita] = useState(false);
 
   useEffect(() => {
-    if (profile?.filial_id) {
-      supabase.from("filiais").select("nome").eq("id", profile.filial_id).single().then(({ data }) => {
-        if (data) setFilialNome(data.nome);
+    supabase.from("filiais").select("*").eq("ativa", true).order("nome").then(({ data }) => {
+      setFiliais((data || []) as Filial[]);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (profile) {
+      setName(profile.full_name);
+      // Carregar filial favorita
+      supabase.from("profiles").select("filial_favorita_id").eq("user_id", profile.user_id).single().then(({ data }) => {
+        if (data) setFilialFavoritaId((data as any).filial_favorita_id || null);
       });
     }
-  }, [profile?.filial_id]);
+  }, [profile?.user_id]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -39,6 +49,25 @@ export default function Perfil() {
     setSaving(false);
   }
 
+  async function handleFavoritar(filialId: string) {
+    if (!profile) return;
+    const novaFavorita = filialFavoritaId === filialId ? null : filialId;
+    setSavingFavorita(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ filial_favorita_id: novaFavorita } as any)
+      .eq("user_id", profile.user_id);
+    if (error) {
+      toast.error("Erro ao salvar filial favorita");
+    } else {
+      setFilialFavoritaId(novaFavorita);
+      toast.success(novaFavorita ? "Filial favorita definida!" : "Filial favorita removida");
+    }
+    setSavingFavorita(false);
+  }
+
+  const filialAtual = filiais.find((f) => f.id === profile?.filial_id);
+
   return (
     <AppLayout>
       <div className="max-w-lg space-y-6">
@@ -47,6 +76,7 @@ export default function Perfil() {
           <p className="text-sm text-muted-foreground">Gerencie suas informações pessoais</p>
         </div>
 
+        {/* Dados pessoais */}
         <div className="bg-card rounded-xl border border-border p-6 shadow-card space-y-5">
           {/* Avatar / Initials */}
           <div className="flex items-center gap-4 pb-4 border-b border-border">
@@ -78,9 +108,9 @@ export default function Perfil() {
             </div>
             <div className="space-y-1.5">
               <Label className="flex items-center gap-1.5">
-                <Building2 className="h-3.5 w-3.5" /> Filial
+                <Building2 className="h-3.5 w-3.5" /> Filial vinculada
               </Label>
-              <Input value={filialNome || profile?.filial || "—"} disabled className="bg-muted" />
+              <Input value={filialAtual?.nome || profile?.filial || "Todas as filiais"} disabled className="bg-muted" />
             </div>
             <div className="space-y-1.5">
               <Label className="flex items-center gap-1.5">
@@ -93,6 +123,57 @@ export default function Perfil() {
               Salvar alterações
             </Button>
           </form>
+        </div>
+
+        {/* Filial favorita */}
+        <div className="bg-card rounded-xl border border-border p-6 shadow-card space-y-4">
+          <div className="flex items-center gap-2">
+            <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+            <h2 className="font-semibold text-foreground">Filial Favorita</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            A filial favorita será pré-selecionada ao criar novos pedidos. Clique na estrela para marcar ou desmarcar.
+          </p>
+
+          {filiais.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma filial disponível.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {filiais.map((filial) => {
+                const isFavorita = filialFavoritaId === filial.id;
+                return (
+                  <li key={filial.id} className="flex items-center justify-between py-3">
+                    <div className="flex items-center gap-3">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <span className={`text-sm font-medium ${isFavorita ? "text-foreground" : "text-muted-foreground"}`}>
+                        {filial.nome}
+                      </span>
+                      {isFavorita && (
+                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                          Favorita
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={savingFavorita}
+                      onClick={() => handleFavoritar(filial.id)}
+                      title={isFavorita ? "Remover favorita" : "Marcar como favorita"}
+                      className="rounded-full p-1.5 hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      <Star
+                        className={`h-5 w-5 transition-colors ${
+                          isFavorita
+                            ? "text-amber-400 fill-amber-400"
+                            : "text-muted-foreground hover:text-amber-400"
+                        }`}
+                      />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       </div>
     </AppLayout>
