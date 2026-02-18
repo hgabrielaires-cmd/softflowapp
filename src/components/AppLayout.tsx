@@ -1,7 +1,7 @@
 import { ReactNode, useState } from "react";
 import iconSoftflow from "@/assets/icon-softflow.png";
 import logoSoftflowBranca from "@/assets/logo-softflow-branca.png";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard,
@@ -12,12 +12,23 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   LogOut,
   Bell,
   User,
   Menu,
   UserCheck,
   BookOpen,
+  Headphones,
+  Ticket,
+  FileText,
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  Plug,
+  ListOrdered,
+  PlusCircle,
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -30,44 +41,134 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AppRole, ROLE_LABELS, Profile } from "@/lib/supabase-types";
 import { toast } from "sonner";
 
-interface NavItem {
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface NavSubItem {
   icon: ReactNode;
   label: string;
   to: string;
   roles?: AppRole[];
 }
 
-const navItems: NavItem[] = [
-  { icon: <LayoutDashboard className="h-4 w-4" />, label: "Dashboard", to: "/dashboard" },
-  { icon: <Users className="h-4 w-4" />, label: "Usuários", to: "/usuarios", roles: ["admin"] },
-  { icon: <UserCheck className="h-4 w-4" />, label: "Clientes", to: "/clientes" },
-  { icon: <ShoppingCart className="h-4 w-4" />, label: "Pedidos", to: "/pedidos", roles: ["admin", "financeiro", "vendedor"] },
-  { icon: <DollarSign className="h-4 w-4" />, label: "Financeiro", to: "/financeiro", roles: ["admin", "financeiro"] },
-  { icon: <Calendar className="h-4 w-4" />, label: "Agenda", to: "/agenda", roles: ["admin", "tecnico"] },
-  { icon: <BookOpen className="h-4 w-4" />, label: "Planos", to: "/planos", roles: ["admin"] },
-  { icon: <Building2 className="h-4 w-4" />, label: "Filiais", to: "/filiais", roles: ["admin"] },
+interface NavGroup {
+  groupLabel: string;
+  groupIcon: ReactNode;
+  roles?: AppRole[]; // if set, entire group is hidden for roles NOT in list
+  items: NavSubItem[];
+}
+
+// ─── Navigation Definition ───────────────────────────────────────────────────
+
+const navGroups: NavGroup[] = [
+  {
+    groupLabel: "Dashboard",
+    groupIcon: <LayoutDashboard className="h-4 w-4" />,
+    items: [
+      { icon: <LayoutDashboard className="h-4 w-4" />, label: "Dashboard Geral", to: "/dashboard" },
+    ],
+  },
+  {
+    groupLabel: "Helpdesk",
+    groupIcon: <Headphones className="h-4 w-4" />,
+    items: [
+      { icon: <Calendar className="h-4 w-4" />, label: "Agenda Operacional", to: "/agenda" },
+      { icon: <Ticket className="h-4 w-4" />, label: "Tickets", to: "/tickets" },
+    ],
+  },
+  {
+    groupLabel: "Cadastros",
+    groupIcon: <UserCheck className="h-4 w-4" />,
+    items: [
+      { icon: <UserCheck className="h-4 w-4" />, label: "Clientes", to: "/clientes" },
+      { icon: <Users className="h-4 w-4" />, label: "Usuários", to: "/usuarios", roles: ["admin"] },
+      { icon: <BookOpen className="h-4 w-4" />, label: "Planos", to: "/planos", roles: ["admin"] },
+    ],
+  },
+  {
+    groupLabel: "Pedidos",
+    groupIcon: <ShoppingCart className="h-4 w-4" />,
+    roles: ["admin", "financeiro", "vendedor"],
+    items: [
+      { icon: <ListOrdered className="h-4 w-4" />, label: "Lista de Pedidos", to: "/pedidos" },
+      { icon: <PlusCircle className="h-4 w-4" />, label: "Criar Pedido", to: "/pedidos/novo" },
+    ],
+  },
+  {
+    groupLabel: "Financeiro",
+    groupIcon: <DollarSign className="h-4 w-4" />,
+    roles: ["admin", "financeiro", "vendedor"],
+    items: [
+      { icon: <Inbox className="h-4 w-4" />, label: "Fila do Financeiro", to: "/financeiro", roles: ["admin", "financeiro"] },
+      { icon: <FileText className="h-4 w-4" />, label: "Contratos", to: "/contratos" },
+      { icon: <TrendingUp className="h-4 w-4" />, label: "Receitas", to: "/receitas" },
+      { icon: <TrendingDown className="h-4 w-4" />, label: "Despesas", to: "/despesas", roles: ["admin", "financeiro"] },
+      { icon: <BarChart3 className="h-4 w-4" />, label: "DRE", to: "/dre", roles: ["admin", "financeiro"] },
+    ],
+  },
+  {
+    groupLabel: "Parâmetros",
+    groupIcon: <Building2 className="h-4 w-4" />,
+    roles: ["admin"],
+    items: [
+      { icon: <Building2 className="h-4 w-4" />, label: "Filiais", to: "/filiais" },
+      { icon: <Plug className="h-4 w-4" />, label: "Integrações", to: "/integracoes" },
+    ],
+  },
 ];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function groupVisible(group: NavGroup, roles: AppRole[]): boolean {
+  if (!group.roles) return true;
+  return group.roles.some((r) => roles.includes(r));
+}
+
+function itemVisible(item: NavSubItem, roles: AppRole[]): boolean {
+  if (!item.roles) return true;
+  return item.roles.some((r) => roles.includes(r));
+}
+
+function visibleItemsInGroup(group: NavGroup, roles: AppRole[]): NavSubItem[] {
+  return group.items.filter((item) => itemVisible(item, roles));
+}
+
+// ─── Sidebar Component ────────────────────────────────────────────────────────
 
 interface SidebarProps {
   collapsed: boolean;
   profile: Profile | null;
   roles: AppRole[];
-  visibleItems: NavItem[];
   initials: string;
   onNavigate: (path: string) => void;
   onSignOut: () => void;
   onMobileClose?: () => void;
 }
 
-function Sidebar({ collapsed, profile, roles, visibleItems, initials, onNavigate, onSignOut, onMobileClose }: SidebarProps) {
+function Sidebar({ collapsed, profile, roles, initials, onNavigate, onSignOut, onMobileClose }: SidebarProps) {
+  const location = useLocation();
+
+  // Determine which groups start open (the one containing the active route)
+  const initialOpen = navGroups.reduce<Record<string, boolean>>((acc, group) => {
+    const hasActive = group.items.some((item) => location.pathname === item.to || location.pathname.startsWith(item.to + "/"));
+    acc[group.groupLabel] = hasActive;
+    return acc;
+  }, {});
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(initialOpen);
+
+  function toggleGroup(label: string) {
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className={cn(
-        "flex items-center gap-3 px-4 py-5 border-b border-sidebar-border",
+        "flex items-center gap-3 px-4 py-5 border-b border-sidebar-border flex-shrink-0",
         collapsed && "justify-center px-2"
       )}>
         {collapsed ? (
@@ -78,37 +179,103 @@ function Sidebar({ collapsed, profile, roles, visibleItems, initials, onNavigate
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
-        {!collapsed && (
-          <p className="text-sidebar-foreground/40 text-xs font-semibold uppercase tracking-wider px-3 mb-3">
-            Menu
-          </p>
-        )}
-        {visibleItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            onClick={onMobileClose}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
-                collapsed && "justify-center px-2",
-                isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              )
-            }
-            title={collapsed ? item.label : undefined}
-          >
-            <span className="flex-shrink-0">{item.icon}</span>
-            {!collapsed && <span>{item.label}</span>}
-          </NavLink>
-        ))}
+      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+        {navGroups.map((group) => {
+          if (!groupVisible(group, roles)) return null;
+          const items = visibleItemsInGroup(group, roles);
+          if (items.length === 0) return null;
+
+          const isGroupActive = items.some(
+            (item) => location.pathname === item.to || location.pathname.startsWith(item.to + "/")
+          );
+          const isOpen = openGroups[group.groupLabel] ?? false;
+
+          if (collapsed) {
+            // In collapsed mode: just show icons for each item
+            return (
+              <div key={group.groupLabel} className="space-y-0.5">
+                {items.map((item) => {
+                  const active = location.pathname === item.to || location.pathname.startsWith(item.to + "/");
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={onMobileClose}
+                      title={item.label}
+                      className={cn(
+                        "flex items-center justify-center p-2 rounded-lg transition-all duration-150",
+                        active
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      )}
+                    >
+                      <span className="flex-shrink-0">{item.icon}</span>
+                    </NavLink>
+                  );
+                })}
+                <div className="border-b border-sidebar-border/30 my-1" />
+              </div>
+            );
+          }
+
+          // Expanded: collapsible group
+          return (
+            <Collapsible key={group.groupLabel} open={isOpen} onOpenChange={() => toggleGroup(group.groupLabel)}>
+              <CollapsibleTrigger asChild>
+                <button
+                  className={cn(
+                    "flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all duration-150 select-none",
+                    isGroupActive
+                      ? "text-sidebar-primary-foreground/90"
+                      : "text-sidebar-foreground/50 hover:text-sidebar-foreground/80"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={cn("flex-shrink-0", isGroupActive ? "text-sidebar-primary-foreground/90" : "text-sidebar-foreground/40")}>
+                      {group.groupIcon}
+                    </span>
+                    <span>{group.groupLabel}</span>
+                  </div>
+                  <ChevronDown
+                    className={cn(
+                      "h-3 w-3 transition-transform duration-200 text-sidebar-foreground/40",
+                      isOpen && "rotate-180"
+                    )}
+                  />
+                </button>
+              </CollapsibleTrigger>
+
+              <CollapsibleContent className="space-y-0.5 overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+                <div className="pt-0.5 pb-1 space-y-0.5">
+                  {items.map((item) => {
+                    const active = location.pathname === item.to || location.pathname.startsWith(item.to + "/");
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        onClick={onMobileClose}
+                        className={cn(
+                          "flex items-center gap-3 pl-8 pr-3 py-2 rounded-lg text-sm font-medium transition-all duration-150",
+                          active
+                            ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                            : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        )}
+                      >
+                        <span className="flex-shrink-0 opacity-70">{item.icon}</span>
+                        <span>{item.label}</span>
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        })}
       </nav>
 
       {/* User info */}
       <div className={cn(
-        "border-t border-sidebar-border p-3",
+        "border-t border-sidebar-border p-3 flex-shrink-0",
         collapsed ? "flex justify-center" : ""
       )}>
         <DropdownMenu>
@@ -156,6 +323,8 @@ function Sidebar({ collapsed, profile, roles, visibleItems, initials, onNavigate
   );
 }
 
+// ─── AppLayout ────────────────────────────────────────────────────────────────
+
 interface AppLayoutProps {
   children: ReactNode;
 }
@@ -165,10 +334,6 @@ export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  const visibleItems = navItems.filter(
-    (item) => !item.roles || item.roles.some((r) => roles.includes(r))
-  );
 
   const initials = profile?.full_name
     ? profile.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
@@ -193,7 +358,6 @@ export function AppLayout({ children }: AppLayoutProps) {
           collapsed={collapsed}
           profile={profile}
           roles={roles}
-          visibleItems={visibleItems}
           initials={initials}
           onNavigate={navigate}
           onSignOut={handleSignOut}
@@ -217,7 +381,6 @@ export function AppLayout({ children }: AppLayoutProps) {
               collapsed={false}
               profile={profile}
               roles={roles}
-              visibleItems={visibleItems}
               initials={initials}
               onNavigate={navigate}
               onSignOut={handleSignOut}
