@@ -274,6 +274,7 @@ export type Database = {
           created_at: string
           email: string
           filial: string | null
+          filial_favorita_id: string | null
           filial_id: string | null
           full_name: string
           id: string
@@ -287,6 +288,7 @@ export type Database = {
           created_at?: string
           email: string
           filial?: string | null
+          filial_favorita_id?: string | null
           filial_id?: string | null
           full_name: string
           id?: string
@@ -300,6 +302,7 @@ export type Database = {
           created_at?: string
           email?: string
           filial?: string | null
+          filial_favorita_id?: string | null
           filial_id?: string | null
           full_name?: string
           id?: string
@@ -307,6 +310,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_filial_favorita_id_fkey"
+            columns: ["filial_favorita_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_filial_id_fkey"
             columns: ["filial_id"]
