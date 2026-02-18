@@ -109,6 +109,79 @@ export type Database = {
         }
         Relationships: []
       }
+      pedidos: {
+        Row: {
+          cliente_id: string
+          comissao_percentual: number
+          comissao_valor: number
+          created_at: string
+          filial_id: string
+          id: string
+          observacoes: string | null
+          plano_id: string
+          status_pedido: string
+          updated_at: string
+          valor_implantacao: number
+          valor_mensalidade: number
+          valor_total: number
+          vendedor_id: string
+        }
+        Insert: {
+          cliente_id: string
+          comissao_percentual?: number
+          comissao_valor?: number
+          created_at?: string
+          filial_id: string
+          id?: string
+          observacoes?: string | null
+          plano_id: string
+          status_pedido?: string
+          updated_at?: string
+          valor_implantacao?: number
+          valor_mensalidade?: number
+          valor_total?: number
+          vendedor_id: string
+        }
+        Update: {
+          cliente_id?: string
+          comissao_percentual?: number
+          comissao_valor?: number
+          created_at?: string
+          filial_id?: string
+          id?: string
+          observacoes?: string | null
+          plano_id?: string
+          status_pedido?: string
+          updated_at?: string
+          valor_implantacao?: number
+          valor_mensalidade?: number
+          valor_total?: number
+          vendedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plano_modulos: {
         Row: {
           duracao_minutos: number | null
@@ -182,6 +255,7 @@ export type Database = {
         Row: {
           active: boolean
           avatar_url: string | null
+          comissao_percentual: number | null
           created_at: string
           email: string
           filial: string | null
@@ -194,6 +268,7 @@ export type Database = {
         Insert: {
           active?: boolean
           avatar_url?: string | null
+          comissao_percentual?: number | null
           created_at?: string
           email: string
           filial?: string | null
@@ -206,6 +281,7 @@ export type Database = {
         Update: {
           active?: boolean
           avatar_url?: string | null
+          comissao_percentual?: number | null
           created_at?: string
           email?: string
           filial?: string | null

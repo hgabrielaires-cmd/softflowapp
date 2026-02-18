@@ -23,8 +23,31 @@ export interface Profile {
   filial_id: string | null;
   avatar_url: string | null;
   active: boolean;
+  comissao_percentual: number | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Pedido {
+  id: string;
+  cliente_id: string;
+  vendedor_id: string;
+  filial_id: string;
+  plano_id: string;
+  valor_implantacao: number;
+  valor_mensalidade: number;
+  valor_total: number;
+  comissao_percentual: number;
+  comissao_valor: number;
+  status_pedido: 'Aguardando Financeiro' | 'Cancelado';
+  observacoes: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joins
+  cliente?: Cliente;
+  plano?: Plano;
+  vendedor?: Profile;
+  filial?: Filial;
 }
 
 export interface Filial {

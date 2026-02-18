@@ -63,6 +63,7 @@ export default function Usuarios() {
   const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState<AppRole>("vendedor");
   const [inviteFilialId, setInviteFilialId] = useState("");
+  const [inviteComissao, setInviteComissao] = useState("5");
   const [inviting, setInviting] = useState(false);
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
@@ -113,6 +114,7 @@ export default function Usuarios() {
 
       await supabase.from("profiles").update({
         filial_id: inviteFilialId || null,
+        comissao_percentual: parseFloat(inviteComissao) || 5,
       }).eq("user_id", data.user.id);
 
       await supabase.from("user_roles").insert({ user_id: data.user.id, role: inviteRole });
@@ -123,6 +125,7 @@ export default function Usuarios() {
       setInviteName("");
       setInviteRole("vendedor");
       setInviteFilialId("");
+      setInviteComissao("5");
       loadUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
@@ -226,6 +229,18 @@ export default function Usuarios() {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Comissão padrão (%)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    placeholder="5"
+                    value={inviteComissao}
+                    onChange={(e) => setInviteComissao(e.target.value)}
+                  />
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <Button type="button" variant="outline" onClick={() => setOpenInvite(false)}>
