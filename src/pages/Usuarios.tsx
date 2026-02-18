@@ -174,7 +174,7 @@ export default function Usuarios() {
                   <Label>E-mail</Label>
                   <Input
                     type="email"
-                    placeholder="joao@softplus.com.br"
+                    placeholder="joao@softflow.com.br"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     required
