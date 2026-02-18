@@ -113,7 +113,6 @@ export default function Financeiro() {
       financeiro_aprovado_em: new Date().toISOString(),
       financeiro_aprovado_por: profile?.user_id,
       financeiro_motivo: null,
-      status_pedido: "Aprovado Financeiro",
     }).eq("id", pedido.id);
     setProcessando(false);
     if (error) { toast.error("Erro ao aprovar pedido: " + error.message); return; }
@@ -132,7 +131,6 @@ export default function Financeiro() {
       financeiro_motivo: motivoReprova.trim(),
       financeiro_aprovado_em: null,
       financeiro_aprovado_por: null,
-      status_pedido: "Reprovado Financeiro",
     }).eq("id", selected.id);
     setProcessando(false);
     if (error) { toast.error("Erro ao reprovar pedido: " + error.message); return; }
