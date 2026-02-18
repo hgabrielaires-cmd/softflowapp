@@ -11,6 +11,8 @@ import Usuarios from "./pages/Usuarios";
 import Perfil from "./pages/Perfil";
 import Filiais from "./pages/Filiais";
 import { ComingSoon } from "./components/ComingSoon";
+import Clientes from "./pages/Clientes";
+import Planos from "./pages/Planos";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -90,6 +92,22 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="admin">
                   <Filiais />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/clientes"
+              element={
+                <ProtectedRoute>
+                  <Clientes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/planos"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <Planos />
                 </ProtectedRoute>
               }
             />

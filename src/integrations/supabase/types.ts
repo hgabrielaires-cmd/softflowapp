@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      clientes: {
+        Row: {
+          ativo: boolean
+          cidade: string | null
+          cnpj_cpf: string
+          contato_nome: string | null
+          created_at: string
+          email: string | null
+          filial_id: string | null
+          id: string
+          nome_fantasia: string
+          razao_social: string | null
+          telefone: string | null
+          uf: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          cidade?: string | null
+          cnpj_cpf: string
+          contato_nome?: string | null
+          created_at?: string
+          email?: string | null
+          filial_id?: string | null
+          id?: string
+          nome_fantasia: string
+          razao_social?: string | null
+          telefone?: string | null
+          uf?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          cidade?: string | null
+          cnpj_cpf?: string
+          contato_nome?: string | null
+          created_at?: string
+          email?: string | null
+          filial_id?: string | null
+          id?: string
+          nome_fantasia?: string
+          razao_social?: string | null
+          telefone?: string | null
+          uf?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       filiais: {
         Row: {
           ativa: boolean
@@ -30,6 +83,96 @@ export type Database = {
         Update: {
           ativa?: boolean
           created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      modulos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      plano_modulos: {
+        Row: {
+          duracao_minutos: number | null
+          id: string
+          inclui_treinamento: boolean
+          modulo_id: string
+          obrigatorio: boolean
+          ordem: number
+          plano_id: string
+        }
+        Insert: {
+          duracao_minutos?: number | null
+          id?: string
+          inclui_treinamento?: boolean
+          modulo_id: string
+          obrigatorio?: boolean
+          ordem?: number
+          plano_id: string
+        }
+        Update: {
+          duracao_minutos?: number | null
+          id?: string
+          inclui_treinamento?: boolean
+          modulo_id?: string
+          obrigatorio?: boolean
+          ordem?: number
+          plano_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plano_modulos_modulo_id_fkey"
+            columns: ["modulo_id"]
+            isOneToOne: false
+            referencedRelation: "modulos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plano_modulos_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
           id?: string
           nome?: string
         }
