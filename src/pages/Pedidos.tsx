@@ -364,6 +364,7 @@ export default function Pedidos() {
 
         {/* Table */}
         <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
@@ -507,6 +508,7 @@ export default function Pedidos() {
               )}
             </TableBody>
           </Table>
+          </div>
           {!loading && (
             <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground">
               {filtered.length} pedido(s) encontrado(s)
