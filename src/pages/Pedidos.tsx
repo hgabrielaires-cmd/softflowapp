@@ -42,7 +42,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus, Info } from "lucide-react";
+import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus, Tag } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -190,6 +191,7 @@ export default function Pedidos() {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingPedido, setEditingPedido] = useState<PedidoWithJoins | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [descontoAtivo, setDescontoAtivo] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Dialog novo cliente rápido
@@ -353,12 +355,14 @@ export default function Pedidos() {
     setForm({ ...emptyForm, comissao_percentual: defaultComissao, filial_id: defaultFilial, vendedor_id: defaultVendedor });
     setPlanoSelecionado(null);
     setModulosOpcionais([]);
+    setDescontoAtivo(false);
     setEditingPedido(null);
     setOpenDialog(true);
   }
 
   function openEdit(pedido: PedidoWithJoins) {
     const adicionais = pedido.modulos_adicionais || [];
+    const temDesconto = (pedido.desconto_implantacao_valor ?? 0) > 0 || (pedido.desconto_mensalidade_valor ?? 0) > 0;
     setForm({
       cliente_id: pedido.cliente_id,
       plano_id: pedido.plano_id,
@@ -374,9 +378,9 @@ export default function Pedidos() {
       desconto_mensalidade_valor: (pedido.desconto_mensalidade_valor ?? 0).toString(),
       modulos_adicionais: adicionais,
     });
+    setDescontoAtivo(temDesconto);
     setEditingPedido(pedido);
     setOpenDialog(true);
-    // Carregar módulos opcionais do plano
     loadPlano(pedido.plano_id, adicionais);
   }
 
@@ -574,7 +578,6 @@ export default function Pedidos() {
                   <TableHead className="text-right">Implantação</TableHead>
                   <TableHead className="text-right">Mensalidade</TableHead>
                   <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Comissão</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Financeiro</TableHead>
                   <TableHead>Data</TableHead>
@@ -611,10 +614,6 @@ export default function Pedidos() {
                       <TableCell className="text-right font-mono text-sm">{fmtBRL(impFinal)}</TableCell>
                       <TableCell className="text-right font-mono text-sm">{fmtBRL(mensFinal)}</TableCell>
                       <TableCell className="text-right font-mono text-sm font-semibold">{fmtBRL(pedido.valor_total)}</TableCell>
-                      <TableCell className="text-right font-mono text-sm text-muted-foreground">
-                        {fmtBRL(pedido.comissao_valor)}
-                        <span className="text-xs ml-1">({pedido.comissao_percentual}%)</span>
-                      </TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[pedido.status_pedido] || "bg-muted text-muted-foreground"}`}>
                           {pedido.status_pedido}
@@ -626,12 +625,12 @@ export default function Pedidos() {
                             {finStatus}
                           </span>
                           {contratoLiberado && (
-                            <div className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
+                            <div className="flex items-center gap-1 text-xs text-success font-medium">
                               <CheckCircle className="h-3 w-3" /> Contrato liberado
                             </div>
                           )}
                           {isReprovado && finMotivo && (
-                            <p className="text-xs text-red-600 max-w-[180px] truncate" title={finMotivo}>⚠ {finMotivo}</p>
+                            <p className="text-xs text-destructive max-w-[180px] truncate" title={finMotivo}>⚠ {finMotivo}</p>
                           )}
                         </div>
                       </TableCell>
@@ -641,7 +640,7 @@ export default function Pedidos() {
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           {isVendedor && isReprovado && pedido.vendedor_id === profile?.user_id && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600 hover:text-amber-700 hover:bg-amber-50" onClick={() => openEdit(pedido)} title="Editar e reenviar">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-warning hover:text-warning" onClick={() => openEdit(pedido)} title="Editar e reenviar">
                               <RefreshCw className="h-3.5 w-3.5" />
                             </Button>
                           )}
@@ -796,82 +795,97 @@ export default function Pedidos() {
             {/* ── Precificação ── */}
             {form.plano_id && (
               <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-4">
-                <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                  <Info className="h-4 w-4 text-muted-foreground" /> Precificação
-                </p>
+                {/* Header com toggle de desconto */}
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Tag className="h-4 w-4 text-muted-foreground" /> Precificação
+                  </p>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <span className="text-xs text-muted-foreground">Aplicar desconto</span>
+                    <Switch
+                      checked={descontoAtivo}
+                      onCheckedChange={(v) => {
+                        setDescontoAtivo(v);
+                        if (!v) {
+                          setForm((f) => ({
+                            ...f,
+                            desconto_implantacao_valor: "0",
+                            desconto_mensalidade_valor: "0",
+                          }));
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
 
                 {/* Valores originais (readonly) */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Implantação original</Label>
-                    <Input readOnly value={fmtBRL(form.valor_implantacao_original)} className="bg-background font-mono text-sm" />
+                    <Label className="text-xs text-muted-foreground">Implantação</Label>
+                    <Input readOnly value={fmtBRL(descontoAtivo ? form.valor_implantacao_original : valorImplantacaoFinal)} className="bg-background font-mono text-sm" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Mensalidade original</Label>
-                    <Input readOnly value={fmtBRL(form.valor_mensalidade_original)} className="bg-background font-mono text-sm" />
+                    <Label className="text-xs text-muted-foreground">Mensalidade</Label>
+                    <Input readOnly value={fmtBRL(descontoAtivo ? form.valor_mensalidade_original : valorMensalidadeFinal)} className="bg-background font-mono text-sm" />
                   </div>
                 </div>
 
-                {/* Desconto implantação */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Desconto — Implantação</Label>
-                  <div className="flex gap-2">
-                    <Select value={form.desconto_implantacao_tipo} onValueChange={(v) => setForm((f) => ({ ...f, desconto_implantacao_tipo: v as "R$" | "%" }))}>
-                      <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="R$">R$</SelectItem>
-                        <SelectItem value="%">%</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      type="number" min="0" step="0.01"
-                      value={form.desconto_implantacao_valor}
-                      onChange={(e) => setForm((f) => ({ ...f, desconto_implantacao_valor: e.target.value }))}
-                      className="flex-1"
-                      placeholder="0"
-                    />
-                    <Input readOnly value={fmtBRL(valorImplantacaoFinal)} className="w-36 bg-background font-mono text-sm text-primary font-semibold" />
-                  </div>
-                </div>
+                {/* Descontos — só exibe quando toggle ativo */}
+                {descontoAtivo && (
+                  <div className="space-y-3 border-t border-border pt-3">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Descontos</p>
 
-                {/* Desconto mensalidade */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Desconto — Mensalidade</Label>
-                  <div className="flex gap-2">
-                    <Select value={form.desconto_mensalidade_tipo} onValueChange={(v) => setForm((f) => ({ ...f, desconto_mensalidade_tipo: v as "R$" | "%" }))}>
-                      <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="R$">R$</SelectItem>
-                        <SelectItem value="%">%</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      type="number" min="0" step="0.01"
-                      value={form.desconto_mensalidade_valor}
-                      onChange={(e) => setForm((f) => ({ ...f, desconto_mensalidade_valor: e.target.value }))}
-                      className="flex-1"
-                      placeholder="0"
-                    />
-                    <Input readOnly value={fmtBRL(valorMensalidadeFinal)} className="w-36 bg-background font-mono text-sm text-primary font-semibold" />
-                  </div>
-                </div>
+                    {/* Desconto implantação */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Desconto — Implantação</Label>
+                      <div className="flex gap-2">
+                        <Select value={form.desconto_implantacao_tipo} onValueChange={(v) => setForm((f) => ({ ...f, desconto_implantacao_tipo: v as "R$" | "%" }))}>
+                          <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="R$">R$</SelectItem>
+                            <SelectItem value="%">%</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="number" min="0" step="0.01"
+                          value={form.desconto_implantacao_valor}
+                          onChange={(e) => setForm((f) => ({ ...f, desconto_implantacao_valor: e.target.value }))}
+                          className="flex-1"
+                          placeholder="0"
+                        />
+                        <Input readOnly value={fmtBRL(valorImplantacaoFinal)} className="w-36 bg-background font-mono text-sm text-primary font-semibold" />
+                      </div>
+                    </div>
 
-                {/* Totais */}
-                <div className="pt-2 border-t border-border grid grid-cols-2 gap-3">
+                    {/* Desconto mensalidade */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Desconto — Mensalidade</Label>
+                      <div className="flex gap-2">
+                        <Select value={form.desconto_mensalidade_tipo} onValueChange={(v) => setForm((f) => ({ ...f, desconto_mensalidade_tipo: v as "R$" | "%" }))}>
+                          <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="R$">R$</SelectItem>
+                            <SelectItem value="%">%</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="number" min="0" step="0.01"
+                          value={form.desconto_mensalidade_valor}
+                          onChange={(e) => setForm((f) => ({ ...f, desconto_mensalidade_valor: e.target.value }))}
+                          className="flex-1"
+                          placeholder="0"
+                        />
+                        <Input readOnly value={fmtBRL(valorMensalidadeFinal)} className="w-36 bg-background font-mono text-sm text-primary font-semibold" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Total */}
+                <div className="pt-2 border-t border-border">
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground">Valor total</Label>
                     <Input readOnly value={fmtBRL(valorTotal)} className="bg-background font-mono font-bold text-foreground" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Comissão (%)</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number" min="0" max="100" step="0.01"
-                        value={form.comissao_percentual}
-                        onChange={(e) => setForm((f) => ({ ...f, comissao_percentual: e.target.value }))}
-                      />
-                      <Input readOnly value={fmtBRL(comissaoValor)} className="bg-background font-mono text-sm" />
-                    </div>
                   </div>
                 </div>
               </div>
