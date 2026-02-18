@@ -113,7 +113,7 @@ export default function Usuarios() {
       if (!data.user) throw new Error("Usuário não criado");
 
       await supabase.from("profiles").update({
-        filial_id: inviteFilialId || null,
+        filial_id: (inviteFilialId && inviteFilialId !== "todas") ? inviteFilialId : null,
         comissao_percentual: parseFloat(inviteComissao) || 5,
       }).eq("user_id", data.user.id);
 
@@ -223,6 +223,7 @@ export default function Usuarios() {
                         <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="todas">🌐 Todas as filiais</SelectItem>
                         {filiais.map((f) => (
                           <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
                         ))}
