@@ -1,0 +1,223 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { AppLayout } from "@/components/AppLayout";
+import { useAuth } from "@/context/AuthContext";
+import { Navigate } from "react-router-dom";
+import { Filial } from "@/lib/supabase-types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Plus, Pencil, Building2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+export default function Filiais() {
+  const { isAdmin } = useAuth();
+  const [filiais, setFiliais] = useState<Filial[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [editing, setEditing] = useState<Filial | null>(null);
+  const [nome, setNome] = useState("");
+  const [ativa, setAtiva] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  if (!isAdmin) return <Navigate to="/dashboard" replace />;
+
+  async function loadFiliais() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("filiais")
+      .select("*")
+      .order("nome");
+    if (error) {
+      toast.error("Erro ao carregar filiais");
+    } else {
+      setFiliais(data as Filial[]);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => { loadFiliais(); }, []);
+
+  function openCreate() {
+    setEditing(null);
+    setNome("");
+    setAtiva(true);
+    setOpenDialog(true);
+  }
+
+  function openEdit(filial: Filial) {
+    setEditing(filial);
+    setNome(filial.nome);
+    setAtiva(filial.ativa);
+    setOpenDialog(true);
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nome.trim()) return;
+    setSaving(true);
+    try {
+      if (editing) {
+        const { error } = await supabase
+          .from("filiais")
+          .update({ nome: nome.trim(), ativa })
+          .eq("id", editing.id);
+        if (error) throw error;
+        toast.success("Filial atualizada com sucesso");
+      } else {
+        const { error } = await supabase
+          .from("filiais")
+          .insert({ nome: nome.trim(), ativa });
+        if (error) throw error;
+        toast.success("Filial criada com sucesso");
+      }
+      setOpenDialog(false);
+      loadFiliais();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar filial");
+    }
+    setSaving(false);
+  }
+
+  async function toggleAtiva(filial: Filial) {
+    const { error } = await supabase
+      .from("filiais")
+      .update({ ativa: !filial.ativa })
+      .eq("id", filial.id);
+    if (error) {
+      toast.error("Erro ao atualizar filial");
+    } else {
+      toast.success(filial.ativa ? "Filial desativada" : "Filial ativada");
+      loadFiliais();
+    }
+  }
+
+  return (
+    <AppLayout>
+      <div className="space-y-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Filiais</h1>
+            <p className="text-sm text-muted-foreground">Gerencie as unidades da Softflow</p>
+          </div>
+          <Button className="gap-2" onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            Nova filial
+          </Button>
+        </div>
+
+        <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead>Nome</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Criada em</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-12">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                  </TableCell>
+                </TableRow>
+              ) : filiais.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                    <Building2 className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                    Nenhuma filial cadastrada
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filiais.map((filial) => (
+                  <TableRow key={filial.id}>
+                    <TableCell className="font-medium">{filial.nome}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={filial.ativa}
+                          onCheckedChange={() => toggleAtiva(filial)}
+                        />
+                        <span className={`text-xs font-medium ${filial.ativa ? "text-sky-600" : "text-muted-foreground"}`}>
+                          {filial.ativa ? "Ativa" : "Inativa"}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(filial.created_at).toLocaleDateString("pt-BR")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => openEdit(filial)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+          {!loading && (
+            <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground flex items-center gap-1.5">
+              <Building2 className="h-3.5 w-3.5" />
+              {filiais.length} filial(is) cadastrada(s)
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{editing ? "Editar filial" : "Nova filial"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Nome da filial</Label>
+              <Input
+                placeholder="Ex: Filial São Paulo"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                required
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={ativa} onCheckedChange={setAtiva} />
+              <Label>Filial ativa</Label>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button type="button" variant="outline" onClick={() => setOpenDialog(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                {editing ? "Salvar" : "Criar filial"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </AppLayout>
+  );
+}

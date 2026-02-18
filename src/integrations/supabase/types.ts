@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      filiais: {
+        Row: {
+          ativa: boolean
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativa?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativa?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           active: boolean
@@ -21,6 +42,7 @@ export type Database = {
           created_at: string
           email: string
           filial: string | null
+          filial_id: string | null
           full_name: string
           id: string
           updated_at: string
@@ -32,6 +54,7 @@ export type Database = {
           created_at?: string
           email: string
           filial?: string | null
+          filial_id?: string | null
           full_name: string
           id?: string
           updated_at?: string
@@ -43,12 +66,21 @@ export type Database = {
           created_at?: string
           email?: string
           filial?: string | null
+          filial_id?: string | null
           full_name?: string
           id?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -83,7 +115,7 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "financeiro" | "vendedor" | "operacional"
+      app_role: "admin" | "financeiro" | "vendedor" | "operacional" | "tecnico"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -211,7 +243,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "financeiro", "vendedor", "operacional"],
+      app_role: ["admin", "financeiro", "vendedor", "operacional", "tecnico"],
     },
   },
 } as const

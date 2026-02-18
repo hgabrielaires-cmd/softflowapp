@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Usuarios from "./pages/Usuarios";
 import Perfil from "./pages/Perfil";
+import Filiais from "./pages/Filiais";
 import { ComingSoon } from "./components/ComingSoon";
 import NotFound from "./pages/NotFound";
 
@@ -88,11 +89,7 @@ const App = () => (
               path="/filiais"
               element={
                 <ProtectedRoute requiredRole="admin">
-                  <ComingSoon
-                    module="Módulo — Admin"
-                    title="Gestão de Filiais"
-                    description="Em desenvolvimento. Controle e visão de cada unidade da Softflow."
-                  />
+                  <Filiais />
                 </ProtectedRoute>
               }
             />

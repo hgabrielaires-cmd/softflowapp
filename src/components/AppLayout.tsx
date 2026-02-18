@@ -43,7 +43,7 @@ const navItems: NavItem[] = [
   { icon: <Users className="h-4 w-4" />, label: "Usuários", to: "/usuarios", roles: ["admin"] },
   { icon: <ShoppingCart className="h-4 w-4" />, label: "Pedidos", to: "/pedidos" },
   { icon: <DollarSign className="h-4 w-4" />, label: "Financeiro", to: "/financeiro", roles: ["admin", "financeiro"] },
-  { icon: <Calendar className="h-4 w-4" />, label: "Agenda", to: "/agenda" },
+  { icon: <Calendar className="h-4 w-4" />, label: "Agenda", to: "/agenda", roles: ["admin", "tecnico"] },
   { icon: <Building2 className="h-4 w-4" />, label: "Filiais", to: "/filiais", roles: ["admin"] },
 ];
 
