@@ -222,8 +222,8 @@ export default function Pedidos() {
     setForm({
       ...emptyForm,
       comissao_percentual: defaultComissao,
-      filial_id: isAdmin ? "" : defaultFilial,
-      vendedor_id: isAdmin ? "" : defaultVendedor,
+      filial_id: defaultFilial,
+      vendedor_id: defaultVendedor,
     });
     setEditingPedido(null);
     setOpenDialog(true);
@@ -621,44 +621,56 @@ export default function Pedidos() {
                 </Select>
               </div>
 
-              {/* Admin: selecionar filial e vendedor */}
-              {isAdmin && (
-                <>
-                  <div className="space-y-1.5">
-                    <Label>Filial *</Label>
-                    <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filiais.map((f) => (
-                          <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Vendedor *</Label>
-                    <Select value={form.vendedor_id} onValueChange={(v) => {
-                      const vend = vendedores.find((vv) => vv.user_id === v);
-                      setForm((f) => ({
-                        ...f,
-                        vendedor_id: v,
-                        comissao_percentual: vend?.comissao_percentual?.toString() ?? f.comissao_percentual,
-                      }));
-                    }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {vendedores.map((v) => (
-                          <SelectItem key={v.user_id} value={v.user_id}>{v.full_name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
-              )}
+              {/* Filial e Vendedor — sempre visível, editável apenas para admin */}
+              <div className="space-y-1.5">
+                <Label>Filial *</Label>
+                {isAdmin ? (
+                  <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filiais.map((f) => (
+                        <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    readOnly
+                    value={filiais.find((f) => f.id === form.filial_id)?.nome || "—"}
+                    className="bg-muted cursor-not-allowed"
+                  />
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Vendedor *</Label>
+                {isAdmin ? (
+                  <Select value={form.vendedor_id} onValueChange={(v) => {
+                    const vend = vendedores.find((vv) => vv.user_id === v);
+                    setForm((f) => ({
+                      ...f,
+                      vendedor_id: v,
+                      comissao_percentual: vend?.comissao_percentual?.toString() ?? f.comissao_percentual,
+                    }));
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vendedores.map((v) => (
+                        <SelectItem key={v.user_id} value={v.user_id}>{v.full_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    readOnly
+                    value={vendedores.find((v) => v.user_id === form.vendedor_id)?.full_name || profile?.full_name || "—"}
+                    className="bg-muted cursor-not-allowed"
+                  />
+                )}
+              </div>
 
               {/* Valores */}
               <div className="space-y-1.5">
