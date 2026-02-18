@@ -40,9 +40,9 @@ export default function Login() {
         <div>
           <h1 className="text-white text-4xl font-bold leading-tight mb-4" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
             Portal Interno<br />
-            <span className="text-emerald-400">Softflow</span>
+            <span style={{ color: 'hsl(var(--sidebar-ring))' }}>Softflow</span>
           </h1>
-          <p className="text-blue-200 text-base leading-relaxed max-w-sm">
+          <p className="text-white/60 text-base leading-relaxed max-w-sm">
             Gestão integrada de vendas, contratos, comissões e agenda operacional para bares e restaurantes.
           </p>
         </div>
@@ -55,8 +55,8 @@ export default function Login() {
             { label: "Filiais", desc: "Multi-unidade" },
           ].map((item) => (
             <div key={item.label} className="rounded-xl p-4" style={{ background: 'hsl(222 60% 22%)' }}>
-              <p className="text-emerald-400 font-semibold text-sm">{item.label}</p>
-              <p className="text-blue-300 text-xs mt-0.5">{item.desc}</p>
+              <p style={{ color: 'hsl(var(--sidebar-ring))' }} className="font-semibold text-sm">{item.label}</p>
+              <p className="text-white/50 text-xs mt-0.5">{item.desc}</p>
             </div>
           ))}
         </div>
