@@ -79,6 +79,7 @@ interface ModuloOpcional {
   nome: string;
   valor_implantacao_modulo: number | null;
   valor_mensalidade_modulo: number | null;
+  incluso_no_plano: boolean;
 }
 
 interface PedidoWithJoins {
@@ -238,27 +239,28 @@ export default function Pedidos() {
 
     setPlanoSelecionado(planoData);
 
-    const opcionais: ModuloOpcional[] = [];
+    const todos: ModuloOpcional[] = [];
     (vinculosData || []).forEach((v: any) => {
-      if (!v.incluso_no_plano && v.modulo) {
-        opcionais.push({
+      if (v.modulo) {
+        todos.push({
           id: v.modulo.id,
           nome: v.modulo.nome,
           valor_implantacao_modulo: v.modulo.valor_implantacao_modulo,
           valor_mensalidade_modulo: v.modulo.valor_mensalidade_modulo,
+          incluso_no_plano: v.incluso_no_plano,
         });
       }
     });
-    setModulosOpcionais(opcionais);
+    setModulosOpcionais(todos);
 
-    // Calcular originais com base no plano + módulos adicionais marcados
+    // Calcular originais com base no plano + módulos adicionais marcados (só opcionais somam)
     const baseImp = planoData?.valor_implantacao_padrao ?? 0;
     const baseMens = planoData?.valor_mensalidade_padrao ?? 0;
-    const adicionaisImp = opcionais
-      .filter((m) => modulosAdicionais.includes(m.id))
+    const adicionaisImp = todos
+      .filter((m) => !m.incluso_no_plano && modulosAdicionais.includes(m.id))
       .reduce((acc, m) => acc + (m.valor_implantacao_modulo ?? 0), 0);
-    const adicionaisMens = opcionais
-      .filter((m) => modulosAdicionais.includes(m.id))
+    const adicionaisMens = todos
+      .filter((m) => !m.incluso_no_plano && modulosAdicionais.includes(m.id))
       .reduce((acc, m) => acc + (m.valor_mensalidade_modulo ?? 0), 0);
 
     setForm((f) => ({
@@ -276,10 +278,10 @@ export default function Pedidos() {
     const baseImp = planoSelecionado.valor_implantacao_padrao ?? 0;
     const baseMens = planoSelecionado.valor_mensalidade_padrao ?? 0;
     const adicionaisImp = modulosOpcionais
-      .filter((m) => modulosAdicionais.includes(m.id))
+      .filter((m) => !m.incluso_no_plano && modulosAdicionais.includes(m.id))
       .reduce((acc, m) => acc + (m.valor_implantacao_modulo ?? 0), 0);
     const adicionaisMens = modulosOpcionais
-      .filter((m) => modulosAdicionais.includes(m.id))
+      .filter((m) => !m.incluso_no_plano && modulosAdicionais.includes(m.id))
       .reduce((acc, m) => acc + (m.valor_mensalidade_modulo ?? 0), 0);
     setForm((f) => ({
       ...f,
@@ -757,34 +759,46 @@ export default function Pedidos() {
               </div>
             </div>
 
-            {/* ── Módulos opcionais ── */}
+            {/* ── Módulos do plano ── */}
             {form.plano_id && (
               <div className="space-y-2">
-                <Label className="flex items-center gap-1.5">
-                  Módulos adicionais
-                  <span className="text-xs text-muted-foreground font-normal">(não inclusos no plano)</span>
-                </Label>
+                <Label>Módulos do plano</Label>
                 {loadingModulos ? (
                   <p className="text-sm text-muted-foreground">Carregando módulos...</p>
                 ) : modulosOpcionais.length === 0 ? (
-                  <p className="text-sm text-muted-foreground italic">Nenhum módulo opcional disponível para este plano.</p>
+                  <p className="text-sm text-muted-foreground italic">Nenhum módulo vinculado a este plano.</p>
                 ) : (
                   <div className="rounded-lg border border-border divide-y divide-border">
                     {modulosOpcionais.map((m) => {
                       const checked = form.modulos_adicionais.includes(m.id);
+                      const isIncluso = m.incluso_no_plano;
                       return (
-                        <label key={m.id} className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-muted/40 transition-colors">
-                          <Checkbox
-                            checked={checked}
-                            onCheckedChange={(v) => toggleModuloAdicional(m.id, !!v)}
-                          />
+                        <div key={m.id} className={`flex items-center gap-3 px-4 py-2.5 ${!isIncluso ? "cursor-pointer hover:bg-muted/40 transition-colors" : "opacity-70"}`}
+                          onClick={!isIncluso ? () => toggleModuloAdicional(m.id, !checked) : undefined}
+                        >
+                          {isIncluso ? (
+                            <span className="h-4 w-4 flex-shrink-0 rounded-sm bg-primary/20 flex items-center justify-center">
+                              <svg className="h-3 w-3 text-primary" fill="currentColor" viewBox="0 0 12 12"><path d="M10 3L5 8.5 2 5.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </span>
+                          ) : (
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(v) => toggleModuloAdicional(m.id, !!v)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          )}
                           <span className="flex-1 text-sm font-medium">{m.nome}</span>
                           <span className="text-xs text-muted-foreground font-mono">
-                            {m.valor_implantacao_modulo != null && `Impl: ${fmtBRL(m.valor_implantacao_modulo)}`}
-                            {m.valor_implantacao_modulo != null && m.valor_mensalidade_modulo != null && " · "}
-                            {m.valor_mensalidade_modulo != null && `Mens: ${fmtBRL(m.valor_mensalidade_modulo)}`}
+                            {isIncluso
+                              ? <span className="text-primary font-medium">Incluso</span>
+                              : <>
+                                  {m.valor_implantacao_modulo != null && `Impl: ${fmtBRL(m.valor_implantacao_modulo)}`}
+                                  {m.valor_implantacao_modulo != null && m.valor_mensalidade_modulo != null && " · "}
+                                  {m.valor_mensalidade_modulo != null && `Mens: ${fmtBRL(m.valor_mensalidade_modulo)}`}
+                                </>
+                            }
                           </span>
-                        </label>
+                        </div>
                       );
                     })}
                   </div>
