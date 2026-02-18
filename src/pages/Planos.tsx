@@ -32,7 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Link } from "lucide-react";
+import { Plus, Pencil, Trash2, Link, CopyPlus } from "lucide-react";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -385,6 +385,8 @@ function VinculosTab() {
   const [vinculos, setVinculos] = useState<any[]>([]);
   const [loadingVinculos, setLoadingVinculos] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingVinculo, setEditingVinculo] = useState<any | null>(null);
+  const [addingAll, setAddingAll] = useState(false);
   const [form, setForm] = useState({
     modulo_id: "",
     inclui_treinamento: false,
@@ -425,23 +427,74 @@ function VinculosTab() {
   const modulosVinculados = new Set(vinculos.map((v) => v.modulo_id));
   const modulosDisponiveis = modulos.filter((m) => !modulosVinculados.has(m.id));
 
-  async function handleAdicionar() {
-    if (!form.modulo_id) { toast.error("Selecione um módulo"); return; }
+  function openCreate() {
+    setEditingVinculo(null);
+    setForm({ modulo_id: "", inclui_treinamento: false, ordem: vinculos.length, duracao_minutos: "", obrigatorio: false, incluso_no_plano: true });
+    setDialogOpen(true);
+  }
+
+  function openEdit(v: any) {
+    setEditingVinculo(v);
+    setForm({
+      modulo_id: v.modulo_id,
+      inclui_treinamento: v.inclui_treinamento,
+      ordem: v.ordem,
+      duracao_minutos: v.duracao_minutos != null ? v.duracao_minutos.toString() : "",
+      obrigatorio: v.obrigatorio,
+      incluso_no_plano: v.incluso_no_plano,
+    });
+    setDialogOpen(true);
+  }
+
+  async function handleSalvar() {
     setSaving(true);
-    const { error } = await supabase.from("plano_modulos").insert({
-      plano_id: selectedPlano,
-      modulo_id: form.modulo_id,
+    const payload = {
       inclui_treinamento: form.inclui_treinamento,
       ordem: Number(form.ordem) || 0,
       duracao_minutos: form.duracao_minutos ? Number(form.duracao_minutos) : null,
       obrigatorio: form.obrigatorio,
       incluso_no_plano: form.incluso_no_plano,
-    });
-    if (error) { toast.error("Erro ao vincular módulo"); setSaving(false); return; }
-    toast.success("Módulo vinculado ao plano");
+    };
+
+    if (editingVinculo) {
+      const { error } = await supabase.from("plano_modulos").update(payload).eq("id", editingVinculo.id);
+      if (error) { toast.error("Erro ao salvar vínculo"); setSaving(false); return; }
+      toast.success("Vínculo atualizado");
+    } else {
+      if (!form.modulo_id) { toast.error("Selecione um módulo"); setSaving(false); return; }
+      const { error } = await supabase.from("plano_modulos").insert({
+        plano_id: selectedPlano,
+        modulo_id: form.modulo_id,
+        ...payload,
+      });
+      if (error) { toast.error("Erro ao vincular módulo"); setSaving(false); return; }
+      toast.success("Módulo vinculado ao plano");
+    }
+
     setSaving(false);
     setDialogOpen(false);
+    setEditingVinculo(null);
     setForm({ modulo_id: "", inclui_treinamento: false, ordem: 0, duracao_minutos: "", obrigatorio: false, incluso_no_plano: true });
+    fetchVinculos(selectedPlano);
+  }
+
+  async function handleAdicionarTodos() {
+    if (modulosDisponiveis.length === 0) { toast.info("Todos os módulos já estão vinculados"); return; }
+    if (!confirm(`Adicionar todos os ${modulosDisponiveis.length} módulos disponíveis a este plano?`)) return;
+    setAddingAll(true);
+    const inserts = modulosDisponiveis.map((m, i) => ({
+      plano_id: selectedPlano,
+      modulo_id: m.id,
+      inclui_treinamento: false,
+      ordem: vinculos.length + i,
+      duracao_minutos: null,
+      obrigatorio: false,
+      incluso_no_plano: true,
+    }));
+    const { error } = await supabase.from("plano_modulos").insert(inserts);
+    if (error) { toast.error("Erro ao adicionar módulos"); setAddingAll(false); return; }
+    toast.success(`${inserts.length} módulos adicionados ao plano`);
+    setAddingAll(false);
     fetchVinculos(selectedPlano);
   }
 
@@ -455,7 +508,7 @@ function VinculosTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
+      <div className="flex items-end gap-4 flex-wrap">
         <div className="flex-1 max-w-xs space-y-1">
           <Label>Selecionar plano</Label>
           <Select value={selectedPlano} onValueChange={setSelectedPlano}>
@@ -470,9 +523,20 @@ function VinculosTab() {
           </Select>
         </div>
         {selectedPlano && (
-          <Button onClick={() => setDialogOpen(true)} className="gap-2 mt-6" disabled={modulosDisponiveis.length === 0}>
-            <Link className="h-4 w-4" /> Adicionar módulo
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleAdicionarTodos}
+              disabled={addingAll || modulosDisponiveis.length === 0}
+              className="gap-2"
+            >
+              <CopyPlus className="h-4 w-4" />
+              {addingAll ? "Adicionando..." : `Adicionar todos (${modulosDisponiveis.length})`}
+            </Button>
+            <Button onClick={openCreate} className="gap-2" disabled={modulosDisponiveis.length === 0}>
+              <Link className="h-4 w-4" /> Adicionar módulo
+            </Button>
+          </div>
         )}
       </div>
 
@@ -487,7 +551,7 @@ function VinculosTab() {
                 <TableHead>Treinamento</TableHead>
                 <TableHead>Duração</TableHead>
                 <TableHead>Obrigatório</TableHead>
-                <TableHead className="w-16">Ação</TableHead>
+                <TableHead className="w-24">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -518,9 +582,14 @@ function VinculosTab() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleRemover(v)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(v)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleRemover(v)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -529,21 +598,25 @@ function VinculosTab() {
         </div>
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditingVinculo(null); }}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Vincular módulo ao plano</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{editingVinculo ? `Editar vínculo: ${editingVinculo.modulo?.nome}` : "Vincular módulo ao plano"}</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>Módulo *</Label>
-              <Select value={form.modulo_id} onValueChange={(v) => setForm((f) => ({ ...f, modulo_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecionar módulo" /></SelectTrigger>
-                <SelectContent>
-                  {modulosDisponiveis.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!editingVinculo && (
+              <div className="space-y-1.5">
+                <Label>Módulo *</Label>
+                <Select value={form.modulo_id} onValueChange={(v) => setForm((f) => ({ ...f, modulo_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar módulo" /></SelectTrigger>
+                  <SelectContent>
+                    {modulosDisponiveis.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Ordem</Label>
@@ -568,8 +641,10 @@ function VinculosTab() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleAdicionar} disabled={saving}>{saving ? "Salvando..." : "Vincular módulo"}</Button>
+            <Button variant="outline" onClick={() => { setDialogOpen(false); setEditingVinculo(null); }}>Cancelar</Button>
+            <Button onClick={handleSalvar} disabled={saving}>
+              {saving ? "Salvando..." : editingVinculo ? "Salvar alterações" : "Vincular módulo"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
