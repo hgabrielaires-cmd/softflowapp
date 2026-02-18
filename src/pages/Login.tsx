@@ -41,7 +41,7 @@ export default function Login() {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="mb-8 flex justify-center">
-            <img src={logoSoftflowAzul} alt="Softflow" className="h-16 object-contain" />
+            <img alt="Softflow" className="h-16 object-contain" src="/lovable-uploads/41a83057-5d6f-4fb4-9aae-97e8b980824c.png" />
           </div>
 
           <div className="mb-8">
