@@ -67,6 +67,48 @@ export type Database = {
           },
         ]
       }
+      contratos: {
+        Row: {
+          cliente_id: string
+          contrato_origem_id: string | null
+          created_at: string
+          id: string
+          numero_exibicao: string
+          numero_registro: number
+          pedido_id: string | null
+          plano_id: string | null
+          status: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          cliente_id: string
+          contrato_origem_id?: string | null
+          created_at?: string
+          id?: string
+          numero_exibicao?: string
+          numero_registro?: number
+          pedido_id?: string | null
+          plano_id?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          cliente_id?: string
+          contrato_origem_id?: string | null
+          created_at?: string
+          id?: string
+          numero_exibicao?: string
+          numero_registro?: number
+          pedido_id?: string | null
+          plano_id?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       filiais: {
         Row: {
           ativa: boolean
@@ -120,6 +162,7 @@ export type Database = {
           cliente_id: string
           comissao_percentual: number
           comissao_valor: number
+          contrato_id: string | null
           contrato_liberado: boolean
           created_at: string
           desconto_implantacao_tipo: string
@@ -136,6 +179,7 @@ export type Database = {
           observacoes: string | null
           plano_id: string
           status_pedido: string
+          tipo_pedido: string
           updated_at: string
           valor_implantacao: number
           valor_implantacao_final: number
@@ -150,6 +194,7 @@ export type Database = {
           cliente_id: string
           comissao_percentual?: number
           comissao_valor?: number
+          contrato_id?: string | null
           contrato_liberado?: boolean
           created_at?: string
           desconto_implantacao_tipo?: string
@@ -166,6 +211,7 @@ export type Database = {
           observacoes?: string | null
           plano_id: string
           status_pedido?: string
+          tipo_pedido?: string
           updated_at?: string
           valor_implantacao?: number
           valor_implantacao_final?: number
@@ -180,6 +226,7 @@ export type Database = {
           cliente_id?: string
           comissao_percentual?: number
           comissao_valor?: number
+          contrato_id?: string | null
           contrato_liberado?: boolean
           created_at?: string
           desconto_implantacao_tipo?: string
@@ -196,6 +243,7 @@ export type Database = {
           observacoes?: string | null
           plano_id?: string
           status_pedido?: string
+          tipo_pedido?: string
           updated_at?: string
           valor_implantacao?: number
           valor_implantacao_final?: number

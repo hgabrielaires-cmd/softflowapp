@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { Cliente, Filial } from "@/lib/supabase-types";
+import { Cliente, Filial, Contrato } from "@/lib/supabase-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,8 +30,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Building2, Phone, Mail } from "lucide-react";
+import { Plus, Search, Pencil, Building2, Phone, Mail, FileText, ArrowUpCircle, Package, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const UF_LIST = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
@@ -51,6 +54,18 @@ const emptyForm = {
   ativo: true,
 };
 
+interface PedidoHistorico {
+  id: string;
+  tipo_pedido: string;
+  status_pedido: string;
+  valor_implantacao_final: number;
+  valor_mensalidade_final: number;
+  valor_total: number;
+  created_at: string;
+  planos?: { nome: string } | null;
+  modulos_adicionais?: any[];
+}
+
 export default function Clientes() {
   const { roles, profile } = useAuth();
   const isAdmin = roles.includes("admin");
@@ -66,6 +81,13 @@ export default function Clientes() {
   const [editing, setEditing] = useState<Cliente | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+
+  // Histórico contratual
+  const [historicoOpen, setHistoricoOpen] = useState(false);
+  const [clienteHistorico, setClienteHistorico] = useState<Cliente | null>(null);
+  const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [pedidosHistorico, setPedidosHistorico] = useState<PedidoHistorico[]>([]);
+  const [loadingHistorico, setLoadingHistorico] = useState(false);
 
   async function fetchData() {
     setLoading(true);
@@ -113,6 +135,22 @@ export default function Clientes() {
     setDialogOpen(true);
   }
 
+  async function openHistorico(c: Cliente) {
+    setClienteHistorico(c);
+    setHistoricoOpen(true);
+    setLoadingHistorico(true);
+    const [{ data: cData }, { data: pData }] = await Promise.all([
+      supabase.from("contratos").select("*").eq("cliente_id", c.id).order("created_at", { ascending: false }),
+      supabase.from("pedidos")
+        .select("id, tipo_pedido, status_pedido, valor_implantacao_final, valor_mensalidade_final, valor_total, created_at, modulos_adicionais, planos(nome)")
+        .eq("cliente_id", c.id)
+        .order("created_at", { ascending: false }),
+    ]);
+    setContratos((cData || []) as unknown as Contrato[]);
+    setPedidosHistorico((pData || []) as unknown as PedidoHistorico[]);
+    setLoadingHistorico(false);
+  }
+
   async function handleSave() {
     if (!form.nome_fantasia.trim() || !form.cnpj_cpf.trim()) {
       toast.error("Nome fantasia e CNPJ/CPF são obrigatórios");
@@ -153,6 +191,25 @@ export default function Clientes() {
 
   const filialNome = (id: string | null) => filiais.find((f) => f.id === id)?.nome || "—";
 
+  function fmtBRL(v: number) {
+    return (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  function fmtDate(d: string) {
+    return format(new Date(d), "dd/MM/yyyy", { locale: ptBR });
+  }
+
+  const TIPO_PEDIDO_COLORS: Record<string, string> = {
+    Novo: "bg-blue-100 text-blue-700",
+    Upgrade: "bg-green-100 text-green-700",
+    Aditivo: "bg-purple-100 text-purple-700",
+  };
+
+  // Dados do histórico separados
+  const contratosBase = contratos.filter((c) => c.tipo === "Base");
+  const contratosAditivos = contratos.filter((c) => c.tipo === "Termo Aditivo");
+  const pedidosUpgrade = pedidosHistorico.filter((p) => p.tipo_pedido === "Upgrade");
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -190,19 +247,19 @@ export default function Clientes() {
                 <TableHead>Filial</TableHead>
                 <TableHead>Cidade / UF</TableHead>
                 <TableHead>Status</TableHead>
-                {canEdit && <TableHead className="w-20">Ações</TableHead>}
+                <TableHead className="w-24">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={canEdit ? 7 : 6} className="text-center text-muted-foreground py-10">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={canEdit ? 7 : 6} className="text-center text-muted-foreground py-10">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
                     Nenhum cliente encontrado
                   </TableCell>
                 </TableRow>
@@ -253,13 +310,18 @@ export default function Clientes() {
                         </Badge>
                       )}
                     </TableCell>
-                    {canEdit && (
-                      <TableCell>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)}>
-                          <Pencil className="h-3.5 w-3.5" />
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        {canEdit && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)} title="Editar cliente">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openHistorico(c)} title="Histórico contratual">
+                          <FileText className="h-3.5 w-3.5" />
                         </Button>
-                      </TableCell>
-                    )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -342,6 +404,198 @@ export default function Clientes() {
               {saving ? "Salvando..." : editing ? "Salvar alterações" : "Cadastrar cliente"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Histórico Contratual */}
+      <Dialog open={historicoOpen} onOpenChange={setHistoricoOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Histórico Contratual — {clienteHistorico?.nome_fantasia}
+            </DialogTitle>
+          </DialogHeader>
+
+          {loadingHistorico ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <Tabs defaultValue="contratos" className="mt-2">
+              <TabsList className="w-full">
+                <TabsTrigger value="contratos" className="flex-1">
+                  <FileText className="h-3.5 w-3.5 mr-1.5" />
+                  Contratos ({contratosBase.length})
+                </TabsTrigger>
+                <TabsTrigger value="aditivos" className="flex-1">
+                  <Package className="h-3.5 w-3.5 mr-1.5" />
+                  Aditivos ({contratosAditivos.length})
+                </TabsTrigger>
+                <TabsTrigger value="upgrades" className="flex-1">
+                  <ArrowUpCircle className="h-3.5 w-3.5 mr-1.5" />
+                  Upgrades ({pedidosUpgrade.length})
+                </TabsTrigger>
+                <TabsTrigger value="pedidos" className="flex-1">
+                  Todos os pedidos ({pedidosHistorico.length})
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Contratos Base */}
+              <TabsContent value="contratos" className="mt-4">
+                {contratosBase.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8 text-sm">Nenhum contrato base registrado</p>
+                ) : (
+                  <div className="rounded-lg border border-border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nº</TableHead>
+                          <TableHead>Exibição</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Data</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {contratosBase.map((c) => (
+                          <TableRow key={c.id}>
+                            <TableCell className="font-mono font-medium">{c.numero_registro}</TableCell>
+                            <TableCell className="font-mono text-sm">{c.numero_exibicao}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{c.tipo}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={c.status === "Ativo" ? "default" : "secondary"}>
+                                {c.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{fmtDate(c.created_at)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Termos Aditivos */}
+              <TabsContent value="aditivos" className="mt-4">
+                {contratosAditivos.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8 text-sm">Nenhum termo aditivo registrado</p>
+                ) : (
+                  <div className="rounded-lg border border-border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nº</TableHead>
+                          <TableHead>Exibição</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Data</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {contratosAditivos.map((c) => (
+                          <TableRow key={c.id}>
+                            <TableCell className="font-mono font-medium">{c.numero_registro}</TableCell>
+                            <TableCell className="font-mono text-sm">{c.numero_exibicao}</TableCell>
+                            <TableCell>
+                              <Badge variant={c.status === "Ativo" ? "default" : "secondary"}>
+                                {c.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{fmtDate(c.created_at)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Upgrades */}
+              <TabsContent value="upgrades" className="mt-4">
+                {pedidosUpgrade.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8 text-sm">Nenhum upgrade realizado</p>
+                ) : (
+                  <div className="rounded-lg border border-border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Plano</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Implantação</TableHead>
+                          <TableHead className="text-right">Mensalidade</TableHead>
+                          <TableHead>Data</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pedidosUpgrade.map((p) => (
+                          <TableRow key={p.id}>
+                            <TableCell className="font-medium">{p.planos?.nome || "—"}</TableCell>
+                            <TableCell>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                {p.status_pedido}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm">{fmtBRL(p.valor_implantacao_final ?? 0)}</TableCell>
+                            <TableCell className="text-right font-mono text-sm">{fmtBRL(p.valor_mensalidade_final ?? 0)}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{fmtDate(p.created_at)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Todos os pedidos */}
+              <TabsContent value="pedidos" className="mt-4">
+                {pedidosHistorico.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8 text-sm">Nenhum pedido registrado</p>
+                ) : (
+                  <div className="rounded-lg border border-border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Plano</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Implantação</TableHead>
+                          <TableHead className="text-right">Mensalidade</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead>Data</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pedidosHistorico.map((p) => (
+                          <TableRow key={p.id}>
+                            <TableCell>
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${TIPO_PEDIDO_COLORS[p.tipo_pedido] || "bg-muted text-muted-foreground"}`}>
+                                {p.tipo_pedido === "Upgrade" && <ArrowUpCircle className="h-3 w-3" />}
+                                {p.tipo_pedido === "Aditivo" && <Package className="h-3 w-3" />}
+                                {p.tipo_pedido || "Novo"}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-sm">{p.planos?.nome || "—"}</TableCell>
+                            <TableCell>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                {p.status_pedido}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm">{fmtBRL(p.valor_implantacao_final ?? 0)}</TableCell>
+                            <TableCell className="text-right font-mono text-sm">{fmtBRL(p.valor_mensalidade_final ?? 0)}</TableCell>
+                            <TableCell className="text-right font-mono text-sm font-semibold">{fmtBRL(p.valor_total)}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{fmtDate(p.created_at)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          )}
         </DialogContent>
       </Dialog>
     </AppLayout>

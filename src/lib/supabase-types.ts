@@ -85,6 +85,23 @@ export interface Modulo {
   created_at: string;
 }
 
+export interface Contrato {
+  id: string;
+  cliente_id: string;
+  plano_id: string | null;
+  numero_registro: number;
+  numero_exibicao: string;
+  tipo: 'Base' | 'Termo Aditivo';
+  status: 'Ativo' | 'Encerrado';
+  pedido_id: string | null;
+  contrato_origem_id: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joins
+  plano?: Plano;
+  cliente?: Cliente;
+}
+
 export interface Plano {
   id: string;
   nome: string;
