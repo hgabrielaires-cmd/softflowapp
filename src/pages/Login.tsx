@@ -67,8 +67,8 @@ export default function Login() {
                   className="pl-9"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+                  required />
+
               </div>
             </div>
 
@@ -85,13 +85,13 @@ export default function Login() {
                   className="pl-9 pr-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                  required />
+
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
@@ -101,30 +101,30 @@ export default function Login() {
               type="submit"
               className="w-full h-11 text-sm font-semibold"
               style={{ background: 'var(--gradient-brand)' }}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
+              disabled={loading}>
+
+              {loading ?
+              <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Entrando...
-                </>
-              ) : (
-                "Entrar no sistema"
-              )}
+                </> :
+
+              "Entrar no sistema"
+              }
             </Button>
           </form>
 
-          <p className="text-center text-xs text-muted-foreground mt-8">
-            Acesso restrito a colaboradores da Softflow Tecnologia.<br />
+          <p className="text-center text-xs text-muted-foreground mt-8">Acesso restrito.
+Entre em contato com o administrador para obter acesso.<br />
             Entre em contato com o administrador para obter acesso.
           </p>
 
           <div className="flex items-center justify-center gap-2 mt-6">
-            <span className="text-xs text-muted-foreground">Feito por</span>
+            <span className="text-xs text-muted-foreground">By
+            </span>
             <img src={logoSoftplusAzul} alt="Softplus" className="h-5 object-contain opacity-70" />
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
 }
