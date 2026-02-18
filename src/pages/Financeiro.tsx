@@ -46,6 +46,10 @@ interface PedidoFila {
   valor_total: number;
   comissao_percentual: number;
   comissao_valor: number;
+  comissao_implantacao_percentual: number | null;
+  comissao_implantacao_valor: number | null;
+  comissao_mensalidade_percentual: number | null;
+  comissao_mensalidade_valor: number | null;
   status_pedido: string;
   financeiro_status: string;
   financeiro_motivo: string | null;
@@ -213,9 +217,12 @@ export default function Financeiro() {
                     <TableCell className="text-right font-mono text-sm">
                       {pedido.valor_total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-sm text-muted-foreground">
-                      {pedido.comissao_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                      <span className="text-xs ml-1">({pedido.comissao_percentual}%)</span>
+                    <TableCell className="text-right text-sm text-muted-foreground">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-mono">{(pedido.comissao_implantacao_percentual ?? pedido.comissao_percentual)}% imp → <span className="font-semibold">{(pedido.comissao_implantacao_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></p>
+                        <p className="text-xs font-mono">{(pedido.comissao_mensalidade_percentual ?? pedido.comissao_percentual)}% mens → <span className="font-semibold">{(pedido.comissao_mensalidade_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></p>
+                        <p className="text-xs font-mono border-t border-border pt-0.5">Total: <span className="font-bold text-foreground">{pedido.comissao_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></p>
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(pedido.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
@@ -264,8 +271,25 @@ export default function Financeiro() {
                 <div><p className="text-muted-foreground text-xs">Data</p><p className="font-semibold">{format(new Date(selected.created_at), "dd/MM/yyyy", { locale: ptBR })}</p></div>
                 <div><p className="text-muted-foreground text-xs">Implantação</p><p className="font-mono">{selected.valor_implantacao.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p></div>
                 <div><p className="text-muted-foreground text-xs">Mensalidade</p><p className="font-mono">{selected.valor_mensalidade.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p></div>
-                <div><p className="text-muted-foreground text-xs">Valor Total</p><p className="font-mono font-bold text-base">{selected.valor_total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p></div>
-                <div><p className="text-muted-foreground text-xs">Comissão</p><p className="font-mono">{selected.comissao_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} ({selected.comissao_percentual}%)</p></div>
+                <div className="col-span-2"><p className="text-muted-foreground text-xs">Valor Total</p><p className="font-mono font-bold text-base">{selected.valor_total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p></div>
+              </div>
+              {/* Comissões separadas */}
+              <div className="bg-muted rounded-lg p-3 space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comissões do Vendedor</p>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Implantação / Treinamento</span>
+                    <span className="font-mono">{(selected.comissao_implantacao_percentual ?? selected.comissao_percentual)}% → {(selected.comissao_implantacao_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Mensalidade</span>
+                    <span className="font-mono">{(selected.comissao_mensalidade_percentual ?? selected.comissao_percentual)}% → {(selected.comissao_mensalidade_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-semibold border-t border-border pt-1">
+                    <span>Total comissão</span>
+                    <span className="font-mono">{selected.comissao_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                  </div>
+                </div>
               </div>
               {selected.observacoes && (
                 <div className="bg-muted rounded-lg p-3">
