@@ -86,7 +86,7 @@ export default function Usuarios() {
     setLoading(true);
     const { data: profiles, error } = await supabase
       .from("profiles")
-      .select("*, filiais(nome)")
+      .select("*, filiais!profiles_filial_id_fkey(nome)")
       .order("full_name");
 
     if (error) { toast.error("Erro ao carregar usuários"); setLoading(false); return; }
