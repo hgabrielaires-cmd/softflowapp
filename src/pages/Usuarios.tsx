@@ -166,8 +166,16 @@ export default function Usuarios() {
       if (profileError) throw profileError;
 
       // Update role: delete existing and insert new
-      await supabase.from("user_roles").delete().eq("user_id", editingUser.user_id);
-      await supabase.from("user_roles").insert({ user_id: editingUser.user_id, role: editRole });
+      const { error: deleteError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", editingUser.user_id);
+      if (deleteError) throw deleteError;
+
+      const { error: insertError } = await supabase
+        .from("user_roles")
+        .insert({ user_id: editingUser.user_id, role: editRole });
+      if (insertError) throw insertError;
 
       toast.success("Usuário atualizado com sucesso!");
       setOpenEdit(false);
