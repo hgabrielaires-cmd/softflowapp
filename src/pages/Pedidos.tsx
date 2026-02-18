@@ -55,6 +55,7 @@ const UF_LIST = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG
 const emptyClienteForm = {
   nome_fantasia: "", razao_social: "", cnpj_cpf: "",
   contato_nome: "", telefone: "", email: "", cidade: "", uf: "",
+  cep: "", logradouro: "", bairro: "",
 };
 
 const STATUS_OPTIONS = ["Aguardando Financeiro", "Aprovado Financeiro", "Reprovado Financeiro", "Cancelado"] as const;
@@ -225,6 +226,11 @@ export default function Pedidos() {
   const [openClienteDialog, setOpenClienteDialog] = useState(false);
   const [clienteForm, setClienteForm] = useState(emptyClienteForm);
   const [savingCliente, setSavingCliente] = useState(false);
+  const [loadingCep, setLoadingCep] = useState(false);
+  const [loadingCnpj, setLoadingCnpj] = useState(false);
+  const [cepError, setCepError] = useState("");
+  const [cnpjError, setCnpjError] = useState("");
+  const isQuerying = loadingCep || loadingCnpj;
 
   // ─── Computed values ─────────────────────────────────────────────────────
 
@@ -559,6 +565,69 @@ export default function Pedidos() {
   }
 
   // ─── Cliente rápido ───────────────────────────────────────────────────────
+
+  async function handleCepBlurCliente() {
+    const cep = clienteForm.cep.replace(/\D/g, "");
+    if (cep.length !== 8) return;
+    setCepError("");
+    setLoadingCep(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await res.json();
+      if (data.erro) {
+        setCepError("CEP não encontrado");
+      } else {
+        setClienteForm((f) => ({
+          ...f,
+          logradouro: f.logradouro || data.logradouro || "",
+          bairro: f.bairro || data.bairro || "",
+          cidade: f.cidade || data.localidade || "",
+          uf: f.uf || data.uf || "",
+        }));
+      }
+    } catch {
+      setCepError("Erro ao consultar CEP");
+    } finally {
+      setLoadingCep(false);
+    }
+  }
+
+  async function handleCnpjBlurCliente() {
+    const cnpj = clienteForm.cnpj_cpf.replace(/\D/g, "");
+    if (cnpj.length !== 14) return;
+    setCnpjError("");
+    setLoadingCnpj(true);
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+      if (!res.ok) {
+        setCnpjError("CNPJ não encontrado");
+      } else {
+        const data = await res.json();
+        const telefoneApi = data.ddd_telefone_1
+          ? `(${data.ddd_telefone_1}) ${data.telefone_1 || ""}`.trim()
+          : "";
+        const logradouroApi = data.logradouro
+          ? `${data.tipo_logradouro || ""} ${data.logradouro}`.trim()
+          : "";
+        setClienteForm((f) => ({
+          ...f,
+          razao_social: f.razao_social || data.razao_social || "",
+          nome_fantasia: f.nome_fantasia || data.nome_fantasia || "",
+          email: f.email || data.email || "",
+          telefone: f.telefone || telefoneApi,
+          cidade: f.cidade || data.municipio || "",
+          uf: f.uf || data.uf || "",
+          logradouro: f.logradouro || logradouroApi,
+          bairro: f.bairro || data.bairro || "",
+          cep: f.cep || (data.cep ? data.cep.replace(/\D/g, "") : ""),
+        }));
+      }
+    } catch {
+      setCnpjError("CNPJ não encontrado");
+    } finally {
+      setLoadingCnpj(false);
+    }
+  }
 
   async function handleSaveCliente(e: React.FormEvent) {
     e.preventDefault();
@@ -1128,10 +1197,29 @@ export default function Pedidos() {
           </DialogHeader>
           <form onSubmit={handleSaveCliente} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
+
+              {/* CNPJ com busca automática */}
               <div className="col-span-2 space-y-1.5">
                 <Label>CNPJ / CPF *</Label>
-                <Input placeholder="00.000.000/0000-00" value={clienteForm.cnpj_cpf} onChange={(e) => setClienteForm((f) => ({ ...f, cnpj_cpf: e.target.value }))} required autoFocus />
+                <div className="relative">
+                  <Input
+                    placeholder="00.000.000/0000-00"
+                    value={clienteForm.cnpj_cpf}
+                    onChange={(e) => { setCnpjError(""); setClienteForm((f) => ({ ...f, cnpj_cpf: e.target.value })); }}
+                    onBlur={handleCnpjBlurCliente}
+                    required
+                    autoFocus
+                    className={cnpjError ? "border-destructive pr-9" : "pr-9"}
+                  />
+                  {loadingCnpj && <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+                </div>
+                {cnpjError && (
+                  <p className="flex items-center gap-1 text-xs text-destructive">
+                    <AlertCircle className="h-3 w-3" />{cnpjError}
+                  </p>
+                )}
               </div>
+
               <div className="col-span-2 space-y-1.5">
                 <Label>Nome Fantasia *</Label>
                 <Input placeholder="Nome fantasia..." value={clienteForm.nome_fantasia} onChange={(e) => setClienteForm((f) => ({ ...f, nome_fantasia: e.target.value }))} required />
@@ -1152,6 +1240,40 @@ export default function Pedidos() {
                 <Label>E-mail</Label>
                 <Input type="email" placeholder="email@empresa.com" value={clienteForm.email} onChange={(e) => setClienteForm((f) => ({ ...f, email: e.target.value }))} />
               </div>
+
+              {/* Separador endereço */}
+              <div className="col-span-2 pt-1">
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Endereço</p>
+              </div>
+
+              {/* CEP com busca automática */}
+              <div className="space-y-1.5">
+                <Label>CEP</Label>
+                <div className="relative">
+                  <Input
+                    placeholder="00000-000"
+                    value={clienteForm.cep}
+                    onChange={(e) => { setCepError(""); setClienteForm((f) => ({ ...f, cep: e.target.value })); }}
+                    onBlur={handleCepBlurCliente}
+                    maxLength={9}
+                    className={cepError ? "border-destructive pr-9" : "pr-9"}
+                  />
+                  {loadingCep && <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+                </div>
+                {cepError && (
+                  <p className="flex items-center gap-1 text-xs text-destructive">
+                    <AlertCircle className="h-3 w-3" />{cepError}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Logradouro</Label>
+                <Input placeholder="Rua / Avenida..." value={clienteForm.logradouro} onChange={(e) => setClienteForm((f) => ({ ...f, logradouro: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Bairro</Label>
+                <Input placeholder="Bairro" value={clienteForm.bairro} onChange={(e) => setClienteForm((f) => ({ ...f, bairro: e.target.value }))} />
+              </div>
               <div className="space-y-1.5">
                 <Label>Cidade</Label>
                 <Input placeholder="Cidade" value={clienteForm.cidade} onChange={(e) => setClienteForm((f) => ({ ...f, cidade: e.target.value }))} />
@@ -1168,9 +1290,12 @@ export default function Pedidos() {
             </div>
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setOpenClienteDialog(false)}>Cancelar</Button>
-              <Button type="submit" disabled={savingCliente}>
-                {savingCliente && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                Cadastrar cliente
+              <Button type="submit" disabled={savingCliente || isQuerying}>
+                {isQuerying ? (
+                  <><Loader2 className="h-4 w-4 animate-spin mr-2" />Consultando...</>
+                ) : savingCliente ? (
+                  <><Loader2 className="h-4 w-4 animate-spin mr-2" />Salvando...</>
+                ) : "Cadastrar cliente"}
               </Button>
             </DialogFooter>
           </form>
