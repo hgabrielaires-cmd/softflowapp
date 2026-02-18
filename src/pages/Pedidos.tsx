@@ -40,16 +40,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Pencil, XCircle, Loader2, Filter } from "lucide-react";
+import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, FileX } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-const STATUS_OPTIONS = ["Aguardando Financeiro", "Cancelado"] as const;
+const STATUS_OPTIONS = ["Aguardando Financeiro", "Aprovado Financeiro", "Reprovado Financeiro", "Cancelado"] as const;
 
 const STATUS_COLORS: Record<string, string> = {
   "Aguardando Financeiro": "bg-amber-100 text-amber-700",
-  "Cancelado": "bg-red-100 text-red-600",
+  "Aprovado Financeiro": "bg-emerald-100 text-emerald-700",
+  "Reprovado Financeiro": "bg-red-100 text-red-600",
+  "Cancelado": "bg-gray-100 text-gray-500",
+};
+
+const FIN_STATUS_COLORS: Record<string, string> = {
+  Aguardando: "bg-amber-100 text-amber-700",
+  Aprovado: "bg-emerald-100 text-emerald-700",
+  Reprovado: "bg-red-100 text-red-600",
 };
 
 interface PedidoWithJoins extends Pedido {
@@ -57,6 +65,9 @@ interface PedidoWithJoins extends Pedido {
   planos?: { nome: string } | null;
   filiais?: { nome: string } | null;
   vendedor_profile?: { full_name: string } | null;
+  financeiro_status?: string;
+  financeiro_motivo?: string | null;
+  contrato_liberado?: boolean;
 }
 
 interface FormState {
@@ -197,16 +208,24 @@ export default function Pedidos() {
       };
 
       if (editingPedido) {
-        const { error } = await supabase
-          .from("pedidos")
-          .update(payload)
-          .eq("id", editingPedido.id);
+        // Se está reeditando um pedido reprovado, reenviar para financeiro
+        const isReprovado = editingPedido.financeiro_status === "Reprovado";
+        const updatePayload: Record<string, unknown> = { ...payload };
+        if (isReprovado) {
+          updatePayload.financeiro_status = "Aguardando";
+          updatePayload.financeiro_motivo = null;
+          updatePayload.financeiro_aprovado_em = null;
+          updatePayload.financeiro_aprovado_por = null;
+          updatePayload.contrato_liberado = false;
+          updatePayload.status_pedido = "Aguardando Financeiro";
+        }
+        const { error } = await supabase.from("pedidos").update(updatePayload).eq("id", editingPedido.id);
         if (error) throw error;
-        toast.success("Pedido atualizado com sucesso!");
+        toast.success(isReprovado ? "Pedido reenviado para o financeiro!" : "Pedido atualizado com sucesso!");
       } else {
         const { error } = await supabase
           .from("pedidos")
-          .insert({ ...payload, status_pedido: "Aguardando Financeiro" });
+          .insert({ ...payload, status_pedido: "Aguardando Financeiro", financeiro_status: "Aguardando", contrato_liberado: false });
         if (error) throw error;
         toast.success("Pedido criado com sucesso!");
       }
@@ -355,6 +374,7 @@ export default function Pedidos() {
                 <TableHead className="text-right">Valor Total</TableHead>
                 <TableHead className="text-right">Comissão</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Financeiro</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -374,11 +394,15 @@ export default function Pedidos() {
                 </TableRow>
               ) : (
                 filtered.map((pedido) => {
-                  const canEdit = isAdmin || (isVendedor && pedido.vendedor_id === profile?.user_id);
+                  const finStatus = (pedido as any).financeiro_status as string || "Aguardando";
+                  const finMotivo = (pedido as any).financeiro_motivo as string | null;
+                  const contratoLiberado = (pedido as any).contrato_liberado as boolean;
+                  const isReprovado = finStatus === "Reprovado";
+                  const canEdit = (isAdmin || (isVendedor && pedido.vendedor_id === profile?.user_id && (pedido.status_pedido === "Aguardando Financeiro" || isReprovado)));
                   const vendedorNome = vendedores.find((v) => v.user_id === pedido.vendedor_id)?.full_name || "—";
                   const filialNome = (pedido as any).filiais?.nome || filiais.find(f => f.id === pedido.filial_id)?.nome || "—";
                   return (
-                    <TableRow key={pedido.id}>
+                    <TableRow key={pedido.id} className={isReprovado ? "bg-red-50/40" : undefined}>
                       <TableCell className="font-medium">
                         {(pedido as any).clientes?.nome_fantasia || "—"}
                       </TableCell>
@@ -399,16 +423,46 @@ export default function Pedidos() {
                         <span className="text-xs ml-1">({pedido.comissao_percentual}%)</span>
                       </TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[pedido.status_pedido]}`}>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[pedido.status_pedido] || "bg-muted text-muted-foreground"}`}>
                           {pedido.status_pedido}
                         </span>
+                      </TableCell>
+                      {/* Coluna Financeiro */}
+                      <TableCell>
+                        <div className="space-y-1">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${FIN_STATUS_COLORS[finStatus] || "bg-muted text-muted-foreground"}`}>
+                            {finStatus}
+                          </span>
+                          {contratoLiberado && (
+                            <div className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
+                              <CheckCircle className="h-3 w-3" /> Contrato liberado
+                            </div>
+                          )}
+                          {isReprovado && finMotivo && (
+                            <p className="text-xs text-red-600 max-w-[180px] truncate" title={finMotivo}>
+                              ⚠ {finMotivo}
+                            </p>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {format(new Date(pedido.created_at), "dd/MM/yyyy", { locale: ptBR })}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {canEdit && pedido.status_pedido !== "Cancelado" && (
+                          {/* Botão reenviar (vendedor, apenas quando reprovado) */}
+                          {isVendedor && isReprovado && pedido.vendedor_id === profile?.user_id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              onClick={() => openEdit(pedido)}
+                              title="Editar e reenviar para financeiro"
+                            >
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {canEdit && !isReprovado && pedido.status_pedido === "Aguardando Financeiro" && (
                             <Button
                               variant="ghost"
                               size="icon"

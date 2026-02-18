@@ -114,8 +114,13 @@ export type Database = {
           cliente_id: string
           comissao_percentual: number
           comissao_valor: number
+          contrato_liberado: boolean
           created_at: string
           filial_id: string
+          financeiro_aprovado_em: string | null
+          financeiro_aprovado_por: string | null
+          financeiro_motivo: string | null
+          financeiro_status: string
           id: string
           observacoes: string | null
           plano_id: string
@@ -130,8 +135,13 @@ export type Database = {
           cliente_id: string
           comissao_percentual?: number
           comissao_valor?: number
+          contrato_liberado?: boolean
           created_at?: string
           filial_id: string
+          financeiro_aprovado_em?: string | null
+          financeiro_aprovado_por?: string | null
+          financeiro_motivo?: string | null
+          financeiro_status?: string
           id?: string
           observacoes?: string | null
           plano_id: string
@@ -146,8 +156,13 @@ export type Database = {
           cliente_id?: string
           comissao_percentual?: number
           comissao_valor?: number
+          contrato_liberado?: boolean
           created_at?: string
           filial_id?: string
+          financeiro_aprovado_em?: string | null
+          financeiro_aprovado_por?: string | null
+          financeiro_motivo?: string | null
+          financeiro_status?: string
           id?: string
           observacoes?: string | null
           plano_id?: string
