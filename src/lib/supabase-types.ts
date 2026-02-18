@@ -39,3 +39,44 @@ export interface UserRole {
   user_id: string;
   role: AppRole;
 }
+
+export interface Cliente {
+  id: string;
+  nome_fantasia: string;
+  razao_social: string | null;
+  cnpj_cpf: string;
+  contato_nome: string | null;
+  telefone: string | null;
+  email: string | null;
+  cidade: string | null;
+  uf: string | null;
+  filial_id: string | null;
+  ativo: boolean;
+  created_at: string;
+}
+
+export interface Modulo {
+  id: string;
+  nome: string;
+  ativo: boolean;
+  created_at: string;
+}
+
+export interface Plano {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  ativo: boolean;
+  created_at: string;
+}
+
+export interface PlanoModulo {
+  id: string;
+  plano_id: string;
+  modulo_id: string;
+  inclui_treinamento: boolean;
+  ordem: number;
+  duracao_minutos: number | null;
+  obrigatorio: boolean;
+  modulo?: Modulo;
+}
