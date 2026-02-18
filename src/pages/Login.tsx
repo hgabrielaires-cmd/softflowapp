@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Lock, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import logoSoftflowBranca from "@/assets/logo-softflow-branca.png";
+import logoSoftflowAzul from "@/assets/logo-softflow-azul.png";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -30,16 +32,8 @@ export default function Login() {
     <div className="min-h-screen flex">
       {/* Left panel */}
       <div className="hidden lg:flex lg:w-1/2 gradient-hero flex-col justify-between p-12">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-emerald flex items-center justify-center">
-            <span className="text-white font-bold text-lg">S</span>
-          </div>
-          <div>
-            <p className="text-white font-bold text-lg leading-tight" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-              Softflow
-            </p>
-            <p className="text-blue-300 text-xs">Tecnologia</p>
-          </div>
+        <div>
+          <img src={logoSoftflowBranca} alt="Softflow" className="h-10 object-contain" />
         </div>
 
         <div>
@@ -71,15 +65,8 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
-          <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="h-10 w-10 rounded-xl bg-emerald flex items-center justify-center">
-              <span className="text-white font-bold text-lg">S</span>
-            </div>
-            <div>
-              <p className="font-bold text-lg text-foreground" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-                Softflow Tecnologia
-              </p>
-            </div>
+          <div className="mb-8 lg:hidden">
+            <img src={logoSoftflowAzul} alt="Softflow" className="h-10 object-contain" />
           </div>
 
           <div className="mb-8">
