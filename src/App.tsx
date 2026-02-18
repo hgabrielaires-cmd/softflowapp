@@ -13,6 +13,7 @@ import Filiais from "./pages/Filiais";
 import { ComingSoon } from "./components/ComingSoon";
 import Clientes from "./pages/Clientes";
 import Planos from "./pages/Planos";
+import Pedidos from "./pages/Pedidos";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,11 +56,7 @@ const App = () => (
               path="/pedidos"
               element={
                 <ProtectedRoute>
-                  <ComingSoon
-                    module="Módulo 2"
-                    title="Pedidos de Venda"
-                    description="Em desenvolvimento. Este módulo permitirá criar e acompanhar pedidos com aprovação financeira integrada."
-                  />
+                  <Pedidos />
                 </ProtectedRoute>
               }
             />
