@@ -39,9 +39,9 @@ export default function Login() {
       {/* Right panel */}
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="mb-8 lg:hidden">
-            <img src={logoSoftflowAzul} alt="Softflow" className="h-10 object-contain" />
+          {/* Logo */}
+          <div className="mb-8 flex justify-center">
+            <img src={logoSoftflowAzul} alt="Softflow" className="h-16 object-contain" />
           </div>
 
           <div className="mb-8">
