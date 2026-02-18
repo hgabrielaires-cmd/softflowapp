@@ -862,15 +862,16 @@ export default function Pedidos() {
 
       {/* ─── Create/Edit Dialog ─────────────────────────────────────────────── */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl flex flex-col h-[90vh] p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b border-border shrink-0">
             <DialogTitle className="flex items-center gap-2">
               {form.tipo_pedido === "Upgrade" && <ArrowUpCircle className="h-4 w-4 text-primary" />}
               {form.tipo_pedido === "Aditivo" && <FileText className="h-4 w-4 text-primary" />}
               {editingPedido ? "Editar Pedido" : `Novo Pedido${form.tipo_pedido !== "Novo" ? ` — ${form.tipo_pedido}` : ""}`}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSave} className="space-y-5">
+          <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
 
             {/* ── Cliente ── */}
             <div className="space-y-1.5">
@@ -1176,7 +1177,8 @@ export default function Pedidos() {
               <Textarea placeholder="Observações opcionais..." value={form.observacoes} onChange={(e) => setForm((f) => ({ ...f, observacoes: e.target.value }))} rows={3} />
             </div>
 
-            <DialogFooter>
+            </div>{/* end scrollable area */}
+            <DialogFooter className="px-6 py-4 border-t border-border shrink-0">
               <Button type="button" variant="outline" onClick={() => setOpenDialog(false)}>Cancelar</Button>
               <Button type="submit" disabled={saving || !form.cliente_id || !form.plano_id}>
                 {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
