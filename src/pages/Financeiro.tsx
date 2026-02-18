@@ -109,6 +109,7 @@ export default function Financeiro() {
     setProcessando(true);
     const { error } = await supabase.from("pedidos").update({
       financeiro_status: "Aprovado",
+      status_pedido: "Aprovado Financeiro",
       contrato_liberado: true,
       financeiro_aprovado_em: new Date().toISOString(),
       financeiro_aprovado_por: profile?.user_id,
@@ -127,6 +128,7 @@ export default function Financeiro() {
     setProcessando(true);
     const { error } = await supabase.from("pedidos").update({
       financeiro_status: "Reprovado",
+      status_pedido: "Reprovado Financeiro",
       contrato_liberado: false,
       financeiro_motivo: motivoReprova.trim(),
       financeiro_aprovado_em: null,
