@@ -105,6 +105,62 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/tickets"
+              element={
+                <ProtectedRoute>
+                  <ComingSoon module="Helpdesk" title="Tickets" description="Em desenvolvimento. Gestão de tickets de suporte." />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pedidos/novo"
+              element={
+                <ProtectedRoute>
+                  <ComingSoon module="Pedidos" title="Criar Pedido" description="Em desenvolvimento. Formulário de criação de pedido direto pelo menu." />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/contratos"
+              element={
+                <ProtectedRoute>
+                  <ComingSoon module="Financeiro" title="Contratos" description="Em desenvolvimento. Gestão e visualização de contratos." />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/receitas"
+              element={
+                <ProtectedRoute requiredRole="financeiro">
+                  <ComingSoon module="Financeiro" title="Receitas" description="Em desenvolvimento. Lançamento e controle de receitas." />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/despesas"
+              element={
+                <ProtectedRoute requiredRole="financeiro">
+                  <ComingSoon module="Financeiro" title="Despesas" description="Em desenvolvimento. Lançamento e controle de despesas." />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dre"
+              element={
+                <ProtectedRoute requiredRole="financeiro">
+                  <ComingSoon module="Financeiro" title="DRE" description="Em desenvolvimento. Demonstrativo de Resultado do Exercício." />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/integracoes"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <ComingSoon module="Parâmetros" title="Integrações" description="Em desenvolvimento. Configuração de integrações externas." />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
