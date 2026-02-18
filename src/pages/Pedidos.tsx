@@ -42,7 +42,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus, Tag, ArrowUpCircle, FileText, AlertCircle } from "lucide-react";
+import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus, Tag, ArrowUpCircle, FileText, AlertCircle, Eye } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -210,6 +210,7 @@ export default function Pedidos() {
 
   // Dialog pedido
   const [openDialog, setOpenDialog] = useState(false);
+  const [viewingPedido, setViewingPedido] = useState<PedidoWithJoins | null>(null);
   const [editingPedido, setEditingPedido] = useState<PedidoWithJoins | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [descontoAtivo, setDescontoAtivo] = useState(false);
@@ -744,7 +745,6 @@ export default function Pedidos() {
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Plano</TableHead>
                   {canSeeAllBranches && <TableHead>Filial</TableHead>}
                   {canSeeAllBranches && <TableHead>Vendedor</TableHead>}
                   <TableHead className="text-right">Implantação</TableHead>
@@ -759,28 +759,39 @@ export default function Pedidos() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-12">
+                    <TableCell colSpan={11} className="text-center py-12">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-12 text-muted-foreground">Nenhum pedido encontrado</TableCell>
+                    <TableCell colSpan={11} className="text-center py-12 text-muted-foreground">Nenhum pedido encontrado</TableCell>
                   </TableRow>
                 ) : filtered.map((pedido) => {
                   const finStatus = pedido.financeiro_status as string || "Aguardando";
                   const finMotivo = pedido.financeiro_motivo as string | null;
                   const contratoLiberado = pedido.contrato_liberado as boolean;
                   const isReprovado = finStatus === "Reprovado";
-                  const canEdit = isAdmin || (isVendedor && pedido.vendedor_id === profile?.user_id && (pedido.status_pedido === "Aguardando Financeiro" || isReprovado));
+                  const isAprovado = finStatus === "Aprovado";
+                  const temContratoVigente = contratoLiberado && isAprovado;
+
+                  // Vendedor só edita se: reprovado OU aguardando financeiro E sem contrato vigente
+                  const canEditVendedor = isVendedor && pedido.vendedor_id === profile?.user_id
+                    && !temContratoVigente
+                    && (isReprovado || pedido.status_pedido === "Aguardando Financeiro");
+                  const canEditAdmin = isAdmin && !temContratoVigente;
+                  const canEdit = canEditAdmin || (canEditVendedor && !isReprovado);
+
+                  // Cancelar: apenas admin (sem contrato vigente); vendedor nunca exclui
+                  const canCancel = isAdmin && pedido.status_pedido !== "Cancelado" && !temContratoVigente;
+
                   const vendedorNome = vendedores.find((v) => v.user_id === pedido.vendedor_id)?.full_name || "—";
                   const filialNome = (pedido as any).filiais?.nome || filiais.find(f => f.id === pedido.filial_id)?.nome || "—";
                   const impFinal = pedido.valor_implantacao_final ?? pedido.valor_implantacao;
                   const mensFinal = pedido.valor_mensalidade_final ?? pedido.valor_mensalidade;
                   return (
-                    <TableRow key={pedido.id} className={isReprovado ? "bg-red-50/40" : undefined}>
+                    <TableRow key={pedido.id} className={isReprovado ? "bg-destructive/5" : undefined}>
                       <TableCell className="font-medium">{(pedido as any).clientes?.nome_fantasia || "—"}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{(pedido as any).planos?.nome || "—"}</TableCell>
                       {canSeeAllBranches && <TableCell className="text-sm text-muted-foreground">{filialNome}</TableCell>}
                       {canSeeAllBranches && <TableCell className="text-sm text-muted-foreground">{vendedorNome}</TableCell>}
                       <TableCell className="text-right font-mono text-sm">{fmtBRL(impFinal)}</TableCell>
@@ -811,17 +822,24 @@ export default function Pedidos() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {isVendedor && isReprovado && pedido.vendedor_id === profile?.user_id && (
+                          {/* Visualizar — sempre disponível */}
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setViewingPedido(pedido)} title="Visualizar pedido">
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                          {/* Reenviar após reprovação (vendedor do pedido) */}
+                          {isVendedor && isReprovado && pedido.vendedor_id === profile?.user_id && !temContratoVigente && (
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-warning hover:text-warning" onClick={() => openEdit(pedido)} title="Editar e reenviar">
                               <RefreshCw className="h-3.5 w-3.5" />
                             </Button>
                           )}
-                          {canEdit && !isReprovado && pedido.status_pedido === "Aguardando Financeiro" && (
+                          {/* Editar (aguardando, sem contrato vigente) */}
+                          {canEdit && (
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(pedido)} title="Editar pedido">
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
                           )}
-                          {isAdmin && pedido.status_pedido !== "Cancelado" && (
+                          {/* Cancelar — somente admin e sem contrato vigente */}
+                          {canCancel && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" title="Cancelar pedido">
@@ -1337,6 +1355,132 @@ export default function Pedidos() {
             <Button onClick={handleConfirmarUpgrade} disabled={!upgradePlanoId}>
               <ArrowUpCircle className="h-4 w-4 mr-1.5" /> Confirmar Upgrade
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Dialog Visualizar Pedido ─────────────────────────────────────────── */}
+      <Dialog open={!!viewingPedido} onOpenChange={(open) => { if (!open) setViewingPedido(null); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-4 w-4" /> Visualizar Pedido
+            </DialogTitle>
+          </DialogHeader>
+          {viewingPedido && (() => {
+            const vp = viewingPedido;
+            const finStatus = vp.financeiro_status || "Aguardando";
+            const impFinal = vp.valor_implantacao_final ?? vp.valor_implantacao;
+            const mensFinal = vp.valor_mensalidade_final ?? vp.valor_mensalidade;
+            const vendedorNome = vendedores.find((v) => v.user_id === vp.vendedor_id)?.full_name || "—";
+            const filialNome = (vp as any).filiais?.nome || filiais.find(f => f.id === vp.filial_id)?.nome || "—";
+            const adicionais = (vp.modulos_adicionais || []) as ModuloAdicionadoItem[];
+            return (
+              <div className="space-y-4 text-sm">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-muted-foreground">Cliente</p>
+                    <p className="font-medium">{(vp as any).clientes?.nome_fantasia || "—"}</p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-muted-foreground">Plano</p>
+                    <p className="font-medium">{(vp as any).planos?.nome || "—"}</p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-muted-foreground">Filial</p>
+                    <p>{filialNome}</p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-muted-foreground">Vendedor</p>
+                    <p>{vendedorNome}</p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-muted-foreground">Tipo</p>
+                    <p>{vp.tipo_pedido || "Novo"}</p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-muted-foreground">Data</p>
+                    <p>{format(new Date(vp.created_at), "dd/MM/yyyy", { locale: ptBR })}</p>
+                  </div>
+                </div>
+
+                <div className="border-t border-border pt-3 grid grid-cols-3 gap-3">
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-muted-foreground">Implantação</p>
+                    <p className="font-mono font-semibold">{fmtBRL(impFinal)}</p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-muted-foreground">Mensalidade</p>
+                    <p className="font-mono font-semibold">{fmtBRL(mensFinal)}</p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-muted-foreground">Total</p>
+                    <p className="font-mono font-bold text-primary">{fmtBRL(vp.valor_total)}</p>
+                  </div>
+                </div>
+
+                {(isAdmin || isFinanceiro) && (
+                  <div className="border-t border-border pt-3 grid grid-cols-2 gap-3">
+                    <div className="space-y-0.5">
+                      <p className="text-xs text-muted-foreground">Comissão %</p>
+                      <p>{vp.comissao_percentual}%</p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-xs text-muted-foreground">Valor comissão</p>
+                      <p className="font-mono">{fmtBRL(vp.comissao_valor)}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="border-t border-border pt-3 grid grid-cols-2 gap-3">
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-muted-foreground">Status pedido</p>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[vp.status_pedido] || "bg-muted text-muted-foreground"}`}>
+                      {vp.status_pedido}
+                    </span>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-muted-foreground">Status financeiro</p>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${FIN_STATUS_COLORS[finStatus] || "bg-muted text-muted-foreground"}`}>
+                      {finStatus}
+                    </span>
+                  </div>
+                  {vp.contrato_liberado && (
+                    <div className="col-span-2 flex items-center gap-1 text-xs text-success font-medium">
+                      <CheckCircle className="h-3 w-3" /> Contrato liberado
+                    </div>
+                  )}
+                  {vp.financeiro_motivo && (
+                    <div className="col-span-2 space-y-0.5">
+                      <p className="text-xs text-muted-foreground">Motivo reprovação</p>
+                      <p className="text-destructive text-xs">{vp.financeiro_motivo}</p>
+                    </div>
+                  )}
+                </div>
+
+                {adicionais.length > 0 && (
+                  <div className="border-t border-border pt-3 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Módulos adicionais</p>
+                    {adicionais.map((m) => (
+                      <div key={m.modulo_id} className="flex justify-between text-xs">
+                        <span>{m.nome} {m.quantidade > 1 ? `(x${m.quantidade})` : ""}</span>
+                        <span className="font-mono text-muted-foreground">{fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}/mês</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {vp.observacoes && (
+                  <div className="border-t border-border pt-3 space-y-0.5">
+                    <p className="text-xs text-muted-foreground">Observações</p>
+                    <p className="text-xs">{vp.observacoes}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewingPedido(null)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
