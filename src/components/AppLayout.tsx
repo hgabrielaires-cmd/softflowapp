@@ -67,9 +67,12 @@ export function AppLayout({ children }: AppLayoutProps) {
     : "??";
 
   async function handleSignOut() {
-    await signOut();
-    toast.success("Sessão encerrada com sucesso");
-    navigate("/login");
+    try {
+      await signOut();
+      toast.success("Sessão encerrada com sucesso");
+    } finally {
+      navigate("/login");
+    }
   }
 
   const SidebarContent = () => (

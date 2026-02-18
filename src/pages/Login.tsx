@@ -8,6 +8,7 @@ import { Eye, EyeOff, Lock, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import logoSoftflowBranca from "@/assets/logo-softflow-branca.png";
 import logoSoftflowAzul from "@/assets/logo-softflow-azul.png";
+import logoSoftplusAzul from "@/assets/logo-softplus-azul.png";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ export default function Login() {
       {/* Left panel */}
       <div className="hidden lg:flex lg:w-1/2 gradient-hero flex-col justify-between p-12">
         <div>
-          <img src={logoSoftflowBranca} alt="Softflow" className="h-10 object-contain" />
+          <img src={logoSoftflowBranca} alt="Softflow" className="h-14 object-contain" />
         </div>
 
         <div>
@@ -143,6 +144,11 @@ export default function Login() {
             Acesso restrito a colaboradores da Softflow Tecnologia.<br />
             Entre em contato com o administrador para obter acesso.
           </p>
+
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <span className="text-xs text-muted-foreground">Feito por</span>
+            <img src={logoSoftplusAzul} alt="Softplus" className="h-5 object-contain opacity-70" />
+          </div>
         </div>
       </div>
     </div>
