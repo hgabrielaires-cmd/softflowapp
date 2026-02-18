@@ -89,12 +89,11 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    groupLabel: "Pedidos",
+    groupLabel: "Vendas",
     groupIcon: <ShoppingCart className="h-4 w-4" />,
     roles: ["admin", "financeiro", "vendedor"],
     items: [
-      { icon: <ListOrdered className="h-4 w-4" />, label: "Lista de Pedidos", to: "/pedidos" },
-      { icon: <PlusCircle className="h-4 w-4" />, label: "Criar Pedido", to: "/pedidos/novo" },
+      { icon: <ListOrdered className="h-4 w-4" />, label: "Pedidos", to: "/pedidos" },
     ],
   },
   {
