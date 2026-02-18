@@ -1,4 +1,6 @@
 import { ReactNode, useState } from "react";
+import iconSoftflow from "@/assets/icon-softflow.png";
+import logoSoftflowBranca from "@/assets/logo-softflow-branca.png";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -77,16 +79,10 @@ export function AppLayout({ children }: AppLayoutProps) {
         "flex items-center gap-3 px-4 py-5 border-b border-sidebar-border",
         collapsed && "justify-center px-2"
       )}>
-        <div className="h-8 w-8 rounded-lg bg-emerald flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-bold text-sm">S</span>
-        </div>
-        {!collapsed && (
-          <div className="overflow-hidden">
-            <p className="text-sidebar-foreground font-bold text-sm leading-tight" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-              Softflow
-            </p>
-            <p className="text-sidebar-foreground/50 text-xs">Tecnologia</p>
-          </div>
+        {collapsed ? (
+          <img src={iconSoftflow} alt="Softflow" className="h-8 w-8 object-contain" style={{ filter: 'brightness(0) invert(1)' }} />
+        ) : (
+          <img src={logoSoftflowBranca} alt="Softflow" className="h-8 object-contain" />
         )}
       </div>
 
