@@ -24,8 +24,9 @@ export default function Login() {
     if (error) {
       toast.error("Credenciais inválidas. Verifique seu e-mail e senha.");
       setLoading(false);
+    } else {
+      navigate("/dashboard");
     }
-    // Redirect é feito automaticamente pelo onAuthStateChange (SIGNED_IN)
   }
 
   return (

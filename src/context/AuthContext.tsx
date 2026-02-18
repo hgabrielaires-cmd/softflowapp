@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { AppRole, Profile } from "@/lib/supabase-types";
-import { useNavigate } from "react-router-dom";
 
 interface AuthContextType {
   user: User | null;
@@ -30,7 +29,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   async function fetchProfile(userId: string) {
     const { data } = await supabase
@@ -50,42 +48,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-          await fetchRoles(session.user.id);
-          if (event === "SIGNED_IN") {
-            navigate("/dashboard");
-          }
-        } else {
-          setProfile(null);
-          setRoles([]);
-          if (event === "SIGNED_OUT") {
-            navigate("/login");
-          }
-        }
-        setLoading(false);
-      }
-    );
-
+    // Primeiro obtém a sessão atual
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
-        fetchRoles(session.user.id);
+        Promise.all([
+          fetchProfile(session.user.id),
+          fetchRoles(session.user.id),
+        ]).finally(() => setLoading(false));
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     });
+
+    // Escuta mudanças futuras
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          // Usa setTimeout para evitar deadlock com Supabase
+          setTimeout(() => {
+            fetchProfile(session.user.id);
+            fetchRoles(session.user.id);
+          }, 0);
+        } else {
+          setProfile(null);
+          setRoles([]);
+        }
+      }
+    );
 
     return () => subscription.unsubscribe();
   }, []);
 
   async function signOut() {
     await supabase.auth.signOut();
+    setProfile(null);
+    setRoles([]);
   }
 
   const isAdmin = roles.includes("admin");
