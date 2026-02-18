@@ -32,34 +32,8 @@ export default function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Left panel */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-hero flex-col justify-between p-12">
-        <div>
-          <img src={logoSoftflowBranca} alt="Softflow" className="h-14 object-contain" />
-        </div>
-
-        <div>
-          <h1 className="text-white text-4xl font-bold leading-tight mb-4" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-            Portal Interno<br />
-            <span style={{ color: 'hsl(var(--sidebar-ring))' }}>Softflow</span>
-          </h1>
-          <p className="text-white/60 text-base leading-relaxed max-w-sm">
-            Gestão integrada de vendas, contratos, comissões e agenda operacional para bares e restaurantes.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            { label: "Pedidos", desc: "Controle completo" },
-            { label: "Comissões", desc: "Automáticas" },
-            { label: "Agenda", desc: "Instalações" },
-            { label: "Filiais", desc: "Multi-unidade" },
-          ].map((item) => (
-            <div key={item.label} className="rounded-xl p-4" style={{ background: 'hsl(222 60% 22%)' }}>
-              <p style={{ color: 'hsl(var(--sidebar-ring))' }} className="font-semibold text-sm">{item.label}</p>
-              <p className="text-white/50 text-xs mt-0.5">{item.desc}</p>
-            </div>
-          ))}
-        </div>
+      <div className="hidden lg:flex lg:w-1/2 gradient-hero flex-col items-center justify-center p-12">
+        <img src={logoSoftflowBranca} alt="Softflow" className="w-64 object-contain" />
       </div>
 
       {/* Right panel */}
