@@ -573,7 +573,7 @@ export default function Pedidos() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingPedido ? "Editar Pedido" : "Novo Pedido"}</DialogTitle>
           </DialogHeader>
@@ -742,7 +742,7 @@ export default function Pedidos() {
 
       {/* Dialog rápido de novo cliente */}
       <Dialog open={openClienteDialog} onOpenChange={setOpenClienteDialog}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-4 w-4" /> Cadastrar Novo Cliente
