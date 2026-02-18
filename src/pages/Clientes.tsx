@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Building2, Phone, Mail, FileText, ArrowUpCircle, Package, Loader2 } from "lucide-react";
+import { Plus, Search, Pencil, Building2, Phone, Mail, FileText, ArrowUpCircle, Package, Loader2, MapPin, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -50,6 +50,9 @@ const emptyForm = {
   email: "",
   cidade: "",
   uf: "",
+  cep: "",
+  logradouro: "",
+  bairro: "",
   filial_id: "",
   ativo: true,
 };
@@ -81,6 +84,75 @@ export default function Clientes() {
   const [editing, setEditing] = useState<Cliente | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [loadingCep, setLoadingCep] = useState(false);
+  const [loadingCnpj, setLoadingCnpj] = useState(false);
+  const [cepError, setCepError] = useState("");
+  const [cnpjError, setCnpjError] = useState("");
+  const isQuerying = loadingCep || loadingCnpj;
+
+  async function handleCepBlur() {
+    const cep = form.cep.replace(/\D/g, "");
+    if (cep.length !== 8) return;
+    setCepError("");
+    setLoadingCep(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await res.json();
+      if (data.erro) {
+        setCepError("CEP não encontrado");
+      } else {
+        setForm((f) => ({
+          ...f,
+          logradouro: f.logradouro || data.logradouro || "",
+          bairro: f.bairro || data.bairro || "",
+          cidade: f.cidade || data.localidade || "",
+          uf: f.uf || data.uf || "",
+        }));
+      }
+    } catch {
+      setCepError("Erro ao consultar CEP");
+    } finally {
+      setLoadingCep(false);
+    }
+  }
+
+  async function handleCnpjBlur() {
+    const cnpj = form.cnpj_cpf.replace(/\D/g, "");
+    if (cnpj.length !== 14) return;
+    setCnpjError("");
+    setLoadingCnpj(true);
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+      if (!res.ok) {
+        setCnpjError("CNPJ não encontrado");
+      } else {
+        const data = await res.json();
+        const telefoneApi = data.ddd_telefone_1
+          ? `(${data.ddd_telefone_1}) ${data.telefone_1 || ""}`.trim()
+          : "";
+        const logradouroApi = data.logradouro
+          ? `${data.tipo_logradouro || ""} ${data.logradouro}`.trim()
+          : "";
+        setForm((f) => ({
+          ...f,
+          razao_social: f.razao_social || data.razao_social || "",
+          nome_fantasia: f.nome_fantasia || data.nome_fantasia || "",
+          email: f.email || data.email || "",
+          telefone: f.telefone || telefoneApi,
+          cidade: f.cidade || data.municipio || "",
+          uf: f.uf || data.uf || "",
+          logradouro: f.logradouro || logradouroApi,
+          bairro: f.bairro || data.bairro || "",
+          cep: f.cep || (data.cep ? data.cep.replace(/\D/g, "") : ""),
+        }));
+      }
+    } catch {
+      setCnpjError("CNPJ não encontrado");
+    } finally {
+      setLoadingCnpj(false);
+    }
+  }
+
 
   // Histórico contratual
   const [historicoOpen, setHistoricoOpen] = useState(false);
@@ -113,6 +185,8 @@ export default function Clientes() {
 
   function openCreate() {
     setEditing(null);
+    setCepError("");
+    setCnpjError("");
     const defaultFilial = isVendedor && profile?.filial_id ? profile.filial_id : "";
     setForm({ ...emptyForm, filial_id: defaultFilial });
     setDialogOpen(true);
@@ -129,6 +203,9 @@ export default function Clientes() {
       email: c.email || "",
       cidade: c.cidade || "",
       uf: c.uf || "",
+      cep: "",
+      logradouro: "",
+      bairro: "",
       filial_id: c.filial_id || "",
       ativo: c.ativo,
     });
@@ -152,6 +229,7 @@ export default function Clientes() {
   }
 
   async function handleSave() {
+    if (isQuerying) return;
     if (!form.nome_fantasia.trim() || !form.cnpj_cpf.trim()) {
       toast.error("Nome fantasia e CNPJ/CPF são obrigatórios");
       return;
@@ -337,18 +415,30 @@ export default function Clientes() {
             <DialogTitle>{editing ? "Editar cliente" : "Novo cliente"}</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-2">
-            <div className="col-span-2 space-y-1.5">
-              <Label>Nome fantasia *</Label>
-              <Input value={form.nome_fantasia} onChange={(e) => setForm((f) => ({ ...f, nome_fantasia: e.target.value }))} placeholder="Ex: Restaurante do João" />
-            </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label>Razão social</Label>
-              <Input value={form.razao_social} onChange={(e) => setForm((f) => ({ ...f, razao_social: e.target.value }))} placeholder="Razão social (opcional)" />
-            </div>
+
+            {/* CNPJ/CPF com busca automática */}
             <div className="space-y-1.5">
               <Label>CNPJ / CPF *</Label>
-              <Input value={form.cnpj_cpf} onChange={(e) => setForm((f) => ({ ...f, cnpj_cpf: e.target.value }))} placeholder="00.000.000/0001-00" />
+              <div className="relative">
+                <Input
+                  value={form.cnpj_cpf}
+                  onChange={(e) => { setCnpjError(""); setForm((f) => ({ ...f, cnpj_cpf: e.target.value })); }}
+                  onBlur={handleCnpjBlur}
+                  placeholder="00.000.000/0001-00"
+                  className={cnpjError ? "border-destructive pr-9" : "pr-9"}
+                />
+                {loadingCnpj && (
+                  <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+              </div>
+              {cnpjError && (
+                <p className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3" />{cnpjError}
+                </p>
+              )}
             </div>
+
+            {/* Filial */}
             <div className="space-y-1.5">
               <Label>Filial responsável</Label>
               <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))} disabled={isVendedor && !isAdmin && !isFinanceiro}>
@@ -362,6 +452,20 @@ export default function Clientes() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Nome fantasia */}
+            <div className="col-span-2 space-y-1.5">
+              <Label>Nome fantasia *</Label>
+              <Input value={form.nome_fantasia} onChange={(e) => setForm((f) => ({ ...f, nome_fantasia: e.target.value }))} placeholder="Ex: Restaurante do João" />
+            </div>
+
+            {/* Razão social */}
+            <div className="col-span-2 space-y-1.5">
+              <Label>Razão social</Label>
+              <Input value={form.razao_social} onChange={(e) => setForm((f) => ({ ...f, razao_social: e.target.value }))} placeholder="Razão social (opcional)" />
+            </div>
+
+            {/* Contato e Telefone */}
             <div className="space-y-1.5">
               <Label>Nome do contato</Label>
               <Input value={form.contato_nome} onChange={(e) => setForm((f) => ({ ...f, contato_nome: e.target.value }))} placeholder="Nome da pessoa de contato" />
@@ -370,10 +474,57 @@ export default function Clientes() {
               <Label>Telefone</Label>
               <Input value={form.telefone} onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
             </div>
+
+            {/* E-mail */}
             <div className="col-span-2 space-y-1.5">
               <Label>E-mail</Label>
               <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@empresa.com" />
             </div>
+
+            {/* Separador endereço */}
+            <div className="col-span-2 pt-1">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                <MapPin className="h-3.5 w-3.5" />
+                Endereço
+              </div>
+            </div>
+
+            {/* CEP com busca automática */}
+            <div className="space-y-1.5">
+              <Label>CEP</Label>
+              <div className="relative">
+                <Input
+                  value={form.cep}
+                  onChange={(e) => { setCepError(""); setForm((f) => ({ ...f, cep: e.target.value })); }}
+                  onBlur={handleCepBlur}
+                  placeholder="00000-000"
+                  maxLength={9}
+                  className={cepError ? "border-destructive pr-9" : "pr-9"}
+                />
+                {loadingCep && (
+                  <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+              </div>
+              {cepError && (
+                <p className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3" />{cepError}
+                </p>
+              )}
+            </div>
+
+            {/* Logradouro */}
+            <div className="space-y-1.5">
+              <Label>Logradouro</Label>
+              <Input value={form.logradouro} onChange={(e) => setForm((f) => ({ ...f, logradouro: e.target.value }))} placeholder="Rua / Avenida..." />
+            </div>
+
+            {/* Bairro */}
+            <div className="space-y-1.5">
+              <Label>Bairro</Label>
+              <Input value={form.bairro} onChange={(e) => setForm((f) => ({ ...f, bairro: e.target.value }))} placeholder="Bairro" />
+            </div>
+
+            {/* Cidade e UF */}
             <div className="space-y-1.5">
               <Label>Cidade</Label>
               <Input value={form.cidade} onChange={(e) => setForm((f) => ({ ...f, cidade: e.target.value }))} placeholder="Ex: São Paulo" />
@@ -391,6 +542,7 @@ export default function Clientes() {
                 </SelectContent>
               </Select>
             </div>
+
             {(isAdmin || isFinanceiro) && (
               <div className="col-span-2 flex items-center gap-3">
                 <Switch checked={form.ativo} onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))} />
@@ -400,8 +552,10 @@ export default function Clientes() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Salvando..." : editing ? "Salvar alterações" : "Cadastrar cliente"}
+            <Button onClick={handleSave} disabled={saving || isQuerying}>
+              {isQuerying ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Consultando...</>
+              ) : saving ? "Salvando..." : editing ? "Salvar alterações" : "Cadastrar cliente"}
             </Button>
           </DialogFooter>
         </DialogContent>
