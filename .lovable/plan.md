@@ -1,117 +1,144 @@
 
-# Passo 2 de 10 — Cadastro de Clientes, Planos e Módulos
+# Passo 3 de 10 — Módulo de Pedidos de Venda
 
 ## Visão Geral
 
-Este passo cria toda a base de cadastros que sustentará os próximos módulos (Pedidos e Agenda). Nenhum pedido ou agenda será construído agora — apenas o cadastro.
+Cria o módulo completo de registro de pedidos com cálculo automático de comissão. Nenhuma aprovação financeira, geração de contrato, agenda ou comissão paga será construída nesta etapa.
 
 ---
 
 ## 1. Banco de Dados (Migração SQL)
 
-Serão criadas 4 novas tabelas:
+### Nova tabela: `pedidos`
 
-**`clientes`**
-- `id` (uuid, PK)
-- `nome_fantasia` (text, obrigatório)
-- `razao_social` (text, opcional)
-- `cnpj_cpf` (text, obrigatório)
-- `contato_nome` (text)
-- `telefone` (text)
-- `email` (text)
-- `cidade` (text)
-- `uf` (text, 2 chars)
-- `filial_id` (uuid, FK → filiais)
-- `ativo` (boolean, default true)
-- `created_at` (timestamptz, default now())
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `id` | uuid PK | gen_random_uuid() |
+| `cliente_id` | uuid FK → clientes | obrigatório |
+| `vendedor_id` | uuid FK → auth.users (via profiles.user_id) | obrigatório |
+| `filial_id` | uuid FK → filiais | obrigatório |
+| `plano_id` | uuid FK → planos | obrigatório |
+| `valor_implantacao` | numeric(10,2) | default 0 |
+| `valor_mensalidade` | numeric(10,2) | default 0 |
+| `valor_total` | numeric(10,2) | calculado: implantação + mensalidade |
+| `comissao_percentual` | numeric(5,2) | preenchido com padrão do vendedor, editável |
+| `comissao_valor` | numeric(10,2) | calculado: valor_total × comissao_percentual / 100; 0 se cancelado |
+| `status_pedido` | text | 'Aguardando Financeiro', 'Cancelado' |
+| `observacoes` | text | opcional |
+| `created_at` | timestamptz | now() |
+| `updated_at` | timestamptz | now(), atualizado via trigger |
 
-**`modulos`**
-- `id` (uuid, PK)
-- `nome` (text, obrigatório)
-- `ativo` (boolean, default true)
-- `created_at` (timestamptz)
+### Nova coluna na tabela `profiles`
 
-**`planos`**
-- `id` (uuid, PK)
-- `nome` (text, obrigatório)
-- `descricao` (text, opcional)
-- `ativo` (boolean, default true)
-- `created_at` (timestamptz)
+Adicionar `comissao_percentual numeric(5,2) default 5` — percentual padrão do vendedor, configurável pelo admin na tela de Usuários.
 
-**`plano_modulos`** (tabela de vínculo)
-- `id` (uuid, PK)
-- `plano_id` (uuid, FK → planos)
-- `modulo_id` (uuid, FK → modulos)
-- `inclui_treinamento` (boolean, default false)
-- `ordem` (int, default 0)
-- `duracao_minutos` (int, opcional)
-- `obrigatorio` (boolean, default false)
+### RLS Policies para `pedidos`
 
-### Políticas de Segurança (RLS)
+| Role | Permissão |
+|---|---|
+| `admin` | SELECT, INSERT, UPDATE, DELETE em todos |
+| `financeiro` | SELECT em todos |
+| `vendedor` | SELECT e INSERT apenas na sua filial (`filial_id = profile.filial_id`) |
+| `tecnico` | Sem acesso |
 
-| Tabela | Admin | Financeiro | Vendedor | Técnico |
-|---|---|---|---|---|
-| clientes | CRUD total | CRUD total | INSERT + SELECT (somente sua filial) | SELECT (somente leitura) |
-| planos | CRUD total | SELECT | SELECT | SELECT |
-| modulos | CRUD total | SELECT | SELECT | SELECT |
-| plano_modulos | CRUD total | SELECT | SELECT | SELECT |
+### Trigger `updated_at`
+
+Reutilizar a função `update_updated_at_column()` já existente no banco.
 
 ---
 
 ## 2. Tipos TypeScript
 
 Adicionar ao `src/lib/supabase-types.ts`:
-- Interface `Cliente`
-- Interface `Modulo`
-- Interface `Plano`
-- Interface `PlanoModulo`
+
+```typescript
+export interface Pedido {
+  id: string;
+  cliente_id: string;
+  vendedor_id: string;
+  filial_id: string;
+  plano_id: string;
+  valor_implantacao: number;
+  valor_mensalidade: number;
+  valor_total: number;
+  comissao_percentual: number;
+  comissao_valor: number;
+  status_pedido: 'Aguardando Financeiro' | 'Cancelado';
+  observacoes: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joins
+  cliente?: Cliente;
+  plano?: Plano;
+  vendedor?: Profile;
+  filial?: Filial;
+}
+```
+
+Também atualizar `Profile` para incluir `comissao_percentual: number | null`.
 
 ---
 
-## 3. Novas Telas
+## 3. Tela de Pedidos — `src/pages/Pedidos.tsx`
 
-### `/clientes` — Gestão de Clientes
-- Lista com busca por nome, telefone e CNPJ/CPF
-- Botão "Novo cliente" (admin, financeiro e vendedor da própria filial)
-- Dialog de criação/edição com todos os campos
-- Toggle ativo/inativo inline na tabela
-- Vendedor vê apenas clientes da sua filial; admin e financeiro veem todos
+### Listagem (página principal)
 
-### `/planos` — Gestão de Planos e Módulos (somente admin)
-Página com 3 abas:
+- Tabela com colunas: Cliente, Plano, Filial, Vendedor, Valor Total, Comissão, Status, Data, Ações
+- Barra de filtros:
+  - Busca por nome do cliente
+  - Filtro por filial (admin/financeiro)
+  - Filtro por status (Aguardando Financeiro / Cancelado)
+  - Filtro por período (data inicial e final)
+- Botão **"Novo Pedido"** — visível somente para `vendedor` e `admin`
+- Botão **Editar** em cada linha (lápis) — visível para `admin` e para o `vendedor` dono do pedido
+- Botão **Cancelar pedido** — somente admin
 
-**Aba "Planos"**
-- Lista de planos com CRUD
-- Dialog para criar/editar plano (nome, descrição, ativo)
+### Comportamento por Role
 
-**Aba "Módulos"**
-- Lista de módulos com CRUD
-- Dialog para criar/editar módulo (nome, ativo)
+| Role | Ver | Criar | Editar | Cancelar |
+|---|---|---|---|---|
+| admin | Todos | Sim | Sim | Sim |
+| financeiro | Todos | Não | Não | Não |
+| vendedor | Só da sua filial | Sim | Só os seus | Não |
+| tecnico | Nenhum | Não | Não | Não |
 
-**Aba "Vínculos"**
-- Selecionar um plano → ver/editar os módulos vinculados a ele
-- Adicionar módulo ao plano com campos: inclui_treinamento, ordem, duração em minutos, obrigatório
-- Remover módulo do plano
+### Dialog — Criar/Editar Pedido
+
+Campos do formulário:
+1. **Cliente** — Select buscando clientes da filial (para vendedor) ou todos (admin)
+2. **Plano** — Select com planos ativos
+3. **Valor de Implantação** — Input numérico (R$)
+4. **Valor de Mensalidade** — Input numérico (R$)
+5. **Valor Total** — Calculado automaticamente (implantação + mensalidade), exibido como somente leitura
+6. **Comissão (%)** — Pré-preenchido com `comissao_percentual` do vendedor logado, editável manualmente
+7. **Comissão (R$)** — Calculado automaticamente (valor_total × percentual / 100), somente leitura
+8. **Observações** — Textarea opcional
+
+Ao criar:
+- `status_pedido` é sempre definido como `'Aguardando Financeiro'` (sem campo visível para o usuário)
+- `vendedor_id` = usuário logado (se vendedor) ou selecionável pelo admin
+- `filial_id` = filial do vendedor logado (se vendedor) ou selecionável pelo admin
 
 ---
 
-## 4. Navegação
+## 4. Atualização da Tela de Usuários — `src/pages/Usuarios.tsx`
 
-Adicionar ao menu lateral (`AppLayout.tsx`) dois novos itens:
-- **Clientes** — visível para todos os papéis (admin, financeiro, vendedor, técnico)
-- **Planos** — visível apenas para admin
-
-Rotas a registrar em `App.tsx`:
-- `/clientes` → `<Clientes />`
-- `/planos` → `<Planos />` (protegido para admin)
+Adicionar campo **"Comissão padrão (%)"** no formulário de convite/edição do usuário. Este valor é salvo em `profiles.comissao_percentual` e pré-preenchido automaticamente ao criar um pedido.
 
 ---
 
-## 5. Sequência de Implementação
+## 5. Atualização da Navegação
 
-1. Executar migração SQL (criar tabelas + RLS)
-2. Atualizar `src/lib/supabase-types.ts` com os novos tipos
-3. Criar `src/pages/Clientes.tsx`
-4. Criar `src/pages/Planos.tsx` (com abas: Planos / Módulos / Vínculos)
-5. Atualizar `src/components/AppLayout.tsx` com os novos itens de menu
-6. Atualizar `src/App.tsx` com as novas rotas
+- `src/components/AppLayout.tsx`: O item "Pedidos" já está no menu. Ajustar a restrição de roles para excluir `tecnico` (apenas `admin`, `financeiro` e `vendedor` enxergam o menu)
+- `src/App.tsx`: Substituir o `<ComingSoon>` da rota `/pedidos` pelo componente `<Pedidos />`
+
+---
+
+## 6. Sequência de Implementação
+
+1. Executar migração SQL (tabela `pedidos` + coluna `comissao_percentual` em `profiles` + trigger `updated_at` + RLS)
+2. Atualizar `src/lib/supabase-types.ts` com interface `Pedido` e campo em `Profile`
+3. Criar `src/pages/Pedidos.tsx` com lista + filtros + dialog criar/editar
+4. Atualizar `src/pages/Usuarios.tsx` com o campo de comissão padrão
+5. Atualizar `src/components/AppLayout.tsx` para restringir "Pedidos" ao técnico
+6. Atualizar `src/App.tsx` para registrar a rota real de Pedidos
