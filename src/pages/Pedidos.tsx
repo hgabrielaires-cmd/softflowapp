@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
-import { Cliente, Filial, Profile } from "@/lib/supabase-types";
+import { Cliente, Filial, Profile, Contrato } from "@/lib/supabase-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,7 +42,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus, Tag } from "lucide-react";
+import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus, Tag, ArrowUpCircle, FileText, AlertCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -117,6 +117,8 @@ interface PedidoWithJoins {
   desconto_mensalidade_valor?: number;
   valor_mensalidade_final?: number;
   modulos_adicionais?: ModuloAdicionadoItem[];
+  tipo_pedido?: string;
+  contrato_id?: string | null;
   clientes?: { nome_fantasia: string } | null;
   planos?: { nome: string } | null;
   filiais?: { nome: string } | null;
@@ -139,6 +141,9 @@ interface FormState {
   desconto_mensalidade_valor: string;
   // Módulos adicionais (lista de itens com quantidade)
   modulos_adicionais: ModuloAdicionadoItem[];
+  // Tipo do pedido
+  tipo_pedido: "Novo" | "Upgrade" | "Aditivo";
+  contrato_id: string | null;
 }
 
 const emptyForm: FormState = {
@@ -151,6 +156,8 @@ const emptyForm: FormState = {
   desconto_mensalidade_tipo: "R$",
   desconto_mensalidade_valor: "0",
   modulos_adicionais: [],
+  tipo_pedido: "Novo",
+  contrato_id: null,
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -206,6 +213,13 @@ export default function Pedidos() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [descontoAtivo, setDescontoAtivo] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Contrato ativo do cliente selecionado
+  const [contratoAtivo, setContratoAtivo] = useState<Contrato | null>(null);
+  const [loadingContrato, setLoadingContrato] = useState(false);
+  // Modal de upgrade
+  const [openUpgradeDialog, setOpenUpgradeDialog] = useState(false);
+  const [upgradePlanoId, setUpgradePlanoId] = useState("");
 
   // Dialog novo cliente rápido
   const [openClienteDialog, setOpenClienteDialog] = useState(false);
@@ -374,6 +388,59 @@ export default function Pedidos() {
 
   useEffect(() => { loadData(); }, []);
 
+  // ─── Buscar contrato ativo do cliente ─────────────────────────────────────
+
+  async function buscarContratoAtivo(clienteId: string) {
+    if (!clienteId) { setContratoAtivo(null); return; }
+    setLoadingContrato(true);
+    const { data } = await supabase
+      .from("contratos")
+      .select("*")
+      .eq("cliente_id", clienteId)
+      .eq("status", "Ativo")
+      .eq("tipo", "Base")
+      .maybeSingle();
+    setContratoAtivo(data as unknown as Contrato | null);
+    setLoadingContrato(false);
+  }
+
+  async function handleClienteChange(clienteId: string) {
+    setForm((f) => ({ ...f, cliente_id: clienteId, plano_id: "", tipo_pedido: "Novo", contrato_id: null }));
+    setPlanoSelecionado(null);
+    setModulosDisponiveis([]);
+    await buscarContratoAtivo(clienteId);
+  }
+
+  function handleIniciarUpgrade() {
+    setUpgradePlanoId("");
+    setOpenUpgradeDialog(true);
+  }
+
+  function handleConfirmarUpgrade() {
+    if (!upgradePlanoId) { toast.error("Selecione o novo plano"); return; }
+    if (!contratoAtivo) return;
+    setForm((f) => ({
+      ...f,
+      plano_id: upgradePlanoId,
+      tipo_pedido: "Upgrade",
+      contrato_id: contratoAtivo.id,
+    }));
+    loadPlano(upgradePlanoId, []);
+    setOpenUpgradeDialog(false);
+  }
+
+  function handleIniciarAditivo() {
+    if (!contratoAtivo) return;
+    // Mantém o plano atual do contrato para buscar módulos
+    setForm((f) => ({
+      ...f,
+      plano_id: contratoAtivo.plano_id || "",
+      tipo_pedido: "Aditivo",
+      contrato_id: contratoAtivo.id,
+    }));
+    if (contratoAtivo.plano_id) loadPlano(contratoAtivo.plano_id, []);
+  }
+
   // ─── Open create/edit ─────────────────────────────────────────────────────
 
   function openCreate() {
@@ -407,6 +474,8 @@ export default function Pedidos() {
       desconto_mensalidade_tipo: (pedido.desconto_mensalidade_tipo as "R$" | "%") || "R$",
       desconto_mensalidade_valor: (pedido.desconto_mensalidade_valor ?? 0).toString(),
       modulos_adicionais: adicionais,
+      tipo_pedido: (pedido.tipo_pedido as "Novo" | "Upgrade" | "Aditivo") || "Novo",
+      contrato_id: pedido.contrato_id || null,
     });
     setModuloBuscaId("");
     setModuloBuscaQtd("1");
@@ -446,6 +515,8 @@ export default function Pedidos() {
         desconto_mensalidade_valor: parseFloat(form.desconto_mensalidade_valor) || 0,
         valor_mensalidade_final: valorMensalidadeFinal,
         modulos_adicionais: form.modulos_adicionais,
+        tipo_pedido: form.tipo_pedido,
+        contrato_id: form.contrato_id || null,
       };
 
       if (editingPedido) {
@@ -724,7 +795,11 @@ export default function Pedidos() {
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingPedido ? "Editar Pedido" : "Novo Pedido"}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {form.tipo_pedido === "Upgrade" && <ArrowUpCircle className="h-4 w-4 text-primary" />}
+              {form.tipo_pedido === "Aditivo" && <FileText className="h-4 w-4 text-primary" />}
+              {editingPedido ? "Editar Pedido" : `Novo Pedido${form.tipo_pedido !== "Novo" ? ` — ${form.tipo_pedido}` : ""}`}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-5">
 
@@ -737,24 +812,79 @@ export default function Pedidos() {
                   <UserPlus className="h-3.5 w-3.5" /> Novo cliente
                 </Button>
               </div>
-              <Select value={form.cliente_id} onValueChange={(v) => setForm((f) => ({ ...f, cliente_id: v }))}>
+              <Select value={form.cliente_id} onValueChange={handleClienteChange}>
                 <SelectTrigger><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
                 <SelectContent>
                   {clientesDisponiveis.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>)}
                 </SelectContent>
               </Select>
+
+              {/* Contrato ativo detectado */}
+              {loadingContrato && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Verificando contratos...
+                </p>
+              )}
+              {!loadingContrato && contratoAtivo && form.tipo_pedido === "Novo" && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 flex items-start gap-2.5">
+                  <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-amber-800">
+                      Contrato ativo: Nº {contratoAtivo.numero_registro} ({contratoAtivo.numero_exibicao})
+                    </p>
+                    <p className="text-xs text-amber-700 mt-0.5">Este cliente já possui contrato ativo. Selecione a ação desejada:</p>
+                    <div className="flex gap-2 mt-2">
+                      <Button type="button" size="sm" variant="outline" className="h-7 text-xs gap-1.5 border-amber-300 text-amber-800 hover:bg-amber-100"
+                        onClick={handleIniciarUpgrade}>
+                        <ArrowUpCircle className="h-3.5 w-3.5" /> Upgrade de Plano
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" className="h-7 text-xs gap-1.5 border-amber-300 text-amber-800 hover:bg-amber-100"
+                        onClick={handleIniciarAditivo}>
+                        <FileText className="h-3.5 w-3.5" /> Adicionar Módulo (Aditivo)
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {!loadingContrato && contratoAtivo && form.tipo_pedido === "Aditivo" && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                  <FileText className="h-3 w-3 inline mr-1" />
+                  Aditivo ao contrato Nº {contratoAtivo.numero_registro} ({contratoAtivo.numero_exibicao})
+                </div>
+              )}
+              {!loadingContrato && contratoAtivo && form.tipo_pedido === "Upgrade" && (
+                <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800">
+                  <ArrowUpCircle className="h-3 w-3 inline mr-1" />
+                  Upgrade do contrato Nº {contratoAtivo.numero_registro} ({contratoAtivo.numero_exibicao})
+                </div>
+              )}
             </div>
 
             {/* ── Plano ── */}
-            <div className="space-y-1.5">
-              <Label>Plano *</Label>
-              <Select value={form.plano_id} onValueChange={handlePlanoChange}>
-                <SelectTrigger><SelectValue placeholder="Selecione o plano..." /></SelectTrigger>
-                <SelectContent>
-                  {planos.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+            {form.tipo_pedido !== "Aditivo" && (
+              <div className="space-y-1.5">
+                <Label>Plano *</Label>
+                {contratoAtivo && form.tipo_pedido === "Novo" ? (
+                  // Bloqueado pois tem contrato ativo e ainda não escolheu a ação
+                  <div className="rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground cursor-not-allowed">
+                    Selecione uma ação acima (Upgrade ou Aditivo)
+                  </div>
+                ) : (
+                  <Select value={form.plano_id} onValueChange={handlePlanoChange} disabled={form.tipo_pedido === "Upgrade" && !!form.plano_id}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o plano..." /></SelectTrigger>
+                    <SelectContent>
+                      {planos.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
+            {form.tipo_pedido === "Aditivo" && form.plano_id && (
+              <div className="space-y-1.5">
+                <Label>Plano de referência</Label>
+                <Input readOnly value={planos.find(p => p.id === form.plano_id)?.nome || "—"} className="bg-muted cursor-not-allowed" />
+              </div>
+            )}
 
             {/* ── Filial e Vendedor ── */}
             <div className="grid grid-cols-2 gap-3">
@@ -1045,7 +1175,45 @@ export default function Pedidos() {
             </DialogFooter>
           </form>
         </DialogContent>
+        </Dialog>
+
+      {/* ─── Modal Upgrade de Plano ──────────────────────────────────────────── */}
+      <Dialog open={openUpgradeDialog} onOpenChange={setOpenUpgradeDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowUpCircle className="h-4 w-4 text-primary" /> Upgrade de Plano
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {contratoAtivo && (
+              <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
+                <p className="text-muted-foreground text-xs">Contrato atual</p>
+                <p className="font-medium">Nº {contratoAtivo.numero_registro} ({contratoAtivo.numero_exibicao})</p>
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label>Novo plano *</Label>
+              <Select value={upgradePlanoId} onValueChange={setUpgradePlanoId}>
+                <SelectTrigger><SelectValue placeholder="Selecione o novo plano..." /></SelectTrigger>
+                <SelectContent>
+                  {planos
+                    .filter((p) => p.id !== contratoAtivo?.plano_id)
+                    .map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">O plano atual do contrato não é exibido.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenUpgradeDialog(false)}>Cancelar</Button>
+            <Button onClick={handleConfirmarUpgrade} disabled={!upgradePlanoId}>
+              <ArrowUpCircle className="h-4 w-4 mr-1.5" /> Confirmar Upgrade
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </AppLayout>
   );
 }
+
