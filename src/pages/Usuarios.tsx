@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
-import { Profile, AppRole, ROLE_LABELS, ROLE_COLORS, Filial } from "@/lib/supabase-types";
+import { Profile, AppRole, ROLE_LABELS, Filial } from "@/lib/supabase-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -40,7 +39,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, UserX, UserCheck, Shield, Loader2, Mail } from "lucide-react";
+import { Plus, Search, UserX, UserCheck, Shield, Loader2, Mail, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 interface UserWithRoles extends Profile {
@@ -56,15 +55,25 @@ export default function Usuarios() {
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [openInvite, setOpenInvite] = useState(false);
 
-  // Invite form
+  // Create dialog
+  const [openInvite, setOpenInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState<AppRole>("vendedor");
   const [inviteFilialId, setInviteFilialId] = useState("");
   const [inviteComissao, setInviteComissao] = useState("5");
   const [inviting, setInviting] = useState(false);
+
+  // Edit dialog
+  const [openEdit, setOpenEdit] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserWithRoles | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editRole, setEditRole] = useState<AppRole>("vendedor");
+  const [editFilialId, setEditFilialId] = useState("");
+  const [editComissao, setEditComissao] = useState("5");
+  const [editActive, setEditActive] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
@@ -99,6 +108,7 @@ export default function Usuarios() {
     loadUsers();
   }, []);
 
+  // ── Create ──────────────────────────────────────────────
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
     setInviting(true);
@@ -121,11 +131,7 @@ export default function Usuarios() {
 
       toast.success(`Usuário ${inviteName} criado com sucesso!`);
       setOpenInvite(false);
-      setInviteEmail("");
-      setInviteName("");
-      setInviteRole("vendedor");
-      setInviteFilialId("");
-      setInviteComissao("5");
+      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteComissao("5");
       loadUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
@@ -133,6 +139,46 @@ export default function Usuarios() {
     setInviting(false);
   }
 
+  // ── Edit ────────────────────────────────────────────────
+  function openEditDialog(user: UserWithRoles) {
+    setEditingUser(user);
+    setEditName(user.full_name);
+    setEditRole(user.roles[0] || "vendedor");
+    setEditFilialId(user.filial_id || "todas");
+    setEditComissao(user.comissao_percentual?.toString() || "5");
+    setEditActive(user.active);
+    setOpenEdit(true);
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingUser) return;
+    setSaving(true);
+    try {
+      // Update profile
+      const { error: profileError } = await supabase.from("profiles").update({
+        full_name: editName,
+        filial_id: (editFilialId && editFilialId !== "todas") ? editFilialId : null,
+        comissao_percentual: parseFloat(editComissao) || 0,
+        active: editActive,
+      }).eq("user_id", editingUser.user_id);
+
+      if (profileError) throw profileError;
+
+      // Update role: delete existing and insert new
+      await supabase.from("user_roles").delete().eq("user_id", editingUser.user_id);
+      await supabase.from("user_roles").insert({ user_id: editingUser.user_id, role: editRole });
+
+      toast.success("Usuário atualizado com sucesso!");
+      setOpenEdit(false);
+      loadUsers();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro ao atualizar usuário");
+    }
+    setSaving(false);
+  }
+
+  // ── Toggle active ────────────────────────────────────────
   async function toggleActive(user: UserWithRoles) {
     const { error } = await supabase.from("profiles").update({ active: !user.active }).eq("user_id", user.user_id);
     if (error) { toast.error("Erro ao atualizar usuário"); return; }
@@ -140,26 +186,24 @@ export default function Usuarios() {
     loadUsers();
   }
 
-  async function changeRole(userId: string, newRole: AppRole) {
-    await supabase.from("user_roles").delete().eq("user_id", userId);
-    await supabase.from("user_roles").insert({ user_id: userId, role: newRole });
-    toast.success("Cargo atualizado");
-    loadUsers();
-  }
-
-  async function changeFilial(userId: string, filialId: string) {
-    const { error } = await supabase.from("profiles")
-      .update({ filial_id: filialId || null })
-      .eq("user_id", userId);
-    if (error) { toast.error("Erro ao atualizar filial"); return; }
-    toast.success("Filial atualizada");
-    loadUsers();
-  }
-
   const filtered = users.filter(
     (u) =>
       u.full_name.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const FilialSelect = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger>
+        <SelectValue placeholder="Selecione..." />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="todas">🌐 Todas as filiais</SelectItem>
+        {filiais.map((f) => (
+          <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 
   return (
@@ -171,90 +215,10 @@ export default function Usuarios() {
             <p className="text-sm text-muted-foreground">Gerencie os colaboradores e permissões</p>
           </div>
 
-          <Dialog open={openInvite} onOpenChange={setOpenInvite}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                Novo usuário
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Criar novo usuário</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleInvite} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label>Nome completo</Label>
-                  <Input
-                    placeholder="João da Silva"
-                    value={inviteName}
-                    onChange={(e) => setInviteName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>E-mail</Label>
-                  <Input
-                    type="email"
-                    placeholder="joao@softflow.com.br"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Cargo</Label>
-                    <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ALL_ROLES.map((r) => (
-                          <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Filial</Label>
-                    <Select value={inviteFilialId} onValueChange={setInviteFilialId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todas">🌐 Todas as filiais</SelectItem>
-                        {filiais.map((f) => (
-                          <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Comissão padrão (%)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    placeholder="5"
-                    value={inviteComissao}
-                    onChange={(e) => setInviteComissao(e.target.value)}
-                  />
-                </div>
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button type="button" variant="outline" onClick={() => setOpenInvite(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={inviting}>
-                    {inviting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
-                    Criar usuário
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button className="gap-2" onClick={() => setOpenInvite(true)}>
+            <Plus className="h-4 w-4" />
+            Novo usuário
+          </Button>
         </div>
 
         {/* Search */}
@@ -277,6 +241,7 @@ export default function Usuarios() {
                 <TableHead>E-mail</TableHead>
                 <TableHead>Cargo</TableHead>
                 <TableHead>Filial</TableHead>
+                <TableHead>Comissão</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -284,13 +249,13 @@ export default function Usuarios() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12">
+                  <TableCell colSpan={7} className="text-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     Nenhum usuário encontrado
                   </TableCell>
                 </TableRow>
@@ -300,78 +265,70 @@ export default function Usuarios() {
                     <TableCell className="font-medium">{user.full_name}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{user.email}</TableCell>
                     <TableCell>
-                      <Select
-                        value={user.roles[0] || ""}
-                        onValueChange={(v) => changeRole(user.user_id, v as AppRole)}
-                      >
-                        <SelectTrigger className="w-32 h-7 text-xs">
-                          <SelectValue placeholder="Sem cargo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ALL_ROLES.map((r) => (
-                            <SelectItem key={r} value={r} className="text-xs">
-                              {ROLE_LABELS[r]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <span className="text-sm">
+                        {user.roles[0] ? ROLE_LABELS[user.roles[0]] : <span className="text-muted-foreground">—</span>}
+                      </span>
                     </TableCell>
-                    <TableCell>
-                      <Select
-                        value={user.filial_id || ""}
-                        onValueChange={(v) => changeFilial(user.user_id, v)}
-                      >
-                        <SelectTrigger className="w-32 h-7 text-xs">
-                          <SelectValue placeholder="—" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {filiais.map((f) => (
-                            <SelectItem key={f.id} value={f.id} className="text-xs">
-                              {f.nome}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {user.filial_id
+                        ? (user.filial_nome || filiais.find(f => f.id === user.filial_id)?.nome || "—")
+                        : <span className="text-xs text-primary font-medium">🌐 Todas</span>
+                      }
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {user.comissao_percentual != null ? `${user.comissao_percentual}%` : "—"}
                     </TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        user.active
-                          ? "bg-sky-100 text-sky-700"
-                          : "bg-gray-100 text-gray-500"
+                        user.active ? "bg-sky-100 text-sky-700" : "bg-gray-100 text-gray-500"
                       }`}>
                         {user.active ? "Ativo" : "Inativo"}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7">
-                            {user.active ? (
-                              <UserX className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <UserCheck className="h-4 w-4 text-primary" />
-                            )}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              {user.active ? "Desativar usuário?" : "Reativar usuário?"}
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              {user.active
-                                ? `${user.full_name} perderá acesso ao sistema.`
-                                : `${user.full_name} terá acesso restaurado.`}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => toggleActive(user)}>
-                              Confirmar
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <div className="flex items-center justify-end gap-1">
+                        {/* Edit */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => openEditDialog(user)}
+                          title="Editar usuário"
+                        >
+                          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+
+                        {/* Toggle active */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title={user.active ? "Desativar" : "Ativar"}>
+                              {user.active ? (
+                                <UserX className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <UserCheck className="h-4 w-4 text-primary" />
+                              )}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                {user.active ? "Desativar usuário?" : "Reativar usuário?"}
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                {user.active
+                                  ? `${user.full_name} perderá acesso ao sistema.`
+                                  : `${user.full_name} terá acesso restaurado.`}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => toggleActive(user)}>
+                                Confirmar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -386,6 +343,141 @@ export default function Usuarios() {
           )}
         </div>
       </div>
+
+      {/* ── Create Dialog ── */}
+      <Dialog open={openInvite} onOpenChange={setOpenInvite}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Criar novo usuário</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleInvite} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Nome completo</Label>
+              <Input
+                placeholder="João da Silva"
+                value={inviteName}
+                onChange={(e) => setInviteName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>E-mail</Label>
+              <Input
+                type="email"
+                placeholder="joao@softplus.com.br"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Cargo</Label>
+                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {ALL_ROLES.map((r) => (
+                      <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Filial</Label>
+                <FilialSelect value={inviteFilialId} onChange={setInviteFilialId} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Comissão padrão (%)</Label>
+              <Input
+                type="number" min="0" max="100" step="0.01" placeholder="5"
+                value={inviteComissao}
+                onChange={(e) => setInviteComissao(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setOpenInvite(false)}>Cancelar</Button>
+              <Button type="submit" disabled={inviting}>
+                {inviting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
+                Criar usuário
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Edit Dialog ── */}
+      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar usuário</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Nome completo</Label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>E-mail</Label>
+              <Input value={editingUser?.email || ""} disabled className="bg-muted text-muted-foreground" />
+            </div>
+
+            {/* Permissões */}
+            <div className="rounded-lg border border-border p-4 space-y-3">
+              <p className="text-sm font-semibold text-foreground">Permissões de acesso</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Cargo</Label>
+                  <Select value={editRole} onValueChange={(v) => setEditRole(v as AppRole)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {ALL_ROLES.map((r) => (
+                        <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Filial</Label>
+                  <FilialSelect value={editFilialId} onChange={setEditFilialId} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Comissão padrão (%)</Label>
+                  <Input
+                    type="number" min="0" max="100" step="0.01"
+                    value={editComissao}
+                    onChange={(e) => setEditComissao(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Status</Label>
+                  <Select value={editActive ? "ativo" : "inativo"} onValueChange={(v) => setEditActive(v === "ativo")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ativo">✅ Ativo</SelectItem>
+                      <SelectItem value="inativo">⛔ Inativo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>Cancelar</Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Salvar alterações
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
