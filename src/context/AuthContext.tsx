@@ -57,6 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           await fetchProfile(session.user.id);
           await fetchRoles(session.user.id);
+          if (event === "SIGNED_IN") {
+            navigate("/dashboard");
+          }
         } else {
           setProfile(null);
           setRoles([]);
