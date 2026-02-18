@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { AppRole, Profile } from "@/lib/supabase-types";
+import { toast } from "sonner";
 
 interface AuthContextType {
   user: User | null;
@@ -30,13 +31,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
 
-  async function fetchProfile(userId: string) {
+  async function fetchProfile(userId: string): Promise<Profile | null> {
     const { data } = await supabase
       .from("profiles")
       .select("*")
       .eq("user_id", userId)
       .single();
-    if (data) setProfile(data as Profile);
+    if (data) {
+      // Bloquear usuário inativo
+      if (data.active === false) {
+        toast.error("Sua conta está inativa. Entre em contato com o administrador.");
+        await supabase.auth.signOut();
+        return null;
+      }
+      setProfile(data as Profile);
+    }
+    return data as Profile | null;
   }
 
   async function fetchRoles(userId: string) {

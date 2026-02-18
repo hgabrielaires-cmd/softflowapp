@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
-import { Profile, AppRole, ROLE_LABELS, ROLE_COLORS } from "@/lib/supabase-types";
+import { Profile, AppRole, ROLE_LABELS, ROLE_COLORS, Filial } from "@/lib/supabase-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,36 +45,47 @@ import { toast } from "sonner";
 
 interface UserWithRoles extends Profile {
   roles: AppRole[];
+  filial_nome?: string;
 }
 
-const FILIAIS = ["Matriz", "Filial SP", "Filial RJ", "Filial BH", "Filial PR"];
-const ALL_ROLES: AppRole[] = ["admin", "financeiro", "vendedor", "operacional"];
+const ALL_ROLES: AppRole[] = ["admin", "financeiro", "vendedor", "tecnico"];
 
 export default function Usuarios() {
   const { isAdmin } = useAuth();
   const [users, setUsers] = useState<UserWithRoles[]>([]);
+  const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [openInvite, setOpenInvite] = useState(false);
 
   // Invite form
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteName, setInviteEmail2] = useState("");
+  const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState<AppRole>("vendedor");
-  const [inviteFilial, setInviteFilial] = useState("Matriz");
+  const [inviteFilialId, setInviteFilialId] = useState("");
   const [inviting, setInviting] = useState(false);
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
+  async function loadFiliais() {
+    const { data } = await supabase.from("filiais").select("*").eq("ativa", true).order("nome");
+    if (data) setFiliais(data as Filial[]);
+  }
+
   async function loadUsers() {
     setLoading(true);
-    const { data: profiles, error } = await supabase.from("profiles").select("*").order("full_name");
+    const { data: profiles, error } = await supabase
+      .from("profiles")
+      .select("*, filiais(nome)")
+      .order("full_name");
+
     if (error) { toast.error("Erro ao carregar usuários"); setLoading(false); return; }
 
     const { data: roleData } = await supabase.from("user_roles").select("*");
 
-    const enriched: UserWithRoles[] = (profiles || []).map((p) => ({
-      ...(p as Profile),
+    const enriched: UserWithRoles[] = (profiles || []).map((p: any) => ({
+      ...p,
+      filial_nome: p.filiais?.nome || p.filial || null,
       roles: (roleData || []).filter((r) => r.user_id === p.user_id).map((r) => r.role as AppRole),
     }));
 
@@ -82,40 +93,39 @@ export default function Usuarios() {
     setLoading(false);
   }
 
-  useEffect(() => { loadUsers(); }, []);
+  useEffect(() => {
+    loadFiliais();
+    loadUsers();
+  }, []);
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
     setInviting(true);
     try {
-      // Create user via Supabase admin - using signUp as a workaround for invite
       const { data, error } = await supabase.auth.signUp({
         email: inviteEmail,
         password: Math.random().toString(36).slice(-12) + "Aa1!",
-        options: {
-          data: { full_name: inviteName },
-        },
+        options: { data: { full_name: inviteName } },
       });
 
       if (error) throw error;
       if (!data.user) throw new Error("Usuário não criado");
 
-      // Update profile with filial
-      await supabase.from("profiles").update({ filial: inviteFilial }).eq("user_id", data.user.id);
+      await supabase.from("profiles").update({
+        filial_id: inviteFilialId || null,
+      }).eq("user_id", data.user.id);
 
-      // Add role
       await supabase.from("user_roles").insert({ user_id: data.user.id, role: inviteRole });
 
       toast.success(`Usuário ${inviteName} criado com sucesso!`);
       setOpenInvite(false);
       setInviteEmail("");
-      setInviteEmail2("");
+      setInviteName("");
       setInviteRole("vendedor");
-      setInviteFilial("Matriz");
+      setInviteFilialId("");
       loadUsers();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Erro ao criar usuário";
-      toast.error(message);
+      toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
     }
     setInviting(false);
   }
@@ -131,6 +141,15 @@ export default function Usuarios() {
     await supabase.from("user_roles").delete().eq("user_id", userId);
     await supabase.from("user_roles").insert({ user_id: userId, role: newRole });
     toast.success("Cargo atualizado");
+    loadUsers();
+  }
+
+  async function changeFilial(userId: string, filialId: string) {
+    const { error } = await supabase.from("profiles")
+      .update({ filial_id: filialId || null })
+      .eq("user_id", userId);
+    if (error) { toast.error("Erro ao atualizar filial"); return; }
+    toast.success("Filial atualizada");
     loadUsers();
   }
 
@@ -166,7 +185,7 @@ export default function Usuarios() {
                   <Input
                     placeholder="João da Silva"
                     value={inviteName}
-                    onChange={(e) => setInviteEmail2(e.target.value)}
+                    onChange={(e) => setInviteName(e.target.value)}
                     required
                   />
                 </div>
@@ -196,13 +215,13 @@ export default function Usuarios() {
                   </div>
                   <div className="space-y-1.5">
                     <Label>Filial</Label>
-                    <Select value={inviteFilial} onValueChange={setInviteFilial}>
+                    <Select value={inviteFilialId} onValueChange={setInviteFilialId}>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {FILIAIS.map((f) => (
-                          <SelectItem key={f} value={f}>{f}</SelectItem>
+                        {filiais.map((f) => (
+                          <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -269,7 +288,7 @@ export default function Usuarios() {
                         value={user.roles[0] || ""}
                         onValueChange={(v) => changeRole(user.user_id, v as AppRole)}
                       >
-                        <SelectTrigger className="w-36 h-7 text-xs">
+                        <SelectTrigger className="w-32 h-7 text-xs">
                           <SelectValue placeholder="Sem cargo" />
                         </SelectTrigger>
                         <SelectContent>
@@ -281,11 +300,27 @@ export default function Usuarios() {
                         </SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell className="text-sm">{user.filial || "—"}</TableCell>
                     <TableCell>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                      <Select
+                        value={user.filial_id || ""}
+                        onValueChange={(v) => changeFilial(user.user_id, v)}
+                      >
+                        <SelectTrigger className="w-32 h-7 text-xs">
+                          <SelectValue placeholder="—" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filiais.map((f) => (
+                            <SelectItem key={f.id} value={f.id} className="text-xs">
+                              {f.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                         user.active
-                          ? "bg-emerald-100 text-emerald-700"
+                          ? "bg-sky-100 text-sky-700"
                           : "bg-gray-100 text-gray-500"
                       }`}>
                         {user.active ? "Ativo" : "Inativo"}
@@ -298,7 +333,7 @@ export default function Usuarios() {
                             {user.active ? (
                               <UserX className="h-4 w-4 text-muted-foreground" />
                             ) : (
-                              <UserCheck className="h-4 w-4 text-emerald" />
+                              <UserCheck className="h-4 w-4 text-primary" />
                             )}
                           </Button>
                         </AlertDialogTrigger>
