@@ -7,15 +7,15 @@ import {
   Calendar,
   Users,
   TrendingUp,
-  Clock,
-} from "lucide-react";
+  Clock } from
+"lucide-react";
 
 const stats = [
-  { label: "Pedidos este mês", value: "—", icon: ShoppingCart, color: "text-blue-600 bg-blue-50" },
-  { label: "Faturamento", value: "—", icon: DollarSign, color: "text-emerald bg-emerald-light" },
-  { label: "Agendamentos", value: "—", icon: Calendar, color: "text-orange-600 bg-orange-50" },
-  { label: "Usuários ativos", value: "—", icon: Users, color: "text-purple-600 bg-purple-50" },
-];
+{ label: "Pedidos este mês", value: "—", icon: ShoppingCart, color: "text-blue-600 bg-blue-50" },
+{ label: "Faturamento", value: "—", icon: DollarSign, color: "text-emerald bg-emerald-light" },
+{ label: "Agendamentos", value: "—", icon: Calendar, color: "text-orange-600 bg-orange-50" },
+{ label: "Usuários ativos", value: "—", icon: Users, color: "text-purple-600 bg-purple-50" }];
+
 
 export default function Dashboard() {
   const { profile, roles } = useAuth();
@@ -30,19 +30,19 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold text-foreground">
               Olá, {firstName} 👋
             </h1>
-            <p className="text-muted-foreground text-sm mt-0.5">
-              Bem-vindo ao portal interno da Softflow Tecnologia
+            <p className="text-muted-foreground text-sm mt-0.5">Bem-vindo ao Softflow Desk Suite   
+
             </p>
           </div>
           <div className="flex gap-2">
-            {roles.map((role) => (
-              <span
-                key={role}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium border ${ROLE_COLORS[role as AppRole]}`}
-              >
+            {roles.map((role) =>
+            <span
+              key={role}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium border ${ROLE_COLORS[role as AppRole]}`}>
+
                 {ROLE_LABELS[role as AppRole]}
               </span>
-            ))}
+            )}
           </div>
         </div>
 
@@ -53,8 +53,8 @@ export default function Dashboard() {
             return (
               <div
                 key={stat.label}
-                className="bg-card rounded-xl p-5 shadow-card border border-border"
-              >
+                className="bg-card rounded-xl p-5 shadow-card border border-border">
+
                 <div className="flex items-center justify-between mb-3">
                   <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${stat.color}`}>
                     <Icon className="h-4 w-4" />
@@ -63,8 +63,8 @@ export default function Dashboard() {
                 </div>
                 <p className="text-2xl font-bold text-foreground">{stat.value}</p>
                 <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
-              </div>
-            );
+              </div>);
+
           })}
         </div>
 
@@ -77,18 +77,18 @@ export default function Dashboard() {
             </div>
             <div className="space-y-3">
               {[
-                { label: "Módulo 1", desc: "Base de usuários e permissões", done: true },
-                { label: "Módulo 2", desc: "Pedidos de venda", done: false },
-                { label: "Módulo 3", desc: "Aprovação financeira e contratos", done: false },
-                { label: "Módulo 4", desc: "Comissões automáticas", done: false },
-                { label: "Módulo 5", desc: "Agenda operacional", done: false },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center gap-3">
+              { label: "Módulo 1", desc: "Base de usuários e permissões", done: true },
+              { label: "Módulo 2", desc: "Pedidos de venda", done: false },
+              { label: "Módulo 3", desc: "Aprovação financeira e contratos", done: false },
+              { label: "Módulo 4", desc: "Comissões automáticas", done: false },
+              { label: "Módulo 5", desc: "Agenda operacional", done: false }].
+              map((item) =>
+              <div key={item.label} className="flex items-center gap-3">
                   <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                    item.done
-                      ? "border-emerald bg-emerald"
-                      : "border-border bg-background"
-                  }`}>
+                item.done ?
+                "border-emerald bg-emerald" :
+                "border-border bg-background"}`
+                }>
                     {item.done && <span className="text-white text-xs">✓</span>}
                   </div>
                   <div>
@@ -96,7 +96,7 @@ export default function Dashboard() {
                     <span className="text-sm text-muted-foreground">{item.desc}</span>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
@@ -109,19 +109,19 @@ export default function Dashboard() {
             </p>
             <div className="grid grid-cols-2 gap-2">
               {[
-                "Pedidos de venda",
-                "Aprovação financeira",
-                "Comissão automática",
-                "Agenda operacional",
-              ].map((feat) => (
-                <div key={feat} className="text-xs bg-white/10 rounded-lg px-3 py-2 text-blue-100">
+              "Pedidos de venda",
+              "Aprovação financeira",
+              "Comissão automática",
+              "Agenda operacional"].
+              map((feat) =>
+              <div key={feat} className="text-xs bg-white/10 rounded-lg px-3 py-2 text-blue-100">
                   {feat}
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
       </div>
-    </AppLayout>
-  );
+    </AppLayout>);
+
 }
