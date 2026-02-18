@@ -23,10 +23,9 @@ export default function Login() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast.error("Credenciais inválidas. Verifique seu e-mail e senha.");
-    } else {
-      navigate("/dashboard");
+      setLoading(false);
     }
-    setLoading(false);
+    // Redirect é feito automaticamente pelo onAuthStateChange (SIGNED_IN)
   }
 
   return (
