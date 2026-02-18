@@ -83,7 +83,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         {!collapsed && (
           <div className="overflow-hidden">
             <p className="text-sidebar-foreground font-bold text-sm leading-tight" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-              Softplus
+              Softflow
             </p>
             <p className="text-sidebar-foreground/50 text-xs">Tecnologia</p>
           </div>

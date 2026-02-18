@@ -31,7 +31,7 @@ export default function Dashboard() {
               Olá, {firstName} 👋
             </h1>
             <p className="text-muted-foreground text-sm mt-0.5">
-              Bem-vindo ao portal interno da Softplus Tecnologia
+              Bem-vindo ao portal interno da Softflow Tecnologia
             </p>
           </div>
           <div className="flex gap-2">
@@ -105,7 +105,7 @@ export default function Dashboard() {
               Sistema em construção
             </h3>
             <p className="text-blue-200 text-sm leading-relaxed mb-4">
-              Esta é a base do portal interno da Softplus. Os módulos serão adicionados progressivamente conforme o planejamento.
+              Esta é a base do portal interno da Softflow. Os módulos serão adicionados progressivamente conforme o planejamento.
             </p>
             <div className="grid grid-cols-2 gap-2">
               {[

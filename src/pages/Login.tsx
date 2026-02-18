@@ -36,7 +36,7 @@ export default function Login() {
           </div>
           <div>
             <p className="text-white font-bold text-lg leading-tight" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-              Softplus
+              Softflow
             </p>
             <p className="text-blue-300 text-xs">Tecnologia</p>
           </div>
@@ -45,7 +45,7 @@ export default function Login() {
         <div>
           <h1 className="text-white text-4xl font-bold leading-tight mb-4" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
             Portal Interno<br />
-            <span className="text-emerald-400">Softplus</span>
+            <span className="text-emerald-400">Softflow</span>
           </h1>
           <p className="text-blue-200 text-base leading-relaxed max-w-sm">
             Gestão integrada de vendas, contratos, comissões e agenda operacional para bares e restaurantes.
@@ -77,7 +77,7 @@ export default function Login() {
             </div>
             <div>
               <p className="font-bold text-lg text-foreground" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-                Softplus Tecnologia
+                Softflow Tecnologia
               </p>
             </div>
           </div>
@@ -153,7 +153,7 @@ export default function Login() {
           </form>
 
           <p className="text-center text-xs text-muted-foreground mt-8">
-            Acesso restrito a colaboradores da Softplus Tecnologia.<br />
+            Acesso restrito a colaboradores da Softflow Tecnologia.<br />
             Entre em contato com o administrador para obter acesso.
           </p>
         </div>

@@ -91,7 +91,7 @@ const App = () => (
                   <ComingSoon
                     module="Módulo — Admin"
                     title="Gestão de Filiais"
-                    description="Em desenvolvimento. Controle e visão de cada unidade da Softplus."
+                    description="Em desenvolvimento. Controle e visão de cada unidade da Softflow."
                   />
                 </ProtectedRoute>
               }
