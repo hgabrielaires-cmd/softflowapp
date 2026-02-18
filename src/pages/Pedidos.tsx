@@ -82,6 +82,14 @@ interface ModuloOpcional {
   incluso_no_plano: boolean;
 }
 
+interface ModuloAdicionadoItem {
+  modulo_id: string;
+  nome: string;
+  quantidade: number;
+  valor_implantacao_modulo: number;
+  valor_mensalidade_modulo: number;
+}
+
 interface PedidoWithJoins {
   id: string;
   cliente_id: string;
@@ -108,7 +116,7 @@ interface PedidoWithJoins {
   desconto_mensalidade_tipo?: string;
   desconto_mensalidade_valor?: number;
   valor_mensalidade_final?: number;
-  modulos_adicionais?: string[];
+  modulos_adicionais?: ModuloAdicionadoItem[];
   clientes?: { nome_fantasia: string } | null;
   planos?: { nome: string } | null;
   filiais?: { nome: string } | null;
@@ -129,8 +137,8 @@ interface FormState {
   desconto_implantacao_valor: string;
   desconto_mensalidade_tipo: "R$" | "%";
   desconto_mensalidade_valor: string;
-  // Módulos opcionais selecionados
-  modulos_adicionais: string[];
+  // Módulos adicionais (lista de itens com quantidade)
+  modulos_adicionais: ModuloAdicionadoItem[];
 }
 
 const emptyForm: FormState = {
@@ -173,9 +181,13 @@ export default function Pedidos() {
   const [loading, setLoading] = useState(true);
   const [filialFavoritaId, setFilialFavoritaId] = useState<string | null>(null);
 
-  // Módulos opcionais do plano selecionado
-  const [modulosOpcionais, setModulosOpcionais] = useState<ModuloOpcional[]>([]);
+  // Módulos disponíveis do plano selecionado (para busca)
+  const [modulosDisponiveis, setModulosDisponiveis] = useState<ModuloOpcional[]>([]);
   const [loadingModulos, setLoadingModulos] = useState(false);
+
+  // Estado do seletor de módulo adicional
+  const [moduloBuscaId, setModuloBuscaId] = useState("");
+  const [moduloBuscaQtd, setModuloBuscaQtd] = useState("1");
 
   // Plano selecionado info
   const [planoSelecionado, setPlanoSelecionado] = useState<any | null>(null);
@@ -202,14 +214,25 @@ export default function Pedidos() {
 
   // ─── Computed values ─────────────────────────────────────────────────────
 
+  // Total dos módulos adicionais na lista
+  const totalAdicionaisImp = form.modulos_adicionais.reduce(
+    (acc, m) => acc + m.valor_implantacao_modulo * m.quantidade, 0
+  );
+  const totalAdicionaisMens = form.modulos_adicionais.reduce(
+    (acc, m) => acc + m.valor_mensalidade_modulo * m.quantidade, 0
+  );
+
+  const valorImplantacaoOriginal = (planoSelecionado?.valor_implantacao_padrao ?? form.valor_implantacao_original) + totalAdicionaisImp;
+  const valorMensalidadeOriginal = (planoSelecionado?.valor_mensalidade_padrao ?? form.valor_mensalidade_original) + totalAdicionaisMens;
+
   const valorImplantacaoFinal = applyDesconto(
-    form.valor_implantacao_original,
+    valorImplantacaoOriginal,
     form.desconto_implantacao_tipo,
     parseFloat(form.desconto_implantacao_valor) || 0
   );
 
   const valorMensalidadeFinal = applyDesconto(
-    form.valor_mensalidade_original,
+    valorMensalidadeOriginal,
     form.desconto_mensalidade_tipo,
     parseFloat(form.desconto_mensalidade_valor) || 0
   );
@@ -217,12 +240,12 @@ export default function Pedidos() {
   const valorTotal = valorImplantacaoFinal + valorMensalidadeFinal;
   const comissaoValor = valorTotal * (parseFloat(form.comissao_percentual) || 0) / 100;
 
-  // ─── Load plano + módulos opcionais ──────────────────────────────────────
+  // ─── Load plano + módulos disponíveis ──────────────────────────────────────
 
-  const loadPlano = useCallback(async (planoId: string, modulosAdicionais: string[] = []) => {
+  const loadPlano = useCallback(async (planoId: string, modulosAdicionaisExistentes: ModuloAdicionadoItem[] = []) => {
     if (!planoId) {
       setPlanoSelecionado(null);
-      setModulosOpcionais([]);
+      setModulosDisponiveis([]);
       setForm((f) => ({ ...f, valor_implantacao_original: 0, valor_mensalidade_original: 0 }));
       return;
     }
@@ -239,68 +262,71 @@ export default function Pedidos() {
 
     setPlanoSelecionado(planoData);
 
-    const todos: ModuloOpcional[] = [];
+    const disponiveis: ModuloOpcional[] = [];
     (vinculosData || []).forEach((v: any) => {
       if (v.modulo) {
-        todos.push({
+        disponiveis.push({
           id: v.modulo.id,
           nome: v.modulo.nome,
-          valor_implantacao_modulo: v.modulo.valor_implantacao_modulo,
-          valor_mensalidade_modulo: v.modulo.valor_mensalidade_modulo,
+          valor_implantacao_modulo: v.modulo.valor_implantacao_modulo ?? 0,
+          valor_mensalidade_modulo: v.modulo.valor_mensalidade_modulo ?? 0,
           incluso_no_plano: v.incluso_no_plano,
         });
       }
     });
-    setModulosOpcionais(todos);
-
-    // Calcular originais com base no plano + módulos adicionais marcados (só opcionais somam)
-    const baseImp = planoData?.valor_implantacao_padrao ?? 0;
-    const baseMens = planoData?.valor_mensalidade_padrao ?? 0;
-    const adicionaisImp = todos
-      .filter((m) => !m.incluso_no_plano && modulosAdicionais.includes(m.id))
-      .reduce((acc, m) => acc + (m.valor_implantacao_modulo ?? 0), 0);
-    const adicionaisMens = todos
-      .filter((m) => !m.incluso_no_plano && modulosAdicionais.includes(m.id))
-      .reduce((acc, m) => acc + (m.valor_mensalidade_modulo ?? 0), 0);
+    setModulosDisponiveis(disponiveis);
 
     setForm((f) => ({
       ...f,
-      valor_implantacao_original: baseImp + adicionaisImp,
-      valor_mensalidade_original: baseMens + adicionaisMens,
+      valor_implantacao_original: planoData?.valor_implantacao_padrao ?? 0,
+      valor_mensalidade_original: planoData?.valor_mensalidade_padrao ?? 0,
+      modulos_adicionais: modulosAdicionaisExistentes,
     }));
 
     setLoadingModulos(false);
   }, []);
 
-  // Recalcular originais quando módulos adicionais mudam
-  const recalcularOriginais = useCallback((modulosAdicionais: string[]) => {
-    if (!planoSelecionado) return;
-    const baseImp = planoSelecionado.valor_implantacao_padrao ?? 0;
-    const baseMens = planoSelecionado.valor_mensalidade_padrao ?? 0;
-    const adicionaisImp = modulosOpcionais
-      .filter((m) => !m.incluso_no_plano && modulosAdicionais.includes(m.id))
-      .reduce((acc, m) => acc + (m.valor_implantacao_modulo ?? 0), 0);
-    const adicionaisMens = modulosOpcionais
-      .filter((m) => !m.incluso_no_plano && modulosAdicionais.includes(m.id))
-      .reduce((acc, m) => acc + (m.valor_mensalidade_modulo ?? 0), 0);
+  // ─── Handlers de módulos adicionais ──────────────────────────────────────
+
+  function handleAdicionarModulo() {
+    if (!moduloBuscaId) { toast.error("Selecione um módulo"); return; }
+    const qtd = parseInt(moduloBuscaQtd) || 1;
+    const modulo = modulosDisponiveis.find((m) => m.id === moduloBuscaId);
+    if (!modulo) return;
+
+    // Se já existe, só incrementa quantidade
+    const jaExiste = form.modulos_adicionais.find((m) => m.modulo_id === moduloBuscaId);
+    if (jaExiste) {
+      setForm((f) => ({
+        ...f,
+        modulos_adicionais: f.modulos_adicionais.map((m) =>
+          m.modulo_id === moduloBuscaId ? { ...m, quantidade: m.quantidade + qtd } : m
+        ),
+      }));
+    } else {
+      const item: ModuloAdicionadoItem = {
+        modulo_id: modulo.id,
+        nome: modulo.nome,
+        quantidade: qtd,
+        valor_implantacao_modulo: modulo.valor_implantacao_modulo ?? 0,
+        valor_mensalidade_modulo: modulo.valor_mensalidade_modulo ?? 0,
+      };
+      setForm((f) => ({ ...f, modulos_adicionais: [...f.modulos_adicionais, item] }));
+    }
+    setModuloBuscaId("");
+    setModuloBuscaQtd("1");
+  }
+
+  function handleRemoverModulo(moduloId: string) {
     setForm((f) => ({
       ...f,
-      valor_implantacao_original: baseImp + adicionaisImp,
-      valor_mensalidade_original: baseMens + adicionaisMens,
+      modulos_adicionais: f.modulos_adicionais.filter((m) => m.modulo_id !== moduloId),
     }));
-  }, [planoSelecionado, modulosOpcionais]);
-
-  // ─── Handlers ─────────────────────────────────────────────────────────────
-
-  function toggleModuloAdicional(moduloId: string, checked: boolean) {
-    const next = checked
-      ? [...form.modulos_adicionais, moduloId]
-      : form.modulos_adicionais.filter((id) => id !== moduloId);
-    setForm((f) => ({ ...f, modulos_adicionais: next }));
-    recalcularOriginais(next);
   }
 
   function handlePlanoChange(planoId: string) {
+    setModuloBuscaId("");
+    setModuloBuscaQtd("1");
     setForm((f) => ({
       ...f,
       plano_id: planoId,
@@ -338,7 +364,7 @@ export default function Pedidos() {
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
       supabase.from("profiles").select("*").order("full_name"),
     ]);
-    setPedidos((pedidosData || []) as PedidoWithJoins[]);
+    setPedidos((pedidosData || []) as unknown as PedidoWithJoins[]);
     setClientes((clientesData || []) as Cliente[]);
     setPlanos(planosData || []);
     setFiliais((filiaisData || []) as Filial[]);
@@ -356,14 +382,16 @@ export default function Pedidos() {
     const defaultVendedor = profile?.user_id ?? "";
     setForm({ ...emptyForm, comissao_percentual: defaultComissao, filial_id: defaultFilial, vendedor_id: defaultVendedor });
     setPlanoSelecionado(null);
-    setModulosOpcionais([]);
+    setModulosDisponiveis([]);
+    setModuloBuscaId("");
+    setModuloBuscaQtd("1");
     setDescontoAtivo(false);
     setEditingPedido(null);
     setOpenDialog(true);
   }
 
   function openEdit(pedido: PedidoWithJoins) {
-    const adicionais = pedido.modulos_adicionais || [];
+    const adicionais = (pedido.modulos_adicionais || []) as ModuloAdicionadoItem[];
     const temDesconto = (pedido.desconto_implantacao_valor ?? 0) > 0 || (pedido.desconto_mensalidade_valor ?? 0) > 0;
     setForm({
       cliente_id: pedido.cliente_id,
@@ -380,6 +408,8 @@ export default function Pedidos() {
       desconto_mensalidade_valor: (pedido.desconto_mensalidade_valor ?? 0).toString(),
       modulos_adicionais: adicionais,
     });
+    setModuloBuscaId("");
+    setModuloBuscaQtd("1");
     setDescontoAtivo(temDesconto);
     setEditingPedido(pedido);
     setOpenDialog(true);
@@ -407,8 +437,8 @@ export default function Pedidos() {
         comissao_valor: comissaoValor,
         observacoes: form.observacoes || null,
         // Novos campos
-        valor_implantacao_original: form.valor_implantacao_original,
-        valor_mensalidade_original: form.valor_mensalidade_original,
+        valor_implantacao_original: valorImplantacaoOriginal,
+        valor_mensalidade_original: valorMensalidadeOriginal,
         desconto_implantacao_tipo: form.desconto_implantacao_tipo,
         desconto_implantacao_valor: parseFloat(form.desconto_implantacao_valor) || 0,
         valor_implantacao_final: valorImplantacaoFinal,
@@ -759,48 +789,84 @@ export default function Pedidos() {
               </div>
             </div>
 
-            {/* ── Módulos do plano ── */}
+            {/* ── Módulos Adicionais ── */}
             {form.plano_id && (
-              <div className="space-y-2">
-                <Label>Módulos do plano</Label>
-                {loadingModulos ? (
-                  <p className="text-sm text-muted-foreground">Carregando módulos...</p>
-                ) : modulosOpcionais.length === 0 ? (
-                  <p className="text-sm text-muted-foreground italic">Nenhum módulo vinculado a este plano.</p>
-                ) : (
+              <div className="space-y-3">
+                <Label>Módulos Adicionais</Label>
+
+                {/* Seletor + quantidade + botão adicionar */}
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1 space-y-1">
+                    <Label className="text-xs text-muted-foreground">Módulo</Label>
+                    {loadingModulos ? (
+                      <p className="text-sm text-muted-foreground">Carregando...</p>
+                    ) : (
+                      <Select value={moduloBuscaId} onValueChange={setModuloBuscaId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o módulo..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {modulosDisponiveis.length === 0
+                            ? <SelectItem value="_none" disabled>Nenhum módulo vinculado</SelectItem>
+                            : modulosDisponiveis.map((m) => (
+                              <SelectItem key={m.id} value={m.id}>
+                                {m.nome}
+                                {(m.valor_implantacao_modulo || m.valor_mensalidade_modulo) && (
+                                  <span className="ml-2 text-xs text-muted-foreground">
+                                    {m.valor_implantacao_modulo ? `Impl: ${fmtBRL(m.valor_implantacao_modulo)}` : ""}
+                                    {m.valor_implantacao_modulo && m.valor_mensalidade_modulo ? " · " : ""}
+                                    {m.valor_mensalidade_modulo ? `Mens: ${fmtBRL(m.valor_mensalidade_modulo)}` : ""}
+                                  </span>
+                                )}
+                              </SelectItem>
+                            ))
+                          }
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                  <div className="w-24 space-y-1">
+                    <Label className="text-xs text-muted-foreground">Qtd</Label>
+                    <Input
+                      type="number" min="1" step="1"
+                      value={moduloBuscaQtd}
+                      onChange={(e) => setModuloBuscaQtd(e.target.value)}
+                    />
+                  </div>
+                  <Button type="button" variant="outline" onClick={handleAdicionarModulo} className="gap-1.5">
+                    <Plus className="h-4 w-4" /> Adicionar
+                  </Button>
+                </div>
+
+                {/* Lista dos módulos adicionados */}
+                {form.modulos_adicionais.length > 0 && (
                   <div className="rounded-lg border border-border divide-y divide-border">
-                    {modulosOpcionais.map((m) => {
-                      const checked = form.modulos_adicionais.includes(m.id);
-                      const isIncluso = m.incluso_no_plano;
-                      return (
-                        <div key={m.id} className={`flex items-center gap-3 px-4 py-2.5 ${!isIncluso ? "cursor-pointer hover:bg-muted/40 transition-colors" : "opacity-70"}`}
-                          onClick={!isIncluso ? () => toggleModuloAdicional(m.id, !checked) : undefined}
-                        >
-                          {isIncluso ? (
-                            <span className="h-4 w-4 flex-shrink-0 rounded-sm bg-primary/20 flex items-center justify-center">
-                              <svg className="h-3 w-3 text-primary" fill="currentColor" viewBox="0 0 12 12"><path d="M10 3L5 8.5 2 5.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                            </span>
-                          ) : (
-                            <Checkbox
-                              checked={checked}
-                              onCheckedChange={(v) => toggleModuloAdicional(m.id, !!v)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          )}
-                          <span className="flex-1 text-sm font-medium">{m.nome}</span>
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {isIncluso
-                              ? <span className="text-primary font-medium">Incluso</span>
-                              : <>
-                                  {m.valor_implantacao_modulo != null && `Impl: ${fmtBRL(m.valor_implantacao_modulo)}`}
-                                  {m.valor_implantacao_modulo != null && m.valor_mensalidade_modulo != null && " · "}
-                                  {m.valor_mensalidade_modulo != null && `Mens: ${fmtBRL(m.valor_mensalidade_modulo)}`}
-                                </>
-                            }
-                          </span>
+                    {form.modulos_adicionais.map((m) => (
+                      <div key={m.modulo_id} className="flex items-center gap-3 px-4 py-2.5">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{m.nome}</p>
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {m.valor_implantacao_modulo > 0 && `Impl: ${fmtBRL(m.valor_implantacao_modulo)}`}
+                            {m.valor_implantacao_modulo > 0 && m.valor_mensalidade_modulo > 0 && " · "}
+                            {m.valor_mensalidade_modulo > 0 && `Mens: ${fmtBRL(m.valor_mensalidade_modulo)}`}
+                          </p>
                         </div>
-                      );
-                    })}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Qtd: <strong>{m.quantidade}</strong></span>
+                          <div className="text-right text-xs font-mono text-foreground">
+                            {m.valor_implantacao_modulo > 0 && <div>Impl: {fmtBRL(m.valor_implantacao_modulo * m.quantidade)}</div>}
+                            {m.valor_mensalidade_modulo > 0 && <div>Mens: {fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}</div>}
+                          </div>
+                          <Button
+                            type="button" variant="ghost" size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => handleRemoverModulo(m.modulo_id)}
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -836,11 +902,11 @@ export default function Pedidos() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground">Implantação</Label>
-                    <Input readOnly value={fmtBRL(descontoAtivo ? form.valor_implantacao_original : valorImplantacaoFinal)} className="bg-background font-mono text-sm" />
+                    <Input readOnly value={fmtBRL(descontoAtivo ? valorImplantacaoOriginal : valorImplantacaoFinal)} className="bg-background font-mono text-sm" />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground">Mensalidade</Label>
-                    <Input readOnly value={fmtBRL(descontoAtivo ? form.valor_mensalidade_original : valorMensalidadeFinal)} className="bg-background font-mono text-sm" />
+                    <Input readOnly value={fmtBRL(descontoAtivo ? valorMensalidadeOriginal : valorMensalidadeFinal)} className="bg-background font-mono text-sm" />
                   </div>
                 </div>
 
