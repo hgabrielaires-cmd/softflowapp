@@ -1129,16 +1129,16 @@ export default function Pedidos() {
           <form onSubmit={handleSaveCliente} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2 space-y-1.5">
+                <Label>CNPJ / CPF *</Label>
+                <Input placeholder="00.000.000/0000-00" value={clienteForm.cnpj_cpf} onChange={(e) => setClienteForm((f) => ({ ...f, cnpj_cpf: e.target.value }))} required autoFocus />
+              </div>
+              <div className="col-span-2 space-y-1.5">
                 <Label>Nome Fantasia *</Label>
                 <Input placeholder="Nome fantasia..." value={clienteForm.nome_fantasia} onChange={(e) => setClienteForm((f) => ({ ...f, nome_fantasia: e.target.value }))} required />
               </div>
               <div className="col-span-2 space-y-1.5">
                 <Label>Razão Social</Label>
                 <Input placeholder="Razão social..." value={clienteForm.razao_social} onChange={(e) => setClienteForm((f) => ({ ...f, razao_social: e.target.value }))} />
-              </div>
-              <div className="col-span-2 space-y-1.5">
-                <Label>CNPJ / CPF *</Label>
-                <Input placeholder="00.000.000/0000-00" value={clienteForm.cnpj_cpf} onChange={(e) => setClienteForm((f) => ({ ...f, cnpj_cpf: e.target.value }))} required />
               </div>
               <div className="space-y-1.5">
                 <Label>Contato</Label>
