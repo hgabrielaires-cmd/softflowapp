@@ -69,7 +69,7 @@ function Sidebar({ collapsed, profile, roles, visibleItems, initials, onNavigate
         {collapsed ? (
           <img src={iconSoftflow} alt="Softflow" className="h-8 w-8 object-contain" style={{ filter: 'brightness(0) invert(1)' }} />
         ) : (
-          <img src={logoSoftflowBranca} alt="Softflow" className="h-8 object-contain" />
+          <img src={logoSoftflowBranca} alt="Softflow" className="h-12 object-contain mx-auto" />
         )}
       </div>
 
