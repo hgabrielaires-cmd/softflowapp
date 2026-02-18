@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Usuarios from "./pages/Usuarios";
 import Perfil from "./pages/Perfil";
 import Filiais from "./pages/Filiais";
+import Financeiro from "./pages/Financeiro";
 import { ComingSoon } from "./components/ComingSoon";
 import Clientes from "./pages/Clientes";
 import Planos from "./pages/Planos";
@@ -63,12 +64,8 @@ const App = () => (
             <Route
               path="/financeiro"
               element={
-                <ProtectedRoute requiredRole="financeiro">
-                  <ComingSoon
-                    module="Módulo 3"
-                    title="Aprovação Financeira"
-                    description="Em desenvolvimento. Aqui o financeiro aprovará pedidos e gerará contratos."
-                  />
+              <ProtectedRoute requiredRole="financeiro">
+                  <Financeiro />
                 </ProtectedRoute>
               }
             />
