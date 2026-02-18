@@ -62,7 +62,8 @@ export default function Usuarios() {
   const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState<AppRole>("vendedor");
   const [inviteFilialId, setInviteFilialId] = useState("");
-  const [inviteComissao, setInviteComissao] = useState("5");
+  const [inviteComissaoImp, setInviteComissaoImp] = useState("5");
+  const [inviteComissaoMens, setInviteComissaoMens] = useState("5");
   const [inviting, setInviting] = useState(false);
 
   // Edit dialog
@@ -71,7 +72,8 @@ export default function Usuarios() {
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState<AppRole>("vendedor");
   const [editFilialId, setEditFilialId] = useState("");
-  const [editComissao, setEditComissao] = useState("5");
+  const [editComissaoImp, setEditComissaoImp] = useState("5");
+  const [editComissaoMens, setEditComissaoMens] = useState("5");
   const [editActive, setEditActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -124,14 +126,16 @@ export default function Usuarios() {
 
       await supabase.from("profiles").update({
         filial_id: (inviteFilialId && inviteFilialId !== "todas") ? inviteFilialId : null,
-        comissao_percentual: parseFloat(inviteComissao) || 5,
-      }).eq("user_id", data.user.id);
+        comissao_percentual: parseFloat(inviteComissaoImp) || 5,
+        comissao_implantacao_percentual: parseFloat(inviteComissaoImp) || 5,
+        comissao_mensalidade_percentual: parseFloat(inviteComissaoMens) || 5,
+      } as any).eq("user_id", data.user.id);
 
       await supabase.from("user_roles").insert({ user_id: data.user.id, role: inviteRole });
 
       toast.success(`Usuário ${inviteName} criado com sucesso!`);
       setOpenInvite(false);
-      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteComissao("5");
+      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteComissaoImp("5"); setInviteComissaoMens("5");
       loadUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
@@ -145,7 +149,8 @@ export default function Usuarios() {
     setEditName(user.full_name);
     setEditRole(user.roles[0] || "vendedor");
     setEditFilialId(user.filial_id || "todas");
-    setEditComissao(user.comissao_percentual?.toString() || "5");
+    setEditComissaoImp(((user as any).comissao_implantacao_percentual ?? user.comissao_percentual ?? 5).toString());
+    setEditComissaoMens(((user as any).comissao_mensalidade_percentual ?? user.comissao_percentual ?? 5).toString());
     setEditActive(user.active);
     setOpenEdit(true);
   }
@@ -159,9 +164,11 @@ export default function Usuarios() {
       const { error: profileError } = await supabase.from("profiles").update({
         full_name: editName,
         filial_id: (editFilialId && editFilialId !== "todas") ? editFilialId : null,
-        comissao_percentual: parseFloat(editComissao) || 0,
+        comissao_percentual: parseFloat(editComissaoImp) || 0,
+        comissao_implantacao_percentual: parseFloat(editComissaoImp) || 0,
+        comissao_mensalidade_percentual: parseFloat(editComissaoMens) || 0,
         active: editActive,
-      }).eq("user_id", editingUser.user_id);
+      } as any).eq("user_id", editingUser.user_id);
 
       if (profileError) throw profileError;
 
@@ -284,7 +291,10 @@ export default function Usuarios() {
                       }
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {user.comissao_percentual != null ? `${user.comissao_percentual}%` : "—"}
+                      {(user as any).comissao_implantacao_percentual != null
+                        ? `Imp: ${(user as any).comissao_implantacao_percentual}% / Mens: ${(user as any).comissao_mensalidade_percentual ?? user.comissao_percentual ?? 0}%`
+                        : user.comissao_percentual != null ? `${user.comissao_percentual}%` : "—"
+                      }
                     </TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -395,13 +405,23 @@ export default function Usuarios() {
                 <FilialSelect value={inviteFilialId} onChange={setInviteFilialId} />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Comissão padrão (%)</Label>
-              <Input
-                type="number" min="0" max="100" step="0.01" placeholder="5"
-                value={inviteComissao}
-                onChange={(e) => setInviteComissao(e.target.value)}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Comissão implantação (%)</Label>
+                <Input
+                  type="number" min="0" max="100" step="0.01" placeholder="5"
+                  value={inviteComissaoImp}
+                  onChange={(e) => setInviteComissaoImp(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Comissão mensalidade (%)</Label>
+                <Input
+                  type="number" min="0" max="100" step="0.01" placeholder="5"
+                  value={inviteComissaoMens}
+                  onChange={(e) => setInviteComissaoMens(e.target.value)}
+                />
+              </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setOpenInvite(false)}>Cancelar</Button>
@@ -456,23 +476,31 @@ export default function Usuarios() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Comissão padrão (%)</Label>
+                  <Label>Comissão implantação (%)</Label>
                   <Input
                     type="number" min="0" max="100" step="0.01"
-                    value={editComissao}
-                    onChange={(e) => setEditComissao(e.target.value)}
+                    value={editComissaoImp}
+                    onChange={(e) => setEditComissaoImp(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Status</Label>
-                  <Select value={editActive ? "ativo" : "inativo"} onValueChange={(v) => setEditActive(v === "ativo")}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ativo">✅ Ativo</SelectItem>
-                      <SelectItem value="inativo">⛔ Inativo</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Comissão mensalidade (%)</Label>
+                  <Input
+                    type="number" min="0" max="100" step="0.01"
+                    value={editComissaoMens}
+                    onChange={(e) => setEditComissaoMens(e.target.value)}
+                  />
                 </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={editActive ? "ativo" : "inativo"} onValueChange={(v) => setEditActive(v === "ativo")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ativo">✅ Ativo</SelectItem>
+                    <SelectItem value="inativo">⛔ Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

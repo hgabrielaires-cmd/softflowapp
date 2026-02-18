@@ -24,6 +24,8 @@ export interface Profile {
   avatar_url: string | null;
   active: boolean;
   comissao_percentual: number | null;
+  comissao_implantacao_percentual: number | null;
+  comissao_mensalidade_percentual: number | null;
   created_at: string;
   updated_at: string;
 }

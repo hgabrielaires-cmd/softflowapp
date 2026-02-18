@@ -131,6 +131,8 @@ interface FormState {
   filial_id: string;
   vendedor_id: string;
   comissao_percentual: string;
+  comissao_implantacao_percentual: string;
+  comissao_mensalidade_percentual: string;
   observacoes: string;
   // Valores originais (auto-preenchidos, readonly)
   valor_implantacao_original: number;
@@ -149,7 +151,10 @@ interface FormState {
 
 const emptyForm: FormState = {
   cliente_id: "", plano_id: "", filial_id: "", vendedor_id: "",
-  comissao_percentual: "5", observacoes: "",
+  comissao_percentual: "5",
+  comissao_implantacao_percentual: "5",
+  comissao_mensalidade_percentual: "5",
+  observacoes: "",
   valor_implantacao_original: 0,
   valor_mensalidade_original: 0,
   desconto_implantacao_tipo: "R$",
@@ -259,7 +264,15 @@ export default function Pedidos() {
   );
 
   const valorTotal = valorImplantacaoFinal + valorMensalidadeFinal;
-  const comissaoValor = valorTotal * (parseFloat(form.comissao_percentual) || 0) / 100;
+  // Comissões separadas por tipo
+  const comissaoImpPerc = parseFloat(form.comissao_implantacao_percentual) || 0;
+  const comissaoMensPerc = parseFloat(form.comissao_mensalidade_percentual) || 0;
+  const comissaoImpValor = valorImplantacaoFinal * comissaoImpPerc / 100;
+  const comissaoMensValor = valorMensalidadeFinal * comissaoMensPerc / 100;
+  const comissaoValorTotal = comissaoImpValor + comissaoMensValor;
+  // Campo legado mantido para compatibilidade
+  const comissaoValor = comissaoValorTotal;
+  const comissaoPercentualLegado = parseFloat(form.comissao_percentual) || 0;
 
   // ─── Load plano + módulos disponíveis ──────────────────────────────────────
 
@@ -451,10 +464,18 @@ export default function Pedidos() {
   // ─── Open create/edit ─────────────────────────────────────────────────────
 
   function openCreate() {
-    const defaultComissao = profile?.comissao_percentual?.toString() ?? "5";
+    const defaultImp = (profile as any)?.comissao_implantacao_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
+    const defaultMens = (profile as any)?.comissao_mensalidade_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
     const defaultFilial = filialFavoritaId || profile?.filial_id || "";
     const defaultVendedor = profile?.user_id ?? "";
-    setForm({ ...emptyForm, comissao_percentual: defaultComissao, filial_id: defaultFilial, vendedor_id: defaultVendedor });
+    setForm({
+      ...emptyForm,
+      comissao_percentual: defaultImp,
+      comissao_implantacao_percentual: defaultImp,
+      comissao_mensalidade_percentual: defaultMens,
+      filial_id: defaultFilial,
+      vendedor_id: defaultVendedor,
+    });
     setPlanoSelecionado(null);
     setModulosDisponiveis([]);
     setModuloBuscaId("");
@@ -473,6 +494,8 @@ export default function Pedidos() {
       filial_id: pedido.filial_id,
       vendedor_id: pedido.vendedor_id,
       comissao_percentual: pedido.comissao_percentual.toString(),
+      comissao_implantacao_percentual: ((pedido as any).comissao_implantacao_percentual ?? pedido.comissao_percentual ?? 5).toString(),
+      comissao_mensalidade_percentual: ((pedido as any).comissao_mensalidade_percentual ?? pedido.comissao_percentual ?? 5).toString(),
       observacoes: pedido.observacoes || "",
       valor_implantacao_original: pedido.valor_implantacao_original ?? pedido.valor_implantacao,
       valor_mensalidade_original: pedido.valor_mensalidade_original ?? pedido.valor_mensalidade,
@@ -505,14 +528,14 @@ export default function Pedidos() {
         plano_id: form.plano_id,
         filial_id: form.filial_id || profile?.filial_id,
         vendedor_id: form.vendedor_id || profile?.user_id,
-        // Legado — mantemos compatibilidade
+        // Legado
         valor_implantacao: valorImplantacaoFinal,
         valor_mensalidade: valorMensalidadeFinal,
         valor_total: valorTotal,
-        comissao_percentual: parseFloat(form.comissao_percentual) || 0,
-        comissao_valor: comissaoValor,
+        comissao_percentual: comissaoPercentualLegado,
+        comissao_valor: comissaoValorTotal,
         observacoes: form.observacoes || null,
-        // Novos campos
+        // Campos de valor
         valor_implantacao_original: valorImplantacaoOriginal,
         valor_mensalidade_original: valorMensalidadeOriginal,
         desconto_implantacao_tipo: form.desconto_implantacao_tipo,
@@ -524,6 +547,11 @@ export default function Pedidos() {
         modulos_adicionais: form.modulos_adicionais,
         tipo_pedido: form.tipo_pedido,
         contrato_id: form.contrato_id || null,
+        // Comissões separadas
+        comissao_implantacao_percentual: comissaoImpPerc,
+        comissao_implantacao_valor: comissaoImpValor,
+        comissao_mensalidade_percentual: comissaoMensPerc,
+        comissao_mensalidade_valor: comissaoMensValor,
       };
 
       if (editingPedido) {
@@ -994,7 +1022,13 @@ export default function Pedidos() {
                 {isAdmin ? (
                   <Select value={form.vendedor_id} onValueChange={(v) => {
                     const vend = vendedores.find((vv) => vv.user_id === v);
-                    setForm((f) => ({ ...f, vendedor_id: v, comissao_percentual: vend?.comissao_percentual?.toString() ?? f.comissao_percentual }));
+                    setForm((f) => ({
+                      ...f,
+                      vendedor_id: v,
+                      comissao_percentual: (vend as any)?.comissao_implantacao_percentual?.toString() ?? vend?.comissao_percentual?.toString() ?? f.comissao_percentual,
+                      comissao_implantacao_percentual: (vend as any)?.comissao_implantacao_percentual?.toString() ?? vend?.comissao_percentual?.toString() ?? f.comissao_implantacao_percentual,
+                      comissao_mensalidade_percentual: (vend as any)?.comissao_mensalidade_percentual?.toString() ?? vend?.comissao_percentual?.toString() ?? f.comissao_mensalidade_percentual,
+                    }));
                   }}>
                     <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
@@ -1185,6 +1219,41 @@ export default function Pedidos() {
                     <Label className="text-xs text-muted-foreground">Valor total</Label>
                     <Input readOnly value={fmtBRL(valorTotal)} className="bg-background font-mono font-bold text-foreground" />
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Comissões ── */}
+            {(isAdmin || isVendedor) && (
+              <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+                <Label className="text-sm font-semibold">Comissões do Vendedor</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Implantação / Treinamento (%)</Label>
+                    <Input
+                      type="number" min="0" max="100" step="0.01"
+                      value={form.comissao_implantacao_percentual}
+                      onChange={(e) => setForm((f) => ({ ...f, comissao_implantacao_percentual: e.target.value, comissao_percentual: e.target.value }))}
+                      readOnly={isVendedor && !isAdmin}
+                      className={isVendedor && !isAdmin ? "bg-muted cursor-not-allowed" : ""}
+                    />
+                    <p className="text-xs text-muted-foreground font-mono">{fmtBRL(comissaoImpValor)}</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Mensalidade (%)</Label>
+                    <Input
+                      type="number" min="0" max="100" step="0.01"
+                      value={form.comissao_mensalidade_percentual}
+                      onChange={(e) => setForm((f) => ({ ...f, comissao_mensalidade_percentual: e.target.value }))}
+                      readOnly={isVendedor && !isAdmin}
+                      className={isVendedor && !isAdmin ? "bg-muted cursor-not-allowed" : ""}
+                    />
+                    <p className="text-xs text-muted-foreground font-mono">{fmtBRL(comissaoMensValor)}</p>
+                  </div>
+                </div>
+                <div className="pt-1 border-t border-border flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">Total comissão</span>
+                  <span className="font-mono font-semibold text-sm">{fmtBRL(comissaoValorTotal)}</span>
                 </div>
               </div>
             )}
@@ -1419,15 +1488,22 @@ export default function Pedidos() {
                   </div>
                 </div>
 
-                {(isAdmin || isFinanceiro) && (
-                  <div className="border-t border-border pt-3 grid grid-cols-2 gap-3">
-                    <div className="space-y-0.5">
-                      <p className="text-xs text-muted-foreground">Comissão %</p>
-                      <p>{vp.comissao_percentual}%</p>
+                {(isAdmin || isFinanceiro || isVendedor) && (
+                  <div className="border-t border-border pt-3 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Comissões</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-0.5">
+                        <p className="text-xs text-muted-foreground">Implantação / Treinamento</p>
+                        <p className="text-xs">{(vp as any).comissao_implantacao_percentual ?? vp.comissao_percentual}% → <span className="font-mono">{fmtBRL((vp as any).comissao_implantacao_valor ?? 0)}</span></p>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-xs text-muted-foreground">Mensalidade</p>
+                        <p className="text-xs">{(vp as any).comissao_mensalidade_percentual ?? vp.comissao_percentual}% → <span className="font-mono">{fmtBRL((vp as any).comissao_mensalidade_valor ?? 0)}</span></p>
+                      </div>
                     </div>
-                    <div className="space-y-0.5">
-                      <p className="text-xs text-muted-foreground">Valor comissão</p>
-                      <p className="font-mono">{fmtBRL(vp.comissao_valor)}</p>
+                    <div className="flex justify-between items-center pt-1 border-t border-border">
+                      <span className="text-xs text-muted-foreground">Total comissão</span>
+                      <span className="font-mono font-semibold text-sm">{fmtBRL(vp.comissao_valor)}</span>
                     </div>
                   </div>
                 )}
