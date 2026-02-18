@@ -160,6 +160,10 @@ export type Database = {
       pedidos: {
         Row: {
           cliente_id: string
+          comissao_implantacao_percentual: number | null
+          comissao_implantacao_valor: number | null
+          comissao_mensalidade_percentual: number | null
+          comissao_mensalidade_valor: number | null
           comissao_percentual: number
           comissao_valor: number
           contrato_id: string | null
@@ -192,6 +196,10 @@ export type Database = {
         }
         Insert: {
           cliente_id: string
+          comissao_implantacao_percentual?: number | null
+          comissao_implantacao_valor?: number | null
+          comissao_mensalidade_percentual?: number | null
+          comissao_mensalidade_valor?: number | null
           comissao_percentual?: number
           comissao_valor?: number
           contrato_id?: string | null
@@ -224,6 +232,10 @@ export type Database = {
         }
         Update: {
           cliente_id?: string
+          comissao_implantacao_percentual?: number | null
+          comissao_implantacao_valor?: number | null
+          comissao_mensalidade_percentual?: number | null
+          comissao_mensalidade_valor?: number | null
           comissao_percentual?: number
           comissao_valor?: number
           contrato_id?: string | null
@@ -360,6 +372,8 @@ export type Database = {
         Row: {
           active: boolean
           avatar_url: string | null
+          comissao_implantacao_percentual: number | null
+          comissao_mensalidade_percentual: number | null
           comissao_percentual: number | null
           created_at: string
           email: string
@@ -374,6 +388,8 @@ export type Database = {
         Insert: {
           active?: boolean
           avatar_url?: string | null
+          comissao_implantacao_percentual?: number | null
+          comissao_mensalidade_percentual?: number | null
           comissao_percentual?: number | null
           created_at?: string
           email: string
@@ -388,6 +404,8 @@ export type Database = {
         Update: {
           active?: boolean
           avatar_url?: string | null
+          comissao_implantacao_percentual?: number | null
+          comissao_mensalidade_percentual?: number | null
           comissao_percentual?: number | null
           created_at?: string
           email?: string
