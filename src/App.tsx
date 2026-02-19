@@ -17,6 +17,7 @@ import Planos from "./pages/Planos";
 import Pedidos from "./pages/Pedidos";
 import Contratos from "./pages/Contratos";
 import Notificacoes from "./pages/Notificacoes";
+import ModelosContrato from "./pages/ModelosContrato";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -160,6 +161,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="admin">
                   <Notificacoes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/modelos-contrato"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <ModelosContrato />
                 </ProtectedRoute>
               }
             />

@@ -91,6 +91,7 @@ const navGroups: NavGroup[] = [
     roles: ["admin"],
     items: [
       { icon: <Building2 className="h-4 w-4" />, label: "Filiais", to: "/filiais" },
+      { icon: <FileText className="h-4 w-4" />, label: "Modelos de Contrato", to: "/modelos-contrato" },
       { icon: <Bell className="h-4 w-4" />, label: "Notificações", to: "/notificacoes" },
       { icon: <Plug className="h-4 w-4" />, label: "Integrações", to: "/integracoes" },
     ],
