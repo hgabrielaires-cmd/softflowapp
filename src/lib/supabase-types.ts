@@ -1,9 +1,10 @@
-export type AppRole = 'admin' | 'financeiro' | 'vendedor' | 'tecnico';
+export type AppRole = 'admin' | 'financeiro' | 'vendedor' | 'operacional' | 'tecnico';
 
 export const ROLE_LABELS: Record<AppRole, string> = {
   admin: 'Administrador',
   financeiro: 'Financeiro',
   vendedor: 'Vendedor',
+  operacional: 'Operacional',
   tecnico: 'Técnico',
 };
 
@@ -11,6 +12,7 @@ export const ROLE_COLORS: Record<AppRole, string> = {
   admin: 'bg-red-100 text-red-700 border-red-200',
   financeiro: 'bg-blue-100 text-blue-700 border-blue-200',
   vendedor: 'bg-sky-100 text-sky-700 border-sky-200',
+  operacional: 'bg-green-100 text-green-700 border-green-200',
   tecnico: 'bg-orange-100 text-orange-700 border-orange-200',
 };
 
