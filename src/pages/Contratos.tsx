@@ -55,6 +55,8 @@ import {
   MoreHorizontal,
   FilePen,
   FileOutput,
+  Download,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -80,7 +82,24 @@ interface Contrato {
   contrato_origem_id: string | null;
   created_at: string;
   updated_at: string;
-  clientes?: { nome_fantasia: string; filial_id: string | null } | null;
+  pdf_url: string | null;
+  status_geracao: string | null;
+  clientes?: {
+    nome_fantasia: string;
+    filial_id: string | null;
+    razao_social: string | null;
+    cnpj_cpf: string;
+    inscricao_estadual: string | null;
+    cidade: string | null;
+    uf: string | null;
+    cep: string | null;
+    logradouro: string | null;
+    numero: string | null;
+    complemento: string | null;
+    bairro: string | null;
+    telefone: string | null;
+    email: string | null;
+  } | null;
   planos?: { nome: string; descricao: string | null; valor_mensalidade_padrao: number } | null;
   pedidos?: {
     status_pedido: string;
@@ -99,6 +118,8 @@ interface Contrato {
     observacoes: string | null;
     pagamento_mensalidade_observacao: string | null;
     pagamento_implantacao_observacao: string | null;
+    pagamento_mensalidade_forma: string | null;
+    pagamento_mensalidade_parcelas: number | null;
     filial_id: string;
     vendedor_id: string;
   } | null;
@@ -126,6 +147,7 @@ export default function Contratos() {
   const [openDetail, setOpenDetail] = useState(false);
   const [openEncerrar, setOpenEncerrar] = useState(false);
   const [processando, setProcessando] = useState(false);
+  const [gerando, setGerando] = useState(false);
 
   // Contatos do cliente selecionado (para Termo de Aceite)
   const [contatosCliente, setContatosCliente] = useState<{ nome: string; decisor: boolean; ativo: boolean }[]>([]);
@@ -137,7 +159,7 @@ export default function Contratos() {
         .from("contratos")
         .select(`
           *,
-          clientes(nome_fantasia, filial_id),
+          clientes(nome_fantasia, filial_id, razao_social, cnpj_cpf, inscricao_estadual, cidade, uf, cep, logradouro, numero, complemento, bairro, telefone, email),
           planos(nome, descricao, valor_mensalidade_padrao),
           pedidos(
             status_pedido, contrato_liberado, financeiro_status,
@@ -146,7 +168,8 @@ export default function Contratos() {
             valor_total, desconto_implantacao_tipo, desconto_implantacao_valor,
             desconto_mensalidade_tipo, desconto_mensalidade_valor,
             modulos_adicionais, observacoes,
-            pagamento_mensalidade_observacao, pagamento_implantacao_observacao,
+            pagamento_mensalidade_observacao, pagamento_mensalidade_forma,
+            pagamento_mensalidade_parcelas, pagamento_implantacao_observacao,
             filial_id, vendedor_id
           )
         `)
@@ -210,6 +233,67 @@ export default function Contratos() {
     loadData();
   }
 
+  // ── Gerar Contrato ─────────────────────────────────────────────────────────
+  async function handleGerarContrato(contrato: Contrato) {
+    setGerando(true);
+    try {
+      // Chamar Edge Function
+      const { data, error } = await supabase.functions.invoke("gerar-contrato-pdf", {
+        body: { contrato_id: contrato.id },
+      });
+
+      if (error) {
+        toast.error("Erro ao gerar contrato: " + (error.message || "Tente novamente."));
+        return;
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      // Atualizar contrato na lista local
+      const updatedContrato = {
+        ...contrato,
+        status_geracao: "Gerado",
+        pdf_url: data.storage_path,
+      };
+      setContratos((prev) =>
+        prev.map((c) => (c.id === contrato.id ? updatedContrato : c))
+      );
+      if (selected?.id === contrato.id) {
+        setSelected(updatedContrato);
+      }
+
+      toast.success("Contrato gerado com sucesso!");
+
+      // Abrir download automaticamente
+      if (data.signed_url) {
+        window.open(data.signed_url, "_blank");
+      }
+    } finally {
+      setGerando(false);
+    }
+  }
+
+  // ── Baixar Contrato (gera nova signed URL) ─────────────────────────────────
+  async function handleBaixarContrato(contrato: Contrato) {
+    if (!contrato.pdf_url) return;
+    setGerando(true);
+    try {
+      const { data, error } = await supabase.storage
+        .from("contratos-pdf")
+        .createSignedUrl(contrato.pdf_url, 3600);
+      if (error || !data) {
+        toast.error("Erro ao gerar link de download: " + error?.message);
+        return;
+      }
+      window.open(data.signedUrl, "_blank");
+    } finally {
+      setGerando(false);
+    }
+  }
+
   function getStatusBadge(status: string) {
     if (status === "Ativo")
       return (
@@ -218,6 +302,21 @@ export default function Contratos() {
         </Badge>
       );
     return <Badge variant="secondary">Encerrado</Badge>;
+  }
+
+  function getStatusGeracaoBadge(statusGeracao: string | null) {
+    if (statusGeracao === "Gerado")
+      return (
+        <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 text-xs flex items-center gap-1 w-fit">
+          <CheckCircle2 className="h-3 w-3" />
+          Gerado
+        </Badge>
+      );
+    return (
+      <Badge variant="secondary" className="text-xs w-fit">
+        Pendente
+      </Badge>
+    );
   }
 
   function getTipoBadge(tipo: string) {
@@ -408,6 +507,7 @@ Estou à disposição.`;
                 <TableHead>Tipo</TableHead>
                 <TableHead>Contrato</TableHead>
                 <TableHead>Pedido</TableHead>
+                <TableHead>Doc.</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -415,13 +515,13 @@ Estou à disposição.`;
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12">
+                  <TableCell colSpan={9} className="text-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-16 text-muted-foreground">
                     <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     Nenhum contrato encontrado
                   </TableCell>
@@ -441,6 +541,7 @@ Estou à disposição.`;
                     <TableCell>{getTipoBadge(contrato.tipo)}</TableCell>
                     <TableCell>{getStatusBadge(contrato.status)}</TableCell>
                     <TableCell>{getPedidoStatusBadges(contrato)}</TableCell>
+                    <TableCell>{getStatusGeracaoBadge(contrato.status_geracao)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(contrato.created_at), "dd/MM/yyyy", { locale: ptBR })}
                     </TableCell>
@@ -461,11 +562,26 @@ Estou à disposição.`;
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="cursor-pointer"
-                            onClick={() => toast.info("Geração de contrato em desenvolvimento.")}
+                            onClick={() => handleGerarContrato(contrato)}
+                            disabled={gerando}
                           >
-                            <FileOutput className="h-4 w-4 mr-2" />
-                            Gerar Contrato
+                            {gerando ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <FileOutput className="h-4 w-4 mr-2" />
+                            )}
+                            {contrato.status_geracao === "Gerado" ? "Regerar Contrato" : "Gerar Contrato"}
                           </DropdownMenuItem>
+                          {contrato.status_geracao === "Gerado" && contrato.pdf_url && (
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={() => handleBaixarContrato(contrato)}
+                              disabled={gerando}
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Baixar Contrato
+                            </DropdownMenuItem>
+                          )}
                           {canManage && (
                             <DropdownMenuItem
                               className="cursor-pointer"
@@ -663,27 +779,65 @@ Estou à disposição.`;
                 );
               })()}
 
-              {/* Ações */}
-              <div className="flex gap-2 pt-2 border-t border-border">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => toast.info("Geração de contrato em desenvolvimento.")}
-                >
-                  <FileOutput className="h-4 w-4 mr-2" />
-                  Gerar Contrato
-                </Button>
-                {canManage && selected.status === "Ativo" && (
+              {/* Ações de Contrato */}
+              <div className="border-t border-border pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Documento do Contrato</p>
+                  {getStatusGeracaoBadge(selected.status_geracao)}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => handleGerarContrato(selected)}
+                    disabled={gerando}
+                  >
+                    {gerando ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <FileOutput className="h-4 w-4 mr-2" />
+                    )}
+                    {selected.status_geracao === "Gerado" ? "Regerar Contrato" : "Gerar Contrato"}
+                  </Button>
+
+                  {selected.status_geracao === "Gerado" && selected.pdf_url && (
+                    <Button
+                      variant="default"
+                      className="flex-1"
+                      onClick={() => handleBaixarContrato(selected)}
+                      disabled={gerando}
+                    >
+                      {gerando ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4 mr-2" />
+                      )}
+                      Baixar Contrato
+                    </Button>
+                  )}
+                </div>
+
+                {selected.status_geracao === "Gerado" && (
+                  <p className="text-xs text-muted-foreground">
+                    💡 O contrato é gerado como DOCX preenchido. Abra no Word ou Google Docs para converter em PDF.
+                  </p>
+                )}
+              </div>
+
+              {/* Cancelar */}
+              {canManage && selected.status === "Ativo" && (
+                <div className="flex gap-2 pt-2 border-t border-border">
                   <Button
                     variant="destructive"
                     className="flex-1"
                     onClick={() => { setOpenDetail(false); setOpenEncerrar(true); }}
                   >
                     <XCircle className="h-4 w-4 mr-2" />
-                    Cancelar
+                    Cancelar Contrato
                   </Button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
