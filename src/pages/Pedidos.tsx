@@ -322,8 +322,8 @@ export default function Pedidos() {
   const limiteImpAtual = limiteDesconto?.implantacao ?? 100;
   const limiteMensAtual = limiteDesconto?.mensalidade ?? 100;
 
-  const descontoImpExcedido = descontoAtivo && descontoImpPercAtual > 0 && descontoImpPercAtual > limiteImpAtual;
-  const descontoMensExcedido = descontoAtivo && descontoMensPercAtual > 0 && descontoMensPercAtual > limiteMensAtual;
+  const descontoImpExcedido = descontoAtivo && (parseFloat(form.desconto_implantacao_valor) || 0) > 0 && limiteDesconto !== null && descontoImpPercAtual > limiteImpAtual;
+  const descontoMensExcedido = descontoAtivo && (parseFloat(form.desconto_mensalidade_valor) || 0) > 0 && limiteDesconto !== null && descontoMensPercAtual > limiteMensAtual;
   const descontoExcedido = descontoImpExcedido || descontoMensExcedido;
   // Qualquer usuário (inclusive admin) é bloqueado se exceder o limite
   const bloqueadoPorDesconto = descontoExcedido;
@@ -429,8 +429,8 @@ export default function Pedidos() {
 
   useEffect(() => {
     if (profile?.user_id) {
-      supabase.from("profiles").select("filial_favorita_id").eq("user_id", profile.user_id).single().then(({ data }) => {
-        if (data) setFilialFavoritaId((data as any).filial_favorita_id || null);
+      supabase.from("profiles").select("filial_favorita_id").eq("user_id", profile.user_id).maybeSingle().then(({ data }) => {
+        setFilialFavoritaId((data as any)?.filial_favorita_id || (profile as any)?.filial_favorita_id || null);
       });
     }
   }, [profile?.user_id]);
@@ -550,17 +550,25 @@ export default function Pedidos() {
     }
   }
 
-  function openCreate() {
+  async function openCreate() {
     const defaultImp = (profile as any)?.comissao_implantacao_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
     const defaultMens = (profile as any)?.comissao_mensalidade_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
-    const defaultFilial = filialFavoritaId || profile?.filial_id || "";
+
+    // Buscar filial favorita atualizada do banco (não depender do estado async)
+    let resolvedFilialId = filialFavoritaId || (profile as any)?.filial_favorita_id || profile?.filial_id || "";
+    if (profile?.user_id && !resolvedFilialId) {
+      const { data: pData } = await supabase.from("profiles").select("filial_favorita_id, filial_id").eq("user_id", profile.user_id).maybeSingle();
+      resolvedFilialId = (pData as any)?.filial_favorita_id || (pData as any)?.filial_id || "";
+      if ((pData as any)?.filial_favorita_id) setFilialFavoritaId((pData as any).filial_favorita_id);
+    }
+
     const defaultVendedor = profile?.user_id ?? "";
     setForm({
       ...emptyForm,
       comissao_percentual: defaultImp,
       comissao_implantacao_percentual: defaultImp,
       comissao_mensalidade_percentual: defaultMens,
-      filial_id: defaultFilial,
+      filial_id: resolvedFilialId,
       vendedor_id: defaultVendedor,
     });
     setClienteSearch("");
@@ -1452,7 +1460,7 @@ export default function Pedidos() {
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <Label className="text-xs">Desconto — Implantação</Label>
-                        {limiteDesconto && limiteDesconto.implantacao < 100 && (
+                        {limiteDesconto && (
                           <span className={`text-xs font-medium ${descontoImpExcedido ? "text-destructive" : "text-muted-foreground"}`}>
                             Limite: {limiteDesconto.implantacao}% · Aplicado: {descontoImpPercAtual.toFixed(1)}%
                           </span>
@@ -1481,7 +1489,7 @@ export default function Pedidos() {
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <Label className="text-xs">Desconto — Mensalidade</Label>
-                        {limiteDesconto && limiteDesconto.mensalidade < 100 && (
+                        {limiteDesconto && (
                           <span className={`text-xs font-medium ${descontoMensExcedido ? "text-destructive" : "text-muted-foreground"}`}>
                             Limite: {limiteDesconto.mensalidade}% · Aplicado: {descontoMensPercAtual.toFixed(1)}%
                           </span>
