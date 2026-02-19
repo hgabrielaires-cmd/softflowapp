@@ -129,14 +129,30 @@ export function getExampleData(): Record<string, string> {
 
 // Substituir todas as variáveis {{key}} no HTML
 export function substituirVariaveis(html: string, dados: Record<string, string>): string {
-  return html.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+  let result = html.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
     const trimmedKey = key.trim();
     // Se a variável é modulos.tabela_detalhada e o valor está vazio, remover o bloco inteiro
     if (trimmedKey === "modulos.tabela_detalhada" && (!dados[trimmedKey] || dados[trimmedKey] === "")) {
       return "";
     }
-    return dados[trimmedKey] ?? match;
+    const value = dados[trimmedKey];
+    if (value === undefined) return match;
+    // Se logo.url aparece fora de um atributo src, renderizar como tag <img>
+    if (trimmedKey === "logo.url" && value) {
+      return `<img src="${value}" alt="Logo" style="max-height: 80px; max-width: 200px;" />`;
+    }
+    return value;
   });
+
+  // Corrigir caso logo.url já esteja dentro de src="<img ...>" (duplo wrapping)
+  result = result.replace(/src="<img\s+src="([^"]+)"[^>]*\/?>"/gi, 'src="$1"');
+
+  // Adicionar max-width ao body se não existir
+  if (!result.includes("max-width") && !result.includes("<style")) {
+    result = `<style>body { max-width: 800px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; }</style>` + result;
+  }
+
+  return result;
 }
 
 export function fmtBRL(v: number): string {
