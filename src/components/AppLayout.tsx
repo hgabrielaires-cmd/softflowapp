@@ -61,9 +61,8 @@ const navGroups: NavGroup[] = [
     groupIcon: <UserCheck className="h-4 w-4" />,
     items: [
       { icon: <UserCheck className="h-4 w-4" />, label: "Clientes", to: "/clientes" },
-      { icon: <Users className="h-4 w-4" />, label: "Usuários", to: "/usuarios", roles: ["admin"] },
       { icon: <BookOpen className="h-4 w-4" />, label: "Planos", to: "/planos", roles: ["admin"] },
-      { icon: <Globe className="h-4 w-4" />, label: "Perfis de Usuário", to: "/perfis-usuario", roles: ["admin"] },
+      { icon: <Building2 className="h-4 w-4" />, label: "Fornecedores", to: "/fornecedores", roles: ["admin", "financeiro"] },
     ],
   },
   {
@@ -92,6 +91,8 @@ const navGroups: NavGroup[] = [
     roles: ["admin"],
     items: [
       { icon: <Building2 className="h-4 w-4" />, label: "Filiais", to: "/filiais" },
+      { icon: <Users className="h-4 w-4" />, label: "Usuários", to: "/usuarios" },
+      { icon: <Globe className="h-4 w-4" />, label: "Perfis de Usuário", to: "/perfis-usuario" },
       { icon: <FileText className="h-4 w-4" />, label: "Modelos de Contrato", to: "/modelos-contrato" },
       { icon: <Bell className="h-4 w-4" />, label: "Notificações", to: "/notificacoes" },
       { icon: <Plug className="h-4 w-4" />, label: "Integrações", to: "/integracoes" },
