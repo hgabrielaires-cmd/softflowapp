@@ -148,11 +148,13 @@ interface FormState {
   // Tipo do pedido
   tipo_pedido: "Novo" | "Upgrade" | "Aditivo";
   contrato_id: string | null;
-  // Forma de pagamento
+  // Forma de pagamento mensalidade (simplificado)
+  pagamento_mensalidade_tipo: "Pré-pago" | "Pós-pago";
+  pagamento_mensalidade_observacao: string;
+  // Forma de pagamento implantação
   pagamento_mensalidade_forma: string;
   pagamento_mensalidade_parcelas: string;
   pagamento_mensalidade_desconto_percentual: string;
-  pagamento_mensalidade_observacao: string;
   pagamento_implantacao_forma: string;
   pagamento_implantacao_parcelas: string;
   pagamento_implantacao_desconto_percentual: string;
@@ -174,11 +176,13 @@ const emptyForm: FormState = {
   modulos_adicionais: [],
   tipo_pedido: "Novo",
   contrato_id: null,
-  // Pagamento
+  // Mensalidade (simplificado)
+  pagamento_mensalidade_tipo: "Pré-pago",
+  pagamento_mensalidade_observacao: "",
+  // Implantação
   pagamento_mensalidade_forma: "",
   pagamento_mensalidade_parcelas: "",
   pagamento_mensalidade_desconto_percentual: "0",
-  pagamento_mensalidade_observacao: "",
   pagamento_implantacao_forma: "",
   pagamento_implantacao_parcelas: "",
   pagamento_implantacao_desconto_percentual: "0",
@@ -549,10 +553,11 @@ export default function Pedidos() {
       modulos_adicionais: adicionais,
       tipo_pedido: (pedido.tipo_pedido as "Novo" | "Upgrade" | "Aditivo") || "Novo",
       contrato_id: pedido.contrato_id || null,
+      pagamento_mensalidade_tipo: ((pedido as any).pagamento_mensalidade_forma === "Pós-pago" ? "Pós-pago" : "Pré-pago") as "Pré-pago" | "Pós-pago",
+      pagamento_mensalidade_observacao: (pedido as any).pagamento_mensalidade_observacao || "",
       pagamento_mensalidade_forma: (pedido as any).pagamento_mensalidade_forma || "",
       pagamento_mensalidade_parcelas: (pedido as any).pagamento_mensalidade_parcelas?.toString() || "",
       pagamento_mensalidade_desconto_percentual: ((pedido as any).pagamento_mensalidade_desconto_percentual ?? 0).toString(),
-      pagamento_mensalidade_observacao: (pedido as any).pagamento_mensalidade_observacao || "",
       pagamento_implantacao_forma: (pedido as any).pagamento_implantacao_forma || "",
       pagamento_implantacao_parcelas: (pedido as any).pagamento_implantacao_parcelas?.toString() || "",
       pagamento_implantacao_desconto_percentual: ((pedido as any).pagamento_implantacao_desconto_percentual ?? 0).toString(),
@@ -604,9 +609,9 @@ export default function Pedidos() {
         comissao_mensalidade_percentual: comissaoMensPerc,
         comissao_mensalidade_valor: comissaoMensValor,
         // Forma de pagamento
-        pagamento_mensalidade_forma: form.pagamento_mensalidade_forma || null,
-        pagamento_mensalidade_parcelas: form.pagamento_mensalidade_parcelas ? parseInt(form.pagamento_mensalidade_parcelas) : null,
-        pagamento_mensalidade_desconto_percentual: parseFloat(form.pagamento_mensalidade_desconto_percentual) || 0,
+        pagamento_mensalidade_forma: form.pagamento_mensalidade_tipo || null,
+        pagamento_mensalidade_parcelas: null,
+        pagamento_mensalidade_desconto_percentual: 0,
         pagamento_mensalidade_observacao: form.pagamento_mensalidade_observacao || null,
         pagamento_implantacao_forma: form.pagamento_implantacao_forma || null,
         pagamento_implantacao_parcelas: form.pagamento_implantacao_parcelas ? parseInt(form.pagamento_implantacao_parcelas) : null,
@@ -1296,40 +1301,7 @@ export default function Pedidos() {
               </div>
             )}
 
-            {/* ── Comissões ── */}
-            {(isAdmin || isVendedor) && (
-              <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
-                <Label className="text-sm font-semibold">Comissões do Vendedor</Label>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Implantação / Treinamento (%)</Label>
-                    <Input
-                      type="number" min="0" max="100" step="0.01"
-                      value={form.comissao_implantacao_percentual}
-                      onChange={(e) => setForm((f) => ({ ...f, comissao_implantacao_percentual: e.target.value, comissao_percentual: e.target.value }))}
-                      readOnly={isVendedor && !isAdmin}
-                      className={isVendedor && !isAdmin ? "bg-muted cursor-not-allowed" : ""}
-                    />
-                    <p className="text-xs text-muted-foreground font-mono">{fmtBRL(comissaoImpValor)}</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Mensalidade (%)</Label>
-                    <Input
-                      type="number" min="0" max="100" step="0.01"
-                      value={form.comissao_mensalidade_percentual}
-                      onChange={(e) => setForm((f) => ({ ...f, comissao_mensalidade_percentual: e.target.value }))}
-                      readOnly={isVendedor && !isAdmin}
-                      className={isVendedor && !isAdmin ? "bg-muted cursor-not-allowed" : ""}
-                    />
-                    <p className="text-xs text-muted-foreground font-mono">{fmtBRL(comissaoMensValor)}</p>
-                  </div>
-                </div>
-                <div className="pt-1 border-t border-border flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Total comissão</span>
-                  <span className="font-mono font-semibold text-sm">{fmtBRL(comissaoValorTotal)}</span>
-                </div>
-              </div>
-            )}
+            {/* ── Comissões — oculto no form, exibido apenas na visualização ── */}
 
             {/* ── Forma de Pagamento ── */}
             <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-4">
@@ -1343,44 +1315,27 @@ export default function Pedidos() {
                 </div>
               )}
 
-              {/* Mensalidade */}
+              {/* Mensalidade — simplificado */}
               <div className="space-y-3 border-t border-border pt-3">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Mensalidade</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Forma de pagamento</Label>
-                    <Select value={form.pagamento_mensalidade_forma} onValueChange={(v) => setForm((f) => ({ ...f, pagamento_mensalidade_forma: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <Label className="text-xs">Tipo de cobrança</Label>
+                    <Select
+                      value={form.pagamento_mensalidade_tipo}
+                      onValueChange={(v) => setForm((f) => ({ ...f, pagamento_mensalidade_tipo: v as "Pré-pago" | "Pós-pago" }))}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Boleto">Boleto</SelectItem>
-                        <SelectItem value="PIX">PIX</SelectItem>
-                        <SelectItem value="Cartão">Cartão</SelectItem>
-                        <SelectItem value="Transferência">Transferência</SelectItem>
+                        <SelectItem value="Pré-pago">Pré-pago</SelectItem>
+                        <SelectItem value="Pós-pago">Pós-pago</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Parcelas</Label>
-                    <Input
-                      type="number" min="1"
-                      placeholder={filialParametros ? `Máx ${filialParametros.parcelas_maximas_cartao}x` : "Nº de parcelas"}
-                      value={form.pagamento_mensalidade_parcelas}
-                      onChange={(e) => setForm((f) => ({ ...f, pagamento_mensalidade_parcelas: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Desconto adicional (%)</Label>
-                    <Input
-                      type="number" min="0" max="100" step="0.01"
-                      placeholder="0"
-                      value={form.pagamento_mensalidade_desconto_percentual}
-                      onChange={(e) => setForm((f) => ({ ...f, pagamento_mensalidade_desconto_percentual: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
                     <Label className="text-xs">Observação</Label>
                     <Input
-                      placeholder={filialParametros?.regras_padrao_mensalidade || "Ex: 1º pagamento após implantação"}
+                      placeholder={filialParametros?.regras_padrao_mensalidade || "Ex: Vencimento todo dia 10"}
                       value={form.pagamento_mensalidade_observacao}
                       onChange={(e) => setForm((f) => ({ ...f, pagamento_mensalidade_observacao: e.target.value }))}
                     />
