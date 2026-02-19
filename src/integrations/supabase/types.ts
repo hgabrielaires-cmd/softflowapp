@@ -488,11 +488,14 @@ export type Database = {
           comissao_mensalidade_percentual: number | null
           comissao_percentual: number | null
           created_at: string
+          desconto_limite_implantacao: number | null
+          desconto_limite_mensalidade: number | null
           email: string
           filial: string | null
           filial_favorita_id: string | null
           filial_id: string | null
           full_name: string
+          gestor_desconto: boolean | null
           id: string
           updated_at: string
           user_id: string
@@ -504,11 +507,14 @@ export type Database = {
           comissao_mensalidade_percentual?: number | null
           comissao_percentual?: number | null
           created_at?: string
+          desconto_limite_implantacao?: number | null
+          desconto_limite_mensalidade?: number | null
           email: string
           filial?: string | null
           filial_favorita_id?: string | null
           filial_id?: string | null
           full_name: string
+          gestor_desconto?: boolean | null
           id?: string
           updated_at?: string
           user_id: string
@@ -520,11 +526,14 @@ export type Database = {
           comissao_mensalidade_percentual?: number | null
           comissao_percentual?: number | null
           created_at?: string
+          desconto_limite_implantacao?: number | null
+          desconto_limite_mensalidade?: number | null
           email?: string
           filial?: string | null
           filial_favorita_id?: string | null
           filial_id?: string | null
           full_name?: string
+          gestor_desconto?: boolean | null
           id?: string
           updated_at?: string
           user_id?: string
@@ -542,6 +551,71 @@ export type Database = {
             columns: ["filial_id"]
             isOneToOne: false
             referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solicitacoes_desconto: {
+        Row: {
+          aprovado_em: string | null
+          aprovado_por: string | null
+          created_at: string
+          desconto_implantacao_percentual: number
+          desconto_implantacao_tipo: string
+          desconto_implantacao_valor: number
+          desconto_mensalidade_percentual: number
+          desconto_mensalidade_tipo: string
+          desconto_mensalidade_valor: number
+          id: string
+          motivo_reprovacao: string | null
+          observacoes: string | null
+          pedido_id: string
+          status: string
+          updated_at: string
+          vendedor_id: string
+        }
+        Insert: {
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          created_at?: string
+          desconto_implantacao_percentual?: number
+          desconto_implantacao_tipo?: string
+          desconto_implantacao_valor?: number
+          desconto_mensalidade_percentual?: number
+          desconto_mensalidade_tipo?: string
+          desconto_mensalidade_valor?: number
+          id?: string
+          motivo_reprovacao?: string | null
+          observacoes?: string | null
+          pedido_id: string
+          status?: string
+          updated_at?: string
+          vendedor_id: string
+        }
+        Update: {
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          created_at?: string
+          desconto_implantacao_percentual?: number
+          desconto_implantacao_tipo?: string
+          desconto_implantacao_valor?: number
+          desconto_mensalidade_percentual?: number
+          desconto_mensalidade_tipo?: string
+          desconto_mensalidade_valor?: number
+          id?: string
+          motivo_reprovacao?: string | null
+          observacoes?: string | null
+          pedido_id?: string
+          status?: string
+          updated_at?: string
+          vendedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitacoes_desconto_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
             referencedColumns: ["id"]
           },
         ]

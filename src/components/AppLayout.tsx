@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import iconSoftflow from "@/assets/icon-softflow.png";
 import logoSoftflowBranca from "@/assets/logo-softflow-branca.png";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
@@ -29,6 +29,9 @@ import {
   ListOrdered,
   PlusCircle,
   Inbox,
+  Percent,
+  Check,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -44,6 +47,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AppRole, ROLE_LABELS, Profile } from "@/lib/supabase-types";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -319,6 +323,196 @@ function Sidebar({ collapsed, profile, roles, initials, onNavigate, onSignOut, o
   );
 }
 
+// ─── Notification Bell ────────────────────────────────────────────────────────
+
+interface SolicitacaoDesconto {
+  id: string;
+  pedido_id: string;
+  vendedor_id: string;
+  desconto_implantacao_percentual: number;
+  desconto_mensalidade_percentual: number;
+  desconto_implantacao_tipo: string;
+  desconto_implantacao_valor: number;
+  desconto_mensalidade_tipo: string;
+  desconto_mensalidade_valor: number;
+  status: string;
+  observacoes: string | null;
+  created_at: string;
+  pedidos?: { clientes?: { nome_fantasia: string } | null; valor_implantacao_final?: number; valor_mensalidade_final?: number } | null;
+  profiles?: { full_name: string } | null;
+}
+
+function NotificationBell({ profile }: { profile: Profile | null }) {
+  const [solicitacoes, setSolicitacoes] = useState<SolicitacaoDesconto[]>([]);
+  const [open, setOpen] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [motivoReprova, setMotivoReprova] = useState<Record<string, string>>({});
+
+  const isGestor = (profile as any)?.gestor_desconto === true;
+
+  async function loadSolicitacoes() {
+    if (!isGestor && !(profile as any)?.gestor_desconto) return;
+    const { data } = await supabase
+      .from("solicitacoes_desconto")
+      .select("*, pedidos(valor_implantacao_final, valor_mensalidade_final, clientes(nome_fantasia))")
+      .eq("status", "Aguardando")
+      .order("created_at", { ascending: false });
+
+    // Enrich with vendor name
+    const enriched = await Promise.all((data || []).map(async (sol: any) => {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", sol.vendedor_id)
+        .single();
+      return { ...sol, profiles: prof };
+    }));
+    setSolicitacoes(enriched as SolicitacaoDesconto[]);
+  }
+
+  useEffect(() => {
+    if (profile) loadSolicitacoes();
+  }, [profile]);
+
+  async function handleAprovar(sol: SolicitacaoDesconto) {
+    setProcessingId(sol.id);
+    // Atualizar solicitação
+    await supabase.from("solicitacoes_desconto").update({
+      status: "Aprovado",
+      aprovado_por: profile?.user_id,
+      aprovado_em: new Date().toISOString(),
+    }).eq("id", sol.id);
+    // Liberar pedido para o financeiro
+    await supabase.from("pedidos").update({
+      status_pedido: "Aguardando Financeiro",
+    }).eq("id", sol.pedido_id);
+    toast.success("Desconto aprovado! Pedido liberado para o financeiro.");
+    setProcessingId(null);
+    loadSolicitacoes();
+  }
+
+  async function handleReprovar(sol: SolicitacaoDesconto) {
+    const motivo = motivoReprova[sol.id] || "";
+    setProcessingId(sol.id);
+    await supabase.from("solicitacoes_desconto").update({
+      status: "Reprovado",
+      aprovado_por: profile?.user_id,
+      aprovado_em: new Date().toISOString(),
+      motivo_reprovacao: motivo || null,
+    }).eq("id", sol.id);
+    // Voltar pedido para reprovado
+    await supabase.from("pedidos").update({
+      status_pedido: "Reprovado Financeiro",
+      financeiro_status: "Reprovado",
+      financeiro_motivo: motivo ? `Desconto reprovado: ${motivo}` : "Desconto reprovado pelo gestor",
+    }).eq("id", sol.pedido_id);
+    toast.error("Desconto reprovado. Vendedor notificado.");
+    setProcessingId(null);
+    setMotivoReprova((prev) => { const n = { ...prev }; delete n[sol.id]; return n; });
+    loadSolicitacoes();
+  }
+
+  if (!isGestor) {
+    return (
+      <Button variant="ghost" size="icon" className="h-8 w-8 relative">
+        <Bell className="h-4 w-4" />
+      </Button>
+    );
+  }
+
+  return (
+    <DropdownMenu open={open} onOpenChange={(v) => { setOpen(v); if (v) loadSolicitacoes(); }}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8 relative">
+          <Bell className="h-4 w-4" />
+          {solicitacoes.length > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+              {solicitacoes.length > 9 ? "9+" : solicitacoes.length}
+            </span>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-96 p-0 max-h-[80vh] overflow-y-auto">
+        <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+          <Percent className="h-4 w-4 text-primary" />
+          <p className="font-semibold text-sm">Aprovações de Desconto</p>
+          {solicitacoes.length > 0 && (
+            <span className="ml-auto text-xs bg-destructive text-destructive-foreground rounded-full px-2 py-0.5 font-medium">
+              {solicitacoes.length} pendente{solicitacoes.length > 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+        {solicitacoes.length === 0 ? (
+          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+            <Bell className="h-8 w-8 mx-auto mb-2 opacity-30" />
+            Nenhuma aprovação pendente
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {solicitacoes.map((sol) => {
+              const cliente = (sol.pedidos as any)?.clientes?.nome_fantasia || "—";
+              const vendedor = (sol as any).profiles?.full_name || "—";
+              const isProcessing = processingId === sol.id;
+              return (
+                <div key={sol.id} className="p-4 space-y-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{cliente}</p>
+                    <p className="text-xs text-muted-foreground">Vendedor: {vendedor}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-muted rounded-lg p-2.5">
+                    {sol.desconto_implantacao_percentual > 0 && (
+                      <div>
+                        <p className="text-muted-foreground">Implantação</p>
+                        <p className="font-semibold text-foreground">{sol.desconto_implantacao_tipo === "%" ? `${sol.desconto_implantacao_percentual.toFixed(1)}%` : `R$ ${sol.desconto_implantacao_valor}`}</p>
+                        <p className="text-muted-foreground">({sol.desconto_implantacao_percentual.toFixed(1)}% do valor)</p>
+                      </div>
+                    )}
+                    {sol.desconto_mensalidade_percentual > 0 && (
+                      <div>
+                        <p className="text-muted-foreground">Mensalidade</p>
+                        <p className="font-semibold text-foreground">{sol.desconto_mensalidade_tipo === "%" ? `${sol.desconto_mensalidade_percentual.toFixed(1)}%` : `R$ ${sol.desconto_mensalidade_valor}`}</p>
+                        <p className="text-muted-foreground">({sol.desconto_mensalidade_percentual.toFixed(1)}% do valor)</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <textarea
+                      className="w-full text-xs rounded-md border border-input bg-background px-2.5 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+                      rows={2}
+                      placeholder="Motivo (opcional para reprovação)..."
+                      value={motivoReprova[sol.id] || ""}
+                      onChange={(e) => setMotivoReprova((prev) => ({ ...prev, [sol.id]: e.target.value }))}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1 h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                        disabled={isProcessing}
+                        onClick={() => handleAprovar(sol)}
+                      >
+                        <Check className="h-3 w-3 mr-1" /> Aprovar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="flex-1 h-7 text-xs"
+                        disabled={isProcessing}
+                        onClick={() => handleReprovar(sol)}
+                      >
+                        <X className="h-3 w-3 mr-1" /> Reprovar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 // ─── AppLayout ────────────────────────────────────────────────────────────────
 
 interface AppLayoutProps {
@@ -402,9 +596,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8 relative">
-              <Bell className="h-4 w-4" />
-            </Button>
+            <NotificationBell profile={profile} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Avatar className="h-8 w-8 cursor-pointer">

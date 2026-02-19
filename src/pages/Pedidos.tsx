@@ -59,12 +59,13 @@ const emptyClienteForm = {
   cep: "", logradouro: "", bairro: "",
 };
 
-const STATUS_OPTIONS = ["Aguardando Financeiro", "Aprovado Financeiro", "Reprovado Financeiro", "Cancelado"] as const;
+const STATUS_OPTIONS = ["Aguardando Financeiro", "Aprovado Financeiro", "Reprovado Financeiro", "Aguardando Aprovação de Desconto", "Cancelado"] as const;
 
 const STATUS_COLORS: Record<string, string> = {
   "Aguardando Financeiro": "bg-amber-100 text-amber-700",
   "Aprovado Financeiro": "bg-emerald-100 text-emerald-700",
   "Reprovado Financeiro": "bg-red-100 text-red-600",
+  "Aguardando Aprovação de Desconto": "bg-purple-100 text-purple-700",
   "Cancelado": "bg-gray-100 text-gray-500",
 };
 
@@ -579,19 +580,40 @@ export default function Pedidos() {
     if (!form.plano_id) { toast.error("Selecione um plano"); return; }
     setSaving(true);
     try {
+      // Buscar limites de desconto do vendedor
+      const vendedorId = form.vendedor_id || profile?.user_id;
+      const { data: vendedorProfile } = await supabase
+        .from("profiles")
+        .select("desconto_limite_implantacao, desconto_limite_mensalidade")
+        .eq("user_id", vendedorId)
+        .single();
+
+      const limiteImp = (vendedorProfile as any)?.desconto_limite_implantacao ?? 100;
+      const limiteMens = (vendedorProfile as any)?.desconto_limite_mensalidade ?? 100;
+
+      // Calcular percentual de desconto aplicado
+      const descontoImpPerc = form.desconto_implantacao_tipo === "%"
+        ? parseFloat(form.desconto_implantacao_valor) || 0
+        : valorImplantacaoOriginal > 0 ? ((parseFloat(form.desconto_implantacao_valor) || 0) / valorImplantacaoOriginal) * 100 : 0;
+      const descontoMensPerc = form.desconto_mensalidade_tipo === "%"
+        ? parseFloat(form.desconto_mensalidade_valor) || 0
+        : valorMensalidadeOriginal > 0 ? ((parseFloat(form.desconto_mensalidade_valor) || 0) / valorMensalidadeOriginal) * 100 : 0;
+
+      const precisaAprovacaoImp = descontoImpPerc > limiteImp && descontoImpPerc > 0;
+      const precisaAprovacaoMens = descontoMensPerc > limiteMens && descontoMensPerc > 0;
+      const precisaAprovacao = precisaAprovacaoImp || precisaAprovacaoMens;
+
       const payload: Record<string, unknown> = {
         cliente_id: form.cliente_id,
         plano_id: form.plano_id,
         filial_id: form.filial_id || profile?.filial_id,
-        vendedor_id: form.vendedor_id || profile?.user_id,
-        // Legado
+        vendedor_id: vendedorId,
         valor_implantacao: valorImplantacaoFinal,
         valor_mensalidade: valorMensalidadeFinal,
         valor_total: valorTotal,
         comissao_percentual: comissaoPercentualLegado,
         comissao_valor: comissaoValorTotal,
         observacoes: form.observacoes || null,
-        // Campos de valor
         valor_implantacao_original: valorImplantacaoOriginal,
         valor_mensalidade_original: valorMensalidadeOriginal,
         desconto_implantacao_tipo: form.desconto_implantacao_tipo,
@@ -603,12 +625,10 @@ export default function Pedidos() {
         modulos_adicionais: form.modulos_adicionais,
         tipo_pedido: form.tipo_pedido,
         contrato_id: form.contrato_id || null,
-        // Comissões separadas
         comissao_implantacao_percentual: comissaoImpPerc,
         comissao_implantacao_valor: comissaoImpValor,
         comissao_mensalidade_percentual: comissaoMensPerc,
         comissao_mensalidade_valor: comissaoMensValor,
-        // Forma de pagamento
         pagamento_mensalidade_forma: form.pagamento_mensalidade_tipo || null,
         pagamento_mensalidade_parcelas: null,
         pagamento_mensalidade_desconto_percentual: 0,
@@ -621,27 +641,84 @@ export default function Pedidos() {
 
       if (editingPedido) {
         const isReprovado = editingPedido.financeiro_status === "Reprovado";
-        if (isReprovado) {
+        const wasAwaitingDesconto = editingPedido.status_pedido === "Aguardando Aprovação de Desconto";
+
+        if (precisaAprovacao && !isAdmin) {
+          // Precisa de aprovação de desconto
+          payload.financeiro_status = "Aguardando";
+          payload.financeiro_motivo = null;
+          payload.financeiro_aprovado_em = null;
+          payload.financeiro_aprovado_por = null;
+          payload.contrato_liberado = false;
+          payload.status_pedido = "Aguardando Aprovação de Desconto";
+          const { error } = await supabase.from("pedidos").update(payload).eq("id", editingPedido.id);
+          if (error) throw error;
+          // Criar/atualizar solicitação
+          await supabase.from("solicitacoes_desconto").upsert({
+            pedido_id: editingPedido.id,
+            vendedor_id: vendedorId,
+            desconto_implantacao_tipo: form.desconto_implantacao_tipo,
+            desconto_implantacao_valor: parseFloat(form.desconto_implantacao_valor) || 0,
+            desconto_mensalidade_tipo: form.desconto_mensalidade_tipo,
+            desconto_mensalidade_valor: parseFloat(form.desconto_mensalidade_valor) || 0,
+            desconto_implantacao_percentual: descontoImpPerc,
+            desconto_mensalidade_percentual: descontoMensPerc,
+            status: "Aguardando",
+            aprovado_por: null,
+            aprovado_em: null,
+            motivo_reprovacao: null,
+          }, { onConflict: "pedido_id" });
+          toast.warning("Desconto acima do limite! Solicitação de aprovação enviada ao gestor.");
+        } else if (isReprovado || wasAwaitingDesconto) {
           payload.financeiro_status = "Aguardando";
           payload.financeiro_motivo = null;
           payload.financeiro_aprovado_em = null;
           payload.financeiro_aprovado_por = null;
           payload.contrato_liberado = false;
           payload.status_pedido = "Aguardando Financeiro";
+          const { error } = await supabase.from("pedidos").update(payload).eq("id", editingPedido.id);
+          if (error) throw error;
+          toast.success(isReprovado ? "Pedido reenviado para o financeiro!" : "Pedido enviado para o financeiro!");
+        } else {
+          const { error } = await supabase.from("pedidos").update(payload).eq("id", editingPedido.id);
+          if (error) throw error;
+          toast.success("Pedido atualizado com sucesso!");
         }
-        const { error } = await supabase.from("pedidos").update(payload).eq("id", editingPedido.id);
-        if (error) throw error;
-        toast.success(isReprovado ? "Pedido reenviado para o financeiro!" : "Pedido atualizado com sucesso!");
       } else {
-        const insertPayload = {
-          ...payload,
-          status_pedido: "Aguardando Financeiro" as string,
-          financeiro_status: "Aguardando",
-          contrato_liberado: false,
-        };
-        const { error } = await supabase.from("pedidos").insert(insertPayload as any);
-        if (error) throw error;
-        toast.success("Pedido criado com sucesso!");
+        if (precisaAprovacao && !isAdmin) {
+          // Criar pedido bloqueado aguardando aprovação de desconto
+          const insertPayload = {
+            ...payload,
+            status_pedido: "Aguardando Aprovação de Desconto",
+            financeiro_status: "Aguardando",
+            contrato_liberado: false,
+          };
+          const { data: novoPedido, error } = await supabase.from("pedidos").insert(insertPayload as any).select().single();
+          if (error) throw error;
+          // Criar solicitação de aprovação
+          await supabase.from("solicitacoes_desconto").insert({
+            pedido_id: novoPedido.id,
+            vendedor_id: vendedorId,
+            desconto_implantacao_tipo: form.desconto_implantacao_tipo,
+            desconto_implantacao_valor: parseFloat(form.desconto_implantacao_valor) || 0,
+            desconto_mensalidade_tipo: form.desconto_mensalidade_tipo,
+            desconto_mensalidade_valor: parseFloat(form.desconto_mensalidade_valor) || 0,
+            desconto_implantacao_percentual: descontoImpPerc,
+            desconto_mensalidade_percentual: descontoMensPerc,
+            status: "Aguardando",
+          });
+          toast.warning("Desconto acima do seu limite! Solicitação enviada ao gestor de descontos para aprovação.");
+        } else {
+          const insertPayload = {
+            ...payload,
+            status_pedido: "Aguardando Financeiro" as string,
+            financeiro_status: "Aguardando",
+            contrato_liberado: false,
+          };
+          const { error } = await supabase.from("pedidos").insert(insertPayload as any);
+          if (error) throw error;
+          toast.success("Pedido criado com sucesso!");
+        }
       }
       setOpenDialog(false);
       loadData();
