@@ -1041,11 +1041,12 @@ export default function Pedidos() {
                   const isAprovado = finStatus === "Aprovado";
                   const temContratoVigente = contratoLiberado && isAprovado;
 
-                  // Vendedor só edita se: reprovado OU aguardando financeiro E sem contrato vigente
+                  // Vendedor só edita se: reprovado OU aguardando financeiro E sem contrato vigente E não cancelado
                   const canEditVendedor = isVendedor && pedido.vendedor_id === profile?.user_id
                     && !temContratoVigente
+                    && pedido.status_pedido !== "Cancelado"
                     && (isReprovado || pedido.status_pedido === "Aguardando Financeiro");
-                  const canEditAdmin = isAdmin && !temContratoVigente;
+                  const canEditAdmin = isAdmin && !temContratoVigente && pedido.status_pedido !== "Cancelado";
                   const canEdit = canEditAdmin || (canEditVendedor && !isReprovado);
 
                   // Cancelar: apenas admin (sem contrato vigente); vendedor nunca exclui
