@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Filial, DocumentTemplate } from "@/lib/supabase-types";
 import { ContractVariablesPanel } from "@/components/ContractVariablesPanel";
 import { ContractPreview } from "@/components/ContractPreview";
+import { getExampleData } from "@/lib/contract-variables";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -223,8 +224,15 @@ export default function ModelosContrato() {
     loadData();
   }
 
-  function handlePreview(html: string) {
+  const [previewDados, setPreviewDados] = useState<Record<string, string> | undefined>(undefined);
+
+  function handlePreview(html: string, logoUrl?: string | null) {
     setPreviewHtml(html);
+    if (logoUrl) {
+      setPreviewDados({ ...getExampleData(), "logo.url": logoUrl });
+    } else {
+      setPreviewDados(undefined);
+    }
     setPreviewOpen(true);
   }
 
@@ -338,7 +346,7 @@ export default function ModelosContrato() {
                         <DropdownMenuItem onClick={() => openEdit(m)} className="cursor-pointer">
                           <Pencil className="h-4 w-4 mr-2" /> Editar
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handlePreview(m.conteudo_html)} className="cursor-pointer">
+                        <DropdownMenuItem onClick={() => handlePreview(m.conteudo_html, m.logo_url)} className="cursor-pointer">
                           <Eye className="h-4 w-4 mr-2" /> Preview
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleDuplicate(m)} className="cursor-pointer">
@@ -454,7 +462,7 @@ export default function ModelosContrato() {
                     variant="outline"
                     size="sm"
                     className="h-7 text-xs gap-1"
-                    onClick={() => handlePreview(form.conteudo_html)}
+                    onClick={() => handlePreview(form.conteudo_html, form.logo_url)}
                   >
                     <Eye className="h-3 w-3" /> Preview
                   </Button>
@@ -494,6 +502,7 @@ export default function ModelosContrato() {
         open={previewOpen}
         onOpenChange={setPreviewOpen}
         html={previewHtml}
+        dados={previewDados}
       />
 
       {/* Delete confirmation */}
