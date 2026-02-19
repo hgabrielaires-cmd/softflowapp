@@ -255,10 +255,12 @@ export type Database = {
           bairro: string | null
           cep: string | null
           cidade: string | null
+          cnpj: string | null
           complemento: string | null
           created_at: string
           email: string | null
           id: string
+          inscricao_estadual: string | null
           logo_url: string | null
           logradouro: string | null
           nome: string
@@ -271,10 +273,12 @@ export type Database = {
           bairro?: string | null
           cep?: string | null
           cidade?: string | null
+          cnpj?: string | null
           complemento?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          inscricao_estadual?: string | null
           logo_url?: string | null
           logradouro?: string | null
           nome: string
@@ -287,10 +291,12 @@ export type Database = {
           bairro?: string | null
           cep?: string | null
           cidade?: string | null
+          cnpj?: string | null
           complemento?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          inscricao_estadual?: string | null
           logo_url?: string | null
           logradouro?: string | null
           nome?: string
