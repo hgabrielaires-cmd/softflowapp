@@ -39,8 +39,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, UserX, UserCheck, Shield, Loader2, Mail, Pencil } from "lucide-react";
+import { Plus, Search, UserX, UserCheck, Shield, Loader2, Mail, Pencil, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 
 interface UserWithRoles extends Profile {
   roles: AppRole[];
@@ -64,6 +65,9 @@ export default function Usuarios() {
   const [inviteFilialId, setInviteFilialId] = useState("");
   const [inviteComissaoImp, setInviteComissaoImp] = useState("5");
   const [inviteComissaoMens, setInviteComissaoMens] = useState("5");
+  const [inviteDescontoLimiteImp, setInviteDescontoLimiteImp] = useState("0");
+  const [inviteDescontoLimiteMens, setInviteDescontoLimiteMens] = useState("0");
+  const [inviteGestorDesconto, setInviteGestorDesconto] = useState(false);
   const [inviting, setInviting] = useState(false);
 
   // Edit dialog
@@ -74,6 +78,9 @@ export default function Usuarios() {
   const [editFilialId, setEditFilialId] = useState("");
   const [editComissaoImp, setEditComissaoImp] = useState("5");
   const [editComissaoMens, setEditComissaoMens] = useState("5");
+  const [editDescontoLimiteImp, setEditDescontoLimiteImp] = useState("0");
+  const [editDescontoLimiteMens, setEditDescontoLimiteMens] = useState("0");
+  const [editGestorDesconto, setEditGestorDesconto] = useState(false);
   const [editActive, setEditActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -129,13 +136,16 @@ export default function Usuarios() {
         comissao_percentual: parseFloat(inviteComissaoImp) || 5,
         comissao_implantacao_percentual: parseFloat(inviteComissaoImp) || 5,
         comissao_mensalidade_percentual: parseFloat(inviteComissaoMens) || 5,
+        desconto_limite_implantacao: parseFloat(inviteDescontoLimiteImp) || 0,
+        desconto_limite_mensalidade: parseFloat(inviteDescontoLimiteMens) || 0,
+        gestor_desconto: inviteGestorDesconto,
       } as any).eq("user_id", data.user.id);
 
       await supabase.from("user_roles").insert({ user_id: data.user.id, role: inviteRole });
 
       toast.success(`Usuário ${inviteName} criado com sucesso!`);
       setOpenInvite(false);
-      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteComissaoImp("5"); setInviteComissaoMens("5");
+      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false);
       loadUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
@@ -151,6 +161,9 @@ export default function Usuarios() {
     setEditFilialId(user.filial_id || "todas");
     setEditComissaoImp(((user as any).comissao_implantacao_percentual ?? user.comissao_percentual ?? 5).toString());
     setEditComissaoMens(((user as any).comissao_mensalidade_percentual ?? user.comissao_percentual ?? 5).toString());
+    setEditDescontoLimiteImp(((user as any).desconto_limite_implantacao ?? 0).toString());
+    setEditDescontoLimiteMens(((user as any).desconto_limite_mensalidade ?? 0).toString());
+    setEditGestorDesconto((user as any).gestor_desconto ?? false);
     setEditActive(user.active);
     setOpenEdit(true);
   }
@@ -167,6 +180,9 @@ export default function Usuarios() {
         comissao_percentual: parseFloat(editComissaoImp) || 0,
         comissao_implantacao_percentual: parseFloat(editComissaoImp) || 0,
         comissao_mensalidade_percentual: parseFloat(editComissaoMens) || 0,
+        desconto_limite_implantacao: parseFloat(editDescontoLimiteImp) || 0,
+        desconto_limite_mensalidade: parseFloat(editDescontoLimiteMens) || 0,
+        gestor_desconto: editGestorDesconto,
         active: editActive,
       } as any).eq("user_id", editingUser.user_id);
 
@@ -405,22 +421,56 @@ export default function Usuarios() {
                 <FilialSelect value={inviteFilialId} onChange={setInviteFilialId} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Comissão implantação (%)</Label>
-                <Input
-                  type="number" min="0" max="100" step="0.01" placeholder="5"
-                  value={inviteComissaoImp}
-                  onChange={(e) => setInviteComissaoImp(e.target.value)}
-                />
+            <div className="rounded-lg border border-border p-3 space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comissão</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Comissão implantação (%)</Label>
+                  <Input
+                    type="number" min="0" max="100" step="0.01" placeholder="5"
+                    value={inviteComissaoImp}
+                    onChange={(e) => setInviteComissaoImp(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Comissão mensalidade (%)</Label>
+                  <Input
+                    type="number" min="0" max="100" step="0.01" placeholder="5"
+                    value={inviteComissaoMens}
+                    onChange={(e) => setInviteComissaoMens(e.target.value)}
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label>Comissão mensalidade (%)</Label>
-                <Input
-                  type="number" min="0" max="100" step="0.01" placeholder="5"
-                  value={inviteComissaoMens}
-                  onChange={(e) => setInviteComissaoMens(e.target.value)}
-                />
+            </div>
+            <div className="rounded-lg border border-border p-3 space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Limite de Desconto</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Desconto máx. implantação (%)</Label>
+                  <Input
+                    type="number" min="0" max="100" step="0.01" placeholder="0"
+                    value={inviteDescontoLimiteImp}
+                    onChange={(e) => setInviteDescontoLimiteImp(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Desconto máx. mensalidade (%)</Label>
+                  <Input
+                    type="number" min="0" max="100" step="0.01" placeholder="0"
+                    value={inviteDescontoLimiteMens}
+                    onChange={(e) => setInviteDescontoLimiteMens(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-1">
+                <div className="space-y-0.5">
+                  <Label className="flex items-center gap-1.5 cursor-pointer">
+                    <ShieldCheck className="h-4 w-4 text-primary" />
+                    Gestor de desconto
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Recebe notificações e aprova descontos acima do limite</p>
+                </div>
+                <Switch checked={inviteGestorDesconto} onCheckedChange={setInviteGestorDesconto} />
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
@@ -490,6 +540,37 @@ export default function Usuarios() {
                     value={editComissaoMens}
                     onChange={(e) => setEditComissaoMens(e.target.value)}
                   />
+                </div>
+              </div>
+              <div className="border-t border-border pt-3 space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Limite de Desconto</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Desconto máx. implantação (%)</Label>
+                    <Input
+                      type="number" min="0" max="100" step="0.01"
+                      value={editDescontoLimiteImp}
+                      onChange={(e) => setEditDescontoLimiteImp(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Desconto máx. mensalidade (%)</Label>
+                    <Input
+                      type="number" min="0" max="100" step="0.01"
+                      value={editDescontoLimiteMens}
+                      onChange={(e) => setEditDescontoLimiteMens(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="flex items-center gap-1.5 cursor-pointer">
+                      <ShieldCheck className="h-4 w-4 text-primary" />
+                      Gestor de desconto
+                    </Label>
+                    <p className="text-xs text-muted-foreground">Aprova descontos acima do limite</p>
+                  </div>
+                  <Switch checked={editGestorDesconto} onCheckedChange={setEditGestorDesconto} />
                 </div>
               </div>
               <div className="space-y-1.5">
