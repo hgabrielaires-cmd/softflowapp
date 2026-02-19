@@ -49,7 +49,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   FileText, Plus, Loader2, MoreHorizontal, Download,
-  Pencil, Trash2, Upload, Building2, CheckCircle, XCircle,
+  Pencil, Trash2, Upload, Building2, CheckCircle, XCircle, Code2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -81,6 +81,7 @@ export default function ModelosContrato() {
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingModelo, setEditingModelo] = useState<ModeloContrato | null>(null);
+  const [variaveisModelo, setVariaveisModelo] = useState<{ id: string; variaveis: string[]; loading: boolean } | null>(null);
 
   const [form, setForm] = useState({
     nome: "",
@@ -239,6 +240,21 @@ export default function ModelosContrato() {
     window.open(data.signedUrl, "_blank");
   }
 
+  async function handleVerVariaveis(modelo: ModeloContrato) {
+    if (!modelo.arquivo_docx_url) { toast.error("Nenhum arquivo vinculado"); return; }
+    setVariaveisModelo({ id: modelo.id, variaveis: [], loading: true });
+    try {
+      const { data, error } = await supabase.functions.invoke("extrair-variaveis-docx", {
+        body: { modelo_id: modelo.id },
+      });
+      if (error) throw error;
+      setVariaveisModelo({ id: modelo.id, variaveis: data.variaveis || [], loading: false });
+    } catch (err) {
+      toast.error("Erro ao extrair variáveis: " + String(err));
+      setVariaveisModelo(null);
+    }
+  }
+
   if (!isAdmin) {
     return (
       <AppLayout>
@@ -318,7 +334,7 @@ export default function ModelosContrato() {
                       title={m.ativo ? "Clique para inativar" : "Clique para ativar"}
                     >
                       {m.ativo ? (
-                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 gap-1">
+                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 gap-1 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
                           <CheckCircle className="h-3 w-3" /> Ativo
                         </Badge>
                       ) : (
@@ -357,6 +373,9 @@ export default function ModelosContrato() {
                         <DropdownMenuItem onClick={() => handleDownload(m)} className="cursor-pointer" disabled={!m.arquivo_docx_url}>
                           <Download className="h-4 w-4 mr-2" /> Baixar DOCX
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleVerVariaveis(m)} className="cursor-pointer" disabled={!m.arquivo_docx_url}>
+                          <Code2 className="h-4 w-4 mr-2" /> Ver Variáveis
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => setDeletingId(m.id)}
@@ -372,6 +391,46 @@ export default function ModelosContrato() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Painel de variáveis extraídas */}
+        {variaveisModelo && (
+          <div className="bg-card rounded-xl border border-border shadow-sm p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Code2 className="h-4 w-4 text-primary" />
+                Variáveis encontradas no modelo
+              </h2>
+              <Button variant="ghost" size="sm" onClick={() => setVariaveisModelo(null)} className="h-7 text-xs">
+                Fechar
+              </Button>
+            </div>
+            {variaveisModelo.loading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                <Loader2 className="h-4 w-4 animate-spin" /> Extraindo variáveis do DOCX...
+              </div>
+            ) : variaveisModelo.variaveis.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">
+                Nenhum marcador <code className="bg-muted px-1 rounded text-xs">#CAMPO#</code> encontrado no documento.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  {variaveisModelo.variaveis.length} variável(is) encontrada(s):
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {variaveisModelo.variaveis.map((v) => (
+                    <span
+                      key={v}
+                      className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-mono bg-primary/10 text-primary border border-primary/20"
+                    >
+                      #{v}#
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Dialog criar/editar */}
@@ -448,7 +507,7 @@ export default function ModelosContrato() {
                   </div>
                 ) : urlAtual ? (
                   <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <FileText className="h-5 w-5 text-emerald-600" />
+                    <FileText className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                     <span>Arquivo atual vinculado</span>
                     <span className="text-xs text-primary">(clique para substituir)</span>
                   </div>
