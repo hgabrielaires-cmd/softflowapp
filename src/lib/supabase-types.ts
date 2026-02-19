@@ -125,3 +125,16 @@ export interface PlanoModulo {
   obrigatorio: boolean;
   modulo?: Modulo;
 }
+
+export interface DocumentTemplate {
+  id: string;
+  nome: string;
+  tipo: 'CONTRATO_BASE' | 'ADITIVO' | 'CANCELAMENTO';
+  filial_id: string | null;
+  conteudo_html: string;
+  ativo: boolean;
+  versao: number;
+  created_at: string;
+  updated_at: string;
+  filiais?: { nome: string } | null;
+}
