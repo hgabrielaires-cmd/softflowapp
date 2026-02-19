@@ -1168,22 +1168,41 @@ export default function Pedidos() {
                     <XCircle className="h-4 w-4" />
                   </button>
                 )}
-                {/* Dropdown de resultados */}
+              {/* Dropdown de resultados */}
                 {clienteSearch && !form.cliente_id && (
                   <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                    {clientesDisponiveis.filter(c => c.nome_fantasia.toLowerCase().includes(clienteSearch.toLowerCase())).length === 0 ? (
+                    {clientesDisponiveis.filter(c => {
+                      const q = clienteSearch.toLowerCase();
+                      return (
+                        c.nome_fantasia.toLowerCase().includes(q) ||
+                        (c.razao_social || "").toLowerCase().includes(q) ||
+                        (c.cnpj_cpf || "").replace(/\D/g, "").includes(q.replace(/\D/g, "")) ||
+                        (c.cnpj_cpf || "").includes(q)
+                      );
+                    }).length === 0 ? (
                       <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum cliente encontrado</div>
                     ) : (
                       clientesDisponiveis
-                        .filter(c => c.nome_fantasia.toLowerCase().includes(clienteSearch.toLowerCase()))
+                        .filter(c => {
+                          const q = clienteSearch.toLowerCase();
+                          return (
+                            c.nome_fantasia.toLowerCase().includes(q) ||
+                            (c.razao_social || "").toLowerCase().includes(q) ||
+                            (c.cnpj_cpf || "").replace(/\D/g, "").includes(q.replace(/\D/g, "")) ||
+                            (c.cnpj_cpf || "").includes(q)
+                          );
+                        })
                         .slice(0, 20)
                         .map(c => (
                           <button key={c.id} type="button"
                             className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
                             onMouseDown={(e) => e.preventDefault()} // evita blur antes do click
                             onClick={() => { handleClienteChange(c.id); setClienteSearch(""); }}>
-                            {c.nome_fantasia}
-                            {c.cnpj_cpf && <span className="ml-2 text-xs text-muted-foreground">{c.cnpj_cpf}</span>}
+                            <div className="font-medium">{c.nome_fantasia}</div>
+                            {c.razao_social && c.razao_social !== c.nome_fantasia && (
+                              <div className="text-xs text-muted-foreground">{c.razao_social}</div>
+                            )}
+                            {c.cnpj_cpf && <div className="text-xs text-muted-foreground font-mono">{c.cnpj_cpf}</div>}
                           </button>
                         ))
                     )}

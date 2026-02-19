@@ -562,6 +562,7 @@ export type Database = {
           full_name: string
           gestor_desconto: boolean | null
           id: string
+          permitir_cnpj_duplicado: boolean | null
           updated_at: string
           user_id: string
         }
@@ -581,6 +582,7 @@ export type Database = {
           full_name: string
           gestor_desconto?: boolean | null
           id?: string
+          permitir_cnpj_duplicado?: boolean | null
           updated_at?: string
           user_id: string
         }
@@ -600,6 +602,7 @@ export type Database = {
           full_name?: string
           gestor_desconto?: boolean | null
           id?: string
+          permitir_cnpj_duplicado?: boolean | null
           updated_at?: string
           user_id?: string
         }

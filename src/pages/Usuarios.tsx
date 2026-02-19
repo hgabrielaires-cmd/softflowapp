@@ -68,6 +68,7 @@ export default function Usuarios() {
   const [inviteDescontoLimiteImp, setInviteDescontoLimiteImp] = useState("0");
   const [inviteDescontoLimiteMens, setInviteDescontoLimiteMens] = useState("0");
   const [inviteGestorDesconto, setInviteGestorDesconto] = useState(false);
+  const [invitePermitirCnpjDuplicado, setInvitePermitirCnpjDuplicado] = useState(false);
   const [inviting, setInviting] = useState(false);
 
   // Edit dialog
@@ -81,6 +82,7 @@ export default function Usuarios() {
   const [editDescontoLimiteImp, setEditDescontoLimiteImp] = useState("0");
   const [editDescontoLimiteMens, setEditDescontoLimiteMens] = useState("0");
   const [editGestorDesconto, setEditGestorDesconto] = useState(false);
+  const [editPermitirCnpjDuplicado, setEditPermitirCnpjDuplicado] = useState(false);
   const [editActive, setEditActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -139,13 +141,14 @@ export default function Usuarios() {
         desconto_limite_implantacao: parseFloat(inviteDescontoLimiteImp) || 0,
         desconto_limite_mensalidade: parseFloat(inviteDescontoLimiteMens) || 0,
         gestor_desconto: inviteGestorDesconto,
+        permitir_cnpj_duplicado: invitePermitirCnpjDuplicado,
       } as any).eq("user_id", data.user.id);
 
       await supabase.from("user_roles").insert({ user_id: data.user.id, role: inviteRole });
 
       toast.success(`Usuário ${inviteName} criado com sucesso!`);
       setOpenInvite(false);
-      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false);
+      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false);
       loadUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
@@ -164,6 +167,7 @@ export default function Usuarios() {
     setEditDescontoLimiteImp(((user as any).desconto_limite_implantacao ?? 0).toString());
     setEditDescontoLimiteMens(((user as any).desconto_limite_mensalidade ?? 0).toString());
     setEditGestorDesconto((user as any).gestor_desconto ?? false);
+    setEditPermitirCnpjDuplicado((user as any).permitir_cnpj_duplicado ?? false);
     setEditActive(user.active);
     setOpenEdit(true);
   }
@@ -183,6 +187,7 @@ export default function Usuarios() {
         desconto_limite_implantacao: parseFloat(editDescontoLimiteImp) || 0,
         desconto_limite_mensalidade: parseFloat(editDescontoLimiteMens) || 0,
         gestor_desconto: editGestorDesconto,
+        permitir_cnpj_duplicado: editPermitirCnpjDuplicado,
         active: editActive,
       } as any).eq("user_id", editingUser.user_id);
 
@@ -480,6 +485,16 @@ export default function Usuarios() {
                 </div>
                 <Switch checked={inviteGestorDesconto} onCheckedChange={setInviteGestorDesconto} />
               </div>
+              <div className="flex items-center justify-between pt-1">
+                <div className="space-y-0.5">
+                  <Label className="flex items-center gap-1.5 cursor-pointer">
+                    <ShieldCheck className="h-4 w-4 text-warning" />
+                    Permitir Cadastro CNPJ Duplicado
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Permite cadastrar clientes com CNPJ já existente no módulo de Clientes</p>
+                </div>
+                <Switch checked={invitePermitirCnpjDuplicado} onCheckedChange={setInvitePermitirCnpjDuplicado} />
+              </div>
             </div>
             <div className="flex justify-end gap-2 pt-2 shrink-0">
                <Button type="button" variant="outline" onClick={() => setOpenInvite(false)}>Cancelar</Button>
@@ -579,6 +594,16 @@ export default function Usuarios() {
                     <p className="text-xs text-muted-foreground">Aprova descontos acima do limite</p>
                   </div>
                   <Switch checked={editGestorDesconto} onCheckedChange={setEditGestorDesconto} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="flex items-center gap-1.5 cursor-pointer">
+                      <ShieldCheck className="h-4 w-4 text-warning" />
+                      Permitir Cadastro CNPJ Duplicado
+                    </Label>
+                    <p className="text-xs text-muted-foreground">Permite cadastrar clientes com CNPJ já existente</p>
+                  </div>
+                  <Switch checked={editPermitirCnpjDuplicado} onCheckedChange={setEditPermitirCnpjDuplicado} />
                 </div>
               </div>
               <div className="space-y-1.5">

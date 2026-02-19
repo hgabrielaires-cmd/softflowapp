@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS permitir_cnpj_duplicado boolean DEFAULT false;
