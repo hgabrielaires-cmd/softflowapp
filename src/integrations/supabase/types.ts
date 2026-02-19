@@ -240,6 +240,47 @@ export type Database = {
           },
         ]
       }
+      modelos_contrato: {
+        Row: {
+          arquivo_docx_url: string | null
+          ativo: boolean
+          created_at: string
+          filial_id: string | null
+          id: string
+          nome: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          arquivo_docx_url?: string | null
+          ativo?: boolean
+          created_at?: string
+          filial_id?: string | null
+          id?: string
+          nome: string
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          arquivo_docx_url?: string | null
+          ativo?: boolean
+          created_at?: string
+          filial_id?: string | null
+          id?: string
+          nome?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modelos_contrato_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       modulos: {
         Row: {
           ativo: boolean
