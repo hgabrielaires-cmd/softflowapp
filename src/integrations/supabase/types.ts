@@ -202,6 +202,50 @@ export type Database = {
           },
         ]
       }
+      document_templates: {
+        Row: {
+          ativo: boolean
+          conteudo_html: string
+          created_at: string
+          filial_id: string | null
+          id: string
+          nome: string
+          tipo: string
+          updated_at: string
+          versao: number
+        }
+        Insert: {
+          ativo?: boolean
+          conteudo_html?: string
+          created_at?: string
+          filial_id?: string | null
+          id?: string
+          nome: string
+          tipo: string
+          updated_at?: string
+          versao?: number
+        }
+        Update: {
+          ativo?: boolean
+          conteudo_html?: string
+          created_at?: string
+          filial_id?: string | null
+          id?: string
+          nome?: string
+          tipo?: string
+          updated_at?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_templates_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       filiais: {
         Row: {
           ativa: boolean

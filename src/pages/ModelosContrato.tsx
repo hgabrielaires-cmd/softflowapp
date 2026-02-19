@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
-import { Filial } from "@/lib/supabase-types";
+import { Filial, DocumentTemplate } from "@/lib/supabase-types";
+import { ContractVariablesPanel } from "@/components/ContractVariablesPanel";
+import { ContractPreview } from "@/components/ContractPreview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,61 +50,52 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  FileText, Plus, Loader2, MoreHorizontal, Download,
-  Pencil, Trash2, Upload, Building2, CheckCircle, XCircle, Code2,
+  FileText, Plus, Loader2, MoreHorizontal,
+  Pencil, Trash2, Building2, CheckCircle, XCircle, Eye, Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-interface ModeloContrato {
-  id: string;
-  nome: string;
-  filial_id: string | null;
-  tipo: string;
-  ativo: boolean;
-  arquivo_docx_url: string | null;
-  created_at: string;
-  updated_at: string;
-  filiais?: { nome: string } | null;
-}
-
-const TIPOS = ["Contrato Base"];
+const TIPOS: { value: DocumentTemplate["tipo"]; label: string }[] = [
+  { value: "CONTRATO_BASE", label: "Contrato Base" },
+  { value: "ADITIVO", label: "Termo Aditivo" },
+  { value: "CANCELAMENTO", label: "Cancelamento" },
+];
 
 export default function ModelosContrato() {
   const { isAdmin } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
 
-  const [modelos, setModelos] = useState<ModeloContrato[]>([]);
+  const [modelos, setModelos] = useState<DocumentTemplate[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
-  const [openDialog, setOpenDialog] = useState(false);
+  const [openEditor, setOpenEditor] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [editingModelo, setEditingModelo] = useState<ModeloContrato | null>(null);
-  const [variaveisModelo, setVariaveisModelo] = useState<{ id: string; variaveis: string[]; loading: boolean } | null>(null);
+  const [editingModelo, setEditingModelo] = useState<DocumentTemplate | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
 
   const [form, setForm] = useState({
     nome: "",
     filial_id: "todas",
-    tipo: "Contrato Base",
+    tipo: "CONTRATO_BASE" as DocumentTemplate["tipo"],
     ativo: true,
+    conteudo_html: "",
   });
-  const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
-  const [urlAtual, setUrlAtual] = useState<string | null>(null);
 
   async function loadData() {
     setLoading(true);
     const [{ data: modelosData, error }, { data: filiaisData }] = await Promise.all([
       supabase
-        .from("modelos_contrato")
+        .from("document_templates")
         .select("*, filiais(nome)")
         .order("created_at", { ascending: false }),
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
     ]);
     if (error) toast.error("Erro ao carregar modelos: " + error.message);
-    setModelos((modelosData || []) as unknown as ModeloContrato[]);
+    setModelos((modelosData || []) as unknown as DocumentTemplate[]);
     setFiliais((filiaisData || []) as Filial[]);
     setLoading(false);
   }
@@ -111,105 +104,86 @@ export default function ModelosContrato() {
 
   function openNew() {
     setEditingModelo(null);
-    setForm({ nome: "", filial_id: "todas", tipo: "Contrato Base", ativo: true });
-    setArquivoSelecionado(null);
-    setUrlAtual(null);
-    setOpenDialog(true);
+    setForm({ nome: "", filial_id: "todas", tipo: "CONTRATO_BASE", ativo: true, conteudo_html: "" });
+    setOpenEditor(true);
   }
 
-  function openEdit(modelo: ModeloContrato) {
+  function openEdit(modelo: DocumentTemplate) {
     setEditingModelo(modelo);
     setForm({
       nome: modelo.nome,
       filial_id: modelo.filial_id ?? "todas",
       tipo: modelo.tipo,
       ativo: modelo.ativo,
+      conteudo_html: modelo.conteudo_html,
     });
-    setArquivoSelecionado(null);
-    setUrlAtual(modelo.arquivo_docx_url);
-    setOpenDialog(true);
+    setOpenEditor(true);
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const ext = file.name.split(".").pop()?.toLowerCase();
-    if (ext !== "docx") {
-      toast.error("Apenas arquivos .docx são permitidos");
+  function handleDuplicate(modelo: DocumentTemplate) {
+    setEditingModelo(null);
+    setForm({
+      nome: modelo.nome + " (cópia)",
+      filial_id: modelo.filial_id ?? "todas",
+      tipo: modelo.tipo,
+      ativo: false,
+      conteudo_html: modelo.conteudo_html,
+    });
+    setOpenEditor(true);
+  }
+
+  const handleInsertVariable = useCallback((variable: string) => {
+    const textarea = editorRef.current;
+    if (!textarea) {
+      setForm((f) => ({ ...f, conteudo_html: f.conteudo_html + variable }));
       return;
     }
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error("Arquivo muito grande. Máximo 20MB.");
-      return;
-    }
-    setArquivoSelecionado(file);
-  }
-
-  async function uploadArquivo(file: File): Promise<string | null> {
-    setUploading(true);
-    const timestamp = Date.now();
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const path = `${timestamp}_${safeName}`;
-
-    const { error } = await supabase.storage
-      .from("modelos-contrato")
-      .upload(path, file, { upsert: false, contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
-
-    setUploading(false);
-    if (error) {
-      toast.error("Erro ao fazer upload: " + error.message);
-      return null;
-    }
-
-    const { data } = supabase.storage.from("modelos-contrato").getPublicUrl(path);
-    // bucket privado — usar signed URL
-    const { data: signed } = await supabase.storage
-      .from("modelos-contrato")
-      .createSignedUrl(path, 60 * 60 * 24 * 365); // 1 ano
-
-    return signed?.signedUrl || data?.publicUrl || null;
-  }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = form.conteudo_html;
+    const newText = text.substring(0, start) + variable + text.substring(end);
+    setForm((f) => ({ ...f, conteudo_html: newText }));
+    // Reposicionar cursor após a variável inserida
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const newPos = start + variable.length;
+      textarea.setSelectionRange(newPos, newPos);
+    });
+  }, [form.conteudo_html]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
-    if (!editingModelo && !arquivoSelecionado) { toast.error("Selecione um arquivo DOCX"); return; }
+    if (!form.conteudo_html.trim()) { toast.error("O conteúdo HTML do modelo é obrigatório"); return; }
 
     setSaving(true);
-
-    let arquivo_docx_url = urlAtual;
-
-    if (arquivoSelecionado) {
-      arquivo_docx_url = await uploadArquivo(arquivoSelecionado);
-      if (!arquivo_docx_url) { setSaving(false); return; }
-    }
 
     const payload = {
       nome: form.nome.trim(),
       filial_id: form.filial_id === "todas" ? null : form.filial_id,
       tipo: form.tipo,
       ativo: form.ativo,
-      arquivo_docx_url,
+      conteudo_html: form.conteudo_html,
     };
 
     if (editingModelo) {
-      const { error } = await supabase.from("modelos_contrato").update(payload).eq("id", editingModelo.id);
+      const { error } = await supabase.from("document_templates").update(payload).eq("id", editingModelo.id);
       if (error) { toast.error("Erro ao atualizar: " + error.message); setSaving(false); return; }
       toast.success("Modelo atualizado!");
     } else {
-      const { error } = await supabase.from("modelos_contrato").insert(payload);
+      const { error } = await supabase.from("document_templates").insert(payload);
       if (error) { toast.error("Erro ao criar: " + error.message); setSaving(false); return; }
       toast.success("Modelo criado!");
     }
 
     setSaving(false);
-    setOpenDialog(false);
+    setOpenEditor(false);
     loadData();
   }
 
-  async function handleToggleAtivo(modelo: ModeloContrato) {
+  async function handleToggleAtivo(modelo: DocumentTemplate) {
     const { error } = await supabase
-      .from("modelos_contrato")
+      .from("document_templates")
       .update({ ativo: !modelo.ativo })
       .eq("id", modelo.id);
     if (error) { toast.error("Erro ao atualizar status"); return; }
@@ -218,41 +192,20 @@ export default function ModelosContrato() {
   }
 
   async function handleDelete(id: string) {
-    const { error } = await supabase.from("modelos_contrato").delete().eq("id", id);
+    const { error } = await supabase.from("document_templates").delete().eq("id", id);
     if (error) { toast.error("Erro ao excluir: " + error.message); return; }
     toast.success("Modelo excluído");
     setDeletingId(null);
     loadData();
   }
 
-  async function handleDownload(modelo: ModeloContrato) {
-    if (!modelo.arquivo_docx_url) { toast.error("Nenhum arquivo vinculado"); return; }
-    // Gerar signed URL para download
-    const path = modelo.arquivo_docx_url.split("/modelos-contrato/")[1]?.split("?")[0];
-    if (!path) {
-      window.open(modelo.arquivo_docx_url, "_blank");
-      return;
-    }
-    const { data, error } = await supabase.storage
-      .from("modelos-contrato")
-      .createSignedUrl(decodeURIComponent(path), 60);
-    if (error || !data?.signedUrl) { toast.error("Erro ao gerar link de download"); return; }
-    window.open(data.signedUrl, "_blank");
+  function handlePreview(html: string) {
+    setPreviewHtml(html);
+    setPreviewOpen(true);
   }
 
-  async function handleVerVariaveis(modelo: ModeloContrato) {
-    if (!modelo.arquivo_docx_url) { toast.error("Nenhum arquivo vinculado"); return; }
-    setVariaveisModelo({ id: modelo.id, variaveis: [], loading: true });
-    try {
-      const { data, error } = await supabase.functions.invoke("extrair-variaveis-docx", {
-        body: { modelo_id: modelo.id },
-      });
-      if (error) throw error;
-      setVariaveisModelo({ id: modelo.id, variaveis: data.variaveis || [], loading: false });
-    } catch (err) {
-      toast.error("Erro ao extrair variáveis: " + String(err));
-      setVariaveisModelo(null);
-    }
+  function getTipoLabel(tipo: string) {
+    return TIPOS.find((t) => t.value === tipo)?.label || tipo;
   }
 
   if (!isAdmin) {
@@ -276,7 +229,7 @@ export default function ModelosContrato() {
               Modelos de Contrato
             </h1>
             <p className="text-sm text-muted-foreground">
-              Gerencie os modelos DOCX para geração de contratos
+              Gerencie os modelos HTML para geração de contratos
             </p>
           </div>
           <Button className="gap-2" onClick={openNew}>
@@ -293,7 +246,7 @@ export default function ModelosContrato() {
                 <TableHead>Tipo</TableHead>
                 <TableHead>Filial</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Arquivo</TableHead>
+                <TableHead>Versão</TableHead>
                 <TableHead>Criado em</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -316,7 +269,7 @@ export default function ModelosContrato() {
                 <TableRow key={m.id}>
                   <TableCell className="font-medium">{m.nome}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="text-xs">{m.tipo}</Badge>
+                    <Badge variant="outline" className="text-xs">{getTipoLabel(m.tipo)}</Badge>
                   </TableCell>
                   <TableCell>
                     {m.filiais ? (
@@ -324,7 +277,7 @@ export default function ModelosContrato() {
                         <Building2 className="h-3 w-3" /> {m.filiais.nome}
                       </span>
                     ) : (
-                      <span className="text-xs text-muted-foreground">Todas</span>
+                      <span className="text-xs text-muted-foreground">Global</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -345,16 +298,7 @@ export default function ModelosContrato() {
                     </button>
                   </TableCell>
                   <TableCell>
-                    {m.arquivo_docx_url ? (
-                      <button
-                        onClick={() => handleDownload(m)}
-                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                      >
-                        <Download className="h-3 w-3" /> Baixar DOCX
-                      </button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
+                    <span className="text-xs text-muted-foreground">v{m.versao}</span>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                     {format(new Date(m.created_at), "dd/MM/yyyy", { locale: ptBR })}
@@ -370,11 +314,11 @@ export default function ModelosContrato() {
                         <DropdownMenuItem onClick={() => openEdit(m)} className="cursor-pointer">
                           <Pencil className="h-4 w-4 mr-2" /> Editar
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDownload(m)} className="cursor-pointer" disabled={!m.arquivo_docx_url}>
-                          <Download className="h-4 w-4 mr-2" /> Baixar DOCX
+                        <DropdownMenuItem onClick={() => handlePreview(m.conteudo_html)} className="cursor-pointer">
+                          <Eye className="h-4 w-4 mr-2" /> Preview
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleVerVariaveis(m)} className="cursor-pointer" disabled={!m.arquivo_docx_url}>
-                          <Code2 className="h-4 w-4 mr-2" /> Ver Variáveis
+                        <DropdownMenuItem onClick={() => handleDuplicate(m)} className="cursor-pointer">
+                          <Copy className="h-4 w-4 mr-2" /> Duplicar
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -391,178 +335,132 @@ export default function ModelosContrato() {
             </TableBody>
           </Table>
         </div>
-
-        {/* Painel de variáveis extraídas */}
-        {variaveisModelo && (
-          <div className="bg-card rounded-xl border border-border shadow-sm p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Code2 className="h-4 w-4 text-primary" />
-                Variáveis encontradas no modelo
-              </h2>
-              <Button variant="ghost" size="sm" onClick={() => setVariaveisModelo(null)} className="h-7 text-xs">
-                Fechar
-              </Button>
-            </div>
-            {variaveisModelo.loading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-                <Loader2 className="h-4 w-4 animate-spin" /> Extraindo variáveis do DOCX...
-              </div>
-            ) : variaveisModelo.variaveis.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-2">
-                Nenhum marcador <code className="bg-muted px-1 rounded text-xs">#CAMPO#</code> encontrado no documento.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  {variaveisModelo.variaveis.length} variável(is) encontrada(s):
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {variaveisModelo.variaveis.map((v) => (
-                    <span
-                      key={v}
-                      className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-mono bg-primary/10 text-primary border border-primary/20"
-                    >
-                      #{v}#
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* Dialog criar/editar */}
-      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+      {/* Editor fullscreen dialog */}
+      <Dialog open={openEditor} onOpenChange={setOpenEditor}>
+        <DialogContent className="max-w-[95vw] w-full h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-5 pb-3 border-b border-border shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-primary" />
               {editingModelo ? "Editar Modelo" : "Novo Modelo de Contrato"}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSave} className="space-y-4">
-            {/* Nome */}
-            <div className="space-y-1.5">
-              <Label>Nome *</Label>
-              <Input
-                placeholder="Ex: Contrato Padrão 2025"
-                value={form.nome}
-                onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
-                maxLength={120}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              {/* Tipo */}
-              <div className="space-y-1.5">
-                <Label>Tipo *</Label>
-                <Select value={form.tipo} onValueChange={(v) => setForm((f) => ({ ...f, tipo: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+          <form onSubmit={handleSave} className="flex flex-col flex-1 overflow-hidden">
+            {/* Top bar com campos */}
+            <div className="px-6 py-3 border-b border-border shrink-0 flex flex-wrap gap-3 items-end">
+              <div className="space-y-1 min-w-[200px] flex-1">
+                <Label className="text-xs">Nome *</Label>
+                <Input
+                  placeholder="Ex: Contrato Padrão 2026"
+                  value={form.nome}
+                  onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
+                  maxLength={120}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1 w-[180px]">
+                <Label className="text-xs">Tipo *</Label>
+                <Select value={form.tipo} onValueChange={(v) => setForm((f) => ({ ...f, tipo: v as DocumentTemplate["tipo"] }))}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {TIPOS.map((t) => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Filial */}
-              <div className="space-y-1.5">
-                <Label>Filial</Label>
+              <div className="space-y-1 w-[200px]">
+                <Label className="text-xs">Filial</Label>
                 <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Todas as filiais" /></SelectTrigger>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="todas">Todas as filiais</SelectItem>
+                    <SelectItem value="todas">Global (todas)</SelectItem>
                     {filiais.map((f) => (
                       <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* Upload DOCX */}
-            <div className="space-y-1.5">
-              <Label>Arquivo DOCX {!editingModelo && "*"}</Label>
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-border rounded-xl p-5 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  className="hidden"
-                  onChange={handleFileChange}
+              <div className="flex items-center gap-2 pb-1">
+                <Switch
+                  checked={form.ativo}
+                  onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))}
+                  id="ativo-switch"
                 />
-                {arquivoSelecionado ? (
-                  <div className="flex items-center justify-center gap-2 text-sm text-foreground">
-                    <FileText className="h-5 w-5 text-primary" />
-                    <span className="font-medium">{arquivoSelecionado.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      ({(arquivoSelecionado.size / 1024).toFixed(0)} KB)
-                    </span>
-                  </div>
-                ) : urlAtual ? (
-                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <FileText className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                    <span>Arquivo atual vinculado</span>
-                    <span className="text-xs text-primary">(clique para substituir)</span>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <Upload className="h-8 w-8 mx-auto text-muted-foreground/50" />
-                    <p className="text-sm text-muted-foreground">
-                      Clique para selecionar o arquivo <strong>.docx</strong>
-                    </p>
-                    <p className="text-xs text-muted-foreground">Máximo 20MB</p>
-                  </div>
-                )}
+                <Label htmlFor="ativo-switch" className="text-xs cursor-pointer">Ativo</Label>
               </div>
             </div>
 
-            {/* Ativo */}
-            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-foreground">Modelo ativo</p>
-                <p className="text-xs text-muted-foreground">Modelos ativos ficam disponíveis para uso</p>
+            {/* Editor + Painel de variáveis */}
+            <div className="flex flex-1 overflow-hidden">
+              {/* Editor HTML */}
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="px-6 py-2 flex items-center justify-between bg-muted/30 border-b border-border shrink-0">
+                  <span className="text-xs font-medium text-muted-foreground">Editor HTML</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                    onClick={() => handlePreview(form.conteudo_html)}
+                  >
+                    <Eye className="h-3 w-3" /> Preview
+                  </Button>
+                </div>
+                <textarea
+                  ref={editorRef}
+                  value={form.conteudo_html}
+                  onChange={(e) => setForm((f) => ({ ...f, conteudo_html: e.target.value }))}
+                  className="flex-1 w-full resize-none p-4 font-mono text-sm bg-background text-foreground focus:outline-none border-0"
+                  placeholder="Cole ou escreva o HTML do seu contrato aqui...&#10;&#10;Use variáveis como {{cliente.nome_fantasia}} para campos dinâmicos.&#10;Clique nas variáveis ao lado para inserir automaticamente."
+                  spellCheck={false}
+                />
               </div>
-              <Switch
-                checked={form.ativo}
-                onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))}
-              />
+
+              {/* Painel lateral de variáveis */}
+              <div className="w-[280px] border-l border-border bg-muted/20 shrink-0 overflow-hidden">
+                <ContractVariablesPanel onInsert={handleInsertVariable} />
+              </div>
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpenDialog(false)}>
+            {/* Footer */}
+            <DialogFooter className="px-6 py-3 border-t border-border shrink-0">
+              <Button type="button" variant="outline" onClick={() => setOpenEditor(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={saving || uploading} className="gap-2">
-                {(saving || uploading) && <Loader2 className="h-4 w-4 animate-spin" />}
-                {uploading ? "Enviando arquivo..." : saving ? "Salvando..." : editingModelo ? "Salvar" : "Criar Modelo"}
+              <Button type="submit" disabled={saving}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {editingModelo ? "Salvar Alterações" : "Criar Modelo"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Confirm delete */}
-      <AlertDialog open={!!deletingId} onOpenChange={(v) => { if (!v) setDeletingId(null); }}>
+      {/* Preview */}
+      <ContractPreview
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        html={previewHtml}
+      />
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir modelo?</AlertDialogTitle>
             <AlertDialogDescription>
-              O modelo será excluído permanentemente. O arquivo DOCX no storage não será removido automaticamente.
+              Esta ação não pode ser desfeita. O modelo será removido permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deletingId && handleDelete(deletingId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={() => deletingId && handleDelete(deletingId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
