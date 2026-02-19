@@ -64,45 +64,60 @@ export type Database = {
       clientes: {
         Row: {
           ativo: boolean
+          bairro: string | null
+          cep: string | null
           cidade: string | null
           cnpj_cpf: string
+          complemento: string | null
           contato_nome: string | null
           created_at: string
           email: string | null
           filial_id: string | null
           id: string
           inscricao_estadual: string | null
+          logradouro: string | null
           nome_fantasia: string
+          numero: string | null
           razao_social: string | null
           telefone: string | null
           uf: string | null
         }
         Insert: {
           ativo?: boolean
+          bairro?: string | null
+          cep?: string | null
           cidade?: string | null
           cnpj_cpf: string
+          complemento?: string | null
           contato_nome?: string | null
           created_at?: string
           email?: string | null
           filial_id?: string | null
           id?: string
           inscricao_estadual?: string | null
+          logradouro?: string | null
           nome_fantasia: string
+          numero?: string | null
           razao_social?: string | null
           telefone?: string | null
           uf?: string | null
         }
         Update: {
           ativo?: boolean
+          bairro?: string | null
+          cep?: string | null
           cidade?: string | null
           cnpj_cpf?: string
+          complemento?: string | null
           contato_nome?: string | null
           created_at?: string
           email?: string | null
           filial_id?: string | null
           id?: string
           inscricao_estadual?: string | null
+          logradouro?: string | null
           nome_fantasia?: string
+          numero?: string | null
           razao_social?: string | null
           telefone?: string | null
           uf?: string | null
@@ -125,9 +140,11 @@ export type Database = {
           id: string
           numero_exibicao: string
           numero_registro: number
+          pdf_url: string | null
           pedido_id: string | null
           plano_id: string | null
           status: string
+          status_geracao: string | null
           tipo: string
           updated_at: string
         }
@@ -138,9 +155,11 @@ export type Database = {
           id?: string
           numero_exibicao?: string
           numero_registro?: number
+          pdf_url?: string | null
           pedido_id?: string | null
           plano_id?: string | null
           status?: string
+          status_geracao?: string | null
           tipo?: string
           updated_at?: string
         }
@@ -151,9 +170,11 @@ export type Database = {
           id?: string
           numero_exibicao?: string
           numero_registro?: number
+          pdf_url?: string | null
           pedido_id?: string | null
           plano_id?: string | null
           status?: string
+          status_geracao?: string | null
           tipo?: string
           updated_at?: string
         }

@@ -1,1 +1,7 @@
 project_id = "gjovmocrotguhjrqroin"
+
+[functions.gerar-contrato-pdf]
+verify_jwt = false
+
+[functions.extrair-variaveis-docx]
+verify_jwt = false
