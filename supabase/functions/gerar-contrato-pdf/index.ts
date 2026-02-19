@@ -40,9 +40,13 @@ Deno.serve(async (req) => {
         pedidos(
           id, filial_id,
           valor_implantacao_final, valor_mensalidade_final, valor_total,
+          valor_implantacao_original, valor_mensalidade_original,
+          desconto_implantacao_tipo, desconto_implantacao_valor,
+          desconto_mensalidade_tipo, desconto_mensalidade_valor,
           observacoes, pagamento_mensalidade_observacao, pagamento_mensalidade_forma,
           pagamento_mensalidade_parcelas, pagamento_implantacao_forma,
-          pagamento_implantacao_parcelas, modulos_adicionais
+          pagamento_implantacao_parcelas, pagamento_implantacao_observacao,
+          modulos_adicionais
         )
       `)
       .eq("id", contrato_id)
@@ -62,130 +66,225 @@ Deno.serve(async (req) => {
     // 2. Buscar contatos do cliente (decisor)
     const { data: contatos } = await supabase
       .from("cliente_contatos")
-      .select("nome, decisor, ativo")
+      .select("nome, telefone, email, decisor, ativo")
       .eq("cliente_id", contrato.cliente_id)
       .eq("ativo", true);
 
     const decisor = (contatos || []).find((c: any) => c.decisor) || (contatos || [])[0];
 
-    // 3. Buscar parâmetros da filial
+    // 3. Buscar filial
     const filialId = pedido?.filial_id || cliente?.filial_id;
-    const { data: filialParams } = filialId
-      ? await supabase.from("filial_parametros").select("*").eq("filial_id", filialId).maybeSingle()
-      : { data: null };
-
-    // 4. Buscar modelo ativo (filial > global)
-    let modelo = null;
+    let filial: any = null;
     if (filialId) {
-      const { data: modeloFilial } = await supabase
-        .from("modelos_contrato")
+      const { data } = await supabase.from("filiais").select("*").eq("id", filialId).maybeSingle();
+      filial = data;
+    }
+
+    // 4. Buscar módulos do plano
+    let planoModulos: any[] = [];
+    if (plano?.id) {
+      const { data } = await supabase
+        .from("plano_modulos")
+        .select("*, modulos(nome)")
+        .eq("plano_id", plano.id)
+        .eq("incluso_no_plano", true)
+        .order("ordem");
+      planoModulos = data || [];
+    }
+
+    // 5. Buscar template HTML ativo (filial > global)
+    let template = null;
+    if (filialId) {
+      const { data } = await supabase
+        .from("document_templates")
         .select("*")
         .eq("filial_id", filialId)
         .eq("ativo", true)
+        .eq("tipo", "CONTRATO_BASE")
         .maybeSingle();
-      modelo = modeloFilial;
+      template = data;
     }
-    if (!modelo) {
-      const { data: modeloGlobal } = await supabase
-        .from("modelos_contrato")
+    if (!template) {
+      const { data } = await supabase
+        .from("document_templates")
         .select("*")
         .is("filial_id", null)
         .eq("ativo", true)
+        .eq("tipo", "CONTRATO_BASE")
         .maybeSingle();
-      modelo = modeloGlobal;
+      template = data;
     }
 
-    if (!modelo?.arquivo_docx_url) {
+    if (!template?.conteudo_html) {
       return new Response(
-        JSON.stringify({ error: "Nenhum modelo de contrato ativo encontrado para esta filial." }),
+        JSON.stringify({ error: "Nenhum modelo de contrato HTML ativo encontrado para esta filial." }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 5. Extrair path do storage do DOCX
-    const url = modelo.arquivo_docx_url;
-    const pathMatch = url.match(/\/modelos-contrato\/([^?]+)/);
-    if (!pathMatch) {
-      return new Response(
-        JSON.stringify({ error: "Não foi possível extrair o path do arquivo DOCX." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    const storagePath = decodeURIComponent(pathMatch[1]);
-
-    // 6. Baixar o DOCX do storage
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from("modelos-contrato")
-      .download(storagePath);
-
-    if (downloadError || !fileData) {
-      return new Response(
-        JSON.stringify({ error: "Erro ao baixar modelo DOCX: " + downloadError?.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const buffer = await fileData.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-
-    // 7. Montar mapeamento de variáveis
+    // 6. Montar dados de variáveis
     const fmtBRL = (v: number) =>
       (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
     const modulos = (pedido?.modulos_adicionais || []) as any[];
-    const modulosTexto = modulos.length > 0
-      ? modulos.map((m: any) => `${m.nome} (${m.quantidade}x - ${fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}/mês)`).join("; ")
+
+    const modulosInclusosLista = planoModulos.length > 0
+      ? "<ul>" + planoModulos.map((pm: any) => `<li>${pm.modulos?.nome || "Módulo"}</li>`).join("") + "</ul>"
+      : "<p>—</p>";
+
+    const modulosAdicionaisLista = modulos.length > 0
+      ? "<ul>" + modulos.map((m: any) => `<li>${m.nome} (${m.quantidade}x)</li>`).join("") + "</ul>"
       : "";
 
-    const planoDescricaoFormatada = [
-      plano?.nome ? `Plano: ${plano.nome}` : "",
-      plano?.valor_mensalidade_padrao ? `Mensalidade base: ${fmtBRL(plano.valor_mensalidade_padrao)}` : "",
-      modulosTexto ? `Módulos adicionais: ${modulosTexto}` : "",
-    ].filter(Boolean).join(" | ");
+    const modulosTabelaDetalhada = modulos.length > 0
+      ? `<table style="width:100%;border-collapse:collapse;margin:10px 0;">
+          <thead><tr style="background:#f0f0f0;">
+            <th style="border:1px solid #ccc;padding:6px;text-align:left;">Módulo</th>
+            <th style="border:1px solid #ccc;padding:6px;text-align:center;">Qtd</th>
+            <th style="border:1px solid #ccc;padding:6px;text-align:right;">Implantação</th>
+            <th style="border:1px solid #ccc;padding:6px;text-align:right;">Mensalidade</th>
+          </tr></thead>
+          <tbody>${modulos.map((m: any) => `<tr>
+            <td style="border:1px solid #ccc;padding:6px;">${m.nome}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:center;">${m.quantidade}x</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmtBRL(m.valor_implantacao_modulo * m.quantidade)}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}</td>
+          </tr>`).join("")}</tbody>
+        </table>`
+      : "";
 
-    const formaPagamentoMensalidade = (() => {
-      const forma = pedido?.pagamento_mensalidade_forma || "";
-      const parcelas = pedido?.pagamento_mensalidade_parcelas;
-      if (forma && parcelas && parcelas > 1) return `${forma} em ${parcelas}x`;
-      return forma || "";
-    })();
+    // Calcular descontos
+    const implOriginal = pedido?.valor_implantacao_original ?? 0;
+    const implFinal = pedido?.valor_implantacao_final ?? 0;
+    const implDesconto = implOriginal - implFinal;
+    const mensOriginal = pedido?.valor_mensalidade_original ?? 0;
+    const mensFinal = pedido?.valor_mensalidade_final ?? 0;
+    const mensDesconto = mensOriginal - mensFinal;
+    const totalGeral = pedido?.valor_total ?? 0;
 
-    const valorTotalExtenso = valorPorExtenso(pedido?.valor_total ?? 0);
+    // Endereço completo do cliente
+    const enderecoCliente = [
+      cliente?.logradouro,
+      cliente?.numero ? `, ${cliente.numero}` : "",
+      cliente?.complemento ? ` - ${cliente.complemento}` : "",
+      cliente?.bairro ? ` - ${cliente.bairro}` : "",
+      cliente?.cidade && cliente?.uf ? ` - ${cliente.cidade}/${cliente.uf}` : "",
+      cliente?.cep ? ` - CEP ${cliente.cep}` : "",
+    ].join("");
 
-    const variaveis: Record<string, string> = {
-      "CLIENTE_RAZAO": cliente?.razao_social || cliente?.nome_fantasia || "",
-      "CLIENTE_FANTASIA": cliente?.nome_fantasia || "",
-      "CLIENTE_CNPJ": cliente?.cnpj_cpf || "",
-      "CLIENTE_INSC_ESTADUAL": cliente?.inscricao_estadual || "",
-      "CLIENTE_ENDERECO_RUA": cliente?.logradouro || "",
-      "CLIENTE_NUMERO": cliente?.numero || "",
-      "CLIENTE_COMPLEMENTO": cliente?.complemento || "",
-      "CLIENTE_BAIRRO": cliente?.bairro || "",
-      "CLIENTE_CIDADE": cliente?.cidade || "",
-      "CLIENTE_UF": cliente?.uf || "",
-      "CLIENTE_CEP": cliente?.cep || "",
-      "CLIENTE_TELEFONE": cliente?.telefone || "",
-      "CLIENTE_EMAIL": cliente?.email || "",
-      "PLANO_SERVICOS_VALOR": plano ? `${plano.nome} - ${fmtBRL(plano.valor_mensalidade_padrao)}` : "",
-      "MENSALIDADES_TOTAIS_COM_DESCRICAO_DO_PLANO": planoDescricaoFormatada,
-      "VALOR_TOTAL_IMPLANTACAO_TREINAMENTO": fmtBRL(pedido?.valor_implantacao_final ?? 0),
-      "VALOR_TOTAL_SERVICO_UNICO_EXTENSO": valorTotalExtenso,
-      "PROPOSTA_OBSERVACOES_NEGOCIACAO": pedido?.observacoes || "",
-      "FORMA_DE_PAGAMENTO_MENSALIDADE": formaPagamentoMensalidade,
-      "VALOR_TOTAL_MENSALIDADE": fmtBRL(pedido?.valor_mensalidade_final ?? 0),
-      "PROPOSTA_OBSERVACOES_GERAIS": pedido?.pagamento_mensalidade_observacao || "",
-      "NOME_DECISOR": decisor?.nome || "",
+    // Endereço completo da filial
+    const enderecoFilial = filial ? [
+      filial.logradouro,
+      filial.numero ? `, ${filial.numero}` : "",
+      filial.complemento ? ` - ${filial.complemento}` : "",
+      filial.bairro ? ` - ${filial.bairro}` : "",
+      filial.cidade && filial.uf ? ` - ${filial.cidade}/${filial.uf}` : "",
+      filial.cep ? ` - CEP ${filial.cep}` : "",
+    ].join("") : "";
+
+    // Data por extenso
+    const meses = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+    const agora = new Date();
+    const dataAtual = `${String(agora.getDate()).padStart(2,"0")}/${String(agora.getMonth()+1).padStart(2,"0")}/${agora.getFullYear()}`;
+    const dataExtenso = `${agora.getDate()} de ${meses[agora.getMonth()]} de ${agora.getFullYear()}`;
+
+    // Logo URL
+    const logoUrl = template.logo_url || filial?.logo_url || "";
+
+    // Forma de pagamento
+    const formaImplantacao = pedido?.pagamento_implantacao_forma || "";
+    const parcelasImplantacao = pedido?.pagamento_implantacao_parcelas;
+    const formaMensalidade = pedido?.pagamento_mensalidade_forma || "";
+    const parcelasMensalidade = pedido?.pagamento_mensalidade_parcelas;
+
+    const dados: Record<string, string> = {
+      // Cliente
+      "cliente.razao_social": cliente?.razao_social || cliente?.nome_fantasia || "",
+      "cliente.nome_fantasia": cliente?.nome_fantasia || "",
+      "cliente.cnpj": cliente?.cnpj_cpf || "",
+      "cliente.inscricao_estadual": cliente?.inscricao_estadual || "",
+      "cliente.endereco_completo": enderecoCliente,
+      "cliente.logradouro": cliente?.logradouro || "",
+      "cliente.numero": cliente?.numero || "",
+      "cliente.complemento": cliente?.complemento || "",
+      "cliente.bairro": cliente?.bairro || "",
+      "cliente.cidade": cliente?.cidade || "",
+      "cliente.uf": cliente?.uf || "",
+      "cliente.cep": cliente?.cep || "",
+      "cliente.telefone": cliente?.telefone || "",
+      "cliente.email": cliente?.email || "",
+      // Contato
+      "contato.nome_decisor": decisor?.nome || "",
+      "contato.telefone_decisor": decisor?.telefone || "",
+      "contato.email_decisor": decisor?.email || "",
+      // Contrato
+      "contrato.numero": contrato.numero_exibicao || "",
+      "contrato.status": contrato.status || "",
+      // Plano
+      "plano.nome": plano?.nome || "",
+      "plano.valor_mensalidade": fmtBRL(plano?.valor_mensalidade_padrao ?? 0),
+      // Módulos
+      "modulos.inclusos_lista": modulosInclusosLista,
+      "modulos.adicionais_lista": modulosAdicionaisLista,
+      "modulos.tabela_detalhada": modulosTabelaDetalhada,
+      // Valores
+      "valores.implantacao.original": fmtBRL(implOriginal),
+      "valores.implantacao.desconto": fmtBRL(implDesconto),
+      "valores.implantacao.final": fmtBRL(implFinal),
+      "valores.mensalidade.original": fmtBRL(mensOriginal),
+      "valores.mensalidade.desconto": fmtBRL(mensDesconto),
+      "valores.mensalidade.final": fmtBRL(mensFinal),
+      "valores.total_geral": fmtBRL(totalGeral),
+      "valores.total_extenso": valorPorExtenso(totalGeral),
+      // Pagamento
+      "pagamento.implantacao.forma": formaImplantacao,
+      "pagamento.implantacao.parcelas": parcelasImplantacao ? `${parcelasImplantacao}x` : "",
+      "pagamento.mensalidade.forma": formaMensalidade,
+      "pagamento.mensalidade.parcelas": parcelasMensalidade ? `${parcelasMensalidade}x` : "",
+      "pagamento.observacoes": pedido?.pagamento_mensalidade_observacao || pedido?.pagamento_implantacao_observacao || "",
+      // Sistema
+      "data.atual": dataAtual,
+      "data.atual_extenso": dataExtenso,
+      "logo.url": logoUrl,
+      // Filial
+      "filial.nome": filial?.nome || "",
+      "filial.cnpj": filial?.cnpj || "",
+      "filial.inscricao_estadual": filial?.inscricao_estadual || "",
+      "filial.logradouro": filial?.logradouro || "",
+      "filial.numero": filial?.numero || "",
+      "filial.complemento": filial?.complemento || "",
+      "filial.bairro": filial?.bairro || "",
+      "filial.cidade": filial?.cidade || "",
+      "filial.uf": filial?.uf || "",
+      "filial.cep": filial?.cep || "",
+      "filial.endereco_completo": enderecoFilial,
+      "filial.telefone": filial?.telefone || "",
+      "filial.email": filial?.email || "",
     };
 
-    // 8. Substituir variáveis no XML interno do DOCX (ZIP)
-    const docxModificado = await substituirVariaveisNoDocx(bytes, variaveis);
+    // 7. Substituir variáveis no HTML
+    let htmlFinal = template.conteudo_html;
+    htmlFinal = htmlFinal.replace(/\{\{([^}]+)\}\}/g, (match: string, key: string) => {
+      const trimmedKey = key.trim();
+      if (trimmedKey === "modulos.tabela_detalhada" && !dados[trimmedKey]) return "";
+      const value = dados[trimmedKey];
+      if (value === undefined) return match;
+      // logo.url: substituir por tag img se estiver como texto puro
+      if (trimmedKey === "logo.url" && value) {
+        return `<img src="${value}" alt="Logo" style="max-height: 80px; max-width: 200px;" />`;
+      }
+      return value;
+    });
 
-    // 9. Extrair texto do DOCX modificado e gerar PDF
-    const textoParagrafos = await extrairTextoDOCX(docxModificado);
-    console.log("Parágrafos extraídos:", textoParagrafos.length, "primeiros:", textoParagrafos.slice(0, 3));
-    const pdfBytes = await gerarPDF(textoParagrafos, variaveis);
+    // Corrigir double-wrapping de logo
+    htmlFinal = htmlFinal.replace(/src="<img\s+src="([^"]+)"[^>]*\/?>"/gi, 'src="$1"');
 
-    // 10. Upload do PDF gerado
+    console.log("HTML final gerado, comprimento:", htmlFinal.length);
+
+    // 8. Converter HTML para PDF usando pdf-lib (parser simples)
+    const pdfBytes = await htmlToPdf(htmlFinal, logoUrl);
+
+    // 9. Upload do PDF
     const outputPath = `${contrato_id}.pdf`;
     const { error: uploadError } = await supabase.storage
       .from("contratos-pdf")
@@ -201,7 +300,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 10. Criar signed URL válida por 1 hora
+    // 10. Signed URL
     const { data: signedData, error: signedError } = await supabase.storage
       .from("contratos-pdf")
       .createSignedUrl(outputPath, 3600);
@@ -213,13 +312,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 11. Atualizar contrato com pdf_url e status_geracao
+    // 11. Atualizar contrato
     const { error: updateError } = await supabase
       .from("contratos")
-      .update({
-        pdf_url: outputPath,
-        status_geracao: "Gerado",
-      })
+      .update({ pdf_url: outputPath, status_geracao: "Gerado" })
       .eq("id", contrato_id);
 
     if (updateError) {
@@ -238,6 +334,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    console.error("Erro geral:", err);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -245,63 +342,70 @@ Deno.serve(async (req) => {
   }
 });
 
-// ─── Extrai parágrafos de texto do DOCX (após substituição) ──────────────────
-async function extrairTextoDOCX(docxBytes: Uint8Array): Promise<string[]> {
-  try {
-    const entries = await lerEntradasZip(docxBytes);
-    const docEntry = entries.find((e) => e.filename === "word/document.xml");
-    if (!docEntry) return [];
-
-    const xml = new TextDecoder("utf-8").decode(docEntry.data);
-
-    // Extrair parágrafos <w:p> e obter texto limpo
-    const paragrafos: string[] = [];
-    const paraRegex = /<w:p[ >][\s\S]*?<\/w:p>/g;
-    let paraMatch;
-    while ((paraMatch = paraRegex.exec(xml)) !== null) {
-      const paraXml = paraMatch[0];
-      // Check for tab elements to add spacing
-      const hasTab = /<w:tab\s*\/>/.test(paraXml);
-      const textos: string[] = [];
-      const tRegex = /<w:t(?:[^>]*)>([\s\S]*?)<\/w:t>/g;
-      let tMatch;
-      while ((tMatch = tRegex.exec(paraXml)) !== null) {
-        // Clean any XML tags that may have leaked into text content
-        const cleanText = tMatch[1].replace(/<[^>]+>/g, "");
-        textos.push(cleanText);
-      }
-      const linha = textos.join(hasTab ? "    " : "").replace(/\s+/g, " ").trim();
-      paragrafos.push(linha);
-    }
-    return paragrafos;
-  } catch (e) {
-    console.error("Erro ao extrair texto do DOCX:", e);
-    return [];
-  }
-}
-
-// ─── Gera PDF a partir dos parágrafos extraídos do DOCX ──────────────────────
-async function gerarPDF(
-  paragrafos: string[],
-  _variaveis: Record<string, string>
-): Promise<Uint8Array> {
+// ─── HTML para PDF usando pdf-lib ────────────────────────────────────────────
+async function htmlToPdf(html: string, logoUrl?: string): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   const pageWidth = PageSizes.A4[0];
   const pageHeight = PageSizes.A4[1];
-  const marginX = 60;
-  const marginTop = 60;
-  const marginBottom = 60;
+  const marginX = 50;
+  const marginTop = 50;
+  const marginBottom = 50;
   const maxWidth = pageWidth - marginX * 2;
-  const fontSize = 10;
-  const lineHeight = fontSize * 1.5;
 
   let page = pdfDoc.addPage(PageSizes.A4);
   let y = pageHeight - marginTop;
 
-  const wrapText = (text: string, f: typeof font, size: number): string[] => {
+  // Embed logo if available
+  let logoImage: any = null;
+  if (logoUrl) {
+    try {
+      const response = await fetch(logoUrl);
+      if (response.ok) {
+        const logoBytes = new Uint8Array(await response.arrayBuffer());
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("png")) {
+          logoImage = await pdfDoc.embedPng(logoBytes);
+        } else if (contentType.includes("jpeg") || contentType.includes("jpg")) {
+          logoImage = await pdfDoc.embedJpg(logoBytes);
+        }
+      }
+    } catch (e) {
+      console.log("Não foi possível carregar logo:", e);
+    }
+  }
+
+  // Draw logo at top if available
+  if (logoImage) {
+    const logoMaxH = 50;
+    const logoMaxW = 150;
+    const scale = Math.min(logoMaxW / logoImage.width, logoMaxH / logoImage.height, 1);
+    const w = logoImage.width * scale;
+    const h = logoImage.height * scale;
+    page.drawImage(logoImage, {
+      x: marginX,
+      y: y - h,
+      width: w,
+      height: h,
+    });
+    y -= h + 15;
+  }
+
+  const sanitize = (t: string): string =>
+    t.replace(/[^\x20-\x7E\xA0-\xFF]/g, (ch) => {
+      const code = ch.charCodeAt(0);
+      if (code === 0x2013 || code === 0x2014) return "-";
+      if (code === 0x2018 || code === 0x2019) return "'";
+      if (code === 0x201C || code === 0x201D) return '"';
+      if (code === 0x2026) return "...";
+      if (code === 0x2022 || code === 0x00B7) return "-";
+      if (code === 0x21E8 || code === 0x2192) return "->";
+      return "";
+    });
+
+  const wrapText = (text: string, f: typeof font, size: number, maxW: number): string[] => {
     if (!text) return [""];
     const words = text.split(" ");
     const lines: string[] = [];
@@ -309,7 +413,7 @@ async function gerarPDF(
     for (const word of words) {
       const test = current ? current + " " + word : word;
       const w = f.widthOfTextAtSize(test, size);
-      if (w > maxWidth && current) {
+      if (w > maxW && current) {
         lines.push(current);
         current = word;
       } else {
@@ -317,436 +421,163 @@ async function gerarPDF(
       }
     }
     if (current) lines.push(current);
-    return lines;
+    return lines.length > 0 ? lines : [""];
   };
 
-  // Sanitize text to only WinAnsi-encodable characters
-  const sanitize = (t: string): string =>
-    t.replace(/[^\x20-\x7E\xA0-\xFF]/g, (ch) => {
-      const code = ch.charCodeAt(0);
-      // Map common unicode chars to ASCII equivalents
-      if (code === 0x21E8 || code === 0x2192) return "->";
-      if (code === 0x2013 || code === 0x2014) return "-";
-      if (code === 0x2018 || code === 0x2019) return "'";
-      if (code === 0x201C || code === 0x201D) return '"';
-      if (code === 0x2026) return "...";
-      if (code === 0x2022 || code === 0x00B7) return "-";
-      return "";
-    });
+  const checkPage = (needed: number) => {
+    if (y - needed < marginBottom) {
+      page = pdfDoc.addPage(PageSizes.A4);
+      y = pageHeight - marginTop;
+    }
+  };
 
-  const addLine = (text: string, bold = false) => {
+  const drawText = (text: string, size: number, bold = false, indent = 0) => {
     text = sanitize(text);
     const f = bold ? fontBold : font;
-    const wrapped = wrapText(text, f, fontSize);
-    for (const line of wrapped) {
-      if (y < marginBottom + lineHeight) {
-        page = pdfDoc.addPage(PageSizes.A4);
-        y = pageHeight - marginTop;
-      }
+    const lineH = size * 1.4;
+    const lines = wrapText(text, f, size, maxWidth - indent);
+    for (const line of lines) {
+      checkPage(lineH);
       page.drawText(line, {
-        x: marginX,
+        x: marginX + indent,
         y,
-        size: fontSize,
+        size,
         font: f,
         color: rgb(0, 0, 0),
       });
-      y -= lineHeight;
+      y -= lineH;
     }
   };
 
-  for (const para of paragrafos) {
-    if (!para) {
-      y -= lineHeight * 0.4; // espaço entre parágrafos
-    } else {
-      addLine(para);
-    }
+  // Strip HTML tags and convert to structured text blocks
+  // Remove <img> tags (logo already drawn), <style> blocks
+  let cleaned = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
+  cleaned = cleaned.replace(/<img[^>]*>/gi, "");
+  
+  // Convert <br> to newlines
+  cleaned = cleaned.replace(/<br\s*\/?>/gi, "\n");
+  // Convert </p>, </div>, </tr>, </li>, </h1-6> to newlines
+  cleaned = cleaned.replace(/<\/(p|div|tr|li|h[1-6])>/gi, "\n");
+  // Convert <li> to bullet
+  cleaned = cleaned.replace(/<li[^>]*>/gi, "  • ");
+  // Convert <hr> to separator
+  cleaned = cleaned.replace(/<hr[^>]*>/gi, "\n---\n");
+  
+  // Handle table cells - add spacing
+  cleaned = cleaned.replace(/<\/td>/gi, "    ");
+  cleaned = cleaned.replace(/<\/th>/gi, "    ");
+
+  // Detect bold/header sections
+  interface TextBlock {
+    text: string;
+    bold: boolean;
+    heading: boolean;
+    separator: boolean;
   }
 
-  const pdfBytes = await pdfDoc.save();
-  return new Uint8Array(pdfBytes);
-}
-
-// ─── Substituição de variáveis no DOCX (ZIP interno) ─────────────────────────
-async function substituirVariaveisNoDocx(
-  bytes: Uint8Array,
-  variaveis: Record<string, string>
-): Promise<Uint8Array> {
-  try {
-    const result = await processarZip(bytes, (filename, content) => {
-      if (
-        filename === "word/document.xml" ||
-        filename.startsWith("word/header") ||
-        filename.startsWith("word/footer") ||
-        filename === "word/styles.xml"
-      ) {
-        return substituirNoXml(content, variaveis);
+  const blocks: TextBlock[] = [];
+  
+  // Split by headers first
+  const parts = cleaned.split(/(<\/?(?:h[1-6]|strong|b|thead|th)[^>]*>)/gi);
+  let isBold = false;
+  let isHeading = false;
+  
+  for (const part of parts) {
+    const lower = part.toLowerCase();
+    if (lower.match(/^<(h[1-6]|strong|b|thead|th)\b/)) {
+      isBold = true;
+      isHeading = !!lower.match(/^<h[1-6]/);
+      continue;
+    }
+    if (lower.match(/^<\/(h[1-6]|strong|b|thead|th)>/)) {
+      isBold = false;
+      isHeading = false;
+      continue;
+    }
+    // Strip remaining HTML tags
+    const stripped = part.replace(/<[^>]+>/g, "").trim();
+    if (!stripped) continue;
+    
+    // Split by newlines
+    const lines = stripped.split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed === "---") {
+        blocks.push({ text: "", bold: false, heading: false, separator: true });
+      } else if (trimmed) {
+        blocks.push({ text: trimmed, bold: isBold, heading: isHeading, separator: false });
+      } else {
+        blocks.push({ text: "", bold: false, heading: false, separator: false });
       }
-      return content;
-    });
-    return result;
-  } catch (e) {
-    console.error("Erro ao processar ZIP:", e);
-    return bytes;
-  }
-}
-
-function substituirNoXml(xmlBytes: Uint8Array, variaveis: Record<string, string>): Uint8Array {
-  const decoder = new TextDecoder("utf-8");
-  const encoder = new TextEncoder();
-  let xml = decoder.decode(xmlBytes);
-
-  // Substituir marcadores simples no formato #CAMPO#
-  for (const [campo, valor] of Object.entries(variaveis)) {
-    const marcador = `#${campo}#`;
-    // Escapar valor para uso em XML
-    const valorEscapado = (valor || "").replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&apos;");
-    xml = xml.split(marcador).join(valorEscapado);
-  }
-
-  // Alguns marcadores podem estar fragmentados entre tags XML (problema comum em DOCX)
-  // Tentar reconstruir texto contínuo dentro de <w:r> antes de substituir
-  xml = resolverMarcadoresFragmentados(xml, variaveis);
-
-  return encoder.encode(xml);
-}
-
-// Resolve marcadores que o Word fragmenta em múltiplos <w:r>
-function resolverMarcadoresFragmentados(xml: string, variaveis: Record<string, string>): string {
-  // Concatenar texto de w:t adjacentes dentro do mesmo parágrafo para detectar marcadores
-  // Depois substituir no XML original
-  const allKeys = Object.keys(variaveis);
-
-  for (const campo of allKeys) {
-    const marcador = `#${campo}#`;
-    // Tentar encontrar o marcador dividido entre runs consecutivos
-    // Padrão: #CAMPO# pode aparecer como #CAM em um run e PO# em outro
-    // Estratégia: procurar no texto decodificado e se não achar, tentar juntar runs
-    // Já foi feito na passagem anterior. Esta é uma segunda passagem mais agressiva:
-    // substituir marcadores divididos com regex que ignora tags XML entre partes do marcador
-    const partes = marcador.split("");
-    let regexStr = "";
-    for (const parte of partes) {
-      regexStr += escapeRegex(parte) + "(?:<[^>]*>)*";
-    }
-    // Remove o último "(?:<[^>]*>)*"
-    regexStr = regexStr.slice(0, regexStr.lastIndexOf("(?:<[^>]*>)*"));
-    try {
-      const regex = new RegExp(regexStr, "g");
-      const valorEscapado = (variaveis[campo] || "").replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-      xml = xml.replace(regex, valorEscapado);
-    } catch {
-      // ignorar erros de regex
     }
   }
-  return xml;
-}
 
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-// ─── Parser/Packer de ZIP ─────────────────────────────────────────────────────
-interface ZipEntry {
-  filename: string;
-  compression: number;
-  offset: number;
-  compressedSize: number;
-  uncompressedSize: number;
-  localHeaderOffset: number;
-  data: Uint8Array; // descomprimido
-  extraField: Uint8Array;
-  comment: Uint8Array;
-}
-
-function readUint16LE(buf: Uint8Array, offset: number): number {
-  return buf[offset] | (buf[offset + 1] << 8);
-}
-function readUint32LE(buf: Uint8Array, offset: number): number {
-  return (buf[offset] | (buf[offset + 1] << 8) | (buf[offset + 2] << 16) | (buf[offset + 3] << 24)) >>> 0;
-}
-function writeUint16LE(buf: Uint8Array, offset: number, value: number) {
-  buf[offset] = value & 0xff;
-  buf[offset + 1] = (value >> 8) & 0xff;
-}
-function writeUint32LE(buf: Uint8Array, offset: number, value: number) {
-  buf[offset] = value & 0xff;
-  buf[offset + 1] = (value >> 8) & 0xff;
-  buf[offset + 2] = (value >> 16) & 0xff;
-  buf[offset + 3] = (value >> 24) & 0xff;
-}
-
-function crc32(data: Uint8Array): number {
-  const table = makeCrc32Table();
-  let crc = 0xffffffff;
-  for (let i = 0; i < data.length; i++) {
-    crc = (crc >>> 8) ^ table[(crc ^ data[i]) & 0xff];
-  }
-  return (crc ^ 0xffffffff) >>> 0;
-}
-
-let _crc32Table: Uint32Array | null = null;
-function makeCrc32Table(): Uint32Array {
-  if (_crc32Table) return _crc32Table;
-  _crc32Table = new Uint32Array(256);
-  for (let i = 0; i < 256; i++) {
-    let c = i;
-    for (let j = 0; j < 8; j++) {
-      c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  // Render blocks
+  for (const block of blocks) {
+    if (block.separator) {
+      checkPage(10);
+      y -= 5;
+      page.drawLine({
+        start: { x: marginX, y },
+        end: { x: pageWidth - marginX, y },
+        thickness: 0.5,
+        color: rgb(0.7, 0.7, 0.7),
+      });
+      y -= 10;
+      continue;
     }
-    _crc32Table[i] = c;
-  }
-  return _crc32Table;
-}
-
-async function processarZip(
-  zipBytes: Uint8Array,
-  transformer: (filename: string, content: Uint8Array) => Uint8Array
-): Promise<Uint8Array> {
-  const entries = await lerEntradasZip(zipBytes);
-
-  // Transformar entradas relevantes
-  const entriesModificadas = entries.map((entry) => {
-    const novoConteudo = transformer(entry.filename, entry.data);
-    return { ...entry, data: novoConteudo };
-  });
-
-  // Repack ZIP
-  return repackZip(entriesModificadas);
-}
-
-async function lerEntradasZip(zipBytes: Uint8Array): Promise<ZipEntry[]> {
-  // Encontrar End of Central Directory (EOCD)
-  let eocdOffset = -1;
-  for (let i = zipBytes.length - 22; i >= 0; i--) {
-    if (
-      zipBytes[i] === 0x50 && zipBytes[i + 1] === 0x4b &&
-      zipBytes[i + 2] === 0x05 && zipBytes[i + 3] === 0x06
-    ) {
-      eocdOffset = i;
-      break;
+    if (!block.text) {
+      y -= 6; // empty line spacing
+      continue;
     }
-  }
-  if (eocdOffset === -1) throw new Error("ZIP inválido: EOCD não encontrado");
-
-  const numEntries = readUint16LE(zipBytes, eocdOffset + 10);
-  const cdOffset = readUint32LE(zipBytes, eocdOffset + 16);
-
-  const entries: ZipEntry[] = [];
-  let cdPos = cdOffset;
-
-  for (let i = 0; i < numEntries; i++) {
-    if (
-      zipBytes[cdPos] !== 0x50 || zipBytes[cdPos + 1] !== 0x4b ||
-      zipBytes[cdPos + 2] !== 0x01 || zipBytes[cdPos + 3] !== 0x02
-    ) {
-      throw new Error("ZIP inválido: assinatura de entrada central incorreta");
-    }
-
-    const compression = readUint16LE(zipBytes, cdPos + 10);
-    const compressedSize = readUint32LE(zipBytes, cdPos + 20);
-    const uncompressedSize = readUint32LE(zipBytes, cdPos + 24);
-    const filenameLen = readUint16LE(zipBytes, cdPos + 28);
-    const extraLen = readUint16LE(zipBytes, cdPos + 30);
-    const commentLen = readUint16LE(zipBytes, cdPos + 32);
-    const localHeaderOffset = readUint32LE(zipBytes, cdPos + 42);
-
-    const filenameBytes = zipBytes.slice(cdPos + 46, cdPos + 46 + filenameLen);
-    const filename = new TextDecoder("utf-8").decode(filenameBytes);
-
-    // Ler dados locais
-    const localPos = localHeaderOffset;
-    const localFilenameLen = readUint16LE(zipBytes, localPos + 26);
-    const localExtraLen = readUint16LE(zipBytes, localPos + 28);
-    const dataOffset = localPos + 30 + localFilenameLen + localExtraLen;
-
-    let data: Uint8Array;
-    if (compression === 0) {
-      // Store (sem compressão)
-      data = zipBytes.slice(dataOffset, dataOffset + uncompressedSize);
-    } else if (compression === 8) {
-      // Deflate - usar descompressão async real
-      const compressed = zipBytes.slice(dataOffset, dataOffset + compressedSize);
-      data = await decompressDeflateAsync(compressed);
-    } else {
-      // Método não suportado — usar dados brutos
-      data = zipBytes.slice(dataOffset, dataOffset + compressedSize);
-    }
-
-    entries.push({
-      filename,
-      compression,
-      offset: dataOffset,
-      compressedSize,
-      uncompressedSize,
-      localHeaderOffset,
-      data,
-      extraField: zipBytes.slice(cdPos + 46 + filenameLen, cdPos + 46 + filenameLen + extraLen),
-      comment: zipBytes.slice(cdPos + 46 + filenameLen + extraLen, cdPos + 46 + filenameLen + extraLen + commentLen),
-    });
-
-    cdPos += 46 + filenameLen + extraLen + commentLen;
+    const fontSize = block.heading ? 13 : 10;
+    const indent = block.text.startsWith("•") ? 10 : 0;
+    drawText(block.text, fontSize, block.bold || block.heading, indent);
   }
 
-  return entries;
+  const pdfBytesOut = await pdfDoc.save();
+  return new Uint8Array(pdfBytesOut);
 }
 
-function repackZip(entries: ZipEntry[]): Uint8Array {
-  const parts: Uint8Array[] = [];
-  const centralDir: Uint8Array[] = [];
-  let offset = 0;
-
-  for (const entry of entries) {
-    const filenameBytes = new TextEncoder().encode(entry.filename);
-    const data = entry.data;
-    const crc = crc32(data);
-    const uncompressedSize = data.length;
-
-    // Armazenar sem compressão (Store) para simplificar
-    const localHeader = new Uint8Array(30 + filenameBytes.length);
-    writeUint32LE(localHeader, 0, 0x04034b50); // local file header signature
-    writeUint16LE(localHeader, 4, 20); // version needed
-    writeUint16LE(localHeader, 6, 0); // flags
-    writeUint16LE(localHeader, 8, 0); // compression: Store
-    writeUint16LE(localHeader, 10, 0); // last mod time
-    writeUint16LE(localHeader, 12, 0); // last mod date
-    writeUint32LE(localHeader, 14, crc);
-    writeUint32LE(localHeader, 18, uncompressedSize);
-    writeUint32LE(localHeader, 22, uncompressedSize);
-    writeUint16LE(localHeader, 26, filenameBytes.length);
-    writeUint16LE(localHeader, 28, 0); // extra length
-    localHeader.set(filenameBytes, 30);
-
-    // Central directory entry
-    const cdEntry = new Uint8Array(46 + filenameBytes.length);
-    writeUint32LE(cdEntry, 0, 0x02014b50); // central dir signature
-    writeUint16LE(cdEntry, 4, 20); // version made by
-    writeUint16LE(cdEntry, 6, 20); // version needed
-    writeUint16LE(cdEntry, 8, 0); // flags
-    writeUint16LE(cdEntry, 10, 0); // compression: Store
-    writeUint16LE(cdEntry, 12, 0); // last mod time
-    writeUint16LE(cdEntry, 14, 0); // last mod date
-    writeUint32LE(cdEntry, 16, crc);
-    writeUint32LE(cdEntry, 20, uncompressedSize);
-    writeUint32LE(cdEntry, 24, uncompressedSize);
-    writeUint16LE(cdEntry, 28, filenameBytes.length);
-    writeUint16LE(cdEntry, 30, 0); // extra length
-    writeUint16LE(cdEntry, 32, 0); // comment length
-    writeUint16LE(cdEntry, 34, 0); // disk number start
-    writeUint16LE(cdEntry, 36, 0); // internal attr
-    writeUint32LE(cdEntry, 38, 0); // external attr
-    writeUint32LE(cdEntry, 42, offset); // local header offset
-    cdEntry.set(filenameBytes, 46);
-
-    parts.push(localHeader);
-    parts.push(data);
-    offset += localHeader.length + data.length;
-    centralDir.push(cdEntry);
-  }
-
-  // End of central directory
-  const cdSize = centralDir.reduce((s, e) => s + e.length, 0);
-  const eocd = new Uint8Array(22);
-  writeUint32LE(eocd, 0, 0x06054b50);
-  writeUint16LE(eocd, 4, 0); // disk number
-  writeUint16LE(eocd, 6, 0); // disk with start of cd
-  writeUint16LE(eocd, 8, entries.length);
-  writeUint16LE(eocd, 10, entries.length);
-  writeUint32LE(eocd, 12, cdSize);
-  writeUint32LE(eocd, 16, offset);
-  writeUint16LE(eocd, 20, 0); // comment length
-
-  const allParts = [...parts, ...centralDir, eocd];
-  const totalSize = allParts.reduce((s, p) => s + p.length, 0);
-  const result = new Uint8Array(totalSize);
-  let pos = 0;
-  for (const part of allParts) {
-    result.set(part, pos);
-    pos += part.length;
-  }
-  return result;
-}
-
-// Decompress DEFLATE (raw) usando DecompressionStream
-async function decompressDeflateAsync(data: Uint8Array): Promise<Uint8Array> {
-  const ds = new DecompressionStream("deflate-raw");
-  const writer = ds.writable.getWriter();
-  const reader = ds.readable.getReader();
-  writer.write(data);
-  writer.close();
-  const chunks: Uint8Array[] = [];
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-  }
-  const total = chunks.reduce((s, c) => s + c.length, 0);
-  const result = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return result;
-}
-
-// decompressDeflate removed — using decompressDeflateAsync directly
-
-// ─── Conversão de número por extenso (pt-BR) ─────────────────────────────────
+// ─── Valor por extenso ───────────────────────────────────────────────────────
 function valorPorExtenso(valor: number): string {
+  const unidades = ["", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
+  const especiais = ["dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
+  const dezenas = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
+  const centenas = ["", "cento", "duzentos", "trezentos", "quatrocentos", "quinhentos", "seiscentos", "setecentos", "oitocentos", "novecentos"];
+
   if (valor === 0) return "zero reais";
 
-  const centavos = Math.round((valor % 1) * 100);
-  const reais = Math.floor(valor);
+  const inteiro = Math.floor(valor);
+  const centavos = Math.round((valor - inteiro) * 100);
 
-  const partes: string[] = [];
-  if (reais > 0) {
-    partes.push(numeroPorExtenso(reais) + (reais === 1 ? " real" : " reais"));
+  function porExtenso(n: number): string {
+    if (n === 0) return "";
+    if (n === 100) return "cem";
+    if (n < 10) return unidades[n];
+    if (n < 20) return especiais[n - 10];
+    if (n < 100) {
+      const d = Math.floor(n / 10);
+      const u = n % 10;
+      return dezenas[d] + (u > 0 ? " e " + unidades[u] : "");
+    }
+    if (n < 1000) {
+      const c = Math.floor(n / 100);
+      const resto = n % 100;
+      return centenas[c] + (resto > 0 ? " e " + porExtenso(resto) : "");
+    }
+    if (n < 1000000) {
+      const milhares = Math.floor(n / 1000);
+      const resto = n % 1000;
+      const milStr = milhares === 1 ? "mil" : porExtenso(milhares) + " mil";
+      return milStr + (resto > 0 ? (resto < 100 ? " e " : " ") + porExtenso(resto) : "");
+    }
+    return String(n);
   }
+
+  let resultado = porExtenso(inteiro) + (inteiro === 1 ? " real" : " reais");
   if (centavos > 0) {
-    partes.push(numeroPorExtenso(centavos) + (centavos === 1 ? " centavo" : " centavos"));
+    resultado += " e " + porExtenso(centavos) + (centavos === 1 ? " centavo" : " centavos");
   }
-  return partes.join(" e ");
-}
-
-function numeroPorExtenso(n: number): string {
-  if (n === 0) return "zero";
-  if (n < 0) return "menos " + numeroPorExtenso(-n);
-
-  const unidades = ["", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove",
-    "dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
-  const dezenas = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
-  const centenas = ["", "cem", "duzentos", "trezentos", "quatrocentos", "quinhentos",
-    "seiscentos", "setecentos", "oitocentos", "novecentos"];
-
-  if (n < 20) return unidades[n];
-  if (n < 100) {
-    const d = Math.floor(n / 10);
-    const u = n % 10;
-    return dezenas[d] + (u > 0 ? " e " + unidades[u] : "");
-  }
-  if (n === 100) return "cem";
-  if (n < 1000) {
-    const c = Math.floor(n / 100);
-    const r = n % 100;
-    return centenas[c] + (r > 0 ? " e " + numeroPorExtenso(r) : "");
-  }
-  if (n < 1000000) {
-    const m = Math.floor(n / 1000);
-    const r = n % 1000;
-    const milStr = m === 1 ? "mil" : numeroPorExtenso(m) + " mil";
-    return milStr + (r > 0 ? " e " + numeroPorExtenso(r) : "");
-  }
-  if (n < 1000000000) {
-    const m = Math.floor(n / 1000000);
-    const r = n % 1000000;
-    const milStr = m === 1 ? "um milhão" : numeroPorExtenso(m) + " milhões";
-    return milStr + (r > 0 ? " e " + numeroPorExtenso(r) : "");
-  }
-  return n.toString();
+  return resultado;
 }
