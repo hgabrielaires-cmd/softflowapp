@@ -51,7 +51,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   FileText, Plus, Loader2, MoreHorizontal,
-  Pencil, Trash2, Building2, CheckCircle, XCircle, Eye, Copy,
+  Pencil, Trash2, Building2, CheckCircle, XCircle, Eye, Copy, Upload, Image,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -72,6 +72,7 @@ export default function ModelosContrato() {
   const [loading, setLoading] = useState(true);
   const [openEditor, setOpenEditor] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingModelo, setEditingModelo] = useState<DocumentTemplate | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -83,6 +84,7 @@ export default function ModelosContrato() {
     tipo: "CONTRATO_BASE" as DocumentTemplate["tipo"],
     ativo: true,
     conteudo_html: "",
+    logo_url: "" as string | null,
   });
 
   async function loadData() {
@@ -104,7 +106,7 @@ export default function ModelosContrato() {
 
   function openNew() {
     setEditingModelo(null);
-    setForm({ nome: "", filial_id: "todas", tipo: "CONTRATO_BASE", ativo: true, conteudo_html: "" });
+    setForm({ nome: "", filial_id: "todas", tipo: "CONTRATO_BASE", ativo: true, conteudo_html: "", logo_url: "" });
     setOpenEditor(true);
   }
 
@@ -116,6 +118,7 @@ export default function ModelosContrato() {
       tipo: modelo.tipo,
       ativo: modelo.ativo,
       conteudo_html: modelo.conteudo_html,
+      logo_url: modelo.logo_url ?? "",
     });
     setOpenEditor(true);
   }
@@ -128,8 +131,28 @@ export default function ModelosContrato() {
       tipo: modelo.tipo,
       ativo: false,
       conteudo_html: modelo.conteudo_html,
+      logo_url: modelo.logo_url ?? "",
     });
     setOpenEditor(true);
+  }
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Selecione uma imagem"); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error("Imagem deve ter no máximo 2MB"); return; }
+
+    setUploadingLogo(true);
+    const ext = file.name.split(".").pop() || "png";
+    const path = `modelos/${crypto.randomUUID()}.${ext}`;
+
+    const { error } = await supabase.storage.from("filiais-logos").upload(path, file, { upsert: true });
+    if (error) { toast.error("Erro ao enviar logo: " + error.message); setUploadingLogo(false); return; }
+
+    const { data: urlData } = supabase.storage.from("filiais-logos").getPublicUrl(path);
+    setForm((f) => ({ ...f, logo_url: urlData.publicUrl }));
+    setUploadingLogo(false);
+    toast.success("Logo enviada!");
   }
 
   const handleInsertVariable = useCallback((variable: string) => {
@@ -164,6 +187,7 @@ export default function ModelosContrato() {
       tipo: form.tipo,
       ativo: form.ativo,
       conteudo_html: form.conteudo_html,
+      logo_url: form.logo_url || null,
     };
 
     if (editingModelo) {
@@ -385,6 +409,29 @@ export default function ModelosContrato() {
                     ))}
                   </SelectContent>
                 </Select>
+               </div>
+              {/* Logo upload */}
+              <div className="space-y-1 min-w-[180px]">
+                <Label className="text-xs">Logo do Modelo</Label>
+                <div className="flex items-center gap-2">
+                  {form.logo_url ? (
+                    <div className="relative h-9 w-9 rounded border border-border overflow-hidden bg-muted">
+                      <img src={form.logo_url} alt="Logo" className="h-full w-full object-contain" />
+                      <button
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, logo_url: "" }))}
+                        className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full h-4 w-4 flex items-center justify-center text-[10px] leading-none"
+                        title="Remover logo"
+                      >×</button>
+                    </div>
+                  ) : (
+                    <label className="cursor-pointer inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-border bg-background text-sm text-muted-foreground hover:bg-muted transition-colors">
+                      {uploadingLogo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                      {uploadingLogo ? "Enviando..." : "Enviar logo"}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploadingLogo} />
+                    </label>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2 pb-1">
                 <Switch

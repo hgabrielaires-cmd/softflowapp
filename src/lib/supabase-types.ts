@@ -134,6 +134,7 @@ export interface DocumentTemplate {
   conteudo_html: string;
   ativo: boolean;
   versao: number;
+  logo_url: string | null;
   created_at: string;
   updated_at: string;
   filiais?: { nome: string } | null;

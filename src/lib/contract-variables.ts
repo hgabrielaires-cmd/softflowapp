@@ -33,6 +33,7 @@ export const CONTRACT_VARIABLE_CATEGORIES: VariableCategory[] = [
     variables: [
       { key: "contato.nome_decisor", label: "Nome do Decisor", example: "João da Silva" },
       { key: "contato.telefone_decisor", label: "Telefone do Decisor", example: "(11) 99999-9999" },
+      { key: "contato.email_decisor", label: "E-mail do Decisor", example: "decisor@empresa.com.br" },
     ],
   },
   {
