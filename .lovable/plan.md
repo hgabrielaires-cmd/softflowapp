@@ -1,144 +1,114 @@
 
-# Passo 3 de 10 — Módulo de Pedidos de Venda
+# Página de Contratos — Fluxo pós-aprovação financeira
 
-## Visão Geral
+## Objetivo
 
-Cria o módulo completo de registro de pedidos com cálculo automático de comissão. Nenhuma aprovação financeira, geração de contrato, agenda ou comissão paga será construída nesta etapa.
-
----
-
-## 1. Banco de Dados (Migração SQL)
-
-### Nova tabela: `pedidos`
-
-| Coluna | Tipo | Observação |
-|---|---|---|
-| `id` | uuid PK | gen_random_uuid() |
-| `cliente_id` | uuid FK → clientes | obrigatório |
-| `vendedor_id` | uuid FK → auth.users (via profiles.user_id) | obrigatório |
-| `filial_id` | uuid FK → filiais | obrigatório |
-| `plano_id` | uuid FK → planos | obrigatório |
-| `valor_implantacao` | numeric(10,2) | default 0 |
-| `valor_mensalidade` | numeric(10,2) | default 0 |
-| `valor_total` | numeric(10,2) | calculado: implantação + mensalidade |
-| `comissao_percentual` | numeric(5,2) | preenchido com padrão do vendedor, editável |
-| `comissao_valor` | numeric(10,2) | calculado: valor_total × comissao_percentual / 100; 0 se cancelado |
-| `status_pedido` | text | 'Aguardando Financeiro', 'Cancelado' |
-| `observacoes` | text | opcional |
-| `created_at` | timestamptz | now() |
-| `updated_at` | timestamptz | now(), atualizado via trigger |
-
-### Nova coluna na tabela `profiles`
-
-Adicionar `comissao_percentual numeric(5,2) default 5` — percentual padrão do vendedor, configurável pelo admin na tela de Usuários.
-
-### RLS Policies para `pedidos`
-
-| Role | Permissão |
-|---|---|
-| `admin` | SELECT, INSERT, UPDATE, DELETE em todos |
-| `financeiro` | SELECT em todos |
-| `vendedor` | SELECT e INSERT apenas na sua filial (`filial_id = profile.filial_id`) |
-| `tecnico` | Sem acesso |
-
-### Trigger `updated_at`
-
-Reutilizar a função `update_updated_at_column()` já existente no banco.
+Quando o financeiro aprovar um pedido na **Fila do Financeiro**, o sistema deve criar automaticamente um registro na tabela `contratos` e redirecionar para a página `/contratos`, onde o usuário poderá executar as ações do contrato (visualizar, gerar documento, etc.).
 
 ---
 
-## 2. Tipos TypeScript
+## Situação Atual
 
-Adicionar ao `src/lib/supabase-types.ts`:
+- A rota `/contratos` existe mas está como `ComingSoon` (página em breve).
+- A tabela `contratos` já existe no banco com: `id`, `cliente_id`, `plano_id`, `numero_registro`, `numero_exibicao`, `tipo`, `status`, `pedido_id`, `contrato_origem_id`, `created_at`, `updated_at`.
+- O trigger `gerar_numero_exibicao_contrato` já gera o `numero_exibicao` automaticamente no formato `AAAA-SERIAL`.
+- Atualmente, `handleAprovar` em `Financeiro.tsx` apenas atualiza o pedido — **não cria o contrato**.
+- Há um pedido aprovado (`contrato_liberado: true`) mas sem contrato vinculado na tabela `contratos`.
 
-```typescript
-export interface Pedido {
-  id: string;
-  cliente_id: string;
-  vendedor_id: string;
-  filial_id: string;
-  plano_id: string;
-  valor_implantacao: number;
-  valor_mensalidade: number;
-  valor_total: number;
-  comissao_percentual: number;
-  comissao_valor: number;
-  status_pedido: 'Aguardando Financeiro' | 'Cancelado';
-  observacoes: string | null;
-  created_at: string;
-  updated_at: string;
-  // Joins
-  cliente?: Cliente;
-  plano?: Plano;
-  vendedor?: Profile;
-  filial?: Filial;
-}
+---
+
+## O Que Será Feito
+
+### 1. `src/pages/Financeiro.tsx` — Criar contrato ao aprovar
+
+Dentro da função `handleAprovar`, após atualizar o pedido com sucesso, inserir um registro na tabela `contratos`:
+
+```
+INSERT INTO contratos (cliente_id, plano_id, pedido_id, tipo, status)
+VALUES (pedido.cliente_id, pedido.plano_id, pedido.id, 'Base', 'Ativo')
 ```
 
-Também atualizar `Profile` para incluir `comissao_percentual: number | null`.
+Após a inserção bem-sucedida, redirecionar para `/contratos` usando `useNavigate`.
+
+> Nota: O `numero_exibicao` é gerado automaticamente pelo trigger do banco de dados.
 
 ---
 
-## 3. Tela de Pedidos — `src/pages/Pedidos.tsx`
+### 2. `src/pages/Contratos.tsx` — Criar a página de gestão de contratos (novo arquivo)
 
-### Listagem (página principal)
+Substituir o `ComingSoon` por uma página funcional com:
 
-- Tabela com colunas: Cliente, Plano, Filial, Vendedor, Valor Total, Comissão, Status, Data, Ações
-- Barra de filtros:
-  - Busca por nome do cliente
-  - Filtro por filial (admin/financeiro)
-  - Filtro por status (Aguardando Financeiro / Cancelado)
-  - Filtro por período (data inicial e final)
-- Botão **"Novo Pedido"** — visível somente para `vendedor` e `admin`
-- Botão **Editar** em cada linha (lápis) — visível para `admin` e para o `vendedor` dono do pedido
-- Botão **Cancelar pedido** — somente admin
+**Cabeçalho**
+- Título "Contratos" com subtítulo
+- Contador de contratos ativos
 
-### Comportamento por Role
+**Filtros**
+- Filtro por filial
+- Filtro por status (Ativo / Encerrado)
+- Filtro por data (De / Até)
 
-| Role | Ver | Criar | Editar | Cancelar |
-|---|---|---|---|---|
-| admin | Todos | Sim | Sim | Sim |
-| financeiro | Todos | Não | Não | Não |
-| vendedor | Só da sua filial | Sim | Só os seus | Não |
-| tecnico | Nenhum | Não | Não | Não |
+**Tabela de contratos** com colunas:
+| Nº Contrato | Cliente | Plano | Tipo | Status | Data | Ações |
+|---|---|---|---|---|---|---|
 
-### Dialog — Criar/Editar Pedido
+- Badge de status: verde para Ativo, cinza para Encerrado
+- Badge de tipo: azul para Base, amarelo para Termo Aditivo
 
-Campos do formulário:
-1. **Cliente** — Select buscando clientes da filial (para vendedor) ou todos (admin)
-2. **Plano** — Select com planos ativos
-3. **Valor de Implantação** — Input numérico (R$)
-4. **Valor de Mensalidade** — Input numérico (R$)
-5. **Valor Total** — Calculado automaticamente (implantação + mensalidade), exibido como somente leitura
-6. **Comissão (%)** — Pré-preenchido com `comissao_percentual` do vendedor logado, editável manualmente
-7. **Comissão (R$)** — Calculado automaticamente (valor_total × percentual / 100), somente leitura
-8. **Observações** — Textarea opcional
+**Ações por linha:**
+- Olho (👁) — Abrir modal de detalhes do contrato
+- Ícone de documento — Gerar contrato (placeholder por ora, marcado como "em breve")
 
-Ao criar:
-- `status_pedido` é sempre definido como `'Aguardando Financeiro'` (sem campo visível para o usuário)
-- `vendedor_id` = usuário logado (se vendedor) ou selecionável pelo admin
-- `filial_id` = filial do vendedor logado (se vendedor) ou selecionável pelo admin
+**Modal de detalhes** com:
+- Número do contrato, cliente, plano, tipo, status, data de criação
+- Link para o pedido de origem
+- Botão "Encerrar contrato" (apenas para admin/financeiro)
 
 ---
 
-## 4. Atualização da Tela de Usuários — `src/pages/Usuarios.tsx`
+### 3. `src/App.tsx` — Substituir `ComingSoon` pela nova página
 
-Adicionar campo **"Comissão padrão (%)"** no formulário de convite/edição do usuário. Este valor é salvo em `profiles.comissao_percentual` e pré-preenchido automaticamente ao criar um pedido.
-
----
-
-## 5. Atualização da Navegação
-
-- `src/components/AppLayout.tsx`: O item "Pedidos" já está no menu. Ajustar a restrição de roles para excluir `tecnico` (apenas `admin`, `financeiro` e `vendedor` enxergam o menu)
-- `src/App.tsx`: Substituir o `<ComingSoon>` da rota `/pedidos` pelo componente `<Pedidos />`
+```tsx
+import Contratos from "./pages/Contratos";
+// ...
+<Route path="/contratos" element={<ProtectedRoute><Contratos /></ProtectedRoute>} />
+```
 
 ---
 
-## 6. Sequência de Implementação
+## Acesso e Permissões
 
-1. Executar migração SQL (tabela `pedidos` + coluna `comissao_percentual` em `profiles` + trigger `updated_at` + RLS)
-2. Atualizar `src/lib/supabase-types.ts` com interface `Pedido` e campo em `Profile`
-3. Criar `src/pages/Pedidos.tsx` com lista + filtros + dialog criar/editar
-4. Atualizar `src/pages/Usuarios.tsx` com o campo de comissão padrão
-5. Atualizar `src/components/AppLayout.tsx` para restringir "Pedidos" ao técnico
-6. Atualizar `src/App.tsx` para registrar a rota real de Pedidos
+- A rota `/contratos` já está visível para todos os papéis no menu lateral (exceto técnico).
+- A query do Supabase respeitará as RLS já configuradas:
+  - Admin e Financeiro: veem todos os contratos
+  - Vendedor: vê contratos dos clientes da sua filial
+  - Técnico: vê todos (somente leitura)
+
+---
+
+## Fluxo Completo
+
+```text
+Financeiro aprova pedido
+        ↓
+handleAprovar() atualiza pedido:
+  financeiro_status = "Aprovado"
+  status_pedido = "Aprovado Financeiro"
+  contrato_liberado = true
+        ↓
+Insere na tabela contratos:
+  cliente_id, plano_id, pedido_id, tipo="Base", status="Ativo"
+        ↓
+Toast de sucesso: "Pedido aprovado! Contrato criado."
+        ↓
+Redireciona para /contratos
+```
+
+---
+
+## Arquivos Modificados / Criados
+
+| Arquivo | Operação |
+|---|---|
+| `src/pages/Financeiro.tsx` | Modificar — inserir contrato + redirecionar |
+| `src/pages/Contratos.tsx` | Criar — página completa de gestão de contratos |
+| `src/App.tsx` | Modificar — trocar ComingSoon pela nova página |
