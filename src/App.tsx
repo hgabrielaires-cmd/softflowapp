@@ -15,6 +15,7 @@ import { ComingSoon } from "./components/ComingSoon";
 import Clientes from "./pages/Clientes";
 import Planos from "./pages/Planos";
 import Pedidos from "./pages/Pedidos";
+import Contratos from "./pages/Contratos";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -125,7 +126,7 @@ const App = () => (
               path="/contratos"
               element={
                 <ProtectedRoute>
-                  <ComingSoon module="Financeiro" title="Contratos" description="Em desenvolvimento. Gestão e visualização de contratos." />
+                  <Contratos />
                 </ProtectedRoute>
               }
             />
