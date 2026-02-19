@@ -71,6 +71,7 @@ export type Database = {
           email: string | null
           filial_id: string | null
           id: string
+          inscricao_estadual: string | null
           nome_fantasia: string
           razao_social: string | null
           telefone: string | null
@@ -85,6 +86,7 @@ export type Database = {
           email?: string | null
           filial_id?: string | null
           id?: string
+          inscricao_estadual?: string | null
           nome_fantasia: string
           razao_social?: string | null
           telefone?: string | null
@@ -99,6 +101,7 @@ export type Database = {
           email?: string | null
           filial_id?: string | null
           id?: string
+          inscricao_estadual?: string | null
           nome_fantasia?: string
           razao_social?: string | null
           telefone?: string | null
