@@ -293,9 +293,6 @@ function Sidebar({ collapsed, profile, roles, initials, onNavigate, onSignOut, o
                   <p className="text-sidebar-foreground text-sm font-medium truncate leading-tight">
                     {profile?.full_name || "Usuário"}
                   </p>
-                  <p className="text-sidebar-foreground/50 text-xs truncate">
-                    {roles.map((r) => ROLE_LABELS[r]).join(", ") || "Sem cargo"}
-                  </p>
                 </div>
               )}
             </button>
