@@ -33,6 +33,9 @@ export default function Filiais() {
   const [editing, setEditing] = useState<Filial | null>(null);
   const [nome, setNome] = useState("");
   const [ativa, setAtiva] = useState(true);
+  const [endereco, setEndereco] = useState({
+    logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "", cep: "", telefone: "", email: "",
+  });
   const [saving, setSaving] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -61,6 +64,7 @@ export default function Filiais() {
     setEditing(null);
     setNome("");
     setAtiva(true);
+    setEndereco({ logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "", cep: "", telefone: "", email: "" });
     setLogoFile(null);
     setLogoPreview(null);
     setRemoveLogo(false);
@@ -71,6 +75,11 @@ export default function Filiais() {
     setEditing(filial);
     setNome(filial.nome);
     setAtiva(filial.ativa);
+    setEndereco({
+      logradouro: filial.logradouro || "", numero: filial.numero || "", complemento: filial.complemento || "",
+      bairro: filial.bairro || "", cidade: filial.cidade || "", uf: filial.uf || "", cep: filial.cep || "",
+      telefone: filial.telefone || "", email: filial.email || "",
+    });
     setLogoFile(null);
     setLogoPreview(filial.logo_url || null);
     setRemoveLogo(false);
@@ -123,14 +132,14 @@ export default function Filiais() {
         }
         const { error } = await supabase
           .from("filiais")
-          .update({ nome: nome.trim(), ativa, logo_url })
+          .update({ nome: nome.trim(), ativa, logo_url, ...endereco })
           .eq("id", editing.id);
         if (error) throw error;
         toast.success("Filial atualizada com sucesso");
       } else {
         const { data: inserted, error } = await supabase
           .from("filiais")
-          .insert({ nome: nome.trim(), ativa })
+          .insert({ nome: nome.trim(), ativa, ...endereco })
           .select("id")
           .single();
         if (error) throw error;
@@ -256,60 +265,73 @@ export default function Filiais() {
       </div>
 
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editing ? "Editar filial" : "Nova filial"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Nome da filial</Label>
-              <Input
-                placeholder="Ex: Filial São Paulo"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                required
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5 col-span-2">
+                <Label>Nome da filial *</Label>
+                <Input placeholder="Ex: Filial São Paulo" value={nome} onChange={(e) => setNome(e.target.value)} required />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Logradouro</Label>
+                <Input placeholder="Av. Paulista" value={endereco.logradouro} onChange={(e) => setEndereco(p => ({ ...p, logradouro: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1.5">
+                  <Label>Número</Label>
+                  <Input placeholder="1000" value={endereco.numero} onChange={(e) => setEndereco(p => ({ ...p, numero: e.target.value }))} />
+                </div>
+                <div className="space-y-1.5 col-span-2">
+                  <Label>Complemento</Label>
+                  <Input placeholder="Sala 501" value={endereco.complemento} onChange={(e) => setEndereco(p => ({ ...p, complemento: e.target.value }))} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Bairro</Label>
+                <Input placeholder="Centro" value={endereco.bairro} onChange={(e) => setEndereco(p => ({ ...p, bairro: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1.5 col-span-1">
+                  <Label>CEP</Label>
+                  <Input placeholder="01310-100" value={endereco.cep} onChange={(e) => setEndereco(p => ({ ...p, cep: e.target.value }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Cidade</Label>
+                  <Input placeholder="São Paulo" value={endereco.cidade} onChange={(e) => setEndereco(p => ({ ...p, cidade: e.target.value }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>UF</Label>
+                  <Input placeholder="SP" maxLength={2} value={endereco.uf} onChange={(e) => setEndereco(p => ({ ...p, uf: e.target.value.toUpperCase() }))} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Telefone</Label>
+                <Input placeholder="(11) 3000-0000" value={endereco.telefone} onChange={(e) => setEndereco(p => ({ ...p, telefone: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>E-mail</Label>
+                <Input type="email" placeholder="filial@empresa.com" value={endereco.email} onChange={(e) => setEndereco(p => ({ ...p, email: e.target.value }))} />
+              </div>
             </div>
 
             {/* Logo upload */}
             <div className="space-y-1.5">
               <Label>Logo da filial</Label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
-              />
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
               {logoPreview && !removeLogo ? (
                 <div className="relative inline-block">
-                  <img
-                    src={logoPreview}
-                    alt="Logo preview"
-                    className="h-20 w-20 rounded-lg object-contain border border-border bg-muted p-1"
-                  />
-                  <button
-                    type="button"
-                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center"
-                    onClick={() => {
-                      setLogoFile(null);
-                      setLogoPreview(null);
-                      setRemoveLogo(true);
-                    }}
-                  >
+                  <img src={logoPreview} alt="Logo preview" className="h-20 w-20 rounded-lg object-contain border border-border bg-muted p-1" />
+                  <button type="button" className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center" onClick={() => { setLogoFile(null); setLogoPreview(null); setRemoveLogo(true); }}>
                     <X className="h-3 w-3" />
                   </button>
                 </div>
               ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="h-4 w-4" />
-                  Enviar logo
+                <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="h-4 w-4" /> Enviar logo
                 </Button>
               )}
               <p className="text-xs text-muted-foreground">PNG, JPG ou SVG. Máx 2MB.</p>
@@ -320,9 +342,7 @@ export default function Filiais() {
               <Label>Filial ativa</Label>
             </div>
             <div className="flex justify-end gap-2 pt-1">
-              <Button type="button" variant="outline" onClick={() => setOpenDialog(false)}>
-                Cancelar
-              </Button>
+              <Button type="button" variant="outline" onClick={() => setOpenDialog(false)}>Cancelar</Button>
               <Button type="submit" disabled={saving}>
                 {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 {editing ? "Salvar" : "Criar filial"}

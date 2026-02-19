@@ -59,6 +59,15 @@ export interface Filial {
   nome: string;
   ativa: boolean;
   logo_url: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  uf: string | null;
+  cep: string | null;
+  telefone: string | null;
+  email: string | null;
   created_at: string;
 }
 
