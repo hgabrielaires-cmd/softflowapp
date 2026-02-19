@@ -60,6 +60,14 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+interface ModuloAdicionadoItem {
+  modulo_id: string;
+  nome: string;
+  quantidade: number;
+  valor_implantacao_modulo: number;
+  valor_mensalidade_modulo: number;
+}
+
 interface Contrato {
   id: string;
   numero_exibicao: string;
@@ -73,21 +81,41 @@ interface Contrato {
   created_at: string;
   updated_at: string;
   clientes?: { nome_fantasia: string; filial_id: string | null } | null;
-  planos?: { nome: string } | null;
+  planos?: { nome: string; descricao: string | null; valor_mensalidade_padrao: number } | null;
   pedidos?: {
     status_pedido: string;
     contrato_liberado: boolean;
     financeiro_status: string;
+    valor_implantacao_final: number;
+    valor_mensalidade_final: number;
+    valor_implantacao_original: number;
+    valor_mensalidade_original: number;
+    valor_total: number;
+    desconto_implantacao_tipo: string;
+    desconto_implantacao_valor: number;
+    desconto_mensalidade_tipo: string;
+    desconto_mensalidade_valor: number;
+    modulos_adicionais: ModuloAdicionadoItem[] | null;
+    observacoes: string | null;
+    pagamento_mensalidade_observacao: string | null;
+    pagamento_implantacao_observacao: string | null;
+    filial_id: string;
+    vendedor_id: string;
   } | null;
 }
 
+function fmtBRL(v: number) {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
 export default function Contratos() {
-  const { isAdmin, roles } = useAuth();
+  const { isAdmin, roles, profile } = useAuth();
   const isFinanceiro = roles.includes("financeiro");
   const canManage = isAdmin || isFinanceiro;
 
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
+  const [filialParametros, setFilialParametros] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [filterFilial, setFilterFilial] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -99,26 +127,63 @@ export default function Contratos() {
   const [openEncerrar, setOpenEncerrar] = useState(false);
   const [processando, setProcessando] = useState(false);
 
+  // Contatos do cliente selecionado (para Termo de Aceite)
+  const [contatosCliente, setContatosCliente] = useState<{ nome: string; decisor: boolean; ativo: boolean }[]>([]);
+
   async function loadData() {
     setLoading(true);
-    const [{ data: contratosData, error: contratosError }, { data: filiaisData }] = await Promise.all([
+    const [{ data: contratosData, error: contratosError }, { data: filiaisData }, { data: paramsData }] = await Promise.all([
       supabase
         .from("contratos")
-        .select("*, clientes(nome_fantasia, filial_id), planos(nome), pedidos(status_pedido, contrato_liberado, financeiro_status)")
+        .select(`
+          *,
+          clientes(nome_fantasia, filial_id),
+          planos(nome, descricao, valor_mensalidade_padrao),
+          pedidos(
+            status_pedido, contrato_liberado, financeiro_status,
+            valor_implantacao_final, valor_mensalidade_final,
+            valor_implantacao_original, valor_mensalidade_original,
+            valor_total, desconto_implantacao_tipo, desconto_implantacao_valor,
+            desconto_mensalidade_tipo, desconto_mensalidade_valor,
+            modulos_adicionais, observacoes,
+            pagamento_mensalidade_observacao, pagamento_implantacao_observacao,
+            filial_id, vendedor_id
+          )
+        `)
         .order("numero_registro", { ascending: false }),
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
+      supabase.from("filial_parametros").select("*"),
     ]);
     if (contratosError) {
       toast.error("Erro ao carregar contratos: " + contratosError.message);
     }
     setContratos((contratosData || []) as unknown as Contrato[]);
     setFiliais((filiaisData || []) as Filial[]);
+    // Indexar parâmetros por filial_id
+    const paramsMap: Record<string, any> = {};
+    (paramsData || []).forEach((p: any) => { paramsMap[p.filial_id] = p; });
+    setFilialParametros(paramsMap);
     setLoading(false);
   }
 
   useEffect(() => {
     loadData();
   }, []);
+
+  async function loadContatosCliente(clienteId: string) {
+    const { data } = await supabase
+      .from("cliente_contatos")
+      .select("nome, decisor, ativo")
+      .eq("cliente_id", clienteId)
+      .eq("ativo", true);
+    setContatosCliente((data || []) as { nome: string; decisor: boolean; ativo: boolean }[]);
+  }
+
+  function handleOpenDetail(contrato: Contrato) {
+    setSelected(contrato);
+    setOpenDetail(true);
+    if (contrato.cliente_id) loadContatosCliente(contrato.cliente_id);
+  }
 
   const filtered = contratos.filter((c) => {
     if (filterFilial !== "all" && c.clientes?.filial_id !== filterFilial) return false;
@@ -193,6 +258,82 @@ export default function Contratos() {
         )}
       </div>
     );
+  }
+
+  // ── Gerador de Termo de Aceite ──────────────────────────────────────────────
+  function gerarTermoAceite(contrato: Contrato): string {
+    const pedido = contrato.pedidos;
+    const plano = contrato.planos;
+    const nomeUsuario = profile?.full_name || "{nome_usuario}";
+    const nomeFantasia = contrato.clientes?.nome_fantasia || "{nome_fantasia}";
+    const nomePlano = plano?.nome || "{plano}";
+    const descricaoPlano = plano?.descricao || "";
+    const modulosTexto = descricaoPlano
+      ? descricaoPlano.split(",").map((m: string) => `• ${m.trim()}`).join("\n")
+      : "";
+    const valorMensBase = fmtBRL(plano?.valor_mensalidade_padrao ?? 0);
+    const adicionais = (pedido?.modulos_adicionais || []) as ModuloAdicionadoItem[];
+    const totalAdicionais = adicionais.reduce((s, m) => s + m.valor_mensalidade_modulo * m.quantidade, 0);
+    const adicionaisTexto = adicionais.length > 0
+      ? adicionais.map(m => `✔️ ${m.nome} (${m.quantidade}x ${fmtBRL(m.valor_mensalidade_modulo)}) - ${fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}`).join("\n")
+      : "";
+
+    const impFinal = pedido?.valor_implantacao_final ?? 0;
+    const mensFinal = pedido?.valor_mensalidade_final ?? 0;
+
+    // Parâmetros da filial do pedido
+    const filialId = pedido?.filial_id || "";
+    const params = filialParametros[filialId] || {};
+    const regrasMens = pedido?.pagamento_mensalidade_observacao || params.regras_padrao_mensalidade || "";
+    const regrasImpl = pedido?.pagamento_implantacao_observacao || params.regras_padrao_implantacao || "";
+    const parcelasCartao = params.parcelas_maximas_cartao;
+    const pixDesconto = params.pix_desconto_percentual;
+
+    // Nome do decisor
+    const decisor = contatosCliente.find(c => c.decisor) || contatosCliente[0];
+    const nomeDecisor = decisor?.nome || "{nome_decisor}";
+
+    return `Olá ${nomeDecisor}, bom dia!
+
+Tudo bem?
+
+Me chamo *${nomeUsuario}*, sou do financeiro da Softplus Tecnologia. 
+
+Primeiro queria agradecer por ter escolhido nosso sistema para auxiliar nos processos da *${nomeFantasia}*. 
+
+Saiba que vamos nos empenhar ao máximo para que tudo corra como o esperado. ☺️💙
+
+Passando para alinhar o que ficou acertado com nossa equipe:
+
+☑️ *Módulos Contratados*
+
+Plano ${nomePlano}${modulosTexto ? "\n" + modulosTexto : ""}
+
+Valor base do plano: ${valorMensBase}${adicionais.length > 0 ? `\n\n🔘 *ADICIONAIS*\n\n${adicionaisTexto}\n\nTotal adicionais: ${fmtBRL(totalAdicionais)}` : ""}
+
+*MENSALIDADE TOTAL*
+
+*${fmtBRL(mensFinal)}*
+
+Valor pré-pago.${regrasMens ? "\n" + regrasMens : ""}
+
+*IMPLANTAÇÃO E TREINAMENTO*
+
+*${fmtBRL(impFinal)}*${regrasImpl ? "\n" + regrasImpl : ""}${parcelasCartao || pixDesconto > 0 ? `\n\nFormas disponíveis:${parcelasCartao ? `\n- Até ${parcelasCartao}x no cartão sem juros` : ""}${pixDesconto > 0 ? `\n- PIX ${pixDesconto}% desconto` : ""}` : ""}
+
+✍️ *TERMO DE ACEITE:*
+
+{link_assinatura}
+
+Implantação confirmada para:
+
+{datas_implantacao}
+
+Os boletos referentes à implantação e primeira mensalidade foram enviados por e-mail.
+
+Caso prefira, posso encaminhar novamente.
+
+Estou à disposição.`;
   }
 
   return (
@@ -313,7 +454,7 @@ export default function Contratos() {
                         <DropdownMenuContent align="end" className="w-48 bg-card border border-border shadow-lg z-50">
                           <DropdownMenuItem
                             className="cursor-pointer"
-                            onClick={() => { setSelected(contrato); setOpenDetail(true); }}
+                            onClick={() => handleOpenDetail(contrato)}
                           >
                             <Eye className="h-4 w-4 mr-2" />
                             Visualizar
@@ -360,17 +501,19 @@ export default function Contratos() {
       {/* Detail Dialog */}
       {selected && (
         <Dialog open={openDetail} onOpenChange={setOpenDetail}>
-          <DialogContent className="max-w-md" aria-describedby="contrato-desc">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="contrato-desc">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <FileCheck className="h-5 w-5 text-emerald-600" />
                 Contrato {selected.numero_exibicao || `#${selected.numero_registro}`}
               </DialogTitle>
               <DialogDescription id="contrato-desc">
-                Detalhes do contrato selecionado.
+                Detalhes completos do contrato selecionado.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 text-sm">
+
+            <div className="space-y-5 text-sm">
+              {/* Dados básicos */}
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <div>
                   <p className="text-muted-foreground text-xs">Número</p>
@@ -400,22 +543,83 @@ export default function Contratos() {
                     {format(new Date(selected.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                   </p>
                 </div>
-                {selected.pedido_id && (
-                  <div className="col-span-2">
-                    <p className="text-muted-foreground text-xs">Pedido de origem</p>
-                    <p className="font-mono text-xs text-muted-foreground">{selected.pedido_id}</p>
-                  </div>
-                )}
-                {selected.pedidos && (
-                  <div className="col-span-2">
-                    <p className="text-muted-foreground text-xs mb-1.5">Status do Pedido</p>
+              </div>
+
+              {/* Dados do pedido vinculado */}
+              {selected.pedidos && (() => {
+                const p = selected.pedidos!;
+                const adicionais = (p.modulos_adicionais || []) as ModuloAdicionadoItem[];
+                const hasDescImp = p.desconto_implantacao_valor > 0;
+                const hasDescMens = p.desconto_mensalidade_valor > 0;
+
+                return (
+                  <div className="border-t border-border pt-4 space-y-4">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Valores do Pedido</p>
+
+                    {/* Valores */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg bg-muted/40 p-3 space-y-0.5">
+                        <p className="text-xs text-muted-foreground">Implantação</p>
+                        {hasDescImp && (
+                          <p className="text-xs line-through text-muted-foreground">{fmtBRL(p.valor_implantacao_original)}</p>
+                        )}
+                        <p className="font-semibold text-foreground">{fmtBRL(p.valor_implantacao_final)}</p>
+                        {hasDescImp && (
+                          <p className="text-xs text-emerald-600">
+                            Desconto: {p.desconto_implantacao_tipo === "%" ? `${p.desconto_implantacao_valor}%` : fmtBRL(p.desconto_implantacao_valor)}
+                          </p>
+                        )}
+                      </div>
+                      <div className="rounded-lg bg-muted/40 p-3 space-y-0.5">
+                        <p className="text-xs text-muted-foreground">Mensalidade</p>
+                        {hasDescMens && (
+                          <p className="text-xs line-through text-muted-foreground">{fmtBRL(p.valor_mensalidade_original)}</p>
+                        )}
+                        <p className="font-semibold text-foreground">{fmtBRL(p.valor_mensalidade_final)}</p>
+                        {hasDescMens && (
+                          <p className="text-xs text-emerald-600">
+                            Desconto: {p.desconto_mensalidade_tipo === "%" ? `${p.desconto_mensalidade_valor}%` : fmtBRL(p.desconto_mensalidade_valor)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-border bg-muted/20 p-3 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground font-medium">Valor Total</span>
+                      <span className="font-bold text-foreground">{fmtBRL(p.valor_total)}</span>
+                    </div>
+
+                    {/* Módulos adicionais */}
+                    {adicionais.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Módulos Adicionais</p>
+                        <div className="rounded-lg border border-border divide-y divide-border">
+                          {adicionais.map((m, i) => (
+                            <div key={i} className="flex items-center justify-between px-3 py-2 text-xs">
+                              <span className="text-foreground">{m.nome} <span className="text-muted-foreground">× {m.quantidade}</span></span>
+                              <span className="font-medium">{fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}/mês</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Observações */}
+                    {p.observacoes && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Observações</p>
+                        <p className="text-xs text-foreground bg-muted/40 rounded-lg p-3">{p.observacoes}</p>
+                      </div>
+                    )}
+
+                    {/* Status do pedido */}
                     <div className="flex flex-wrap gap-1.5">
-                      {selected.pedidos.financeiro_status === "Aprovado" && (
+                      {p.financeiro_status === "Aprovado" && (
                         <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs">
                           ✓ Aprovado Financeiro
                         </Badge>
                       )}
-                      {selected.pedidos.contrato_liberado ? (
+                      {p.contrato_liberado ? (
                         <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 text-xs">
                           Contrato Liberado
                         </Badge>
@@ -426,9 +630,40 @@ export default function Contratos() {
                       )}
                     </div>
                   </div>
-                )}
-              </div>
+                );
+              })()}
 
+              {/* Termo de Aceite — apenas admin/financeiro */}
+              {canManage && selected.pedidos && (() => {
+                const mensagem = gerarTermoAceite(selected);
+                return (
+                  <div className="border-t border-border pt-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Mensagem — Termo de Aceite</p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs gap-1"
+                        onClick={() => {
+                          navigator.clipboard.writeText(mensagem);
+                          toast.success("Mensagem copiada!");
+                        }}
+                      >
+                        📋 Copiar
+                      </Button>
+                    </div>
+                    <div className="rounded-lg border border-border bg-muted/40 p-3 max-h-64 overflow-y-auto">
+                      <pre className="text-xs whitespace-pre-wrap font-sans text-foreground leading-relaxed">{mensagem}</pre>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      💡 Substitua <code className="bg-muted px-1 rounded">{"{link_assinatura}"}</code> e <code className="bg-muted px-1 rounded">{"{datas_implantacao}"}</code> antes de enviar.
+                    </p>
+                  </div>
+                );
+              })()}
+
+              {/* Ações */}
               <div className="flex gap-2 pt-2 border-t border-border">
                 <Button
                   variant="outline"
