@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Building2, Loader2 } from "lucide-react";
+import { Plus, Pencil, Building2, Loader2, Upload, X, Image } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Filiais() {
@@ -34,6 +34,10 @@ export default function Filiais() {
   const [nome, setNome] = useState("");
   const [ativa, setAtiva] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [removeLogo, setRemoveLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
@@ -57,6 +61,9 @@ export default function Filiais() {
     setEditing(null);
     setNome("");
     setAtiva(true);
+    setLogoFile(null);
+    setLogoPreview(null);
+    setRemoveLogo(false);
     setOpenDialog(true);
   }
 
@@ -64,7 +71,42 @@ export default function Filiais() {
     setEditing(filial);
     setNome(filial.nome);
     setAtiva(filial.ativa);
+    setLogoFile(null);
+    setLogoPreview(filial.logo_url || null);
+    setRemoveLogo(false);
     setOpenDialog(true);
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione um arquivo de imagem");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 2MB");
+      return;
+    }
+    setLogoFile(file);
+    setRemoveLogo(false);
+    const reader = new FileReader();
+    reader.onload = () => setLogoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  async function uploadLogo(filialId: string): Promise<string | null> {
+    if (!logoFile) return null;
+    const ext = logoFile.name.split(".").pop() || "png";
+    const path = `${filialId}/logo.${ext}`;
+    const { error } = await supabase.storage
+      .from("filiais-logos")
+      .upload(path, logoFile, { upsert: true });
+    if (error) throw new Error("Erro ao enviar logo: " + error.message);
+    const { data: urlData } = supabase.storage
+      .from("filiais-logos")
+      .getPublicUrl(path);
+    return urlData.publicUrl;
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -73,17 +115,29 @@ export default function Filiais() {
     setSaving(true);
     try {
       if (editing) {
+        let logo_url = editing.logo_url;
+        if (logoFile) {
+          logo_url = await uploadLogo(editing.id);
+        } else if (removeLogo) {
+          logo_url = null;
+        }
         const { error } = await supabase
           .from("filiais")
-          .update({ nome: nome.trim(), ativa })
+          .update({ nome: nome.trim(), ativa, logo_url })
           .eq("id", editing.id);
         if (error) throw error;
         toast.success("Filial atualizada com sucesso");
       } else {
-        const { error } = await supabase
+        const { data: inserted, error } = await supabase
           .from("filiais")
-          .insert({ nome: nome.trim(), ativa });
+          .insert({ nome: nome.trim(), ativa })
+          .select("id")
+          .single();
         if (error) throw error;
+        if (logoFile && inserted) {
+          const logo_url = await uploadLogo(inserted.id);
+          await supabase.from("filiais").update({ logo_url }).eq("id", inserted.id);
+        }
         toast.success("Filial criada com sucesso");
       }
       setOpenDialog(false);
@@ -125,6 +179,7 @@ export default function Filiais() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
+                <TableHead>Logo</TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Criada em</TableHead>
@@ -134,13 +189,13 @@ export default function Filiais() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-12">
+                  <TableCell colSpan={5} className="text-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : filiais.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                     <Building2 className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     Nenhuma filial cadastrada
                   </TableCell>
@@ -148,6 +203,19 @@ export default function Filiais() {
               ) : (
                 filiais.map((filial) => (
                   <TableRow key={filial.id}>
+                    <TableCell>
+                      {filial.logo_url ? (
+                        <img
+                          src={filial.logo_url}
+                          alt={`Logo ${filial.nome}`}
+                          className="h-8 w-8 rounded object-contain bg-muted"
+                        />
+                      ) : (
+                        <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+                          <Image className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">{filial.nome}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -202,6 +270,51 @@ export default function Filiais() {
                 required
               />
             </div>
+
+            {/* Logo upload */}
+            <div className="space-y-1.5">
+              <Label>Logo da filial</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              {logoPreview && !removeLogo ? (
+                <div className="relative inline-block">
+                  <img
+                    src={logoPreview}
+                    alt="Logo preview"
+                    className="h-20 w-20 rounded-lg object-contain border border-border bg-muted p-1"
+                  />
+                  <button
+                    type="button"
+                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center"
+                    onClick={() => {
+                      setLogoFile(null);
+                      setLogoPreview(null);
+                      setRemoveLogo(true);
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="h-4 w-4" />
+                  Enviar logo
+                </Button>
+              )}
+              <p className="text-xs text-muted-foreground">PNG, JPG ou SVG. Máx 2MB.</p>
+            </div>
+
             <div className="flex items-center gap-3">
               <Switch checked={ativa} onCheckedChange={setAtiva} />
               <Label>Filial ativa</Label>

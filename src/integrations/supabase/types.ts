@@ -207,18 +207,21 @@ export type Database = {
           ativa: boolean
           created_at: string
           id: string
+          logo_url: string | null
           nome: string
         }
         Insert: {
           ativa?: boolean
           created_at?: string
           id?: string
+          logo_url?: string | null
           nome: string
         }
         Update: {
           ativa?: boolean
           created_at?: string
           id?: string
+          logo_url?: string | null
           nome?: string
         }
         Relationships: []
