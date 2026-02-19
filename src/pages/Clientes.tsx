@@ -185,7 +185,7 @@ export default function Clientes() {
     }
   }
 
-  // Histórico contratual
+  // Historico contratual
   const [historicoOpen, setHistoricoOpen] = useState(false);
   const [clienteHistorico, setClienteHistorico] = useState<Cliente | null>(null);
   const [contratosList, setContratosList] = useState<Contrato[]>([]);
@@ -259,8 +259,7 @@ export default function Clientes() {
     setLoadingHistorico(false);
   }
 
-  // ─── Contatos ─────────────────────────────────────────────────────────────
-
+  // Contatos
   async function openContatos(c: Cliente) {
     setClienteContatos(c);
     setContatosOpen(true);
@@ -342,7 +341,7 @@ export default function Clientes() {
     setSavingContato(false);
   }
 
-  async function handleToggleDecisор(contato: ClienteContato) {
+  async function handleToggleDecisor(contato: ClienteContato) {
     if (!clienteContatos) return;
     if (!contato.decisor) {
       // Desmarcar todos e marcar esse
@@ -370,8 +369,6 @@ export default function Clientes() {
       await fetchContatos(clienteContatos.id);
     }
   }
-
-  // ─── Save cliente ──────────────────────────────────────────────────────────
 
   async function handleSave() {
     if (isQuerying) return;
@@ -428,7 +425,7 @@ export default function Clientes() {
     Aditivo: "bg-purple-100 text-purple-700",
   };
 
-  // Dados do histórico separados
+  // Dados do historico separados
   const contratosBase = contratosList.filter((c) => c.tipo === "Base");
   const contratosAditivos = contratosList.filter((c) => c.tipo === "Termo Aditivo");
   const pedidosUpgrade = pedidosHistorico.filter((p) => p.tipo_pedido === "Upgrade");
@@ -564,7 +561,7 @@ export default function Clientes() {
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-2">
 
-            {/* CNPJ/CPF com busca automática */}
+            {/* CNPJ/CPF com busca automatica */}
             <div className="space-y-1.5">
               <Label>CNPJ / CPF *</Label>
               <div className="relative">
@@ -607,7 +604,7 @@ export default function Clientes() {
               <Input value={form.nome_fantasia} onChange={(e) => setForm((f) => ({ ...f, nome_fantasia: e.target.value }))} placeholder="Ex: Restaurante do João" />
             </div>
 
-            {/* Razão social */}
+            {/* Razao social */}
             <div className="col-span-2 space-y-1.5">
               <Label>Razão social</Label>
               <Input value={form.razao_social} onChange={(e) => setForm((f) => ({ ...f, razao_social: e.target.value }))} placeholder="Razão social (opcional)" />
@@ -629,7 +626,7 @@ export default function Clientes() {
               <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@empresa.com" />
             </div>
 
-            {/* Separador endereço */}
+            {/* Separador endereco */}
             <div className="col-span-2 pt-1">
               <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
                 <MapPin className="h-3.5 w-3.5" />
@@ -637,7 +634,7 @@ export default function Clientes() {
               </div>
             </div>
 
-            {/* CEP com busca automática */}
+            {/* CEP com busca automatica */}
             <div className="space-y-1.5">
               <Label>CEP</Label>
               <div className="relative">
@@ -769,7 +766,7 @@ export default function Clientes() {
                     <div className="flex items-center gap-1 shrink-0">
                       <Button
                         variant="ghost" size="icon" className={`h-7 w-7 ${c.decisor ? "text-primary" : "text-muted-foreground"}`}
-                        onClick={() => handleToggleDecisор(c)}
+                        onClick={() => handleToggleDecisor(c)}
                         title={c.decisor ? "Remover como decisor" : "Marcar como decisor"}
                       >
                         <Star className={`h-3.5 w-3.5 ${c.decisor ? "fill-current" : ""}`} />
@@ -847,7 +844,7 @@ export default function Clientes() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Histórico Contratual */}
+      {/* Dialog Historico Contratual */}
       <Dialog open={historicoOpen} onOpenChange={setHistoricoOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -876,166 +873,81 @@ export default function Clientes() {
                   <ArrowUpCircle className="h-3.5 w-3.5 mr-1.5" />
                   Upgrades ({pedidosUpgrade.length})
                 </TabsTrigger>
-                <TabsTrigger value="pedidos" className="flex-1">
-                  Todos os pedidos ({pedidosHistorico.length})
-                </TabsTrigger>
               </TabsList>
 
               {/* Contratos Base */}
-              <TabsContent value="contratos" className="mt-4">
+              <TabsContent value="contratos" className="mt-3">
                 {contratosBase.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8 text-sm">Nenhum contrato base registrado</p>
+                  <p className="text-sm text-muted-foreground text-center py-8">Nenhum contrato base.</p>
                 ) : (
-                  <div className="rounded-lg border border-border overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Nº</TableHead>
-                          <TableHead>Exibição</TableHead>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Data</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {contratosBase.map((c) => (
-                          <TableRow key={c.id}>
-                            <TableCell className="font-mono font-medium">{c.numero_registro}</TableCell>
-                            <TableCell className="font-mono text-sm">{c.numero_exibicao}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{c.tipo}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={c.status === "Ativo" ? "default" : "secondary"}>
-                                {c.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{fmtDate(c.created_at)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="rounded-lg border border-border divide-y divide-border">
+                    {contratosBase.map((ct) => (
+                      <div key={ct.id} className="px-4 py-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">{ct.numero_exibicao}</p>
+                          <p className="text-xs text-muted-foreground">{fmtDate(ct.created_at)}</p>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ct.status === "Ativo" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
+                          {ct.status}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </TabsContent>
 
-              {/* Termos Aditivos */}
-              <TabsContent value="aditivos" className="mt-4">
+              {/* Aditivos */}
+              <TabsContent value="aditivos" className="mt-3">
                 {contratosAditivos.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8 text-sm">Nenhum termo aditivo registrado</p>
+                  <p className="text-sm text-muted-foreground text-center py-8">Nenhum termo aditivo.</p>
                 ) : (
-                  <div className="rounded-lg border border-border overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Nº</TableHead>
-                          <TableHead>Exibição</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Data</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {contratosAditivos.map((c) => (
-                          <TableRow key={c.id}>
-                            <TableCell className="font-mono font-medium">{c.numero_registro}</TableCell>
-                            <TableCell className="font-mono text-sm">{c.numero_exibicao}</TableCell>
-                            <TableCell>
-                              <Badge variant={c.status === "Ativo" ? "default" : "secondary"}>
-                                {c.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{fmtDate(c.created_at)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="rounded-lg border border-border divide-y divide-border">
+                    {contratosAditivos.map((ct) => (
+                      <div key={ct.id} className="px-4 py-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">{ct.numero_exibicao}</p>
+                          <p className="text-xs text-muted-foreground">{fmtDate(ct.created_at)}</p>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ct.status === "Ativo" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
+                          {ct.status}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </TabsContent>
 
               {/* Upgrades */}
-              <TabsContent value="upgrades" className="mt-4">
+              <TabsContent value="upgrades" className="mt-3">
                 {pedidosUpgrade.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8 text-sm">Nenhum upgrade realizado</p>
+                  <p className="text-sm text-muted-foreground text-center py-8">Nenhum upgrade registrado.</p>
                 ) : (
-                  <div className="rounded-lg border border-border overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Plano</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Implantação</TableHead>
-                          <TableHead className="text-right">Mensalidade</TableHead>
-                          <TableHead>Data</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {pedidosUpgrade.map((p) => (
-                          <TableRow key={p.id}>
-                            <TableCell className="font-medium">{p.planos?.nome || "—"}</TableCell>
-                            <TableCell>
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                                {p.status_pedido}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right font-mono text-sm">{fmtBRL(p.valor_implantacao_final ?? 0)}</TableCell>
-                            <TableCell className="text-right font-mono text-sm">{fmtBRL(p.valor_mensalidade_final ?? 0)}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{fmtDate(p.created_at)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* Todos os pedidos */}
-              <TabsContent value="pedidos" className="mt-4">
-                {pedidosHistorico.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8 text-sm">Nenhum pedido registrado</p>
-                ) : (
-                  <div className="rounded-lg border border-border overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead>Plano</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Implantação</TableHead>
-                          <TableHead className="text-right">Mensalidade</TableHead>
-                          <TableHead className="text-right">Total</TableHead>
-                          <TableHead>Data</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {pedidosHistorico.map((p) => (
-                          <TableRow key={p.id}>
-                            <TableCell>
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${TIPO_PEDIDO_COLORS[p.tipo_pedido] || "bg-muted text-muted-foreground"}`}>
-                                {p.tipo_pedido === "Upgrade" && <ArrowUpCircle className="h-3 w-3" />}
-                                {p.tipo_pedido === "Aditivo" && <Package className="h-3 w-3" />}
-                                {p.tipo_pedido || "Novo"}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-sm">{p.planos?.nome || "—"}</TableCell>
-                            <TableCell>
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                                {p.status_pedido}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right font-mono text-sm">{fmtBRL(p.valor_implantacao_final ?? 0)}</TableCell>
-                            <TableCell className="text-right font-mono text-sm">{fmtBRL(p.valor_mensalidade_final ?? 0)}</TableCell>
-                            <TableCell className="text-right font-mono text-sm font-semibold">{fmtBRL(p.valor_total)}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{fmtDate(p.created_at)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="rounded-lg border border-border divide-y divide-border">
+                    {pedidosUpgrade.map((p) => (
+                      <div key={p.id} className="px-4 py-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">{p.planos?.nome || "—"}</p>
+                            <p className="text-xs text-muted-foreground">{fmtDate(p.created_at)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-mono">{fmtBRL(p.valor_total)}</p>
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${TIPO_PEDIDO_COLORS[p.tipo_pedido] || "bg-muted text-muted-foreground"}`}>
+                              {p.tipo_pedido}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </TabsContent>
             </Tabs>
           )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHistoricoOpen(false)}>Fechar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AppLayout>
