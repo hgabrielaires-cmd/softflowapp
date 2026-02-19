@@ -46,6 +46,8 @@ const emptyForm = {
   nome_fantasia: "",
   razao_social: "",
   cnpj_cpf: "",
+  inscricao_estadual: "",
+  ie_isento: false,
   contato_nome: "",
   telefone: "",
   email: "",
@@ -240,10 +242,13 @@ export default function Clientes() {
 
   async function openEdit(c: Cliente) {
     setEditing(c);
+    const ieIsento = (c as any).inscricao_estadual === "ISENTO";
     setForm({
       nome_fantasia: c.nome_fantasia,
       razao_social: c.razao_social || "",
       cnpj_cpf: c.cnpj_cpf,
+      inscricao_estadual: ieIsento ? "" : ((c as any).inscricao_estadual || ""),
+      ie_isento: ieIsento,
       contato_nome: c.contato_nome || "",
       telefone: c.telefone || "",
       email: c.email || "",
@@ -453,6 +458,7 @@ export default function Clientes() {
       nome_fantasia: form.nome_fantasia.trim(),
       razao_social: form.razao_social.trim() || null,
       cnpj_cpf: form.cnpj_cpf.trim(),
+      inscricao_estadual: form.ie_isento ? "ISENTO" : (form.inscricao_estadual.trim() || null),
       contato_nome: formContatos[0]?.nome || form.contato_nome.trim() || null,
       telefone: formContatos[0]?.telefone || form.telefone.trim() || null,
       email: formContatos[0]?.email || form.email.trim() || null,
@@ -699,6 +705,27 @@ export default function Clientes() {
             <div className="col-span-2 space-y-1.5">
               <Label>Razão social</Label>
               <Input value={form.razao_social} onChange={(e) => setForm((f) => ({ ...f, razao_social: e.target.value }))} placeholder="Razão social (opcional)" />
+            </div>
+
+            {/* Inscrição estadual */}
+            <div className="space-y-1.5">
+              <Label>Inscrição estadual</Label>
+              <Input
+                value={form.inscricao_estadual}
+                onChange={(e) => setForm((f) => ({ ...f, inscricao_estadual: e.target.value }))}
+                placeholder="Ex: 123.456.789.012"
+                disabled={form.ie_isento}
+                className={form.ie_isento ? "opacity-50" : ""}
+              />
+            </div>
+            <div className="space-y-1.5 flex flex-col justify-end">
+              <div className="flex items-center gap-2 h-10">
+                <Switch
+                  checked={form.ie_isento}
+                  onCheckedChange={(v) => setForm((f) => ({ ...f, ie_isento: v, inscricao_estadual: v ? "" : f.inscricao_estadual }))}
+                />
+                <Label className="cursor-pointer select-none">Isento de IE</Label>
+              </div>
             </div>
 
             {/* Separador endereco */}
