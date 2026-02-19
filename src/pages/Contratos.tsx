@@ -57,6 +57,11 @@ interface Contrato {
   updated_at: string;
   clientes?: { nome_fantasia: string; filial_id: string | null } | null;
   planos?: { nome: string } | null;
+  pedidos?: {
+    status_pedido: string;
+    contrato_liberado: boolean;
+    financeiro_status: string;
+  } | null;
 }
 
 export default function Contratos() {
@@ -82,7 +87,7 @@ export default function Contratos() {
     const [{ data: contratosData }, { data: filiaisData }] = await Promise.all([
       supabase
         .from("contratos")
-        .select("*, clientes(nome_fantasia, filial_id), planos(nome)")
+        .select("*, clientes(nome_fantasia, filial_id), planos(nome), pedidos(status_pedido, contrato_liberado, financeiro_status)")
         .order("numero_registro", { ascending: false }),
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
     ]);
@@ -182,7 +187,8 @@ export default function Contratos() {
                 <TableHead>Cliente</TableHead>
                 <TableHead>Plano</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Status Contrato</TableHead>
+                <TableHead>Status Pedido</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -196,7 +202,7 @@ export default function Contratos() {
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-16 text-muted-foreground">
                     <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     Nenhum contrato encontrado
                   </TableCell>
@@ -209,6 +215,23 @@ export default function Contratos() {
                     <TableCell className="text-sm text-muted-foreground">{contrato.planos?.nome || "—"}</TableCell>
                     <TableCell>{getTipoBadge(contrato.tipo)}</TableCell>
                     <TableCell>{getStatusBadge(contrato.status)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        {contrato.pedidos?.financeiro_status === "Aprovado" && (
+                          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs w-fit">
+                            ✓ Aprovado Financeiro
+                          </Badge>
+                        )}
+                        {contrato.pedidos?.contrato_liberado && (
+                          <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 text-xs w-fit">
+                            Contrato Liberado
+                          </Badge>
+                        )}
+                        {!contrato.pedidos && (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(contrato.created_at), "dd/MM/yyyy", { locale: ptBR })}
                     </TableCell>
@@ -277,6 +300,25 @@ export default function Contratos() {
                   <div className="col-span-2">
                     <p className="text-muted-foreground text-xs">Pedido de origem</p>
                     <p className="font-mono text-xs text-muted-foreground">{selected.pedido_id}</p>
+                  </div>
+                )}
+                {selected.pedidos && (
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground text-xs mb-1.5">Status do Pedido</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selected.pedidos.financeiro_status === "Aprovado" && (
+                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs">
+                          ✓ Aprovado Financeiro
+                        </Badge>
+                      )}
+                      {selected.pedidos.contrato_liberado ? (
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 text-xs">
+                          Contrato Liberado
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">Contrato Pendente</Badge>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
