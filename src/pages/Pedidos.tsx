@@ -1224,11 +1224,11 @@ export default function Pedidos() {
                     ? clientesDisponiveis.find(c => c.id === form.cliente_id)?.nome_fantasia || "Cliente selecionado"
                     : "Buscar cliente pelo nome ou CNPJ..."}
                   value={clienteSearch}
+                  autoComplete="off"
                   onFocus={() => setClienteSearchFocused(true)}
-                  onBlur={() => setTimeout(() => setClienteSearchFocused(false), 200)}
+                  onBlur={() => setTimeout(() => setClienteSearchFocused(false), 300)}
                   onChange={(e) => {
                     setClienteSearch(e.target.value);
-                    // Se apagou tudo, deseleciona o cliente
                     if (!e.target.value && form.cliente_id) {
                       setForm(f => ({ ...f, cliente_id: "", plano_id: "", tipo_pedido: "Novo", contrato_id: null }));
                       setContratoAtivo(null);
@@ -1241,46 +1241,44 @@ export default function Pedidos() {
                     <XCircle className="h-4 w-4" />
                   </button>
                 )}
-              {/* Dropdown de resultados */}
-                {clienteSearchFocused && clienteSearch && !form.cliente_id && (
-                  <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                    {clientesDisponiveis.filter(c => {
-                      const q = clienteSearch.toLowerCase();
-                      return (
-                        c.nome_fantasia.toLowerCase().includes(q) ||
-                        (c.razao_social || "").toLowerCase().includes(q) ||
-                        (c.cnpj_cpf || "").replace(/\D/g, "").includes(q.replace(/\D/g, "")) ||
-                        (c.cnpj_cpf || "").includes(q)
-                      );
-                    }).length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum cliente encontrado</div>
-                    ) : (
-                      clientesDisponiveis
-                        .filter(c => {
-                          const q = clienteSearch.toLowerCase();
-                          return (
-                            c.nome_fantasia.toLowerCase().includes(q) ||
-                            (c.razao_social || "").toLowerCase().includes(q) ||
-                            (c.cnpj_cpf || "").replace(/\D/g, "").includes(q.replace(/\D/g, "")) ||
-                            (c.cnpj_cpf || "").includes(q)
-                          );
-                        })
-                        .slice(0, 20)
-                        .map(c => (
-                          <button key={c.id} type="button"
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-                            onMouseDown={(e) => e.preventDefault()} // evita blur antes do click
-                            onClick={() => { handleClienteChange(c.id); setClienteSearch(""); }}>
-                            <div className="font-medium">{c.nome_fantasia}</div>
+                {/* Dropdown de resultados */}
+                {clienteSearchFocused && clienteSearch.trim() && !form.cliente_id && (() => {
+                  const q = clienteSearch.trim().toLowerCase();
+                  const qNum = q.replace(/\D/g, "");
+                  const filtered = clientesDisponiveis.filter(c =>
+                    c.nome_fantasia.toLowerCase().includes(q) ||
+                    (c.razao_social || "").toLowerCase().includes(q) ||
+                    (qNum.length > 0 && (c.cnpj_cpf || "").replace(/\D/g, "").includes(qNum))
+                  );
+                  return (
+                    <div className="absolute z-[9999] top-full mt-1 left-0 right-0 bg-white border border-border rounded-md shadow-xl max-h-52 overflow-y-auto">
+                      {filtered.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum cliente encontrado</div>
+                      ) : (
+                        filtered.slice(0, 20).map(c => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors border-b border-border last:border-0"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleClienteChange(c.id);
+                              setClienteSearch("");
+                              setClienteSearchFocused(false);
+                            }}
+                          >
+                            <div className="font-medium text-foreground">{c.nome_fantasia}</div>
                             {c.razao_social && c.razao_social !== c.nome_fantasia && (
                               <div className="text-xs text-muted-foreground">{c.razao_social}</div>
                             )}
                             {c.cnpj_cpf && <div className="text-xs text-muted-foreground font-mono">{c.cnpj_cpf}</div>}
                           </button>
                         ))
-                    )}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
               {form.cliente_id && (
                 <p className="text-xs text-success flex items-center gap-1">
