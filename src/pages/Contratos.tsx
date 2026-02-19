@@ -154,6 +154,24 @@ export default function Contratos() {
   const [gerarStatus, setGerarStatus] = useState<"gerando" | "concluido" | "erro">("gerando");
   const [gerarSignedUrl, setGerarSignedUrl] = useState<string | null>(null);
   const [gerarContratoAlvo, setGerarContratoAlvo] = useState<Contrato | null>(null);
+  const [gerarMsgIndex, setGerarMsgIndex] = useState(0);
+
+  const GERAR_MSGS = [
+    "Ajustando os detalhes finais…",
+    "Quase lá… deixando tudo redondo pra você!",
+    "Montando seu contrato sob medida…",
+    "Organizando tudo para assinatura…",
+    "Preparando seu Termo de Aceite 💙",
+  ];
+
+  useEffect(() => {
+    if (gerarStatus !== "gerando") return;
+    setGerarMsgIndex(0);
+    const interval = setInterval(() => {
+      setGerarMsgIndex((prev) => (prev + 1) % GERAR_MSGS.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [gerarStatus]);
 
   // Contatos do cliente selecionado (para Termo de Aceite)
   const [contatosCliente, setContatosCliente] = useState<{ nome: string; decisor: boolean; ativo: boolean }[]>([]);
@@ -910,7 +928,9 @@ Estou à disposição.`;
                 </div>
                 <div className="text-center space-y-1">
                   <p className="font-semibold text-foreground">Gerando contrato…</p>
-                  <p className="text-xs text-muted-foreground">Preenchendo variáveis do modelo DOCX</p>
+                  <p className="text-xs text-muted-foreground transition-all duration-500">
+                    {GERAR_MSGS[gerarMsgIndex]}
+                  </p>
                 </div>
               </div>
             )}
