@@ -307,14 +307,21 @@ export default function Contratos() {
       const { data, error } = await supabase.storage
         .from("contratos-pdf")
         .createSignedUrl(contrato.pdf_url, 3600);
-      if (error || !data) {
-        toast.error("Erro ao gerar link de download: " + error?.message);
+      if (error || !data?.signedUrl) {
+        toast.error("Erro ao gerar link de download.");
         return;
       }
+      // Fetch as blob to force download (cross-origin URLs ignore the download attribute)
+      const response = await fetch(data.signedUrl);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = data.signedUrl;
+      a.href = objectUrl;
       a.download = `contrato-${contrato.numero_exibicao || contrato.numero_registro}.pdf`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
     } finally {
       setGerando(false);
     }
@@ -846,7 +853,7 @@ Estou à disposição.`;
 
                 {selected.status_geracao === "Gerado" && (
                   <p className="text-xs text-muted-foreground">
-                    💡 O contrato é gerado como DOCX preenchido. Abra no Word ou Google Docs para converter em PDF.
+                    💡 Contrato gerado em PDF e pronto para download.
                   </p>
                 )}
               </div>
@@ -955,18 +962,26 @@ Estou à disposição.`;
                   <Button
                     className="w-full gap-2"
                     onClick={async () => {
-                      if (gerarSignedUrl) {
+                      const url = gerarSignedUrl || null;
+                      const fileName = `contrato-${gerarContratoAlvo?.numero_exibicao || gerarContratoAlvo?.numero_registro}.pdf`;
+                      if (url) {
+                        const response = await fetch(url);
+                        const blob = await response.blob();
+                        const objectUrl = URL.createObjectURL(blob);
                         const a = document.createElement("a");
-                        a.href = gerarSignedUrl;
-                        a.download = `contrato-${gerarContratoAlvo?.numero_exibicao || gerarContratoAlvo?.numero_registro}.pdf`;
+                        a.href = objectUrl;
+                        a.download = fileName;
+                        document.body.appendChild(a);
                         a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(objectUrl);
                       } else if (gerarContratoAlvo?.pdf_url) {
                         await handleBaixarContrato(gerarContratoAlvo);
                       }
                     }}
                   >
                     <FileDown className="h-4 w-4" />
-                    Baixar DOCX
+                    Baixar PDF
                   </Button>
 
                   <Button
