@@ -707,8 +707,25 @@ export default function Pedidos() {
       if (editingPedido) {
         const isReprovado = editingPedido.financeiro_status === "Reprovado";
         const wasAwaitingDesconto = editingPedido.status_pedido === "Aguardando Aprovação de Desconto";
+        const wasDescontoAprovado = editingPedido.status_pedido === "Desconto Aprovado";
 
-        if (precisaAprovacao) {
+        // Verificar se os valores de desconto mudaram em relação ao pedido original
+        const descontoImpValorNovo = parseFloat(form.desconto_implantacao_valor) || 0;
+        const descontoMensValorNovo = parseFloat(form.desconto_mensalidade_valor) || 0;
+        const descontoImpValorOriginal = editingPedido.desconto_implantacao_valor ?? 0;
+        const descontoMensValorOriginal = editingPedido.desconto_mensalidade_valor ?? 0;
+        const descontoImpTipoOriginal = editingPedido.desconto_implantacao_tipo;
+        const descontoMensTipoOriginal = editingPedido.desconto_mensalidade_tipo;
+        const descontoValoresMudaram =
+          descontoImpValorNovo !== descontoImpValorOriginal ||
+          descontoMensValorNovo !== descontoMensValorOriginal ||
+          form.desconto_implantacao_tipo !== descontoImpTipoOriginal ||
+          form.desconto_mensalidade_tipo !== descontoMensTipoOriginal;
+
+        // Se desconto já foi aprovado e os valores não mudaram, não reenviar para aprovação
+        const descontoJaAprovadoSemMudanca = wasDescontoAprovado && precisaAprovacao && !descontoValoresMudaram;
+
+        if (precisaAprovacao && !descontoJaAprovadoSemMudanca) {
           payload.financeiro_status = "Aguardando";
           payload.financeiro_motivo = null;
           payload.financeiro_aprovado_em = null;
@@ -732,6 +749,11 @@ export default function Pedidos() {
             motivo_reprovacao: null,
           }, { onConflict: "pedido_id" });
           toast.warning("Desconto acima do limite! Solicitação de aprovação enviada ao gestor.");
+        } else if (descontoJaAprovadoSemMudanca) {
+          // Desconto já aprovado e valores não mudaram: salvar mantendo status "Desconto Aprovado"
+          const { error } = await supabase.from("pedidos").update(payload).eq("id", editingPedido.id);
+          if (error) throw error;
+          toast.success("Pedido atualizado com sucesso!");
         } else if (isReprovado || wasAwaitingDesconto) {
           payload.financeiro_status = "Aguardando";
           payload.financeiro_motivo = null;
