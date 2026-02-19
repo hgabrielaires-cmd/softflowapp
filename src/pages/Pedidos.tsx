@@ -43,7 +43,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus, Tag, ArrowUpCircle, FileText, AlertCircle, Eye } from "lucide-react";
+import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus, Tag, ArrowUpCircle, FileText, AlertCircle, Eye, Users, Star, Trash2, MapPin } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -257,6 +257,12 @@ export default function Pedidos() {
   const [cepError, setCepError] = useState("");
   const [cnpjError, setCnpjError] = useState("");
   const isQuerying = loadingCep || loadingCnpj;
+
+  // Contatos inline do form novo cliente
+  const [clienteContatos, setClienteContatos] = useState<{ nome: string; cargo: string; telefone: string; email: string; decisor: boolean; ativo: boolean }[]>([]);
+  const [showContatoClienteForm, setShowContatoClienteForm] = useState(false);
+  const [editingContatoClienteIdx, setEditingContatoClienteIdx] = useState<number | null>(null);
+  const [inlineContatoClienteForm, setInlineContatoClienteForm] = useState({ nome: "", cargo: "", telefone: "", email: "", decisor: false, ativo: true });
 
   // ─── Computed values ─────────────────────────────────────────────────────
 
@@ -718,26 +724,39 @@ export default function Pedidos() {
       toast.error("Nome fantasia e CNPJ/CPF são obrigatórios");
       return;
     }
+    if (clienteContatos.length === 0) {
+      toast.error("Cadastre pelo menos um contato antes de salvar");
+      return;
+    }
     setSavingCliente(true);
     const filial_id = profile?.filial_id || (isAdmin ? form.filial_id || null : null);
     const { data, error } = await supabase.from("clientes").insert({
       nome_fantasia: clienteForm.nome_fantasia.trim(),
       razao_social: clienteForm.razao_social.trim() || null,
       cnpj_cpf: clienteForm.cnpj_cpf.trim(),
-      contato_nome: clienteForm.contato_nome.trim() || null,
-      telefone: clienteForm.telefone.trim() || null,
-      email: clienteForm.email.trim() || null,
+      contato_nome: clienteContatos[0]?.nome || clienteForm.contato_nome.trim() || null,
+      telefone: clienteContatos[0]?.telefone || clienteForm.telefone.trim() || null,
+      email: clienteContatos[0]?.email || clienteForm.email.trim() || null,
       cidade: clienteForm.cidade.trim() || null,
       uf: clienteForm.uf || null,
       filial_id,
       ativo: true,
     }).select().single();
     if (error) { toast.error("Erro ao cadastrar cliente: " + error.message); setSavingCliente(false); return; }
+    // Salvar contatos
+    for (const ct of clienteContatos) {
+      await supabase.from("cliente_contatos").insert({
+        cliente_id: data.id, nome: ct.nome, cargo: ct.cargo || null,
+        telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
+      });
+    }
     toast.success("Cliente cadastrado! Já selecionado no pedido.");
     const { data: novosClientes } = await supabase.from("clientes").select("*").eq("ativo", true).order("nome_fantasia");
     setClientes((novosClientes || []) as Cliente[]);
     if (data) setForm((f) => ({ ...f, cliente_id: data.id }));
     setClienteForm(emptyClienteForm);
+    setClienteContatos([]);
+    setShowContatoClienteForm(false);
     setOpenClienteDialog(false);
     setSavingCliente(false);
   }
@@ -1434,7 +1453,7 @@ export default function Pedidos() {
       </Dialog>
 
       {/* ─── Dialog rápido novo cliente ─────────────────────────────────────── */}
-      <Dialog open={openClienteDialog} onOpenChange={setOpenClienteDialog}>
+      <Dialog open={openClienteDialog} onOpenChange={(open) => { setOpenClienteDialog(open); if (!open) { setClienteContatos([]); setShowContatoClienteForm(false); } }}>
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1474,22 +1493,12 @@ export default function Pedidos() {
                 <Label>Razão Social</Label>
                 <Input placeholder="Razão social..." value={clienteForm.razao_social} onChange={(e) => setClienteForm((f) => ({ ...f, razao_social: e.target.value }))} />
               </div>
-              <div className="space-y-1.5">
-                <Label>Contato</Label>
-                <Input placeholder="Nome do contato" value={clienteForm.contato_nome} onChange={(e) => setClienteForm((f) => ({ ...f, contato_nome: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Telefone</Label>
-                <Input placeholder="(00) 00000-0000" value={clienteForm.telefone} onChange={(e) => setClienteForm((f) => ({ ...f, telefone: e.target.value }))} />
-              </div>
-              <div className="col-span-2 space-y-1.5">
-                <Label>E-mail</Label>
-                <Input type="email" placeholder="email@empresa.com" value={clienteForm.email} onChange={(e) => setClienteForm((f) => ({ ...f, email: e.target.value }))} />
-              </div>
 
               {/* Separador endereço */}
               <div className="col-span-2 pt-1">
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Endereço</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                  <MapPin className="h-3 w-3" /> Endereço
+                </div>
               </div>
 
               {/* CEP com busca automática */}
@@ -1533,6 +1542,115 @@ export default function Pedidos() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* ── Seção Contatos ── */}
+              <div className="col-span-2 pt-2">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                    <Users className="h-3.5 w-3.5" />
+                    Contatos <span className="text-destructive">*</span>
+                    <span className="text-xs font-normal normal-case">(obrigatório ao menos 1)</span>
+                  </div>
+                  {!showContatoClienteForm && (
+                    <Button type="button" size="sm" variant="outline" className="gap-1.5 h-7 text-xs"
+                      onClick={() => { setEditingContatoClienteIdx(null); setInlineContatoClienteForm({ nome: "", cargo: "", telefone: "", email: "", decisor: false, ativo: true }); setShowContatoClienteForm(true); }}>
+                      <Plus className="h-3 w-3" /> Adicionar contato
+                    </Button>
+                  )}
+                </div>
+
+                {clienteContatos.length > 0 && (
+                  <div className="rounded-lg border border-border divide-y divide-border mb-2">
+                    {clienteContatos.map((ct, idx) => (
+                      <div key={idx} className="flex items-center gap-3 px-3 py-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-medium truncate">{ct.nome}</p>
+                            {ct.decisor && (
+                              <span className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium shrink-0">
+                                <Star className="h-2.5 w-2.5 fill-current" /> Decisor
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex gap-2 mt-0.5">
+                            {ct.cargo && <span className="text-xs text-muted-foreground">{ct.cargo}</span>}
+                            {ct.telefone && <span className="text-xs text-muted-foreground">{ct.telefone}</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <Button type="button" variant="ghost" size="icon" className={`h-6 w-6 ${ct.decisor ? "text-primary" : "text-muted-foreground"}`}
+                            onClick={() => setClienteContatos((prev) => prev.map((c, i) => ({ ...c, decisor: i === idx ? !c.decisor : (ct.decisor ? c.decisor : false) })))}>
+                            <Star className={`h-3 w-3 ${ct.decisor ? "fill-current" : ""}`} />
+                          </Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6"
+                            onClick={() => { setEditingContatoClienteIdx(idx); setInlineContatoClienteForm({ ...ct }); setShowContatoClienteForm(true); }}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
+                            onClick={() => setClienteContatos((prev) => prev.filter((_, i) => i !== idx))}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {clienteContatos.length === 0 && !showContatoClienteForm && (
+                  <div className="rounded-lg border border-dashed border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-muted-foreground text-center mb-2">
+                    <Users className="h-4 w-4 mx-auto mb-1" />
+                    Nenhum contato cadastrado. Adicione pelo menos um contato.
+                  </div>
+                )}
+
+                {showContatoClienteForm && (
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+                    <p className="text-xs font-medium text-foreground">{editingContatoClienteIdx !== null ? "Editar contato" : "Novo contato"}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="col-span-2 space-y-1">
+                        <Label className="text-xs">Nome *</Label>
+                        <Input className="h-8 text-sm" value={inlineContatoClienteForm.nome} onChange={(e) => setInlineContatoClienteForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Nome completo" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Cargo</Label>
+                        <Input className="h-8 text-sm" value={inlineContatoClienteForm.cargo} onChange={(e) => setInlineContatoClienteForm((f) => ({ ...f, cargo: e.target.value }))} placeholder="Cargo / função" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Telefone</Label>
+                        <Input className="h-8 text-sm" value={inlineContatoClienteForm.telefone} onChange={(e) => setInlineContatoClienteForm((f) => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
+                      </div>
+                      <div className="col-span-2 space-y-1">
+                        <Label className="text-xs">E-mail</Label>
+                        <Input className="h-8 text-sm" type="email" value={inlineContatoClienteForm.email} onChange={(e) => setInlineContatoClienteForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@empresa.com" />
+                      </div>
+                      <div className="col-span-2 flex items-center gap-3">
+                        <Checkbox id="cli-decisor" checked={inlineContatoClienteForm.decisor} onCheckedChange={(v) => setInlineContatoClienteForm((f) => ({ ...f, decisor: !!v }))} />
+                        <Label htmlFor="cli-decisor" className="text-xs cursor-pointer">Decisor (tomador de decisão)</Label>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setShowContatoClienteForm(false); setEditingContatoClienteIdx(null); }}>Cancelar</Button>
+                      <Button type="button" size="sm" className="h-7 text-xs" onClick={() => {
+                        if (!inlineContatoClienteForm.nome.trim()) { toast.error("Nome do contato é obrigatório"); return; }
+                        if (editingContatoClienteIdx !== null) {
+                          setClienteContatos((prev) => prev.map((c, i) => i === editingContatoClienteIdx ? { ...inlineContatoClienteForm } : c));
+                        } else {
+                          setClienteContatos((prev) => [
+                            ...(inlineContatoClienteForm.decisor ? prev.map((c) => ({ ...c, decisor: false })) : prev),
+                            { ...inlineContatoClienteForm },
+                          ]);
+                        }
+                        setShowContatoClienteForm(false);
+                        setEditingContatoClienteIdx(null);
+                        setInlineContatoClienteForm({ nome: "", cargo: "", telefone: "", email: "", decisor: false, ativo: true });
+                      }}>
+                        {editingContatoClienteIdx !== null ? "Salvar" : "Adicionar"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setOpenClienteDialog(false)}>Cancelar</Button>
@@ -1547,6 +1665,7 @@ export default function Pedidos() {
           </form>
         </DialogContent>
         </Dialog>
+
 
       {/* ─── Modal Upgrade de Plano ──────────────────────────────────────────── */}
       <Dialog open={openUpgradeDialog} onOpenChange={setOpenUpgradeDialog}>
