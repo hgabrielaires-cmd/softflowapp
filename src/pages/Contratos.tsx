@@ -57,6 +57,8 @@ import {
   FileOutput,
   Download,
   CheckCircle2,
+  Send,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -148,6 +150,10 @@ export default function Contratos() {
   const [openEncerrar, setOpenEncerrar] = useState(false);
   const [processando, setProcessando] = useState(false);
   const [gerando, setGerando] = useState(false);
+  const [openGerarPopup, setOpenGerarPopup] = useState(false);
+  const [gerarStatus, setGerarStatus] = useState<"gerando" | "concluido" | "erro">("gerando");
+  const [gerarSignedUrl, setGerarSignedUrl] = useState<string | null>(null);
+  const [gerarContratoAlvo, setGerarContratoAlvo] = useState<Contrato | null>(null);
 
   // Contatos do cliente selecionado (para Termo de Aceite)
   const [contatosCliente, setContatosCliente] = useState<{ nome: string; decisor: boolean; ativo: boolean }[]>([]);
@@ -235,20 +241,20 @@ export default function Contratos() {
 
   // ── Gerar Contrato ─────────────────────────────────────────────────────────
   async function handleGerarContrato(contrato: Contrato) {
+    // Abrir popup imediatamente no estado "gerando"
+    setGerarContratoAlvo(contrato);
+    setGerarStatus("gerando");
+    setGerarSignedUrl(null);
+    setOpenGerarPopup(true);
     setGerando(true);
+
     try {
-      // Chamar Edge Function
       const { data, error } = await supabase.functions.invoke("gerar-contrato-pdf", {
         body: { contrato_id: contrato.id },
       });
 
-      if (error) {
-        toast.error("Erro ao gerar contrato: " + (error.message || "Tente novamente."));
-        return;
-      }
-
-      if (data?.error) {
-        toast.error(data.error);
+      if (error || data?.error) {
+        setGerarStatus("erro");
         return;
       }
 
@@ -265,12 +271,11 @@ export default function Contratos() {
         setSelected(updatedContrato);
       }
 
-      toast.success("Contrato gerado com sucesso!");
-
-      // Abrir download automaticamente
-      if (data.signed_url) {
-        window.open(data.signed_url, "_blank");
-      }
+      setGerarSignedUrl(data.signed_url || null);
+      setGerarContratoAlvo(updatedContrato);
+      setGerarStatus("concluido");
+    } catch {
+      setGerarStatus("erro");
     } finally {
       setGerando(false);
     }
@@ -288,7 +293,10 @@ export default function Contratos() {
         toast.error("Erro ao gerar link de download: " + error?.message);
         return;
       }
-      window.open(data.signedUrl, "_blank");
+      const a = document.createElement("a");
+      a.href = data.signedUrl;
+      a.download = `contrato-${contrato.numero_exibicao || contrato.numero_registro}.docx`;
+      a.click();
     } finally {
       setGerando(false);
     }
@@ -870,6 +878,137 @@ Estou à disposição.`;
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Popup de Geração de Contrato ─────────────────────────────────── */}
+      <Dialog
+        open={openGerarPopup}
+        onOpenChange={(open) => {
+          if (!gerando) setOpenGerarPopup(open);
+        }}
+      >
+        <DialogContent className="max-w-sm" aria-describedby="gerar-desc">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <FileOutput className="h-5 w-5 text-primary" />
+              Gerar Contrato
+            </DialogTitle>
+            <DialogDescription id="gerar-desc" className="sr-only">
+              Status da geração do contrato
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-6 flex flex-col items-center gap-5">
+            {/* Estado: Gerando */}
+            {gerarStatus === "gerando" && (
+              <div className="flex flex-col items-center gap-4 animate-fade-in">
+                <div className="relative flex items-center justify-center">
+                  <span className="absolute inline-flex h-20 w-20 rounded-full bg-primary/10 animate-ping" />
+                  <span className="absolute inline-flex h-14 w-14 rounded-full bg-primary/20 animate-ping [animation-delay:0.3s]" />
+                  <div className="relative flex items-center justify-center h-16 w-16 rounded-full bg-primary/15 border-2 border-primary/30">
+                    <Loader2 className="h-7 w-7 text-primary animate-spin" />
+                  </div>
+                </div>
+                <div className="text-center space-y-1">
+                  <p className="font-semibold text-foreground">Gerando contrato…</p>
+                  <p className="text-xs text-muted-foreground">Preenchendo variáveis do modelo DOCX</p>
+                </div>
+              </div>
+            )}
+
+            {/* Estado: Concluído */}
+            {gerarStatus === "concluido" && (
+              <div className="flex flex-col items-center gap-4 animate-fade-in">
+                <div className="relative flex items-center justify-center">
+                  <span className="absolute inline-flex h-20 w-20 rounded-full bg-emerald-500/10" />
+                  <div className="relative flex items-center justify-center h-16 w-16 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-300 dark:border-emerald-700">
+                    <CheckCircle2 className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                </div>
+                <div className="text-center space-y-1">
+                  <p className="font-semibold text-foreground">Contrato gerado!</p>
+                  <p className="text-xs text-muted-foreground">
+                    {gerarContratoAlvo?.numero_exibicao || `#${gerarContratoAlvo?.numero_registro}`} · {gerarContratoAlvo?.clientes?.nome_fantasia}
+                  </p>
+                </div>
+
+                <div className="w-full space-y-2 pt-1">
+                  <Button
+                    className="w-full gap-2"
+                    onClick={async () => {
+                      if (gerarSignedUrl) {
+                        const a = document.createElement("a");
+                        a.href = gerarSignedUrl;
+                        a.download = `contrato-${gerarContratoAlvo?.numero_exibicao || gerarContratoAlvo?.numero_registro}.docx`;
+                        a.click();
+                      } else if (gerarContratoAlvo?.pdf_url) {
+                        await handleBaixarContrato(gerarContratoAlvo);
+                      }
+                    }}
+                  >
+                    <FileDown className="h-4 w-4" />
+                    Baixar DOCX
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 relative"
+                    disabled
+                    title="Integração em construção"
+                  >
+                    <Send className="h-4 w-4" />
+                    Enviar para ZapSign
+                    <span className="absolute -top-2 -right-2 bg-amber-400 text-amber-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                      Em breve
+                    </span>
+                  </Button>
+                </div>
+
+                <button
+                  className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors mt-1"
+                  onClick={() => setOpenGerarPopup(false)}
+                >
+                  Fechar
+                </button>
+              </div>
+            )}
+
+            {/* Estado: Erro */}
+            {gerarStatus === "erro" && (
+              <div className="flex flex-col items-center gap-4 animate-fade-in">
+                <div className="flex items-center justify-center h-16 w-16 rounded-full bg-destructive/10 border-2 border-destructive/30">
+                  <XCircle className="h-8 w-8 text-destructive" />
+                </div>
+                <div className="text-center space-y-1">
+                  <p className="font-semibold text-foreground">Falha na geração</p>
+                  <p className="text-xs text-muted-foreground">
+                    Verifique se há um modelo de contrato ativo configurado e tente novamente.
+                  </p>
+                </div>
+                <div className="w-full space-y-2">
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    onClick={() => {
+                      setOpenGerarPopup(false);
+                      if (gerarContratoAlvo) handleGerarContrato(gerarContratoAlvo);
+                    }}
+                  >
+                    Tentar novamente
+                  </Button>
+                  <Button
+                    className="w-full"
+                    variant="ghost"
+                    onClick={() => setOpenGerarPopup(false)}
+                  >
+                    Fechar
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
+
