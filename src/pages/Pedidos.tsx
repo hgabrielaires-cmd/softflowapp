@@ -56,7 +56,7 @@ const UF_LIST = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG
 const emptyClienteForm = {
   nome_fantasia: "", razao_social: "", cnpj_cpf: "",
   contato_nome: "", telefone: "", email: "", cidade: "", uf: "",
-  cep: "", logradouro: "", bairro: "",
+  cep: "", logradouro: "", numero: "", complemento: "", bairro: "",
 };
 
 const STATUS_OPTIONS = ["Aguardando Financeiro", "Aprovado Financeiro", "Reprovado Financeiro", "Aguardando Aprovação de Desconto", "Desconto Aprovado", "Cancelado"] as const;
@@ -1799,6 +1799,14 @@ export default function Pedidos() {
               <div className="space-y-1.5">
                 <Label>Logradouro</Label>
                 <Input placeholder="Rua / Avenida..." value={clienteForm.logradouro} onChange={(e) => setClienteForm((f) => ({ ...f, logradouro: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Número</Label>
+                <Input placeholder="Ex: 123" value={clienteForm.numero} onChange={(e) => setClienteForm((f) => ({ ...f, numero: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Complemento</Label>
+                <Input placeholder="Apto, Sala, Bloco..." value={clienteForm.complemento} onChange={(e) => setClienteForm((f) => ({ ...f, complemento: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
                 <Label>Bairro</Label>
