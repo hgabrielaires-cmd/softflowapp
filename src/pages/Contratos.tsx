@@ -295,7 +295,7 @@ export default function Contratos() {
       }
       const a = document.createElement("a");
       a.href = data.signedUrl;
-      a.download = `contrato-${contrato.numero_exibicao || contrato.numero_registro}.docx`;
+      a.download = `contrato-${contrato.numero_exibicao || contrato.numero_registro}.pdf`;
       a.click();
     } finally {
       setGerando(false);
@@ -938,7 +938,7 @@ Estou à disposição.`;
                       if (gerarSignedUrl) {
                         const a = document.createElement("a");
                         a.href = gerarSignedUrl;
-                        a.download = `contrato-${gerarContratoAlvo?.numero_exibicao || gerarContratoAlvo?.numero_registro}.docx`;
+                        a.download = `contrato-${gerarContratoAlvo?.numero_exibicao || gerarContratoAlvo?.numero_registro}.pdf`;
                         a.click();
                       } else if (gerarContratoAlvo?.pdf_url) {
                         await handleBaixarContrato(gerarContratoAlvo);

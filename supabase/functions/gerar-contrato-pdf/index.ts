@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { PDFDocument, StandardFonts, rgb, PageSizes } from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -179,12 +180,16 @@ Deno.serve(async (req) => {
     // 8. Substituir variáveis no XML interno do DOCX (ZIP)
     const docxModificado = substituirVariaveisNoDocx(bytes, variaveis);
 
-    // 9. Upload do DOCX preenchido
-    const outputPath = `${contrato_id}.docx`;
+    // 9. Extrair texto do DOCX modificado e gerar PDF
+    const textoParagrafos = extrairTextoDOCX(docxModificado);
+    const pdfBytes = await gerarPDF(textoParagrafos, variaveis);
+
+    // 10. Upload do PDF gerado
+    const outputPath = `${contrato_id}.pdf`;
     const { error: uploadError } = await supabase.storage
       .from("contratos-pdf")
-      .upload(outputPath, docxModificado, {
-        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      .upload(outputPath, pdfBytes, {
+        contentType: "application/pdf",
         upsert: true,
       });
 
@@ -238,6 +243,107 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+// ─── Extrai parágrafos de texto do DOCX (após substituição) ──────────────────
+function extrairTextoDOCX(docxBytes: Uint8Array): string[] {
+  try {
+    const entries = lerEntradasZip(docxBytes);
+    const docEntry = entries.find((e) => e.filename === "word/document.xml");
+    if (!docEntry) return [];
+
+    const xml = new TextDecoder("utf-8").decode(docEntry.data);
+
+    // Extrair parágrafos <w:p> e obter texto concatenado dos <w:t>
+    const paragrafos: string[] = [];
+    const paraRegex = /<w:p[ >][\s\S]*?<\/w:p>/g;
+    let paraMatch;
+    while ((paraMatch = paraRegex.exec(xml)) !== null) {
+      const paraXml = paraMatch[0];
+      const textos: string[] = [];
+      const tRegex = /<w:t(?:[^>]*)>([\s\S]*?)<\/w:t>/g;
+      let tMatch;
+      while ((tMatch = tRegex.exec(paraXml)) !== null) {
+        textos.push(tMatch[1]);
+      }
+      const linha = textos.join("").trim();
+      paragrafos.push(linha); // manter vazios para preservar espaçamento
+    }
+    return paragrafos;
+  } catch {
+    return [];
+  }
+}
+
+// ─── Gera PDF a partir dos parágrafos extraídos do DOCX ──────────────────────
+async function gerarPDF(
+  paragrafos: string[],
+  _variaveis: Record<string, string>
+): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  const pageWidth = PageSizes.A4[0];
+  const pageHeight = PageSizes.A4[1];
+  const marginX = 60;
+  const marginTop = 60;
+  const marginBottom = 60;
+  const maxWidth = pageWidth - marginX * 2;
+  const fontSize = 10;
+  const lineHeight = fontSize * 1.5;
+
+  let page = pdfDoc.addPage(PageSizes.A4);
+  let y = pageHeight - marginTop;
+
+  const wrapText = (text: string, f: typeof font, size: number): string[] => {
+    if (!text) return [""];
+    const words = text.split(" ");
+    const lines: string[] = [];
+    let current = "";
+    for (const word of words) {
+      const test = current ? current + " " + word : word;
+      const w = f.widthOfTextAtSize(test, size);
+      if (w > maxWidth && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+    return lines;
+  };
+
+  const addLine = (text: string, bold = false) => {
+    const f = bold ? fontBold : font;
+    const wrapped = wrapText(text, f, fontSize);
+    for (const line of wrapped) {
+      if (y < marginBottom + lineHeight) {
+        page = pdfDoc.addPage(PageSizes.A4);
+        y = pageHeight - marginTop;
+      }
+      page.drawText(line, {
+        x: marginX,
+        y,
+        size: fontSize,
+        font: f,
+        color: rgb(0, 0, 0),
+      });
+      y -= lineHeight;
+    }
+  };
+
+  for (const para of paragrafos) {
+    if (!para) {
+      y -= lineHeight * 0.4; // espaço entre parágrafos
+    } else {
+      addLine(para);
+    }
+  }
+
+  const pdfBytes = await pdfDoc.save();
+  return new Uint8Array(pdfBytes);
+}
 
 // ─── Substituição de variáveis no DOCX (ZIP interno) ─────────────────────────
 function substituirVariaveisNoDocx(
