@@ -180,16 +180,6 @@ export default function Dashboard() {
               Bem-vindo ao Softflow Desk Suite
             </p>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            {roles.map((role) => (
-              <span
-                key={role}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium border ${ROLE_COLORS[role as AppRole]}`}
-              >
-                {ROLE_LABELS[role as AppRole]}
-              </span>
-            ))}
-          </div>
         </div>
 
         {/* Filtros */}
