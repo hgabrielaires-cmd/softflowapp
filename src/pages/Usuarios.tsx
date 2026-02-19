@@ -188,17 +188,25 @@ export default function Usuarios() {
 
       if (profileError) throw profileError;
 
-      // Update role: delete existing and insert new
-      const { error: deleteError } = await supabase
+      // Update role: find existing and UPDATE (avoids losing admin rights mid-operation)
+      const { data: existingRole } = await supabase
         .from("user_roles")
-        .delete()
-        .eq("user_id", editingUser.user_id);
-      if (deleteError) throw deleteError;
+        .select("id")
+        .eq("user_id", editingUser.user_id)
+        .single();
 
-      const { error: insertError } = await supabase
-        .from("user_roles")
-        .insert({ user_id: editingUser.user_id, role: editRole });
-      if (insertError) throw insertError;
+      if (existingRole) {
+        const { error: updateRoleError } = await supabase
+          .from("user_roles")
+          .update({ role: editRole })
+          .eq("id", existingRole.id);
+        if (updateRoleError) throw updateRoleError;
+      } else {
+        const { error: insertError } = await supabase
+          .from("user_roles")
+          .insert({ user_id: editingUser.user_id, role: editRole });
+        if (insertError) throw insertError;
+      }
 
       toast.success("Usuário atualizado com sucesso!");
       setOpenEdit(false);
