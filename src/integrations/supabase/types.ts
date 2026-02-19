@@ -760,6 +760,33 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          permissao: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          permissao: string
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          permissao?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       solicitacoes_desconto: {
         Row: {
           aprovado_em: string | null

@@ -63,6 +63,7 @@ const navGroups: NavGroup[] = [
       { icon: <UserCheck className="h-4 w-4" />, label: "Clientes", to: "/clientes" },
       { icon: <Users className="h-4 w-4" />, label: "Usuários", to: "/usuarios", roles: ["admin"] },
       { icon: <BookOpen className="h-4 w-4" />, label: "Planos", to: "/planos", roles: ["admin"] },
+      { icon: <Globe className="h-4 w-4" />, label: "Perfis de Usuário", to: "/perfis-usuario", roles: ["admin"] },
     ],
   },
   {
