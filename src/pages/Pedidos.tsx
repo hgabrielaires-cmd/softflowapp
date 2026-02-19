@@ -43,7 +43,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus, Tag, ArrowUpCircle, FileText, AlertCircle, Eye, Users, Star, Trash2, MapPin } from "lucide-react";
+import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus, Tag, ArrowUpCircle, FileText, AlertCircle, Eye, Users, Star, Trash2, MapPin, Send } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -59,13 +59,14 @@ const emptyClienteForm = {
   cep: "", logradouro: "", bairro: "",
 };
 
-const STATUS_OPTIONS = ["Aguardando Financeiro", "Aprovado Financeiro", "Reprovado Financeiro", "Aguardando Aprovação de Desconto", "Cancelado"] as const;
+const STATUS_OPTIONS = ["Aguardando Financeiro", "Aprovado Financeiro", "Reprovado Financeiro", "Aguardando Aprovação de Desconto", "Desconto Aprovado", "Cancelado"] as const;
 
 const STATUS_COLORS: Record<string, string> = {
   "Aguardando Financeiro": "bg-amber-100 text-amber-700",
   "Aprovado Financeiro": "bg-emerald-100 text-emerald-700",
   "Reprovado Financeiro": "bg-red-100 text-red-600",
   "Aguardando Aprovação de Desconto": "bg-purple-100 text-purple-700",
+  "Desconto Aprovado": "bg-teal-100 text-teal-700",
   "Cancelado": "bg-gray-100 text-gray-500",
 };
 
@@ -798,6 +799,19 @@ export default function Pedidos() {
     loadData();
   }
 
+  async function handleEnviarPedido(pedido: PedidoWithJoins) {
+    const { error } = await supabase.from("pedidos").update({
+      status_pedido: "Aguardando Financeiro",
+      financeiro_status: "Aguardando",
+      financeiro_motivo: null,
+      financeiro_aprovado_em: null,
+      financeiro_aprovado_por: null,
+    }).eq("id", pedido.id);
+    if (error) { toast.error("Erro ao enviar pedido: " + error.message); return; }
+    toast.success("Pedido enviado para o financeiro!");
+    loadData();
+  }
+
   // ─── Cliente rápido ───────────────────────────────────────────────────────
 
   async function handleCepBlurCliente() {
@@ -1078,6 +1092,30 @@ export default function Pedidos() {
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setViewingPedido(pedido)} title="Visualizar pedido">
                             <Eye className="h-3.5 w-3.5" />
                           </Button>
+                          {/* Enviar pedido — desconto aprovado, vendedor dono */}
+                          {pedido.status_pedido === "Desconto Aprovado" && (isVendedor && pedido.vendedor_id === profile?.user_id || isAdmin) && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-teal-600 hover:text-teal-700" title="Enviar pedido para o financeiro">
+                                  <Send className="h-3.5 w-3.5" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Enviar pedido para o financeiro?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    O desconto já foi aprovado. O pedido será enviado para análise do financeiro.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Voltar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleEnviarPedido(pedido)}>
+                                    Enviar pedido
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
                           {/* Reenviar após reprovação (vendedor do pedido) */}
                           {isVendedor && isReprovado && pedido.vendedor_id === profile?.user_id && !temContratoVigente && (
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-warning hover:text-warning" onClick={() => openEdit(pedido)} title="Editar e reenviar">
