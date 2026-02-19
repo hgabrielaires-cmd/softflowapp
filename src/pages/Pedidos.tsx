@@ -1065,15 +1065,22 @@ export default function Pedidos() {
                   const isAprovado = finStatus === "Aprovado";
                   const temContratoVigente = contratoLiberado && isAprovado;
 
-                  // Vendedor só edita se: reprovado OU aguardando financeiro E sem contrato vigente E não cancelado
+                  // Vendedor só edita se: APENAS reprovado financeiro (não aprovado, não enviado, não cancelado)
+                  const statusBloqueadoVendedor = [
+                    "Aprovado Financeiro",
+                    "Aguardando Financeiro",
+                    "Aguardando Aprovação de Desconto",
+                    "Desconto Aprovado",
+                    "Cancelado",
+                  ];
                   const canEditVendedor = isVendedor && pedido.vendedor_id === profile?.user_id
+                    && isReprovado
                     && !temContratoVigente
-                    && pedido.status_pedido !== "Cancelado"
-                    && (isReprovado || pedido.status_pedido === "Aguardando Financeiro");
+                    && !statusBloqueadoVendedor.includes(pedido.status_pedido);
                   const canEditAdmin = isAdmin && !temContratoVigente && pedido.status_pedido !== "Cancelado";
-                  const canEdit = canEditAdmin || (canEditVendedor && !isReprovado);
+                  const canEdit = canEditAdmin || canEditVendedor;
 
-                  // Cancelar: apenas admin (sem contrato vigente); vendedor nunca exclui
+                  // Cancelar: apenas admin (sem contrato vigente); vendedor nunca cancela
                   const canCancel = isAdmin && pedido.status_pedido !== "Cancelado" && !temContratoVigente;
 
                   const vendedorNome = vendedores.find((v) => v.user_id === pedido.vendedor_id)?.full_name || "—";
