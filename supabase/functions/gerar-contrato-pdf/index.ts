@@ -316,7 +316,22 @@ async function gerarPDF(
     return lines;
   };
 
+  // Sanitize text to only WinAnsi-encodable characters
+  const sanitize = (t: string): string =>
+    t.replace(/[^\x20-\x7E\xA0-\xFF]/g, (ch) => {
+      const code = ch.charCodeAt(0);
+      // Map common unicode chars to ASCII equivalents
+      if (code === 0x21E8 || code === 0x2192) return "->";
+      if (code === 0x2013 || code === 0x2014) return "-";
+      if (code === 0x2018 || code === 0x2019) return "'";
+      if (code === 0x201C || code === 0x201D) return '"';
+      if (code === 0x2026) return "...";
+      if (code === 0x2022 || code === 0x00B7) return "-";
+      return "";
+    });
+
   const addLine = (text: string, bold = false) => {
+    text = sanitize(text);
     const f = bold ? fontBold : font;
     const wrapped = wrapText(text, f, fontSize);
     for (const line of wrapped) {
