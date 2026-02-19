@@ -90,6 +90,7 @@ export default function Financeiro() {
         .from("pedidos")
         .select("*, clientes(nome_fantasia), planos(nome), filiais(nome)")
         .eq("financeiro_status", "Aguardando")
+        .eq("status_pedido", "Aguardando Financeiro")
         .order("created_at", { ascending: true }),
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
     ]);
