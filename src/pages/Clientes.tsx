@@ -217,6 +217,8 @@ export default function Clientes() {
     const q = search.toLowerCase();
     return (
       c.nome_fantasia.toLowerCase().includes(q) ||
+      (c.razao_social || "").toLowerCase().includes(q) ||
+      (c.cnpj_cpf || "").replace(/\D/g, "").includes(q.replace(/\D/g, "")) ||
       (c.cnpj_cpf || "").includes(q) ||
       (c.telefone || "").includes(q)
     );
@@ -417,6 +419,34 @@ export default function Clientes() {
       return;
     }
     setSaving(true);
+
+    // ── Verificação de CNPJ duplicado ──────────────────────────────────────
+    if (!editing) {
+      // Verifica se o usuário tem permissão para cadastrar CNPJ duplicado
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("permitir_cnpj_duplicado")
+        .eq("user_id", profile?.user_id || "")
+        .maybeSingle();
+
+      const podeduplicar = isAdmin || (profileData as any)?.permitir_cnpj_duplicado === true;
+
+      if (!podeduplicar) {
+        const cnpjLimpo = form.cnpj_cpf.trim();
+        const { data: existente } = await supabase
+          .from("clientes")
+          .select("id, nome_fantasia")
+          .eq("cnpj_cpf", cnpjLimpo)
+          .maybeSingle();
+
+        if (existente) {
+          toast.error(`CNPJ/CPF já cadastrado para o cliente "${existente.nome_fantasia}". Para cadastrar com CNPJ duplicado, solicite permissão ao administrador.`);
+          setSaving(false);
+          return;
+        }
+      }
+    }
+
     const payload = {
       nome_fantasia: form.nome_fantasia.trim(),
       razao_social: form.razao_social.trim() || null,
@@ -511,7 +541,7 @@ export default function Clientes() {
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome, CNPJ ou telefone..."
+            placeholder="Buscar por nome fantasia, razão social ou CNPJ..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
