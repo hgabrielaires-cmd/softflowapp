@@ -1714,7 +1714,7 @@ export default function Pedidos() {
                 {(isAdmin || isFinanceiro) && (() => {
                   const cliente = clientes.find(c => c.id === vp.cliente_id);
                   const plano = planos.find(p => p.id === vp.plano_id);
-                  const nomeDecisоr = "{nome_decisor}"; // será substituído dinamicamente do banco
+                  const nomeDecisor = "{nome_decisor}"; // será substituído dinamicamente do banco
                   const nomeUsuario = profile?.full_name || "{nome_usuario}";
                   const nomeFantasia = cliente?.nome_fantasia || "{nome_fantasia}";
                   const nomePlano = plano?.nome || "{plano}";
