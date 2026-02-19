@@ -74,6 +74,7 @@ const FIN_STATUS_COLORS: Record<string, string> = {
   Aguardando: "bg-amber-100 text-amber-700",
   Aprovado: "bg-emerald-100 text-emerald-700",
   Reprovado: "bg-red-100 text-red-600",
+  Cancelado: "bg-gray-100 text-gray-500",
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
