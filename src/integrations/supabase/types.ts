@@ -209,6 +209,7 @@ export type Database = {
           created_at: string
           filial_id: string | null
           id: string
+          logo_url: string | null
           nome: string
           tipo: string
           updated_at: string
@@ -220,6 +221,7 @@ export type Database = {
           created_at?: string
           filial_id?: string | null
           id?: string
+          logo_url?: string | null
           nome: string
           tipo: string
           updated_at?: string
@@ -231,6 +233,7 @@ export type Database = {
           created_at?: string
           filial_id?: string | null
           id?: string
+          logo_url?: string | null
           nome?: string
           tipo?: string
           updated_at?: string

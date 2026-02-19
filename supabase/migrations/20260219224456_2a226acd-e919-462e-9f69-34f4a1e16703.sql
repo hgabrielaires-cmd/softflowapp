@@ -1,0 +1,1 @@
+ALTER TABLE public.document_templates ADD COLUMN logo_url text DEFAULT NULL;
