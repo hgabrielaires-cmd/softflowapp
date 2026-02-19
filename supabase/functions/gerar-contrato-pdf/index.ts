@@ -178,10 +178,11 @@ Deno.serve(async (req) => {
     };
 
     // 8. Substituir variáveis no XML interno do DOCX (ZIP)
-    const docxModificado = substituirVariaveisNoDocx(bytes, variaveis);
+    const docxModificado = await substituirVariaveisNoDocx(bytes, variaveis);
 
     // 9. Extrair texto do DOCX modificado e gerar PDF
-    const textoParagrafos = extrairTextoDOCX(docxModificado);
+    const textoParagrafos = await extrairTextoDOCX(docxModificado);
+    console.log("Parágrafos extraídos:", textoParagrafos.length, "primeiros:", textoParagrafos.slice(0, 3));
     const pdfBytes = await gerarPDF(textoParagrafos, variaveis);
 
     // 10. Upload do PDF gerado
@@ -245,9 +246,9 @@ Deno.serve(async (req) => {
 });
 
 // ─── Extrai parágrafos de texto do DOCX (após substituição) ──────────────────
-function extrairTextoDOCX(docxBytes: Uint8Array): string[] {
+async function extrairTextoDOCX(docxBytes: Uint8Array): Promise<string[]> {
   try {
-    const entries = lerEntradasZip(docxBytes);
+    const entries = await lerEntradasZip(docxBytes);
     const docEntry = entries.find((e) => e.filename === "word/document.xml");
     if (!docEntry) return [];
 
@@ -269,7 +270,8 @@ function extrairTextoDOCX(docxBytes: Uint8Array): string[] {
       paragrafos.push(linha); // manter vazios para preservar espaçamento
     }
     return paragrafos;
-  } catch {
+  } catch (e) {
+    console.error("Erro ao extrair texto do DOCX:", e);
     return [];
   }
 }
@@ -346,16 +348,12 @@ async function gerarPDF(
 }
 
 // ─── Substituição de variáveis no DOCX (ZIP interno) ─────────────────────────
-function substituirVariaveisNoDocx(
+async function substituirVariaveisNoDocx(
   bytes: Uint8Array,
   variaveis: Record<string, string>
-): Uint8Array {
-  // Um DOCX é um ZIP. Vamos processar o ZIP manualmente.
-  // A estratégia: localizar entradas ZIP, modificar word/document.xml e word/header*.xml
-
+): Promise<Uint8Array> {
   try {
-    const result = processarZip(bytes, (filename, content) => {
-      // Processar apenas arquivos XML relevantes
+    const result = await processarZip(bytes, (filename, content) => {
       if (
         filename === "word/document.xml" ||
         filename.startsWith("word/header") ||
@@ -369,7 +367,6 @@ function substituirVariaveisNoDocx(
     return result;
   } catch (e) {
     console.error("Erro ao processar ZIP:", e);
-    // Fallback: retorna o original
     return bytes;
   }
 }
@@ -488,11 +485,11 @@ function makeCrc32Table(): Uint32Array {
   return _crc32Table;
 }
 
-function processarZip(
+async function processarZip(
   zipBytes: Uint8Array,
   transformer: (filename: string, content: Uint8Array) => Uint8Array
-): Uint8Array {
-  const entries = lerEntradasZip(zipBytes);
+): Promise<Uint8Array> {
+  const entries = await lerEntradasZip(zipBytes);
 
   // Transformar entradas relevantes
   const entriesModificadas = entries.map((entry) => {
@@ -504,7 +501,7 @@ function processarZip(
   return repackZip(entriesModificadas);
 }
 
-function lerEntradasZip(zipBytes: Uint8Array): ZipEntry[] {
+async function lerEntradasZip(zipBytes: Uint8Array): Promise<ZipEntry[]> {
   // Encontrar End of Central Directory (EOCD)
   let eocdOffset = -1;
   for (let i = zipBytes.length - 22; i >= 0; i--) {
@@ -554,9 +551,9 @@ function lerEntradasZip(zipBytes: Uint8Array): ZipEntry[] {
       // Store (sem compressão)
       data = zipBytes.slice(dataOffset, dataOffset + uncompressedSize);
     } else if (compression === 8) {
-      // Deflate
+      // Deflate - usar descompressão async real
       const compressed = zipBytes.slice(dataOffset, dataOffset + compressedSize);
-      data = decompressDeflate(compressed, uncompressedSize);
+      data = await decompressDeflateAsync(compressed);
     } else {
       // Método não suportado — usar dados brutos
       data = zipBytes.slice(dataOffset, dataOffset + compressedSize);
@@ -679,20 +676,7 @@ async function decompressDeflateAsync(data: Uint8Array): Promise<Uint8Array> {
   return result;
 }
 
-// Wrapper síncrono (usando um workaround com ReadableStream)
-function decompressDeflate(data: Uint8Array, _expectedSize: number): Uint8Array {
-  // Deno suporta DecompressionStream nativamente
-  // Mas como precisamos sincrono, usamos uma abordagem diferente:
-  // tentamos decodificar como UTF-8 diretamente (pode não funcionar para binário comprimido)
-  // Para conteúdo XML, muitas vezes é armazenado como Store (compressão 0) no DOCX
-  // Se não conseguir descomprimir, retorna o dado bruto
-  try {
-    // Fallback: retornar como está (pode falhar para deflate real)
-    return data;
-  } catch {
-    return data;
-  }
-}
+// decompressDeflate removed — using decompressDeflateAsync directly
 
 // ─── Conversão de número por extenso (pt-BR) ─────────────────────────────────
 function valorPorExtenso(valor: number): string {
