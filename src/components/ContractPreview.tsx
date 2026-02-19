@@ -17,6 +17,10 @@ interface ContractPreviewProps {
 
 export function ContractPreview({ open, onOpenChange, html, dados, title }: ContractPreviewProps) {
   const dataToUse = dados || getExampleData();
+  // Garantir que logo.url no exemplo tenha um placeholder visual válido
+  if (!dados && !dataToUse["logo.url"]?.startsWith("http")) {
+    dataToUse["logo.url"] = "";
+  }
   const rendered = substituirVariaveis(html, dataToUse);
 
   return (
