@@ -962,7 +962,8 @@ export default function Pedidos() {
   });
 
   const canCreate = isAdmin || isVendedor;
-  const clientesDisponiveis = canSeeAllBranches ? clientes : clientes.filter((c) => c.filial_id === profile?.filial_id);
+  // A RLS já restringe os clientes por filial para vendedores, não filtrar novamente
+  const clientesDisponiveis = clientes;
 
   if (isTecnico) return <Navigate to="/dashboard" replace />;
 
