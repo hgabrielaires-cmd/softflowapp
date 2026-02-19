@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +33,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Building2, Phone, Mail, FileText, ArrowUpCircle, Package, Loader2, MapPin, AlertCircle } from "lucide-react";
+import { Plus, Search, Pencil, Building2, Phone, Mail, FileText, ArrowUpCircle, Package, Loader2, MapPin, AlertCircle, Users, Star, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -54,6 +55,27 @@ const emptyForm = {
   logradouro: "",
   bairro: "",
   filial_id: "",
+  ativo: true,
+};
+
+interface ClienteContato {
+  id: string;
+  cliente_id: string;
+  nome: string;
+  cargo: string | null;
+  telefone: string | null;
+  email: string | null;
+  decisor: boolean;
+  ativo: boolean;
+  created_at: string;
+}
+
+const emptyContatoForm = {
+  nome: "",
+  cargo: "",
+  telefone: "",
+  email: "",
+  decisor: false,
   ativo: true,
 };
 
@@ -89,6 +111,16 @@ export default function Clientes() {
   const [cepError, setCepError] = useState("");
   const [cnpjError, setCnpjError] = useState("");
   const isQuerying = loadingCep || loadingCnpj;
+
+  // Contatos
+  const [contatosOpen, setContatosOpen] = useState(false);
+  const [clienteContatos, setClienteContatos] = useState<Cliente | null>(null);
+  const [contatos, setContatos] = useState<ClienteContato[]>([]);
+  const [loadingContatos, setLoadingContatos] = useState(false);
+  const [contatoDialogOpen, setContatoDialogOpen] = useState(false);
+  const [editingContato, setEditingContato] = useState<ClienteContato | null>(null);
+  const [contatoForm, setContatoForm] = useState(emptyContatoForm);
+  const [savingContato, setSavingContato] = useState(false);
 
   async function handleCepBlur() {
     const cep = form.cep.replace(/\D/g, "");
@@ -153,11 +185,10 @@ export default function Clientes() {
     }
   }
 
-
   // Histórico contratual
   const [historicoOpen, setHistoricoOpen] = useState(false);
   const [clienteHistorico, setClienteHistorico] = useState<Cliente | null>(null);
-  const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [contratosList, setContratosList] = useState<Contrato[]>([]);
   const [pedidosHistorico, setPedidosHistorico] = useState<PedidoHistorico[]>([]);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
 
@@ -223,10 +254,124 @@ export default function Clientes() {
         .eq("cliente_id", c.id)
         .order("created_at", { ascending: false }),
     ]);
-    setContratos((cData || []) as unknown as Contrato[]);
+    setContratosList((cData || []) as unknown as Contrato[]);
     setPedidosHistorico((pData || []) as unknown as PedidoHistorico[]);
     setLoadingHistorico(false);
   }
+
+  // ─── Contatos ─────────────────────────────────────────────────────────────
+
+  async function openContatos(c: Cliente) {
+    setClienteContatos(c);
+    setContatosOpen(true);
+    await fetchContatos(c.id);
+  }
+
+  async function fetchContatos(clienteId: string) {
+    setLoadingContatos(true);
+    const { data } = await supabase
+      .from("cliente_contatos")
+      .select("*")
+      .eq("cliente_id", clienteId)
+      .order("decisor", { ascending: false })
+      .order("nome");
+    setContatos((data || []) as ClienteContato[]);
+    setLoadingContatos(false);
+  }
+
+  function openNovoContato() {
+    setEditingContato(null);
+    setContatoForm(emptyContatoForm);
+    setContatoDialogOpen(true);
+  }
+
+  function openEditContato(c: ClienteContato) {
+    setEditingContato(c);
+    setContatoForm({
+      nome: c.nome,
+      cargo: c.cargo || "",
+      telefone: c.telefone || "",
+      email: c.email || "",
+      decisor: c.decisor,
+      ativo: c.ativo,
+    });
+    setContatoDialogOpen(true);
+  }
+
+  async function handleSaveContato() {
+    if (!contatoForm.nome.trim()) {
+      toast.error("Nome é obrigatório");
+      return;
+    }
+    if (!clienteContatos) return;
+    setSavingContato(true);
+
+    const payload = {
+      cliente_id: clienteContatos.id,
+      nome: contatoForm.nome.trim(),
+      cargo: contatoForm.cargo.trim() || null,
+      telefone: contatoForm.telefone.trim() || null,
+      email: contatoForm.email.trim() || null,
+      decisor: contatoForm.decisor,
+      ativo: contatoForm.ativo,
+    };
+
+    // Se marcando como decisor, desmarcar os outros
+    if (contatoForm.decisor) {
+      await supabase
+        .from("cliente_contatos")
+        .update({ decisor: false })
+        .eq("cliente_id", clienteContatos.id)
+        .neq("id", editingContato?.id || "");
+    }
+
+    let error;
+    if (editingContato) {
+      ({ error } = await supabase.from("cliente_contatos").update(payload).eq("id", editingContato.id));
+    } else {
+      ({ error } = await supabase.from("cliente_contatos").insert(payload));
+    }
+
+    if (error) {
+      toast.error("Erro ao salvar contato: " + error.message);
+    } else {
+      toast.success(editingContato ? "Contato atualizado!" : "Contato adicionado!");
+      setContatoDialogOpen(false);
+      await fetchContatos(clienteContatos.id);
+    }
+    setSavingContato(false);
+  }
+
+  async function handleToggleDecisор(contato: ClienteContato) {
+    if (!clienteContatos) return;
+    if (!contato.decisor) {
+      // Desmarcar todos e marcar esse
+      await supabase.from("cliente_contatos").update({ decisor: false }).eq("cliente_id", clienteContatos.id);
+      await supabase.from("cliente_contatos").update({ decisor: true }).eq("id", contato.id);
+    } else {
+      await supabase.from("cliente_contatos").update({ decisor: false }).eq("id", contato.id);
+    }
+    await fetchContatos(clienteContatos.id);
+  }
+
+  async function handleToggleAtivoContato(contato: ClienteContato) {
+    if (!clienteContatos) return;
+    await supabase.from("cliente_contatos").update({ ativo: !contato.ativo }).eq("id", contato.id);
+    await fetchContatos(clienteContatos.id);
+  }
+
+  async function handleDeleteContato(contato: ClienteContato) {
+    if (!clienteContatos) return;
+    const { error } = await supabase.from("cliente_contatos").delete().eq("id", contato.id);
+    if (error) {
+      toast.error("Erro ao excluir contato");
+    } else {
+      toast.success("Contato removido");
+      await fetchContatos(clienteContatos.id);
+    }
+  }
+
+  // ─── Save cliente ──────────────────────────────────────────────────────────
 
   async function handleSave() {
     if (isQuerying) return;
@@ -284,8 +429,8 @@ export default function Clientes() {
   };
 
   // Dados do histórico separados
-  const contratosBase = contratos.filter((c) => c.tipo === "Base");
-  const contratosAditivos = contratos.filter((c) => c.tipo === "Termo Aditivo");
+  const contratosBase = contratosList.filter((c) => c.tipo === "Base");
+  const contratosAditivos = contratosList.filter((c) => c.tipo === "Termo Aditivo");
   const pedidosUpgrade = pedidosHistorico.filter((p) => p.tipo_pedido === "Upgrade");
 
   return (
@@ -325,7 +470,7 @@ export default function Clientes() {
                 <TableHead>Filial</TableHead>
                 <TableHead>Cidade / UF</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-24">Ações</TableHead>
+                <TableHead className="w-28">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -395,6 +540,9 @@ export default function Clientes() {
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
                         )}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openContatos(c)} title="Contatos">
+                          <Users className="h-3.5 w-3.5" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openHistorico(c)} title="Histórico contratual">
                           <FileText className="h-3.5 w-3.5" />
                         </Button>
@@ -408,7 +556,7 @@ export default function Clientes() {
         </div>
       </div>
 
-      {/* Dialog criar/editar */}
+      {/* Dialog criar/editar cliente */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -556,6 +704,144 @@ export default function Clientes() {
               {isQuerying ? (
                 <><Loader2 className="h-4 w-4 animate-spin mr-2" />Consultando...</>
               ) : saving ? "Salvando..." : editing ? "Salvar alterações" : "Cadastrar cliente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Contatos */}
+      <Dialog open={contatosOpen} onOpenChange={setContatosOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Contatos — {clienteContatos?.nome_fantasia}
+            </DialogTitle>
+          </DialogHeader>
+
+          {canEdit && (
+            <div className="flex justify-end">
+              <Button size="sm" className="gap-1.5" onClick={openNovoContato}>
+                <Plus className="h-3.5 w-3.5" /> Novo contato
+              </Button>
+            </div>
+          )}
+
+          {loadingContatos ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : contatos.length === 0 ? (
+            <div className="text-center text-muted-foreground py-10 text-sm">
+              Nenhum contato cadastrado. Clique em "Novo contato" para adicionar.
+            </div>
+          ) : (
+            <div className="rounded-lg border border-border divide-y divide-border">
+              {contatos.map((c) => (
+                <div key={c.id} className={`flex items-start gap-3 px-4 py-3 ${!c.ativo ? "opacity-50" : ""}`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{c.nome}</p>
+                      {c.decisor && (
+                        <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                          <Star className="h-2.5 w-2.5 fill-current" /> Decisor
+                        </span>
+                      )}
+                      {!c.ativo && (
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">Inativo</span>
+                      )}
+                    </div>
+                    {c.cargo && <p className="text-xs text-muted-foreground">{c.cargo}</p>}
+                    <div className="flex gap-3 mt-1">
+                      {c.telefone && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Phone className="h-3 w-3" />{c.telefone}
+                        </span>
+                      )}
+                      {c.email && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Mail className="h-3 w-3" />{c.email}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {canEdit && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="ghost" size="icon" className={`h-7 w-7 ${c.decisor ? "text-primary" : "text-muted-foreground"}`}
+                        onClick={() => handleToggleDecisор(c)}
+                        title={c.decisor ? "Remover como decisor" : "Marcar como decisor"}
+                      >
+                        <Star className={`h-3.5 w-3.5 ${c.decisor ? "fill-current" : ""}`} />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditContato(c)} title="Editar contato">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteContato(c)}
+                        title="Remover contato"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setContatosOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Novo/Editar Contato */}
+      <Dialog open={contatoDialogOpen} onOpenChange={setContatoDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingContato ? "Editar contato" : "Novo contato"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 py-2">
+            <div className="col-span-2 space-y-1.5">
+              <Label>Nome *</Label>
+              <Input value={contatoForm.nome} onChange={(e) => setContatoForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Nome completo" />
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>Cargo</Label>
+              <Input value={contatoForm.cargo} onChange={(e) => setContatoForm((f) => ({ ...f, cargo: e.target.value }))} placeholder="Ex: Proprietário, Gerente..." />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Telefone</Label>
+              <Input value={contatoForm.telefone} onChange={(e) => setContatoForm((f) => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>E-mail</Label>
+              <Input type="email" value={contatoForm.email} onChange={(e) => setContatoForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@empresa.com" />
+            </div>
+            <div className="col-span-2 flex items-center gap-3 pt-1">
+              <Checkbox
+                id="decisor"
+                checked={contatoForm.decisor}
+                onCheckedChange={(v) => setContatoForm((f) => ({ ...f, decisor: !!v }))}
+              />
+              <div>
+                <Label htmlFor="decisor" className="cursor-pointer">Decisor</Label>
+                <p className="text-xs text-muted-foreground">Este contato é o tomador de decisão</p>
+              </div>
+            </div>
+            <div className="col-span-2 flex items-center gap-3">
+              <Switch checked={contatoForm.ativo} onCheckedChange={(v) => setContatoForm((f) => ({ ...f, ativo: v }))} />
+              <Label>Contato ativo</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setContatoDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveContato} disabled={savingContato}>
+              {savingContato ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {editingContato ? "Salvar" : "Adicionar contato"}
             </Button>
           </DialogFooter>
         </DialogContent>

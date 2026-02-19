@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -147,6 +148,15 @@ interface FormState {
   // Tipo do pedido
   tipo_pedido: "Novo" | "Upgrade" | "Aditivo";
   contrato_id: string | null;
+  // Forma de pagamento
+  pagamento_mensalidade_forma: string;
+  pagamento_mensalidade_parcelas: string;
+  pagamento_mensalidade_desconto_percentual: string;
+  pagamento_mensalidade_observacao: string;
+  pagamento_implantacao_forma: string;
+  pagamento_implantacao_parcelas: string;
+  pagamento_implantacao_desconto_percentual: string;
+  pagamento_implantacao_observacao: string;
 }
 
 const emptyForm: FormState = {
@@ -164,6 +174,15 @@ const emptyForm: FormState = {
   modulos_adicionais: [],
   tipo_pedido: "Novo",
   contrato_id: null,
+  // Pagamento
+  pagamento_mensalidade_forma: "",
+  pagamento_mensalidade_parcelas: "",
+  pagamento_mensalidade_desconto_percentual: "0",
+  pagamento_mensalidade_observacao: "",
+  pagamento_implantacao_forma: "",
+  pagamento_implantacao_parcelas: "",
+  pagamento_implantacao_desconto_percentual: "0",
+  pagamento_implantacao_observacao: "",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -193,6 +212,7 @@ export default function Pedidos() {
   const [vendedores, setVendedores] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [filialFavoritaId, setFilialFavoritaId] = useState<string | null>(null);
+  const [filialParametros, setFilialParametros] = useState<any | null>(null);
 
   // Módulos disponíveis do plano selecionado (para busca)
   const [modulosDisponiveis, setModulosDisponiveis] = useState<ModuloOpcional[]>([]);
@@ -381,7 +401,24 @@ export default function Pedidos() {
     }
   }, [profile?.user_id]);
 
-  // ─── Data loading ─────────────────────────────────────────────────────────
+  // ─── Buscar parâmetros da filial ──────────────────────────────────────────
+
+  async function loadFilialParametros(filialId: string) {
+    if (!filialId) { setFilialParametros(null); return; }
+    const { data } = await supabase
+      .from("filial_parametros")
+      .select("*")
+      .eq("filial_id", filialId)
+      .maybeSingle();
+    setFilialParametros(data || null);
+  }
+
+  // Atualiza parametros quando filial muda no form
+  useEffect(() => {
+    if (form.filial_id) loadFilialParametros(form.filial_id);
+  }, [form.filial_id]);
+
+
 
   async function loadData() {
     setLoading(true);
@@ -506,6 +543,14 @@ export default function Pedidos() {
       modulos_adicionais: adicionais,
       tipo_pedido: (pedido.tipo_pedido as "Novo" | "Upgrade" | "Aditivo") || "Novo",
       contrato_id: pedido.contrato_id || null,
+      pagamento_mensalidade_forma: (pedido as any).pagamento_mensalidade_forma || "",
+      pagamento_mensalidade_parcelas: (pedido as any).pagamento_mensalidade_parcelas?.toString() || "",
+      pagamento_mensalidade_desconto_percentual: ((pedido as any).pagamento_mensalidade_desconto_percentual ?? 0).toString(),
+      pagamento_mensalidade_observacao: (pedido as any).pagamento_mensalidade_observacao || "",
+      pagamento_implantacao_forma: (pedido as any).pagamento_implantacao_forma || "",
+      pagamento_implantacao_parcelas: (pedido as any).pagamento_implantacao_parcelas?.toString() || "",
+      pagamento_implantacao_desconto_percentual: ((pedido as any).pagamento_implantacao_desconto_percentual ?? 0).toString(),
+      pagamento_implantacao_observacao: (pedido as any).pagamento_implantacao_observacao || "",
     });
     setModuloBuscaId("");
     setModuloBuscaQtd("1");
@@ -552,6 +597,15 @@ export default function Pedidos() {
         comissao_implantacao_valor: comissaoImpValor,
         comissao_mensalidade_percentual: comissaoMensPerc,
         comissao_mensalidade_valor: comissaoMensValor,
+        // Forma de pagamento
+        pagamento_mensalidade_forma: form.pagamento_mensalidade_forma || null,
+        pagamento_mensalidade_parcelas: form.pagamento_mensalidade_parcelas ? parseInt(form.pagamento_mensalidade_parcelas) : null,
+        pagamento_mensalidade_desconto_percentual: parseFloat(form.pagamento_mensalidade_desconto_percentual) || 0,
+        pagamento_mensalidade_observacao: form.pagamento_mensalidade_observacao || null,
+        pagamento_implantacao_forma: form.pagamento_implantacao_forma || null,
+        pagamento_implantacao_parcelas: form.pagamento_implantacao_parcelas ? parseInt(form.pagamento_implantacao_parcelas) : null,
+        pagamento_implantacao_desconto_percentual: parseFloat(form.pagamento_implantacao_desconto_percentual) || 0,
+        pagamento_implantacao_observacao: form.pagamento_implantacao_observacao || null,
       };
 
       if (editingPedido) {
@@ -1258,6 +1312,109 @@ export default function Pedidos() {
               </div>
             )}
 
+            {/* ── Forma de Pagamento ── */}
+            <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-4">
+              <p className="text-sm font-semibold text-foreground">Forma de Pagamento</p>
+
+              {filialParametros && (
+                <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground space-y-0.5">
+                  <p className="font-medium text-foreground">Parâmetros da Filial</p>
+                  {filialParametros.parcelas_maximas_cartao && <p>Cartão: até {filialParametros.parcelas_maximas_cartao}x sem juros</p>}
+                  {filialParametros.pix_desconto_percentual > 0 && <p>PIX: {filialParametros.pix_desconto_percentual}% de desconto</p>}
+                </div>
+              )}
+
+              {/* Mensalidade */}
+              <div className="space-y-3 border-t border-border pt-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Mensalidade</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Forma de pagamento</Label>
+                    <Select value={form.pagamento_mensalidade_forma} onValueChange={(v) => setForm((f) => ({ ...f, pagamento_mensalidade_forma: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Boleto">Boleto</SelectItem>
+                        <SelectItem value="PIX">PIX</SelectItem>
+                        <SelectItem value="Cartão">Cartão</SelectItem>
+                        <SelectItem value="Transferência">Transferência</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Parcelas</Label>
+                    <Input
+                      type="number" min="1"
+                      placeholder={filialParametros ? `Máx ${filialParametros.parcelas_maximas_cartao}x` : "Nº de parcelas"}
+                      value={form.pagamento_mensalidade_parcelas}
+                      onChange={(e) => setForm((f) => ({ ...f, pagamento_mensalidade_parcelas: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Desconto adicional (%)</Label>
+                    <Input
+                      type="number" min="0" max="100" step="0.01"
+                      placeholder="0"
+                      value={form.pagamento_mensalidade_desconto_percentual}
+                      onChange={(e) => setForm((f) => ({ ...f, pagamento_mensalidade_desconto_percentual: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Observação</Label>
+                    <Input
+                      placeholder={filialParametros?.regras_padrao_mensalidade || "Ex: 1º pagamento após implantação"}
+                      value={form.pagamento_mensalidade_observacao}
+                      onChange={(e) => setForm((f) => ({ ...f, pagamento_mensalidade_observacao: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Implantação */}
+              <div className="space-y-3 border-t border-border pt-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Implantação</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Forma de pagamento</Label>
+                    <Select value={form.pagamento_implantacao_forma} onValueChange={(v) => setForm((f) => ({ ...f, pagamento_implantacao_forma: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Boleto">Boleto</SelectItem>
+                        <SelectItem value="PIX">PIX</SelectItem>
+                        <SelectItem value="Cartão">Cartão</SelectItem>
+                        <SelectItem value="Transferência">Transferência</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Parcelas</Label>
+                    <Input
+                      type="number" min="1"
+                      placeholder={filialParametros ? `Máx ${filialParametros.parcelas_maximas_cartao}x` : "Nº de parcelas"}
+                      value={form.pagamento_implantacao_parcelas}
+                      onChange={(e) => setForm((f) => ({ ...f, pagamento_implantacao_parcelas: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Desconto adicional (%)</Label>
+                    <Input
+                      type="number" min="0" max="100" step="0.01"
+                      placeholder="0"
+                      value={form.pagamento_implantacao_desconto_percentual}
+                      onChange={(e) => setForm((f) => ({ ...f, pagamento_implantacao_desconto_percentual: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Observação</Label>
+                    <Input
+                      placeholder={filialParametros?.regras_padrao_implantacao || "Ex: À vista no ato da implantação"}
+                      value={form.pagamento_implantacao_observacao}
+                      onChange={(e) => setForm((f) => ({ ...f, pagamento_implantacao_observacao: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* ── Observações ── */}
             <div className="space-y-1.5">
               <Label>Observações</Label>
@@ -1552,6 +1709,104 @@ export default function Pedidos() {
                     <p className="text-xs">{vp.observacoes}</p>
                   </div>
                 )}
+
+                {/* ── Mensagem Termo de Aceite ── */}
+                {(isAdmin || isFinanceiro) && (() => {
+                  const cliente = clientes.find(c => c.id === vp.cliente_id);
+                  const plano = planos.find(p => p.id === vp.plano_id);
+                  const nomeDecisоr = "{nome_decisor}"; // será substituído dinamicamente do banco
+                  const nomeUsuario = profile?.full_name || "{nome_usuario}";
+                  const nomeFantasia = cliente?.nome_fantasia || "{nome_fantasia}";
+                  const nomePlano = plano?.nome || "{plano}";
+                  const descricaoPlano = plano?.descricao || "";
+                  const modulosTexto = descricaoPlano
+                    ? descricaoPlano.split(",").map((m: string) => `• ${m.trim()}`).join("\n")
+                    : "";
+                  const valorPlano = fmtBRL(plano?.valor_mensalidade_padrao ?? 0);
+                  const adicionais = (vp.modulos_adicionais || []) as ModuloAdicionadoItem[];
+                  const totalAdicionais = adicionais.reduce((s, m) => s + m.valor_mensalidade_modulo * m.quantidade, 0);
+                  const adicionaisTexto = adicionais.length > 0
+                    ? adicionais.map(m => `✔️ ${m.nome} (${m.quantidade}x ${fmtBRL(m.valor_mensalidade_modulo)}) - ${fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}`).join("\n")
+                    : "";
+
+                  const regrasMens = (vp as any).pagamento_mensalidade_observacao || filialParametros?.regras_padrao_mensalidade || "";
+                  const regrasImpl = (vp as any).pagamento_implantacao_observacao || filialParametros?.regras_padrao_implantacao || "";
+                  const parcelasCartao = filialParametros?.parcelas_maximas_cartao;
+                  const pixDesconto = filialParametros?.pix_desconto_percentual;
+
+                  const mensagem = `Olá {nome_decisor}, bom dia!
+
+Tudo bem?
+
+Me chamo *${nomeUsuario}*, sou do financeiro da Softplus Tecnologia. 
+
+Primeiro queria agradecer por ter escolhido nosso sistema para auxiliar nos processos da *${nomeFantasia}*. 
+
+Saiba que vamos nos empenhar ao máximo para que tudo corra como o esperado. ☺️💙
+
+Passando para alinhar o que ficou acertado com nossa equipe:
+
+☑️ *Módulos Contratados*
+
+Plano ${nomePlano}${modulosTexto ? "\n" + modulosTexto : ""}
+
+Valor base do plano: R$ ${valorPlano}${adicionais.length > 0 ? `
+
+🔘 *ADICIONAIS*
+
+${adicionaisTexto}
+
+Total adicionais: ${fmtBRL(totalAdicionais)}` : ""}
+
+*MENSALIDADE TOTAL*
+
+*${fmtBRL(mensFinal)}*
+
+Valor pré-pago.${regrasMens ? "\n" + regrasMens : ""}
+
+*IMPLANTAÇÃO E TREINAMENTO*
+
+*${fmtBRL(impFinal)}*${regrasImpl ? "\n" + regrasImpl : ""}${parcelasCartao || pixDesconto > 0 ? `
+
+Formas disponíveis:${parcelasCartao ? `\n- Até ${parcelasCartao}x no cartão sem juros` : ""}${pixDesconto > 0 ? `\n- PIX ${pixDesconto}% desconto` : ""}` : ""}
+
+✍️ *TERMO DE ACEITE:*
+
+{link_assinatura}
+
+Implantação confirmada para:
+
+{datas_implantacao}
+
+Os boletos referentes à implantação e primeira mensalidade foram enviados por e-mail.
+
+Caso prefira, posso encaminhar novamente.
+
+Estou à disposição.`;
+
+                  return (
+                    <div className="border-t border-border pt-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Mensagem — Termo de Aceite</p>
+                        <Button
+                          type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1"
+                          onClick={() => {
+                            navigator.clipboard.writeText(mensagem);
+                            toast.success("Mensagem copiada!");
+                          }}
+                        >
+                          📋 Copiar
+                        </Button>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/40 p-3">
+                        <pre className="text-xs whitespace-pre-wrap font-sans text-foreground leading-relaxed">{mensagem}</pre>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        💡 Substitua <code className="bg-muted px-1 rounded">{"{nome_decisor}"}</code>, <code className="bg-muted px-1 rounded">{"{link_assinatura}"}</code> e <code className="bg-muted px-1 rounded">{"{datas_implantacao}"}</code> antes de enviar.
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })()}
@@ -1563,4 +1818,5 @@ export default function Pedidos() {
     </AppLayout>
   );
 }
+
 

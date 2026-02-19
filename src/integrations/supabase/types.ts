@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      cliente_contatos: {
+        Row: {
+          ativo: boolean
+          cargo: string | null
+          cliente_id: string
+          created_at: string
+          decisor: boolean
+          email: string | null
+          id: string
+          nome: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cargo?: string | null
+          cliente_id: string
+          created_at?: string
+          decisor?: boolean
+          email?: string | null
+          id?: string
+          nome: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cargo?: string | null
+          cliente_id?: string
+          created_at?: string
+          decisor?: boolean
+          email?: string | null
+          id?: string
+          nome?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_contatos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientes: {
         Row: {
           ativo: boolean
@@ -130,6 +177,47 @@ export type Database = {
         }
         Relationships: []
       }
+      filial_parametros: {
+        Row: {
+          created_at: string
+          filial_id: string
+          id: string
+          parcelas_maximas_cartao: number
+          pix_desconto_percentual: number
+          regras_padrao_implantacao: string | null
+          regras_padrao_mensalidade: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          filial_id: string
+          id?: string
+          parcelas_maximas_cartao?: number
+          pix_desconto_percentual?: number
+          regras_padrao_implantacao?: string | null
+          regras_padrao_mensalidade?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          filial_id?: string
+          id?: string
+          parcelas_maximas_cartao?: number
+          pix_desconto_percentual?: number
+          regras_padrao_implantacao?: string | null
+          regras_padrao_mensalidade?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "filial_parametros_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: true
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       modulos: {
         Row: {
           ativo: boolean
@@ -181,6 +269,14 @@ export type Database = {
           id: string
           modulos_adicionais: Json | null
           observacoes: string | null
+          pagamento_implantacao_desconto_percentual: number | null
+          pagamento_implantacao_forma: string | null
+          pagamento_implantacao_observacao: string | null
+          pagamento_implantacao_parcelas: number | null
+          pagamento_mensalidade_desconto_percentual: number | null
+          pagamento_mensalidade_forma: string | null
+          pagamento_mensalidade_observacao: string | null
+          pagamento_mensalidade_parcelas: number | null
           plano_id: string
           status_pedido: string
           tipo_pedido: string
@@ -217,6 +313,14 @@ export type Database = {
           id?: string
           modulos_adicionais?: Json | null
           observacoes?: string | null
+          pagamento_implantacao_desconto_percentual?: number | null
+          pagamento_implantacao_forma?: string | null
+          pagamento_implantacao_observacao?: string | null
+          pagamento_implantacao_parcelas?: number | null
+          pagamento_mensalidade_desconto_percentual?: number | null
+          pagamento_mensalidade_forma?: string | null
+          pagamento_mensalidade_observacao?: string | null
+          pagamento_mensalidade_parcelas?: number | null
           plano_id: string
           status_pedido?: string
           tipo_pedido?: string
@@ -253,6 +357,14 @@ export type Database = {
           id?: string
           modulos_adicionais?: Json | null
           observacoes?: string | null
+          pagamento_implantacao_desconto_percentual?: number | null
+          pagamento_implantacao_forma?: string | null
+          pagamento_implantacao_observacao?: string | null
+          pagamento_implantacao_parcelas?: number | null
+          pagamento_mensalidade_desconto_percentual?: number | null
+          pagamento_mensalidade_forma?: string | null
+          pagamento_mensalidade_observacao?: string | null
+          pagamento_mensalidade_parcelas?: number | null
           plano_id?: string
           status_pedido?: string
           tipo_pedido?: string
