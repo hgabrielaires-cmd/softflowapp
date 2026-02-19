@@ -380,11 +380,11 @@ export default function Usuarios() {
 
       {/* ── Create Dialog ── */}
       <Dialog open={openInvite} onOpenChange={setOpenInvite}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-md flex flex-col max-h-[90vh]">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Criar novo usuário</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleInvite} className="space-y-4">
+          <form onSubmit={handleInvite} className="space-y-4 overflow-y-auto flex-1 pr-1">
             <div className="space-y-1.5">
               <Label>Nome completo</Label>
               <Input
@@ -473,8 +473,8 @@ export default function Usuarios() {
                 <Switch checked={inviteGestorDesconto} onCheckedChange={setInviteGestorDesconto} />
               </div>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => setOpenInvite(false)}>Cancelar</Button>
+            <div className="flex justify-end gap-2 pt-2 shrink-0">
+               <Button type="button" variant="outline" onClick={() => setOpenInvite(false)}>Cancelar</Button>
               <Button type="submit" disabled={inviting}>
                 {inviting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
                 Criar usuário
@@ -486,11 +486,11 @@ export default function Usuarios() {
 
       {/* ── Edit Dialog ── */}
       <Dialog open={openEdit} onOpenChange={setOpenEdit}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-md flex flex-col max-h-[90vh]">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Editar usuário</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleEdit} className="space-y-4">
+          <form onSubmit={handleEdit} className="space-y-4 overflow-y-auto flex-1 pr-1">
             <div className="space-y-1.5">
               <Label>Nome completo</Label>
               <Input
@@ -585,7 +585,7 @@ export default function Usuarios() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-2 shrink-0">
               <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>Cancelar</Button>
               <Button type="submit" disabled={saving}>
                 {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
