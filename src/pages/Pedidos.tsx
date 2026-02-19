@@ -269,6 +269,7 @@ export default function Pedidos() {
 
   // Busca de cliente no form
   const [clienteSearch, setClienteSearch] = useState("");
+  const [clienteSearchFocused, setClienteSearchFocused] = useState(false);
 
   // Contatos inline do form novo cliente
   const [clienteContatos, setClienteContatos] = useState<{ nome: string; cargo: string; telefone: string; email: string; decisor: boolean; ativo: boolean }[]>([]);
@@ -1221,8 +1222,10 @@ export default function Pedidos() {
                   className="pl-9 pr-8"
                   placeholder={form.cliente_id
                     ? clientesDisponiveis.find(c => c.id === form.cliente_id)?.nome_fantasia || "Cliente selecionado"
-                    : "Buscar cliente pelo nome..."}
+                    : "Buscar cliente pelo nome ou CNPJ..."}
                   value={clienteSearch}
+                  onFocus={() => setClienteSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setClienteSearchFocused(false), 200)}
                   onChange={(e) => {
                     setClienteSearch(e.target.value);
                     // Se apagou tudo, deseleciona o cliente
@@ -1239,7 +1242,7 @@ export default function Pedidos() {
                   </button>
                 )}
               {/* Dropdown de resultados */}
-                {clienteSearch && !form.cliente_id && (
+                {clienteSearchFocused && clienteSearch && !form.cliente_id && (
                   <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
                     {clientesDisponiveis.filter(c => {
                       const q = clienteSearch.toLowerCase();
