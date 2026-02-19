@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Building2, Phone, Mail, FileText, ArrowUpCircle, Package, Loader2, MapPin, AlertCircle, Users, Star, Trash2 } from "lucide-react";
+import { Plus, Search, Pencil, Building2, Phone, Mail, FileText, ArrowUpCircle, ArrowDownCircle, Package, Loader2, MapPin, AlertCircle, Users, Star, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -84,6 +84,7 @@ interface PedidoHistorico {
   id: string;
   tipo_pedido: string;
   status_pedido: string;
+  financeiro_status: string;
   valor_implantacao_final: number;
   valor_mensalidade_final: number;
   valor_total: number;
@@ -281,7 +282,7 @@ export default function Clientes() {
     const [{ data: cData }, { data: pData }] = await Promise.all([
       supabase.from("contratos").select("*").eq("cliente_id", c.id).order("created_at", { ascending: false }),
       supabase.from("pedidos")
-        .select("id, tipo_pedido, status_pedido, valor_implantacao_final, valor_mensalidade_final, valor_total, created_at, modulos_adicionais, planos(nome)")
+        .select("id, tipo_pedido, status_pedido, financeiro_status, valor_implantacao_final, valor_mensalidade_final, valor_total, created_at, modulos_adicionais, planos(nome)")
         .eq("cliente_id", c.id)
         .order("created_at", { ascending: false }),
     ]);
@@ -489,6 +490,7 @@ export default function Clientes() {
   const contratosBase = contratosList.filter((c) => c.tipo === "Base");
   const contratosAditivos = contratosList.filter((c) => c.tipo === "Termo Aditivo");
   const pedidosUpgrade = pedidosHistorico.filter((p) => p.tipo_pedido === "Upgrade");
+  const pedidosDowngrade = pedidosHistorico.filter((p) => p.tipo_pedido === "Downgrade");
 
   return (
     <AppLayout>
@@ -1036,6 +1038,10 @@ export default function Clientes() {
                   <ArrowUpCircle className="h-3.5 w-3.5 mr-1.5" />
                   Upgrades ({pedidosUpgrade.length})
                 </TabsTrigger>
+                <TabsTrigger value="downgrades" className="flex-1">
+                  <ArrowDownCircle className="h-3.5 w-3.5 mr-1.5" />
+                  Downgrades ({pedidosDowngrade.length})
+                </TabsTrigger>
               </TabsList>
 
               {/* Contratos Base */}
@@ -1097,6 +1103,32 @@ export default function Clientes() {
                             <p className="text-xs font-mono">{fmtBRL(p.valor_total)}</p>
                             <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${TIPO_PEDIDO_COLORS[p.tipo_pedido] || "bg-muted text-muted-foreground"}`}>
                               {p.tipo_pedido}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Downgrades */}
+              <TabsContent value="downgrades" className="mt-3">
+                {pedidosDowngrade.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">Nenhum downgrade registrado.</p>
+                ) : (
+                  <div className="rounded-lg border border-border divide-y divide-border">
+                    {pedidosDowngrade.map((p) => (
+                      <div key={p.id} className="px-4 py-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">{p.planos?.nome || "—"}</p>
+                            <p className="text-xs text-muted-foreground">{fmtDate(p.created_at)}</p>
+                          </div>
+                          <div className="text-right space-y-1">
+                            <p className="text-xs font-mono">{fmtBRL(p.valor_total)}</p>
+                            <span className="text-xs px-1.5 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 border border-amber-200">
+                              Downgrade
                             </span>
                           </div>
                         </div>
