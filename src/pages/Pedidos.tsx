@@ -266,6 +266,9 @@ export default function Pedidos() {
   const [cnpjError, setCnpjError] = useState("");
   const isQuerying = loadingCep || loadingCnpj;
 
+  // Busca de cliente no form
+  const [clienteSearch, setClienteSearch] = useState("");
+
   // Contatos inline do form novo cliente
   const [clienteContatos, setClienteContatos] = useState<{ nome: string; cargo: string; telefone: string; email: string; decisor: boolean; ativo: boolean }[]>([]);
   const [showContatoClienteForm, setShowContatoClienteForm] = useState(false);
@@ -560,6 +563,7 @@ export default function Pedidos() {
       filial_id: defaultFilial,
       vendedor_id: defaultVendedor,
     });
+    setClienteSearch("");
     setPlanoSelecionado(null);
     setModulosDisponiveis([]);
     setModuloBuscaId("");
@@ -567,6 +571,7 @@ export default function Pedidos() {
     setDescontoAtivo(false);
     setEditingPedido(null);
     setLimiteDesconto(null);
+    setContratoAtivo(null);
     setOpenDialog(true);
     // Carregar limites do vendedor atual
     if (profile?.user_id) carregarLimitesDesconto(profile.user_id);
@@ -603,15 +608,19 @@ export default function Pedidos() {
       pagamento_implantacao_desconto_percentual: ((pedido as any).pagamento_implantacao_desconto_percentual ?? 0).toString(),
       pagamento_implantacao_observacao: (pedido as any).pagamento_implantacao_observacao || "",
     });
+    // Limpar a busca de cliente ao editar (o nome será exibido via form.cliente_id)
+    setClienteSearch("");
     setModuloBuscaId("");
     setModuloBuscaQtd("1");
     setDescontoAtivo(temDesconto);
     setEditingPedido(pedido);
     setOpenDialog(true);
     loadPlano(pedido.plano_id, adicionais);
+    buscarContratoAtivo(pedido.cliente_id);
     // Carregar limites do vendedor do pedido
     carregarLimitesDesconto(pedido.vendedor_id || profile?.user_id || "");
   }
+
 
   // ─── Save ────────────────────────────────────────────────────────────────
 
@@ -621,13 +630,19 @@ export default function Pedidos() {
     if (!form.plano_id) { toast.error("Selecione um plano"); return; }
     setSaving(true);
     try {
+      // Garantir que vendedorId nunca seja undefined
+      const vendedorId = form.vendedor_id || profile?.user_id || "";
+      if (!vendedorId) { toast.error("Vendedor não identificado"); setSaving(false); return; }
+
+      const filialId = form.filial_id || profile?.filial_id || "";
+      if (!filialId) { toast.error("Filial não identificada"); setSaving(false); return; }
+
       // Buscar limites de desconto do vendedor
-      const vendedorId = form.vendedor_id || profile?.user_id;
       const { data: vendedorProfile } = await supabase
         .from("profiles")
         .select("desconto_limite_implantacao, desconto_limite_mensalidade")
         .eq("user_id", vendedorId)
-        .single();
+        .maybeSingle();
 
       const limiteImp = (vendedorProfile as any)?.desconto_limite_implantacao ?? 100;
       const limiteMens = (vendedorProfile as any)?.desconto_limite_mensalidade ?? 100;
@@ -640,14 +655,14 @@ export default function Pedidos() {
         ? parseFloat(form.desconto_mensalidade_valor) || 0
         : valorMensalidadeOriginal > 0 ? ((parseFloat(form.desconto_mensalidade_valor) || 0) / valorMensalidadeOriginal) * 100 : 0;
 
-      const precisaAprovacaoImp = descontoImpPerc > limiteImp && descontoImpPerc > 0;
-      const precisaAprovacaoMens = descontoMensPerc > limiteMens && descontoMensPerc > 0;
+      const precisaAprovacaoImp = descontoAtivo && descontoImpPerc > 0 && descontoImpPerc > limiteImp;
+      const precisaAprovacaoMens = descontoAtivo && descontoMensPerc > 0 && descontoMensPerc > limiteMens;
       const precisaAprovacao = precisaAprovacaoImp || precisaAprovacaoMens;
 
       const payload: Record<string, unknown> = {
         cliente_id: form.cliente_id,
         plano_id: form.plano_id,
-        filial_id: form.filial_id || profile?.filial_id,
+        filial_id: filialId,
         vendedor_id: vendedorId,
         valor_implantacao: valorImplantacaoFinal,
         valor_mensalidade: valorMensalidadeFinal,
@@ -684,8 +699,7 @@ export default function Pedidos() {
         const isReprovado = editingPedido.financeiro_status === "Reprovado";
         const wasAwaitingDesconto = editingPedido.status_pedido === "Aguardando Aprovação de Desconto";
 
-      if (precisaAprovacao) {
-          // Precisa de aprovação de desconto
+        if (precisaAprovacao) {
           payload.financeiro_status = "Aguardando";
           payload.financeiro_motivo = null;
           payload.financeiro_aprovado_em = null;
@@ -694,7 +708,6 @@ export default function Pedidos() {
           payload.status_pedido = "Aguardando Aprovação de Desconto";
           const { error } = await supabase.from("pedidos").update(payload).eq("id", editingPedido.id);
           if (error) throw error;
-          // Criar/atualizar solicitação
           await supabase.from("solicitacoes_desconto").upsert({
             pedido_id: editingPedido.id,
             vendedor_id: vendedorId,
@@ -727,7 +740,6 @@ export default function Pedidos() {
         }
       } else {
         if (precisaAprovacao) {
-          // Criar pedido bloqueado aguardando aprovação de desconto
           const insertPayload = {
             ...payload,
             status_pedido: "Aguardando Aprovação de Desconto",
@@ -736,7 +748,6 @@ export default function Pedidos() {
           };
           const { data: novoPedido, error } = await supabase.from("pedidos").insert(insertPayload as any).select().single();
           if (error) throw error;
-          // Criar solicitação de aprovação
           await supabase.from("solicitacoes_desconto").insert({
             pedido_id: novoPedido.id,
             vendedor_id: vendedorId,
@@ -752,7 +763,7 @@ export default function Pedidos() {
         } else {
           const insertPayload = {
             ...payload,
-            status_pedido: "Aguardando Financeiro" as string,
+            status_pedido: "Aguardando Financeiro",
             financeiro_status: "Aguardando",
             contrato_liberado: false,
           };
@@ -764,10 +775,13 @@ export default function Pedidos() {
       setOpenDialog(false);
       loadData();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Erro ao salvar pedido");
+      console.error("Erro ao salvar pedido:", err);
+      const msg = err instanceof Error ? err.message : (err as any)?.message || "Erro ao salvar pedido";
+      toast.error(msg);
     }
     setSaving(false);
   }
+
 
   async function cancelarPedido(pedido: PedidoWithJoins) {
     const { error } = await supabase.from("pedidos").update({ status_pedido: "Cancelado", comissao_valor: 0 }).eq("id", pedido.id);
@@ -873,10 +887,16 @@ export default function Pedidos() {
         telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
       });
     }
-    toast.success("Cliente cadastrado! Já selecionado no pedido.");
+    // Recarregar lista de clientes e selecionar o novo
     const { data: novosClientes } = await supabase.from("clientes").select("*").eq("ativo", true).order("nome_fantasia");
-    setClientes((novosClientes || []) as Cliente[]);
-    if (data) setForm((f) => ({ ...f, cliente_id: data.id }));
+    const listaAtualizada = (novosClientes || []) as Cliente[];
+    setClientes(listaAtualizada);
+    // Selecionar o cliente recém-criado e limpar busca
+    setForm((f) => ({ ...f, cliente_id: data.id }));
+    setClienteSearch("");
+    // Verificar contrato ativo para o novo cliente
+    buscarContratoAtivo(data.id);
+    toast.success("Cliente cadastrado e selecionado no pedido!");
     setClienteForm(emptyClienteForm);
     setClienteContatos([]);
     setShowContatoClienteForm(false);
@@ -1120,16 +1140,62 @@ export default function Pedidos() {
               <div className="flex items-center justify-between">
                 <Label>Cliente *</Label>
                 <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1 text-primary hover:text-primary"
-                  onClick={() => { setClienteForm(emptyClienteForm); setOpenClienteDialog(true); }}>
+                  onClick={() => { setClienteForm(emptyClienteForm); setClienteContatos([]); setOpenClienteDialog(true); }}>
                   <UserPlus className="h-3.5 w-3.5" /> Novo cliente
                 </Button>
               </div>
-              <Select value={form.cliente_id} onValueChange={handleClienteChange}>
-                <SelectTrigger><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
-                <SelectContent>
-                  {clientesDisponiveis.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              {/* Campo de busca com dropdown de clientes */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  className="pl-9 pr-8"
+                  placeholder={form.cliente_id
+                    ? clientesDisponiveis.find(c => c.id === form.cliente_id)?.nome_fantasia || "Cliente selecionado"
+                    : "Buscar cliente pelo nome..."}
+                  value={clienteSearch}
+                  onChange={(e) => {
+                    setClienteSearch(e.target.value);
+                    // Se apagou tudo, deseleciona o cliente
+                    if (!e.target.value && form.cliente_id) {
+                      setForm(f => ({ ...f, cliente_id: "", plano_id: "", tipo_pedido: "Novo", contrato_id: null }));
+                      setContratoAtivo(null);
+                    }
+                  }}
+                />
+                {form.cliente_id && (
+                  <button type="button" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => { setForm(f => ({ ...f, cliente_id: "", plano_id: "", tipo_pedido: "Novo", contrato_id: null })); setClienteSearch(""); setContratoAtivo(null); }}>
+                    <XCircle className="h-4 w-4" />
+                  </button>
+                )}
+                {/* Dropdown de resultados */}
+                {clienteSearch && !form.cliente_id && (
+                  <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    {clientesDisponiveis.filter(c => c.nome_fantasia.toLowerCase().includes(clienteSearch.toLowerCase())).length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum cliente encontrado</div>
+                    ) : (
+                      clientesDisponiveis
+                        .filter(c => c.nome_fantasia.toLowerCase().includes(clienteSearch.toLowerCase()))
+                        .slice(0, 20)
+                        .map(c => (
+                          <button key={c.id} type="button"
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                            onMouseDown={(e) => e.preventDefault()} // evita blur antes do click
+                            onClick={() => { handleClienteChange(c.id); setClienteSearch(""); }}>
+                            {c.nome_fantasia}
+                            {c.cnpj_cpf && <span className="ml-2 text-xs text-muted-foreground">{c.cnpj_cpf}</span>}
+                          </button>
+                        ))
+                    )}
+                  </div>
+                )}
+              </div>
+              {form.cliente_id && (
+                <p className="text-xs text-success flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  {clientesDisponiveis.find(c => c.id === form.cliente_id)?.nome_fantasia} selecionado
+                </p>
+              )}
 
               {/* Contrato ativo detectado */}
               {loadingContrato && (
