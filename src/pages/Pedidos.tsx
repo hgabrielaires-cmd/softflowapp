@@ -246,6 +246,9 @@ export default function Pedidos() {
   const [descontoAtivo, setDescontoAtivo] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Limites de desconto do vendedor atual
+  const [limiteDesconto, setLimiteDesconto] = useState<{ implantacao: number; mensalidade: number } | null>(null);
+
   // Contrato ativo do cliente selecionado
   const [contratoAtivo, setContratoAtivo] = useState<Contrato | null>(null);
   const [loadingContrato, setLoadingContrato] = useState(false);
@@ -304,6 +307,23 @@ export default function Pedidos() {
   // Campo legado mantido para compatibilidade
   const comissaoValor = comissaoValorTotal;
   const comissaoPercentualLegado = parseFloat(form.comissao_percentual) || 0;
+
+  // ─── Cálculo de desconto em % para comparação com limites ───────────────────
+  const descontoImpPercAtual = form.desconto_implantacao_tipo === "%"
+    ? parseFloat(form.desconto_implantacao_valor) || 0
+    : valorImplantacaoOriginal > 0 ? ((parseFloat(form.desconto_implantacao_valor) || 0) / valorImplantacaoOriginal) * 100 : 0;
+  const descontoMensPercAtual = form.desconto_mensalidade_tipo === "%"
+    ? parseFloat(form.desconto_mensalidade_valor) || 0
+    : valorMensalidadeOriginal > 0 ? ((parseFloat(form.desconto_mensalidade_valor) || 0) / valorMensalidadeOriginal) * 100 : 0;
+
+  const limiteImpAtual = limiteDesconto?.implantacao ?? 100;
+  const limiteMensAtual = limiteDesconto?.mensalidade ?? 100;
+
+  const descontoImpExcedido = descontoAtivo && descontoImpPercAtual > 0 && descontoImpPercAtual > limiteImpAtual;
+  const descontoMensExcedido = descontoAtivo && descontoMensPercAtual > 0 && descontoMensPercAtual > limiteMensAtual;
+  const descontoExcedido = descontoImpExcedido || descontoMensExcedido;
+  // Admin pode criar mesmo com desconto excedido (vai para financeiro normalmente)
+  const bloqueadoPorDesconto = descontoExcedido && !isAdmin;
 
   // ─── Load plano + módulos disponíveis ──────────────────────────────────────
 
@@ -511,6 +531,22 @@ export default function Pedidos() {
 
   // ─── Open create/edit ─────────────────────────────────────────────────────
 
+  async function carregarLimitesDesconto(vendedorUserId: string) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("desconto_limite_implantacao, desconto_limite_mensalidade")
+      .eq("user_id", vendedorUserId)
+      .single();
+    if (data) {
+      setLimiteDesconto({
+        implantacao: (data as any).desconto_limite_implantacao ?? 100,
+        mensalidade: (data as any).desconto_limite_mensalidade ?? 100,
+      });
+    } else {
+      setLimiteDesconto({ implantacao: 100, mensalidade: 100 });
+    }
+  }
+
   function openCreate() {
     const defaultImp = (profile as any)?.comissao_implantacao_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
     const defaultMens = (profile as any)?.comissao_mensalidade_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
@@ -530,7 +566,10 @@ export default function Pedidos() {
     setModuloBuscaQtd("1");
     setDescontoAtivo(false);
     setEditingPedido(null);
+    setLimiteDesconto(null);
     setOpenDialog(true);
+    // Carregar limites do vendedor atual
+    if (profile?.user_id) carregarLimitesDesconto(profile.user_id);
   }
 
   function openEdit(pedido: PedidoWithJoins) {
@@ -570,6 +609,8 @@ export default function Pedidos() {
     setEditingPedido(pedido);
     setOpenDialog(true);
     loadPlano(pedido.plano_id, adicionais);
+    // Carregar limites do vendedor do pedido
+    carregarLimitesDesconto(pedido.vendedor_id || profile?.user_id || "");
   }
 
   // ─── Save ────────────────────────────────────────────────────────────────
@@ -1324,8 +1365,15 @@ export default function Pedidos() {
 
                     {/* Desconto implantação */}
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Desconto — Implantação</Label>
-                      <div className="flex gap-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs">Desconto — Implantação</Label>
+                        {limiteDesconto && limiteDesconto.implantacao < 100 && (
+                          <span className={`text-xs font-medium ${descontoImpExcedido ? "text-destructive" : "text-muted-foreground"}`}>
+                            Limite: {limiteDesconto.implantacao}% · Aplicado: {descontoImpPercAtual.toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                      <div className={`flex gap-2 ${descontoImpExcedido ? "ring-1 ring-destructive rounded-md p-1" : ""}`}>
                         <Select value={form.desconto_implantacao_tipo} onValueChange={(v) => setForm((f) => ({ ...f, desconto_implantacao_tipo: v as "R$" | "%" }))}>
                           <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
                           <SelectContent>
@@ -1337,7 +1385,7 @@ export default function Pedidos() {
                           type="number" min="0" step="0.01"
                           value={form.desconto_implantacao_valor}
                           onChange={(e) => setForm((f) => ({ ...f, desconto_implantacao_valor: e.target.value }))}
-                          className="flex-1"
+                          className={`flex-1 ${descontoImpExcedido ? "border-destructive" : ""}`}
                           placeholder="0"
                         />
                         <Input readOnly value={fmtBRL(valorImplantacaoFinal)} className="w-36 bg-background font-mono text-sm text-primary font-semibold" />
@@ -1346,8 +1394,15 @@ export default function Pedidos() {
 
                     {/* Desconto mensalidade */}
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Desconto — Mensalidade</Label>
-                      <div className="flex gap-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs">Desconto — Mensalidade</Label>
+                        {limiteDesconto && limiteDesconto.mensalidade < 100 && (
+                          <span className={`text-xs font-medium ${descontoMensExcedido ? "text-destructive" : "text-muted-foreground"}`}>
+                            Limite: {limiteDesconto.mensalidade}% · Aplicado: {descontoMensPercAtual.toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                      <div className={`flex gap-2 ${descontoMensExcedido ? "ring-1 ring-destructive rounded-md p-1" : ""}`}>
                         <Select value={form.desconto_mensalidade_tipo} onValueChange={(v) => setForm((f) => ({ ...f, desconto_mensalidade_tipo: v as "R$" | "%" }))}>
                           <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
                           <SelectContent>
@@ -1359,7 +1414,7 @@ export default function Pedidos() {
                           type="number" min="0" step="0.01"
                           value={form.desconto_mensalidade_valor}
                           onChange={(e) => setForm((f) => ({ ...f, desconto_mensalidade_valor: e.target.value }))}
-                          className="flex-1"
+                          className={`flex-1 ${descontoMensExcedido ? "border-destructive" : ""}`}
                           placeholder="0"
                         />
                         <Input readOnly value={fmtBRL(valorMensalidadeFinal)} className="w-36 bg-background font-mono text-sm text-primary font-semibold" />
@@ -1472,13 +1527,46 @@ export default function Pedidos() {
               <Textarea placeholder="Observações opcionais..." value={form.observacoes} onChange={(e) => setForm((f) => ({ ...f, observacoes: e.target.value }))} rows={3} />
             </div>
 
+            {/* ── Alerta de desconto excedido ── */}
+            {descontoExcedido && (
+              <div className={`mx-6 mb-2 rounded-lg border p-3 flex items-start gap-2.5 ${bloqueadoPorDesconto ? "border-destructive/40 bg-destructive/10" : "border-amber-400/40 bg-amber-50"}`}>
+                <AlertCircle className={`h-4 w-4 mt-0.5 shrink-0 ${bloqueadoPorDesconto ? "text-destructive" : "text-amber-600"}`} />
+                <div className="flex-1 min-w-0 text-sm">
+                  {bloqueadoPorDesconto ? (
+                    <>
+                      <p className="font-semibold text-destructive">Desconto acima do seu limite</p>
+                      <p className="text-muted-foreground mt-0.5">
+                        {descontoImpExcedido && `Implantação: ${descontoImpPercAtual.toFixed(1)}% (limite: ${limiteImpAtual}%)`}
+                        {descontoImpExcedido && descontoMensExcedido && " · "}
+                        {descontoMensExcedido && `Mensalidade: ${descontoMensPercAtual.toFixed(1)}% (limite: ${limiteMensAtual}%)`}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs">Você pode <strong>enviar para aprovação do gestor</strong> — o pedido ficará aguardando revisão.</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-semibold text-amber-700">Desconto acima do limite do vendedor</p>
+                      <p className="text-amber-700/80 mt-0.5 text-xs">Como administrador, você pode criar normalmente. O pedido irá direto para o financeiro.</p>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
             </div>{/* end scrollable area */}
             <DialogFooter className="px-6 py-4 border-t border-border shrink-0">
               <Button type="button" variant="outline" onClick={() => setOpenDialog(false)}>Cancelar</Button>
-              <Button type="submit" disabled={saving || !form.cliente_id || !form.plano_id}>
-                {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                {editingPedido ? "Salvar alterações" : "Criar pedido"}
-              </Button>
+              {bloqueadoPorDesconto ? (
+                <Button type="submit" disabled={saving || !form.cliente_id || !form.plano_id} variant="secondary" className="gap-2">
+                  {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                  <ArrowUpCircle className="h-4 w-4" />
+                  Enviar para aprovação
+                </Button>
+              ) : (
+                <Button type="submit" disabled={saving || !form.cliente_id || !form.plano_id}>
+                  {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  {editingPedido ? "Salvar alterações" : "Criar pedido"}
+                </Button>
+              )}
             </DialogFooter>
           </form>
         </DialogContent>
