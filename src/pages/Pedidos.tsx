@@ -793,7 +793,7 @@ export default function Pedidos() {
 
 
   async function cancelarPedido(pedido: PedidoWithJoins) {
-    const { error } = await supabase.from("pedidos").update({ status_pedido: "Cancelado", comissao_valor: 0 }).eq("id", pedido.id);
+    const { error } = await supabase.from("pedidos").update({ status_pedido: "Cancelado", financeiro_status: "Cancelado", comissao_valor: 0 }).eq("id", pedido.id);
     if (error) { toast.error("Erro ao cancelar pedido"); return; }
     toast.success("Pedido cancelado");
     loadData();
