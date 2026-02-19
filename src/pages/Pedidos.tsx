@@ -322,8 +322,8 @@ export default function Pedidos() {
   const descontoImpExcedido = descontoAtivo && descontoImpPercAtual > 0 && descontoImpPercAtual > limiteImpAtual;
   const descontoMensExcedido = descontoAtivo && descontoMensPercAtual > 0 && descontoMensPercAtual > limiteMensAtual;
   const descontoExcedido = descontoImpExcedido || descontoMensExcedido;
-  // Admin pode criar mesmo com desconto excedido (vai para financeiro normalmente)
-  const bloqueadoPorDesconto = descontoExcedido && !isAdmin;
+  // Qualquer usuário (inclusive admin) é bloqueado se exceder o limite
+  const bloqueadoPorDesconto = descontoExcedido;
 
   // ─── Load plano + módulos disponíveis ──────────────────────────────────────
 
@@ -684,7 +684,7 @@ export default function Pedidos() {
         const isReprovado = editingPedido.financeiro_status === "Reprovado";
         const wasAwaitingDesconto = editingPedido.status_pedido === "Aguardando Aprovação de Desconto";
 
-        if (precisaAprovacao && !isAdmin) {
+      if (precisaAprovacao) {
           // Precisa de aprovação de desconto
           payload.financeiro_status = "Aguardando";
           payload.financeiro_motivo = null;
@@ -726,7 +726,7 @@ export default function Pedidos() {
           toast.success("Pedido atualizado com sucesso!");
         }
       } else {
-        if (precisaAprovacao && !isAdmin) {
+        if (precisaAprovacao) {
           // Criar pedido bloqueado aguardando aprovação de desconto
           const insertPayload = {
             ...payload,
@@ -1529,25 +1529,16 @@ export default function Pedidos() {
 
             {/* ── Alerta de desconto excedido ── */}
             {descontoExcedido && (
-              <div className={`mx-6 mb-2 rounded-lg border p-3 flex items-start gap-2.5 ${bloqueadoPorDesconto ? "border-destructive/40 bg-destructive/10" : "border-amber-400/40 bg-amber-50"}`}>
-                <AlertCircle className={`h-4 w-4 mt-0.5 shrink-0 ${bloqueadoPorDesconto ? "text-destructive" : "text-amber-600"}`} />
+              <div className="mx-6 mb-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 flex items-start gap-2.5">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-destructive" />
                 <div className="flex-1 min-w-0 text-sm">
-                  {bloqueadoPorDesconto ? (
-                    <>
-                      <p className="font-semibold text-destructive">Desconto acima do seu limite</p>
-                      <p className="text-muted-foreground mt-0.5">
-                        {descontoImpExcedido && `Implantação: ${descontoImpPercAtual.toFixed(1)}% (limite: ${limiteImpAtual}%)`}
-                        {descontoImpExcedido && descontoMensExcedido && " · "}
-                        {descontoMensExcedido && `Mensalidade: ${descontoMensPercAtual.toFixed(1)}% (limite: ${limiteMensAtual}%)`}
-                      </p>
-                      <p className="text-muted-foreground mt-1 text-xs">Você pode <strong>enviar para aprovação do gestor</strong> — o pedido ficará aguardando revisão.</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-semibold text-amber-700">Desconto acima do limite do vendedor</p>
-                      <p className="text-amber-700/80 mt-0.5 text-xs">Como administrador, você pode criar normalmente. O pedido irá direto para o financeiro.</p>
-                    </>
-                  )}
+                  <p className="font-semibold text-destructive">Desconto acima do limite permitido</p>
+                  <p className="text-muted-foreground mt-0.5">
+                    {descontoImpExcedido && `Implantação: ${descontoImpPercAtual.toFixed(1)}% (limite: ${limiteImpAtual}%)`}
+                    {descontoImpExcedido && descontoMensExcedido && " · "}
+                    {descontoMensExcedido && `Mensalidade: ${descontoMensPercAtual.toFixed(1)}% (limite: ${limiteMensAtual}%)`}
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs">Você pode <strong>enviar para aprovação do gestor</strong> — o pedido ficará aguardando revisão.</p>
                 </div>
               </div>
             )}
