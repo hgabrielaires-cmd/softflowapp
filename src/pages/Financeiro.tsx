@@ -31,6 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CheckCircle, XCircle, Loader2, Filter, Clock, Eye } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -65,6 +66,7 @@ interface PedidoFila {
 
 export default function Financeiro() {
   const { profile, roles, isAdmin } = useAuth();
+  const navigate = useNavigate();
   const isFinanceiro = roles.includes("financeiro");
 
   const [pedidos, setPedidos] = useState<PedidoFila[]>([]);
@@ -119,11 +121,27 @@ export default function Financeiro() {
       financeiro_aprovado_por: profile?.user_id,
       financeiro_motivo: null,
     }).eq("id", pedido.id);
+    if (error) {
+      setProcessando(false);
+      toast.error("Erro ao aprovar pedido: " + error.message);
+      return;
+    }
+    // Criar contrato
+    const { error: contratoError } = await supabase.from("contratos").insert({
+      cliente_id: pedido.cliente_id,
+      plano_id: pedido.plano_id,
+      pedido_id: pedido.id,
+      tipo: "Base",
+      status: "Ativo",
+    });
     setProcessando(false);
-    if (error) { toast.error("Erro ao aprovar pedido: " + error.message); return; }
-    toast.success("Pedido aprovado! Contrato liberado.");
+    if (contratoError) {
+      toast.error("Pedido aprovado, mas erro ao criar contrato: " + contratoError.message);
+      return;
+    }
+    toast.success("Pedido aprovado! Contrato criado e liberado.");
     setOpenDetail(false);
-    loadData();
+    navigate("/contratos");
   }
 
   async function handleReprovar() {
