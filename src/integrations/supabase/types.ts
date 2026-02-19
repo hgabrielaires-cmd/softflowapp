@@ -245,6 +245,71 @@ export type Database = {
         }
         Relationships: []
       }
+      notificacoes: {
+        Row: {
+          created_at: string
+          criado_por: string
+          destinatario_role: string | null
+          destinatario_user_id: string | null
+          id: string
+          mensagem: string
+          tipo: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          criado_por: string
+          destinatario_role?: string | null
+          destinatario_user_id?: string | null
+          id?: string
+          mensagem: string
+          tipo?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          criado_por?: string
+          destinatario_role?: string | null
+          destinatario_user_id?: string | null
+          id?: string
+          mensagem?: string
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notificacoes_lidas: {
+        Row: {
+          id: string
+          lido_em: string
+          notificacao_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          lido_em?: string
+          notificacao_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          lido_em?: string
+          notificacao_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notificacoes_lidas_notificacao_id_fkey"
+            columns: ["notificacao_id"]
+            isOneToOne: false
+            referencedRelation: "notificacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pedidos: {
         Row: {
           cliente_id: string
