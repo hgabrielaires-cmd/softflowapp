@@ -14,6 +14,13 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -38,7 +45,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FileText, Eye, Filter, Loader2, FileCheck, XCircle } from "lucide-react";
+import {
+  FileText,
+  Eye,
+  Filter,
+  Loader2,
+  FileCheck,
+  XCircle,
+  MoreHorizontal,
+  FilePen,
+  FileOutput,
+} from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -84,13 +101,16 @@ export default function Contratos() {
 
   async function loadData() {
     setLoading(true);
-    const [{ data: contratosData }, { data: filiaisData }] = await Promise.all([
+    const [{ data: contratosData, error: contratosError }, { data: filiaisData }] = await Promise.all([
       supabase
         .from("contratos")
         .select("*, clientes(nome_fantasia, filial_id), planos(nome), pedidos(status_pedido, contrato_liberado, financeiro_status)")
         .order("numero_registro", { ascending: false }),
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
     ]);
+    if (contratosError) {
+      toast.error("Erro ao carregar contratos: " + contratosError.message);
+    }
     setContratos((contratosData || []) as unknown as Contrato[]);
     setFiliais((filiaisData || []) as Filial[]);
     setLoading(false);
@@ -126,15 +146,53 @@ export default function Contratos() {
   }
 
   function getStatusBadge(status: string) {
-    if (status === "Ativo") return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400">Ativo</Badge>;
+    if (status === "Ativo")
+      return (
+        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400">
+          Ativo
+        </Badge>
+      );
     return <Badge variant="secondary">Encerrado</Badge>;
   }
 
   function getTipoBadge(tipo: string) {
-    if (tipo === "Base") return <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/10">Base</Badge>;
-    if (tipo === "Upgrade") return <Badge className="bg-violet-100 text-violet-700 border-violet-200 hover:bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400">Upgrade</Badge>;
-    if (tipo === "Downgrade") return <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400">Downgrade</Badge>;
+    if (tipo === "Base")
+      return (
+        <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/10">
+          Base
+        </Badge>
+      );
+    if (tipo === "Upgrade")
+      return (
+        <Badge className="bg-violet-100 text-violet-700 border-violet-200 hover:bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400">
+          Upgrade
+        </Badge>
+      );
+    if (tipo === "Downgrade")
+      return (
+        <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400">
+          Downgrade
+        </Badge>
+      );
     return <Badge variant="outline">{tipo}</Badge>;
+  }
+
+  function getPedidoStatusBadges(contrato: Contrato) {
+    if (!contrato.pedidos) return <span className="text-xs text-muted-foreground">—</span>;
+    return (
+      <div className="flex flex-col gap-1">
+        {contrato.pedidos.financeiro_status === "Aprovado" && (
+          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs w-fit">
+            ✓ Aprovado
+          </Badge>
+        )}
+        {contrato.pedidos.contrato_liberado && (
+          <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 text-xs w-fit">
+            Liberado
+          </Badge>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -148,7 +206,9 @@ export default function Contratos() {
           </div>
           <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
             <FileCheck className="h-4 w-4 text-emerald-600" />
-            <span className="text-sm font-semibold text-emerald-700">{ativos} ativo{ativos !== 1 ? "s" : ""}</span>
+            <span className="text-sm font-semibold text-emerald-700">
+              {ativos} ativo{ativos !== 1 ? "s" : ""}
+            </span>
           </div>
         </div>
 
@@ -159,22 +219,40 @@ export default function Contratos() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <Select value={filterFilial} onValueChange={setFilterFilial}>
-              <SelectTrigger><SelectValue placeholder="Todas as filiais" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Todas as filiais" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as filiais</SelectItem>
-                {filiais.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                {filiais.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.nome}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger><SelectValue placeholder="Todos os status" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos os status" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os status</SelectItem>
                 <SelectItem value="Ativo">Ativo</SelectItem>
                 <SelectItem value="Encerrado">Encerrado</SelectItem>
               </SelectContent>
             </Select>
-            <Input type="date" value={filterDe} onChange={(e) => setFilterDe(e.target.value)} title="Data inicial" />
-            <Input type="date" value={filterAte} onChange={(e) => setFilterAte(e.target.value)} title="Data final" />
+            <Input
+              type="date"
+              value={filterDe}
+              onChange={(e) => setFilterDe(e.target.value)}
+              title="Data inicial"
+            />
+            <Input
+              type="date"
+              value={filterAte}
+              onChange={(e) => setFilterAte(e.target.value)}
+              title="Data final"
+            />
           </div>
         </div>
 
@@ -187,8 +265,8 @@ export default function Contratos() {
                 <TableHead>Cliente</TableHead>
                 <TableHead>Plano</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead>Status Contrato</TableHead>
-                <TableHead>Status Pedido</TableHead>
+                <TableHead>Contrato</TableHead>
+                <TableHead>Pedido</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -196,7 +274,7 @@ export default function Contratos() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12">
+                  <TableCell colSpan={8} className="text-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
@@ -210,46 +288,66 @@ export default function Contratos() {
               ) : (
                 filtered.map((contrato) => (
                   <TableRow key={contrato.id}>
-                    <TableCell className="font-mono font-semibold text-sm">{contrato.numero_exibicao || `#${contrato.numero_registro}`}</TableCell>
-                    <TableCell className="font-medium">{contrato.clientes?.nome_fantasia || "—"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{contrato.planos?.nome || "—"}</TableCell>
+                    <TableCell className="font-mono font-semibold text-sm">
+                      {contrato.numero_exibicao || `#${contrato.numero_registro}`}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {contrato.clientes?.nome_fantasia || "—"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {contrato.planos?.nome || "—"}
+                    </TableCell>
                     <TableCell>{getTipoBadge(contrato.tipo)}</TableCell>
                     <TableCell>{getStatusBadge(contrato.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        {contrato.pedidos?.financeiro_status === "Aprovado" && (
-                          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs w-fit">
-                            ✓ Aprovado Financeiro
-                          </Badge>
-                        )}
-                        {contrato.pedidos?.contrato_liberado && (
-                          <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 text-xs w-fit">
-                            Contrato Liberado
-                          </Badge>
-                        )}
-                        {!contrato.pedidos && (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </div>
-                    </TableCell>
+                    <TableCell>{getPedidoStatusBadges(contrato)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(contrato.created_at), "dd/MM/yyyy", { locale: ptBR })}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost" size="icon" className="h-7 w-7" title="Ver detalhes"
-                          onClick={() => { setSelected(contrato); setOpenDetail(true); }}
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" title="Gerar documento (em breve)"
-                          onClick={() => toast.info("Geração de documento em desenvolvimento.")}
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 bg-card border border-border shadow-lg z-50">
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => { setSelected(contrato); setOpenDetail(true); }}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Visualizar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => toast.info("Geração de contrato em desenvolvimento.")}
+                          >
+                            <FileOutput className="h-4 w-4 mr-2" />
+                            Gerar Contrato
+                          </DropdownMenuItem>
+                          {canManage && (
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={() => toast.info("Edição de contrato em desenvolvimento.")}
+                            >
+                              <FilePen className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                          )}
+                          {canManage && contrato.status === "Ativo" && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="cursor-pointer text-destructive focus:text-destructive"
+                                onClick={() => { setSelected(contrato); setOpenEncerrar(true); }}
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Cancelar Contrato
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
@@ -268,13 +366,17 @@ export default function Contratos() {
                 <FileCheck className="h-5 w-5 text-emerald-600" />
                 Contrato {selected.numero_exibicao || `#${selected.numero_registro}`}
               </DialogTitle>
-              <DialogDescription id="contrato-desc">Detalhes do contrato selecionado.</DialogDescription>
+              <DialogDescription id="contrato-desc">
+                Detalhes do contrato selecionado.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <div>
                   <p className="text-muted-foreground text-xs">Número</p>
-                  <p className="font-mono font-semibold">{selected.numero_exibicao || `#${selected.numero_registro}`}</p>
+                  <p className="font-mono font-semibold">
+                    {selected.numero_exibicao || `#${selected.numero_registro}`}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Status</p>
@@ -294,7 +396,9 @@ export default function Contratos() {
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Data de criação</p>
-                  <p>{format(new Date(selected.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+                  <p>
+                    {format(new Date(selected.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                  </p>
                 </div>
                 {selected.pedido_id && (
                   <div className="col-span-2">
@@ -316,7 +420,9 @@ export default function Contratos() {
                           Contrato Liberado
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="text-xs">Contrato Pendente</Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          Contrato Pendente
+                        </Badge>
                       )}
                     </div>
                   </div>
@@ -325,19 +431,21 @@ export default function Contratos() {
 
               <div className="flex gap-2 pt-2 border-t border-border">
                 <Button
-                  variant="outline" className="flex-1" title="Gerar documento (em breve)"
-                  onClick={() => toast.info("Geração de documento em desenvolvimento.")}
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => toast.info("Geração de contrato em desenvolvimento.")}
                 >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Gerar Documento
+                  <FileOutput className="h-4 w-4 mr-2" />
+                  Gerar Contrato
                 </Button>
                 {canManage && selected.status === "Ativo" && (
                   <Button
-                    variant="destructive" className="flex-1"
+                    variant="destructive"
+                    className="flex-1"
                     onClick={() => { setOpenDetail(false); setOpenEncerrar(true); }}
                   >
                     <XCircle className="h-4 w-4 mr-2" />
-                    Encerrar
+                    Cancelar
                   </Button>
                 )}
               </div>
@@ -350,20 +458,25 @@ export default function Contratos() {
       <AlertDialog open={openEncerrar} onOpenChange={setOpenEncerrar}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Encerrar contrato?</AlertDialogTitle>
+            <AlertDialogTitle>Cancelar contrato?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação encerrará o contrato <strong>{selected?.numero_exibicao}</strong> do cliente <strong>{selected?.clientes?.nome_fantasia}</strong>. Esta ação não pode ser desfeita.
+              Esta ação cancelará o contrato{" "}
+              <strong>{selected?.numero_exibicao}</strong> do cliente{" "}
+              <strong>{selected?.clientes?.nome_fantasia}</strong>. Esta ação não pode
+              ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleEncerrar}
               disabled={processando}
             >
-              {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Encerrar
+              {processando ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Confirmar Cancelamento
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
