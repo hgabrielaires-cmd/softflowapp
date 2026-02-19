@@ -100,6 +100,16 @@ export const CONTRACT_VARIABLE_CATEGORIES: VariableCategory[] = [
     icon: "🏢",
     variables: [
       { key: "filial.nome", label: "Nome da Filial", example: "Filial São Paulo" },
+      { key: "filial.logradouro", label: "Logradouro", example: "Av. Paulista" },
+      { key: "filial.numero", label: "Número", example: "1000" },
+      { key: "filial.complemento", label: "Complemento", example: "Sala 501" },
+      { key: "filial.bairro", label: "Bairro", example: "Bela Vista" },
+      { key: "filial.cidade", label: "Cidade", example: "São Paulo" },
+      { key: "filial.uf", label: "UF", example: "SP" },
+      { key: "filial.cep", label: "CEP", example: "01310-100" },
+      { key: "filial.endereco_completo", label: "Endereço Completo", example: "Av. Paulista, 1000 - Sala 501 - Bela Vista - São Paulo/SP - CEP 01310-100" },
+      { key: "filial.telefone", label: "Telefone", example: "(11) 3000-0000" },
+      { key: "filial.email", label: "E-mail", example: "filial@softflow.com.br" },
     ],
   },
 ];

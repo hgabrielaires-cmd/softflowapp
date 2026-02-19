@@ -252,24 +252,51 @@ export type Database = {
       filiais: {
         Row: {
           ativa: boolean
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
+          complemento: string | null
           created_at: string
+          email: string | null
           id: string
           logo_url: string | null
+          logradouro: string | null
           nome: string
+          numero: string | null
+          telefone: string | null
+          uf: string | null
         }
         Insert: {
           ativa?: boolean
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           logo_url?: string | null
+          logradouro?: string | null
           nome: string
+          numero?: string | null
+          telefone?: string | null
+          uf?: string | null
         }
         Update: {
           ativa?: boolean
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           logo_url?: string | null
+          logradouro?: string | null
           nome?: string
+          numero?: string | null
+          telefone?: string | null
+          uf?: string | null
         }
         Relationships: []
       }
