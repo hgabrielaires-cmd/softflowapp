@@ -54,6 +54,7 @@ const emptyForm = {
   cep: "",
   logradouro: "",
   numero: "",
+  complemento: "",
   bairro: "",
   filial_id: "",
   ativo: true,
@@ -248,9 +249,10 @@ export default function Clientes() {
       email: c.email || "",
       cidade: c.cidade || "",
       uf: c.uf || "",
-    cep: "",
+      cep: "",
       logradouro: "",
       numero: "",
+      complemento: "",
       bairro: "",
       filial_id: c.filial_id || "",
       ativo: c.ativo,
@@ -740,6 +742,12 @@ export default function Clientes() {
             <div className="space-y-1.5">
               <Label>Número</Label>
               <Input value={form.numero} onChange={(e) => setForm((f) => ({ ...f, numero: e.target.value }))} placeholder="Ex: 123" />
+            </div>
+
+            {/* Complemento */}
+            <div className="space-y-1.5">
+              <Label>Complemento</Label>
+              <Input value={form.complemento} onChange={(e) => setForm((f) => ({ ...f, complemento: e.target.value }))} placeholder="Apto, Sala, Bloco..." />
             </div>
 
             {/* Bairro */}
