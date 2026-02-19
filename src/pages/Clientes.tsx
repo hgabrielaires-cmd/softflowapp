@@ -112,7 +112,7 @@ export default function Clientes() {
   const [cnpjError, setCnpjError] = useState("");
   const isQuerying = loadingCep || loadingCnpj;
 
-  // Contatos
+  // Contatos (modal separado — histórico/edição extra)
   const [contatosOpen, setContatosOpen] = useState(false);
   const [clienteContatos, setClienteContatos] = useState<Cliente | null>(null);
   const [contatos, setContatos] = useState<ClienteContato[]>([]);
@@ -121,6 +121,12 @@ export default function Clientes() {
   const [editingContato, setEditingContato] = useState<ClienteContato | null>(null);
   const [contatoForm, setContatoForm] = useState(emptyContatoForm);
   const [savingContato, setSavingContato] = useState(false);
+
+  // Contatos inline no formulário de cadastro/edição
+  const [formContatos, setFormContatos] = useState<(typeof emptyContatoForm & { _id?: string })[]>([]);
+  const [showContatoInlineForm, setShowContatoInlineForm] = useState(false);
+  const [editingInlineIdx, setEditingInlineIdx] = useState<number | null>(null);
+  const [inlineContatoForm, setInlineContatoForm] = useState(emptyContatoForm);
 
   async function handleCepBlur() {
     const cep = form.cep.replace(/\D/g, "");
@@ -220,10 +226,14 @@ export default function Clientes() {
     setCnpjError("");
     const defaultFilial = isVendedor && profile?.filial_id ? profile.filial_id : "";
     setForm({ ...emptyForm, filial_id: defaultFilial });
+    setFormContatos([]);
+    setShowContatoInlineForm(false);
+    setEditingInlineIdx(null);
+    setInlineContatoForm(emptyContatoForm);
     setDialogOpen(true);
   }
 
-  function openEdit(c: Cliente) {
+  async function openEdit(c: Cliente) {
     setEditing(c);
     setForm({
       nome_fantasia: c.nome_fantasia,
@@ -240,6 +250,25 @@ export default function Clientes() {
       filial_id: c.filial_id || "",
       ativo: c.ativo,
     });
+    setShowContatoInlineForm(false);
+    setEditingInlineIdx(null);
+    setInlineContatoForm(emptyContatoForm);
+    // Carrega contatos existentes
+    const { data } = await supabase
+      .from("cliente_contatos")
+      .select("*")
+      .eq("cliente_id", c.id)
+      .order("decisor", { ascending: false })
+      .order("nome");
+    setFormContatos((data || []).map((ct: any) => ({
+      _id: ct.id,
+      nome: ct.nome,
+      cargo: ct.cargo || "",
+      telefone: ct.telefone || "",
+      email: ct.email || "",
+      decisor: ct.decisor,
+      ativo: ct.ativo,
+    })));
     setDialogOpen(true);
   }
 
@@ -376,14 +405,22 @@ export default function Clientes() {
       toast.error("Nome fantasia e CNPJ/CPF são obrigatórios");
       return;
     }
+    if (formContatos.filter((c) => c.ativo !== false).length === 0 && formContatos.length === 0) {
+      toast.error("Cadastre pelo menos um contato antes de salvar");
+      return;
+    }
+    if (formContatos.length === 0) {
+      toast.error("Cadastre pelo menos um contato antes de salvar");
+      return;
+    }
     setSaving(true);
     const payload = {
       nome_fantasia: form.nome_fantasia.trim(),
       razao_social: form.razao_social.trim() || null,
       cnpj_cpf: form.cnpj_cpf.trim(),
-      contato_nome: form.contato_nome.trim() || null,
-      telefone: form.telefone.trim() || null,
-      email: form.email.trim() || null,
+      contato_nome: formContatos[0]?.nome || form.contato_nome.trim() || null,
+      telefone: formContatos[0]?.telefone || form.telefone.trim() || null,
+      email: formContatos[0]?.email || form.email.trim() || null,
       cidade: form.cidade.trim() || null,
       uf: form.uf || null,
       filial_id: form.filial_id || null,
@@ -392,10 +429,31 @@ export default function Clientes() {
     if (editing) {
       const { error } = await supabase.from("clientes").update(payload).eq("id", editing.id);
       if (error) { toast.error("Erro ao atualizar cliente"); setSaving(false); return; }
+      // Sincronizar contatos: upsert dos com _id, inserir novos
+      for (const ct of formContatos) {
+        if (ct._id) {
+          await supabase.from("cliente_contatos").update({
+            nome: ct.nome, cargo: ct.cargo || null, telefone: ct.telefone || null,
+            email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
+          }).eq("id", ct._id);
+        } else {
+          await supabase.from("cliente_contatos").insert({
+            cliente_id: editing.id, nome: ct.nome, cargo: ct.cargo || null,
+            telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
+          });
+        }
+      }
       toast.success("Cliente atualizado com sucesso");
     } else {
-      const { error } = await supabase.from("clientes").insert(payload);
-      if (error) { toast.error("Erro ao cadastrar cliente"); setSaving(false); return; }
+      const { data: newCliente, error } = await supabase.from("clientes").insert(payload).select().single();
+      if (error || !newCliente) { toast.error("Erro ao cadastrar cliente"); setSaving(false); return; }
+      // Inserir contatos
+      for (const ct of formContatos) {
+        await supabase.from("cliente_contatos").insert({
+          cliente_id: newCliente.id, nome: ct.nome, cargo: ct.cargo || null,
+          telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
+        });
+      }
       toast.success("Cliente cadastrado com sucesso");
     }
     setSaving(false);
@@ -537,9 +595,6 @@ export default function Clientes() {
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
                         )}
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openContatos(c)} title="Contatos">
-                          <Users className="h-3.5 w-3.5" />
-                        </Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openHistorico(c)} title="Histórico contratual">
                           <FileText className="h-3.5 w-3.5" />
                         </Button>
@@ -610,22 +665,6 @@ export default function Clientes() {
               <Input value={form.razao_social} onChange={(e) => setForm((f) => ({ ...f, razao_social: e.target.value }))} placeholder="Razão social (opcional)" />
             </div>
 
-            {/* Contato e Telefone */}
-            <div className="space-y-1.5">
-              <Label>Nome do contato</Label>
-              <Input value={form.contato_nome} onChange={(e) => setForm((f) => ({ ...f, contato_nome: e.target.value }))} placeholder="Nome da pessoa de contato" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Telefone</Label>
-              <Input value={form.telefone} onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
-            </div>
-
-            {/* E-mail */}
-            <div className="col-span-2 space-y-1.5">
-              <Label>E-mail</Label>
-              <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@empresa.com" />
-            </div>
-
             {/* Separador endereco */}
             <div className="col-span-2 pt-1">
               <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
@@ -694,6 +733,122 @@ export default function Clientes() {
                 <Label>Cliente ativo</Label>
               </div>
             )}
+
+            {/* ── Seção Contatos ── */}
+            <div className="col-span-2 pt-2">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                  <Users className="h-3.5 w-3.5" />
+                  Contatos <span className="text-destructive">*</span>
+                  <span className="text-xs font-normal normal-case text-muted-foreground">(obrigatório ao menos 1)</span>
+                </div>
+                {canEdit && !showContatoInlineForm && (
+                  <Button type="button" size="sm" variant="outline" className="gap-1.5 h-7 text-xs"
+                    onClick={() => { setEditingInlineIdx(null); setInlineContatoForm(emptyContatoForm); setShowContatoInlineForm(true); }}>
+                    <Plus className="h-3 w-3" /> Adicionar contato
+                  </Button>
+                )}
+              </div>
+
+              {/* Lista de contatos */}
+              {formContatos.length > 0 && (
+                <div className="rounded-lg border border-border divide-y divide-border mb-2">
+                  {formContatos.map((ct, idx) => (
+                    <div key={idx} className={`flex items-center gap-3 px-3 py-2 ${!ct.ativo ? "opacity-50" : ""}`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium truncate">{ct.nome}</p>
+                          {ct.decisor && (
+                            <span className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium shrink-0">
+                              <Star className="h-2.5 w-2.5 fill-current" /> Decisor
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex gap-2 mt-0.5">
+                          {ct.cargo && <span className="text-xs text-muted-foreground">{ct.cargo}</span>}
+                          {ct.telefone && <span className="text-xs text-muted-foreground">{ct.telefone}</span>}
+                          {ct.email && <span className="text-xs text-muted-foreground">{ct.email}</span>}
+                        </div>
+                      </div>
+                      {canEdit && (
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <Button type="button" variant="ghost" size="icon" className={`h-6 w-6 ${ct.decisor ? "text-primary" : "text-muted-foreground"}`}
+                            title={ct.decisor ? "Remover como decisor" : "Marcar como decisor"}
+                            onClick={() => setFormContatos((prev) => prev.map((c, i) => ({ ...c, decisor: i === idx ? !c.decisor : (ct.decisor ? c.decisor : false) })))}>
+                            <Star className={`h-3 w-3 ${ct.decisor ? "fill-current" : ""}`} />
+                          </Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6"
+                            onClick={() => { setEditingInlineIdx(idx); setInlineContatoForm({ nome: ct.nome, cargo: ct.cargo || "", telefone: ct.telefone || "", email: ct.email || "", decisor: ct.decisor, ativo: ct.ativo }); setShowContatoInlineForm(true); }}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
+                            onClick={() => setFormContatos((prev) => prev.filter((_, i) => i !== idx))}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {formContatos.length === 0 && !showContatoInlineForm && (
+                <div className="rounded-lg border border-dashed border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-muted-foreground text-center">
+                  <Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                  Nenhum contato cadastrado. Adicione pelo menos um contato.
+                </div>
+              )}
+
+              {/* Formulário inline de contato */}
+              {showContatoInlineForm && (
+                <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+                  <p className="text-xs font-medium text-foreground">{editingInlineIdx !== null ? "Editar contato" : "Novo contato"}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-xs">Nome *</Label>
+                      <Input className="h-8 text-sm" value={inlineContatoForm.nome} onChange={(e) => setInlineContatoForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Nome completo" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Cargo</Label>
+                      <Input className="h-8 text-sm" value={inlineContatoForm.cargo} onChange={(e) => setInlineContatoForm((f) => ({ ...f, cargo: e.target.value }))} placeholder="Cargo / função" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Telefone</Label>
+                      <Input className="h-8 text-sm" value={inlineContatoForm.telefone} onChange={(e) => setInlineContatoForm((f) => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
+                    </div>
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-xs">E-mail</Label>
+                      <Input className="h-8 text-sm" type="email" value={inlineContatoForm.email} onChange={(e) => setInlineContatoForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@empresa.com" />
+                    </div>
+                    <div className="col-span-2 flex items-center gap-3">
+                      <Checkbox id="inline-decisor" checked={inlineContatoForm.decisor} onCheckedChange={(v) => setInlineContatoForm((f) => ({ ...f, decisor: !!v }))} />
+                      <Label htmlFor="inline-decisor" className="text-xs cursor-pointer">Decisor (tomador de decisão)</Label>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setShowContatoInlineForm(false); setEditingInlineIdx(null); }}>Cancelar</Button>
+                    <Button type="button" size="sm" className="h-7 text-xs" onClick={() => {
+                      if (!inlineContatoForm.nome.trim()) { toast.error("Nome do contato é obrigatório"); return; }
+                      if (editingInlineIdx !== null) {
+                        setFormContatos((prev) => prev.map((c, i) => i === editingInlineIdx ? { ...c, ...inlineContatoForm, _id: c._id } : c));
+                      } else {
+                        // Se marcado decisor, desmarcar outros
+                        setFormContatos((prev) => [
+                          ...(inlineContatoForm.decisor ? prev.map((c) => ({ ...c, decisor: false })) : prev),
+                          { ...inlineContatoForm },
+                        ]);
+                      }
+                      setShowContatoInlineForm(false);
+                      setEditingInlineIdx(null);
+                      setInlineContatoForm(emptyContatoForm);
+                    }}>
+                      {editingInlineIdx !== null ? "Salvar" : "Adicionar"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
@@ -706,7 +861,7 @@ export default function Clientes() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Contatos */}
+
       <Dialog open={contatosOpen} onOpenChange={setContatosOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
