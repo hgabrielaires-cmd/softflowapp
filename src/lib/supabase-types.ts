@@ -58,6 +58,7 @@ export interface Filial {
   id: string;
   nome: string;
   ativa: boolean;
+  logo_url: string | null;
   created_at: string;
 }
 
