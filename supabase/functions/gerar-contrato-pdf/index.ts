@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { PDFDocument, StandardFonts, rgb, PageSizes } from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +17,9 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { contrato_id } = await req.json();
+    const body = await req.json();
+    const { contrato_id, action, pdf_base64 } = body;
+
     if (!contrato_id) {
       return new Response(JSON.stringify({ error: "contrato_id obrigatório" }), {
         status: 400,
@@ -26,6 +27,45 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── ACTION: upload ── Client sends generated PDF base64 for storage
+    if (action === "upload" && pdf_base64) {
+      const pdfBytes = Uint8Array.from(atob(pdf_base64), (c) => c.charCodeAt(0));
+      const outputPath = `${contrato_id}.pdf`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("contratos-pdf")
+        .upload(outputPath, pdfBytes, {
+          contentType: "application/pdf",
+          upsert: true,
+        });
+
+      if (uploadError) {
+        return new Response(
+          JSON.stringify({ error: "Erro ao salvar PDF: " + uploadError.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: signedData } = await supabase.storage
+        .from("contratos-pdf")
+        .createSignedUrl(outputPath, 3600);
+
+      await supabase
+        .from("contratos")
+        .update({ pdf_url: outputPath, status_geracao: "Gerado" })
+        .eq("id", contrato_id);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          signed_url: signedData?.signedUrl || null,
+          storage_path: outputPath,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── ACTION: render (default) ── Return rendered HTML with variables substituted
     // 1. Buscar contrato com joins
     const { data: contrato, error: contratoError } = await supabase
       .from("contratos")
@@ -153,7 +193,6 @@ Deno.serve(async (req) => {
         </table>`
       : "";
 
-    // Calcular descontos
     const implOriginal = pedido?.valor_implantacao_original ?? 0;
     const implFinal = pedido?.valor_implantacao_final ?? 0;
     const implDesconto = implOriginal - implFinal;
@@ -162,7 +201,6 @@ Deno.serve(async (req) => {
     const mensDesconto = mensOriginal - mensFinal;
     const totalGeral = pedido?.valor_total ?? 0;
 
-    // Endereço completo do cliente
     const enderecoCliente = [
       cliente?.logradouro,
       cliente?.numero ? `, ${cliente.numero}` : "",
@@ -172,7 +210,6 @@ Deno.serve(async (req) => {
       cliente?.cep ? ` - CEP ${cliente.cep}` : "",
     ].join("");
 
-    // Endereço completo da filial
     const enderecoFilial = filial ? [
       filial.logradouro,
       filial.numero ? `, ${filial.numero}` : "",
@@ -182,23 +219,19 @@ Deno.serve(async (req) => {
       filial.cep ? ` - CEP ${filial.cep}` : "",
     ].join("") : "";
 
-    // Data por extenso
     const meses = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
     const agora = new Date();
     const dataAtual = `${String(agora.getDate()).padStart(2,"0")}/${String(agora.getMonth()+1).padStart(2,"0")}/${agora.getFullYear()}`;
     const dataExtenso = `${agora.getDate()} de ${meses[agora.getMonth()]} de ${agora.getFullYear()}`;
 
-    // Logo URL
     const logoUrl = template.logo_url || filial?.logo_url || "";
 
-    // Forma de pagamento
     const formaImplantacao = pedido?.pagamento_implantacao_forma || "";
     const parcelasImplantacao = pedido?.pagamento_implantacao_parcelas;
     const formaMensalidade = pedido?.pagamento_mensalidade_forma || "";
     const parcelasMensalidade = pedido?.pagamento_mensalidade_parcelas;
 
     const dados: Record<string, string> = {
-      // Cliente
       "cliente.razao_social": cliente?.razao_social || cliente?.nome_fantasia || "",
       "cliente.nome_fantasia": cliente?.nome_fantasia || "",
       "cliente.cnpj": cliente?.cnpj_cpf || "",
@@ -213,21 +246,16 @@ Deno.serve(async (req) => {
       "cliente.cep": cliente?.cep || "",
       "cliente.telefone": cliente?.telefone || "",
       "cliente.email": cliente?.email || "",
-      // Contato
       "contato.nome_decisor": decisor?.nome || "",
       "contato.telefone_decisor": decisor?.telefone || "",
       "contato.email_decisor": decisor?.email || "",
-      // Contrato
       "contrato.numero": contrato.numero_exibicao || "",
       "contrato.status": contrato.status || "",
-      // Plano
       "plano.nome": plano?.nome || "",
       "plano.valor_mensalidade": fmtBRL(plano?.valor_mensalidade_padrao ?? 0),
-      // Módulos
       "modulos.inclusos_lista": modulosInclusosLista,
       "modulos.adicionais_lista": modulosAdicionaisLista,
       "modulos.tabela_detalhada": modulosTabelaDetalhada,
-      // Valores
       "valores.implantacao.original": fmtBRL(implOriginal),
       "valores.implantacao.desconto": fmtBRL(implDesconto),
       "valores.implantacao.final": fmtBRL(implFinal),
@@ -236,17 +264,14 @@ Deno.serve(async (req) => {
       "valores.mensalidade.final": fmtBRL(mensFinal),
       "valores.total_geral": fmtBRL(totalGeral),
       "valores.total_extenso": valorPorExtenso(totalGeral),
-      // Pagamento
       "pagamento.implantacao.forma": formaImplantacao,
       "pagamento.implantacao.parcelas": parcelasImplantacao ? `${parcelasImplantacao}x` : "",
       "pagamento.mensalidade.forma": formaMensalidade,
       "pagamento.mensalidade.parcelas": parcelasMensalidade ? `${parcelasMensalidade}x` : "",
       "pagamento.observacoes": pedido?.pagamento_mensalidade_observacao || pedido?.pagamento_implantacao_observacao || "",
-      // Sistema
       "data.atual": dataAtual,
       "data.atual_extenso": dataExtenso,
       "logo.url": logoUrl,
-      // Filial
       "filial.nome": filial?.nome || "",
       "filial.cnpj": filial?.cnpj || "",
       "filial.inscricao_estadual": filial?.inscricao_estadual || "",
@@ -269,67 +294,16 @@ Deno.serve(async (req) => {
       if (trimmedKey === "modulos.tabela_detalhada" && !dados[trimmedKey]) return "";
       const value = dados[trimmedKey];
       if (value === undefined) return match;
-      // logo.url: substituir por tag img se estiver como texto puro
-      if (trimmedKey === "logo.url" && value) {
-        return `<img src="${value}" alt="Logo" style="max-height: 80px; max-width: 200px;" />`;
-      }
       return value;
     });
 
-    // Corrigir double-wrapping de logo
-    htmlFinal = htmlFinal.replace(/src="<img\s+src="([^"]+)"[^>]*\/?>"/gi, 'src="$1"');
-
-    console.log("HTML final gerado, comprimento:", htmlFinal.length);
-
-    // 8. Converter HTML para PDF usando pdf-lib (parser simples)
-    const pdfBytes = await htmlToPdf(htmlFinal, logoUrl);
-
-    // 9. Upload do PDF
-    const outputPath = `${contrato_id}.pdf`;
-    const { error: uploadError } = await supabase.storage
-      .from("contratos-pdf")
-      .upload(outputPath, pdfBytes, {
-        contentType: "application/pdf",
-        upsert: true,
-      });
-
-    if (uploadError) {
-      return new Response(
-        JSON.stringify({ error: "Erro ao salvar contrato gerado: " + uploadError.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // 10. Signed URL
-    const { data: signedData, error: signedError } = await supabase.storage
-      .from("contratos-pdf")
-      .createSignedUrl(outputPath, 3600);
-
-    if (signedError || !signedData) {
-      return new Response(
-        JSON.stringify({ error: "Erro ao gerar URL do contrato: " + signedError?.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // 11. Atualizar contrato
-    const { error: updateError } = await supabase
-      .from("contratos")
-      .update({ pdf_url: outputPath, status_geracao: "Gerado" })
-      .eq("id", contrato_id);
-
-    if (updateError) {
-      return new Response(
-        JSON.stringify({ error: "Erro ao atualizar contrato: " + updateError.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Logo: se {{logo.url}} ficou como texto puro, colocar na tag img
+    // (se o template já usa <img src="{{logo.url}}">, a substituição já resolveu)
 
     return new Response(
       JSON.stringify({
         success: true,
-        signed_url: signedData.signedUrl,
-        storage_path: outputPath,
+        html: htmlFinal,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
@@ -341,203 +315,6 @@ Deno.serve(async (req) => {
     });
   }
 });
-
-// ─── HTML para PDF usando pdf-lib ────────────────────────────────────────────
-async function htmlToPdf(html: string, logoUrl?: string): Promise<Uint8Array> {
-  const pdfDoc = await PDFDocument.create();
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-
-  const pageWidth = PageSizes.A4[0];
-  const pageHeight = PageSizes.A4[1];
-  const marginX = 50;
-  const marginTop = 50;
-  const marginBottom = 50;
-  const maxWidth = pageWidth - marginX * 2;
-
-  let page = pdfDoc.addPage(PageSizes.A4);
-  let y = pageHeight - marginTop;
-
-  // Embed logo if available
-  let logoImage: any = null;
-  if (logoUrl) {
-    try {
-      const response = await fetch(logoUrl);
-      if (response.ok) {
-        const logoBytes = new Uint8Array(await response.arrayBuffer());
-        const contentType = response.headers.get("content-type") || "";
-        if (contentType.includes("png")) {
-          logoImage = await pdfDoc.embedPng(logoBytes);
-        } else if (contentType.includes("jpeg") || contentType.includes("jpg")) {
-          logoImage = await pdfDoc.embedJpg(logoBytes);
-        }
-      }
-    } catch (e) {
-      console.log("Não foi possível carregar logo:", e);
-    }
-  }
-
-  // Draw logo at top if available
-  if (logoImage) {
-    const logoMaxH = 50;
-    const logoMaxW = 150;
-    const scale = Math.min(logoMaxW / logoImage.width, logoMaxH / logoImage.height, 1);
-    const w = logoImage.width * scale;
-    const h = logoImage.height * scale;
-    page.drawImage(logoImage, {
-      x: marginX,
-      y: y - h,
-      width: w,
-      height: h,
-    });
-    y -= h + 15;
-  }
-
-  const sanitize = (t: string): string =>
-    t.replace(/[^\x20-\x7E\xA0-\xFF]/g, (ch) => {
-      const code = ch.charCodeAt(0);
-      if (code === 0x2013 || code === 0x2014) return "-";
-      if (code === 0x2018 || code === 0x2019) return "'";
-      if (code === 0x201C || code === 0x201D) return '"';
-      if (code === 0x2026) return "...";
-      if (code === 0x2022 || code === 0x00B7) return "-";
-      if (code === 0x21E8 || code === 0x2192) return "->";
-      return "";
-    });
-
-  const wrapText = (text: string, f: typeof font, size: number, maxW: number): string[] => {
-    if (!text) return [""];
-    const words = text.split(" ");
-    const lines: string[] = [];
-    let current = "";
-    for (const word of words) {
-      const test = current ? current + " " + word : word;
-      const w = f.widthOfTextAtSize(test, size);
-      if (w > maxW && current) {
-        lines.push(current);
-        current = word;
-      } else {
-        current = test;
-      }
-    }
-    if (current) lines.push(current);
-    return lines.length > 0 ? lines : [""];
-  };
-
-  const checkPage = (needed: number) => {
-    if (y - needed < marginBottom) {
-      page = pdfDoc.addPage(PageSizes.A4);
-      y = pageHeight - marginTop;
-    }
-  };
-
-  const drawText = (text: string, size: number, bold = false, indent = 0) => {
-    text = sanitize(text);
-    const f = bold ? fontBold : font;
-    const lineH = size * 1.4;
-    const lines = wrapText(text, f, size, maxWidth - indent);
-    for (const line of lines) {
-      checkPage(lineH);
-      page.drawText(line, {
-        x: marginX + indent,
-        y,
-        size,
-        font: f,
-        color: rgb(0, 0, 0),
-      });
-      y -= lineH;
-    }
-  };
-
-  // Strip HTML tags and convert to structured text blocks
-  // Remove <img> tags (logo already drawn), <style> blocks
-  let cleaned = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
-  cleaned = cleaned.replace(/<img[^>]*>/gi, "");
-  
-  // Convert <br> to newlines
-  cleaned = cleaned.replace(/<br\s*\/?>/gi, "\n");
-  // Convert </p>, </div>, </tr>, </li>, </h1-6> to newlines
-  cleaned = cleaned.replace(/<\/(p|div|tr|li|h[1-6])>/gi, "\n");
-  // Convert <li> to bullet
-  cleaned = cleaned.replace(/<li[^>]*>/gi, "  • ");
-  // Convert <hr> to separator
-  cleaned = cleaned.replace(/<hr[^>]*>/gi, "\n---\n");
-  
-  // Handle table cells - add spacing
-  cleaned = cleaned.replace(/<\/td>/gi, "    ");
-  cleaned = cleaned.replace(/<\/th>/gi, "    ");
-
-  // Detect bold/header sections
-  interface TextBlock {
-    text: string;
-    bold: boolean;
-    heading: boolean;
-    separator: boolean;
-  }
-
-  const blocks: TextBlock[] = [];
-  
-  // Split by headers first
-  const parts = cleaned.split(/(<\/?(?:h[1-6]|strong|b|thead|th)[^>]*>)/gi);
-  let isBold = false;
-  let isHeading = false;
-  
-  for (const part of parts) {
-    const lower = part.toLowerCase();
-    if (lower.match(/^<(h[1-6]|strong|b|thead|th)\b/)) {
-      isBold = true;
-      isHeading = !!lower.match(/^<h[1-6]/);
-      continue;
-    }
-    if (lower.match(/^<\/(h[1-6]|strong|b|thead|th)>/)) {
-      isBold = false;
-      isHeading = false;
-      continue;
-    }
-    // Strip remaining HTML tags
-    const stripped = part.replace(/<[^>]+>/g, "").trim();
-    if (!stripped) continue;
-    
-    // Split by newlines
-    const lines = stripped.split("\n");
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed === "---") {
-        blocks.push({ text: "", bold: false, heading: false, separator: true });
-      } else if (trimmed) {
-        blocks.push({ text: trimmed, bold: isBold, heading: isHeading, separator: false });
-      } else {
-        blocks.push({ text: "", bold: false, heading: false, separator: false });
-      }
-    }
-  }
-
-  // Render blocks
-  for (const block of blocks) {
-    if (block.separator) {
-      checkPage(10);
-      y -= 5;
-      page.drawLine({
-        start: { x: marginX, y },
-        end: { x: pageWidth - marginX, y },
-        thickness: 0.5,
-        color: rgb(0.7, 0.7, 0.7),
-      });
-      y -= 10;
-      continue;
-    }
-    if (!block.text) {
-      y -= 6; // empty line spacing
-      continue;
-    }
-    const fontSize = block.heading ? 13 : 10;
-    const indent = block.text.startsWith("•") ? 10 : 0;
-    drawText(block.text, fontSize, block.bold || block.heading, indent);
-  }
-
-  const pdfBytesOut = await pdfDoc.save();
-  return new Uint8Array(pdfBytesOut);
-}
 
 // ─── Valor por extenso ───────────────────────────────────────────────────────
 function valorPorExtenso(valor: number): string {
