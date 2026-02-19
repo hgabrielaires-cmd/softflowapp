@@ -59,6 +59,8 @@ export interface Filial {
   nome: string;
   ativa: boolean;
   logo_url: string | null;
+  cnpj: string | null;
+  inscricao_estadual: string | null;
   logradouro: string | null;
   numero: string | null;
   complemento: string | null;
