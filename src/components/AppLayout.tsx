@@ -272,12 +272,12 @@ interface Notificacao {
 }
 
 const TIPO_ICON: Record<string, ReactNode> = {
-  info: <Info className="h-4 w-4 text-blue-500" />,
-  aviso: <AlertTriangle className="h-4 w-4 text-amber-500" />,
-  urgente: <Zap className="h-4 w-4 text-red-500" />,
+  info: <Info className="h-4 w-4 text-primary" />,
+  aviso: <AlertTriangle className="h-4 w-4 text-warning" />,
+  urgente: <Zap className="h-4 w-4 text-destructive" />,
 };
 
-function NotificationBell({ profile }: { profile: Profile | null }) {
+function NotificationBell({ profile, roles }: { profile: Profile | null; roles: AppRole[] }) {
   const [solicitacoes, setSolicitacoes] = useState<SolicitacaoDesconto[]>([]);
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
   const [lidasIds, setLidasIds] = useState<Set<string>>(new Set());
@@ -285,7 +285,8 @@ function NotificationBell({ profile }: { profile: Profile | null }) {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [motivoReprova, setMotivoReprova] = useState<Record<string, string>>({});
 
-  const isGestor = (profile as any)?.gestor_desconto === true;
+  const isAdmin = roles.includes("admin");
+  const isGestor = isAdmin || (profile as any)?.gestor_desconto === true;
 
   async function loadSolicitacoes() {
     if (!isGestor) return;
@@ -399,7 +400,7 @@ function NotificationBell({ profile }: { profile: Profile | null }) {
                   <input type="text" placeholder="Motivo (opcional)" className="w-full text-xs border border-border rounded px-2 py-1 bg-background"
                     value={motivoReprova[sol.id] || ""} onChange={(e) => setMotivoReprova((p) => ({ ...p, [sol.id]: e.target.value }))} />
                   <div className="flex gap-2">
-                    <button className="flex-1 flex items-center justify-center gap-1 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded px-3 py-1.5 transition-colors disabled:opacity-50"
+                    <button className="flex-1 flex items-center justify-center gap-1 text-xs font-medium bg-success hover:bg-success/90 text-success-foreground rounded px-3 py-1.5 transition-colors disabled:opacity-50"
                       onClick={() => handleAprovar(sol)} disabled={processingId === sol.id}>
                       <Check className="h-3 w-3" /> Aprovar
                     </button>
@@ -513,14 +514,28 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           <div className="flex-1" />
 
-          <NotificationBell profile={profile} />
+          <NotificationBell profile={profile} roles={roles} />
 
-          <div className="text-right hidden sm:block">
-            <p className="text-xs font-medium text-foreground leading-tight">{profile?.full_name || "Carregando..."}</p>
-            <p className="text-[10px] text-muted-foreground">
-              {roles.map((r) => ROLE_LABELS[r]).join(", ") || "—"}
-            </p>
-          </div>
+          {/* Avatar com menu de perfil/sair */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 rounded-full hover:bg-accent transition-colors p-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">{initials}</AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuLabel className="font-normal">
+                <p className="font-semibold text-sm truncate">{profile?.full_name || "Usuário"}</p>
+                <p className="text-xs text-muted-foreground truncate">{roles.map((r) => ROLE_LABELS[r]).join(", ") || "—"}</p>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate("/perfil")}><User className="mr-2 h-4 w-4" />Meu perfil</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive"><LogOut className="mr-2 h-4 w-4" />Sair</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
 
         {/* Page Content */}
