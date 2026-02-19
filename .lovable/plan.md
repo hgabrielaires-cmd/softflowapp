@@ -1,220 +1,181 @@
 
-# Conectar Modelo DOCX ao Fluxo de Geração de Contrato
 
-## Visão Geral
+# Evolucao do Modulo de Modelos de Contrato - Editor HTML Moderno
 
-O objetivo é criar um fluxo completo de geração de contrato em PDF a partir de um modelo DOCX cadastrado, substituindo os marcadores `#CAMPO#` com dados reais do cliente, pedido e plano. O PDF gerado será salvo no banco e poderá ser visualizado/baixado diretamente na tela de contratos.
+## Resumo
 
----
-
-## Análise do Estado Atual
-
-**O que já existe:**
-- Tabela `modelos_contrato` com upload de DOCX e bucket privado `modelos-contrato`
-- Edge Function `extrair-variaveis-docx` que lê o XML interno do DOCX
-- Botão "Gerar Contrato" na tela de contratos (atualmente mostra toast de "em desenvolvimento")
-- Tabela `contratos` com `status`, `pedido_id`, `cliente_id`, `plano_id`
-- Dados completos do pedido carregados na tela de contratos (valores, módulos adicionais, observações, formas de pagamento)
-- Contatos do cliente carregados (para obter o decisor)
-
-**O que precisa ser criado/adicionado:**
-- Colunas `pdf_url` e `status_geracao` na tabela `contratos`
-- Colunas de endereço (`cep`, `logradouro`, `numero`, `complemento`, `bairro`) na tabela `clientes` (UI já existe mas não salva)
-- Nova Edge Function `gerar-contrato-pdf` que faz a substituição de variáveis e geração de PDF
-- Um bucket de storage para PDFs gerados (`contratos-pdf`)
-- Lógica de busca do modelo correto (filial > global)
-- UI de visualização/download do PDF no modal de detalhes do contrato
+Substituir o sistema atual baseado em upload de DOCX por um editor HTML rico integrado, com painel de variaveis dinamicas, preview em tempo real e geracao de PDF a partir de HTML. Isso elimina os problemas recorrentes de parsing DOCX (tags XML vazadas, caracteres incompativeis, ZIP corrompido) e oferece controle total sobre o layout do contrato.
 
 ---
 
-## Arquitetura da Solução
+## 1. Banco de Dados
+
+### Nova tabela `document_templates`
+
+Substituira a tabela `modelos_contrato` existente (que sera mantida temporariamente para compatibilidade):
+
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| id | uuid (PK) | Identificador |
+| nome | text | Nome do modelo |
+| tipo | text | CONTRATO_BASE, ADITIVO, CANCELAMENTO |
+| filial_id | uuid (nullable, FK filiais) | Null = modelo global |
+| conteudo_html | text | HTML completo do contrato |
+| ativo | boolean (default true) | Status |
+| versao | integer (default 1) | Controle de versao |
+| created_at / updated_at | timestamptz | Timestamps |
+
+**RLS**: Mesmas politicas do `modelos_contrato` (admin gerencia, autenticados visualizam).
+
+**Constraint**: Trigger para garantir apenas 1 modelo ativo por tipo + filial_id.
+
+---
+
+## 2. Tela de Modelos de Contrato (Reescrita)
+
+### 2.1 Listagem (ja existente, sera adaptada)
+- Tabela com colunas: Nome, Tipo, Filial, Status, Versao, Acoes
+- Acoes: Editar, Duplicar, Preview, Excluir
+
+### 2.2 Editor HTML Rico (novo Dialog fullscreen)
+
+Ao clicar em "Novo Modelo" ou "Editar":
+
+**Layout em 2 paineis:**
 
 ```text
-[Usuário clica "Gerar Contrato"]
-        |
-        v
-[Frontend busca modelo ativo]
-  1. filial do pedido → modelos_contrato (ativo=true, tipo="Contrato Base", filial_id = filial do pedido)
-  2. Se não achar → busca global (filial_id IS NULL, ativo=true)
-  3. Se não achar → bloqueia com erro
-        |
-        v
-[Edge Function: gerar-contrato-pdf]
-  - Recebe: contrato_id
-  - Busca todos os dados: cliente, pedido, plano, módulos, contatos, filial_parametros
-  - Baixa o DOCX do storage
-  - Substitui todos os marcadores #CAMPO# no XML interno
-  - Converte DOCX → PDF usando biblioteca Deno
-  - Faz upload do PDF no bucket contratos-pdf
-  - Atualiza contratos SET pdf_url = ..., status_geracao = "Gerado"
-        |
-        v
-[Frontend]
-  - Recarrega contrato
-  - Exibe botão "Ver PDF" / "Baixar PDF"
++----------------------------------+-------------------+
+|                                  |  VARIAVEIS        |
+|   EDITOR HTML                    |  [Categorias]     |
+|   (textarea com destaque         |                   |
+|    ou contentEditable)           |  > Cliente        |
+|                                  |    {{cliente.nome}}|
+|   O usuario cola/edita o HTML    |    {{cliente.cnpj}}|
+|   do contrato com as clausulas   |    ...            |
+|                                  |                   |
+|                                  |  > Contrato       |
+|                                  |    {{contrato...}} |
+|                                  |                   |
+|                                  |  > Valores        |
+|                                  |    {{valores...}}  |
++----------------------------------+-------------------+
 ```
+
+**Editor**: Sera um `<textarea>` com syntax highlighting basico (monospace, altura grande) onde o usuario pode colar HTML completo do contrato incluindo clausulas, tabelas, estilos inline, e as variaveis com sintaxe `{{variavel}}`.
+
+**Painel lateral de variaveis**: Lista clicavel organizada por categoria. Ao clicar numa variavel, ela eh inserida na posicao do cursor no editor.
+
+### 2.3 Logo do Modelo
+- Opcao de usar a logo da filial vinculada (automatico via `{{logo.url}}`)
+- Ou fazer upload de logo especifica para o modelo
+- A variavel `{{logo.url}}` resolve para a logo do modelo, ou fallback para a logo da filial
 
 ---
 
-## Detalhamento Técnico
+## 3. Sistema de Variaveis Completo
 
-### 1. Migrações de Banco de Dados
+Todas as variaveis disponiveis, organizadas por categoria:
 
-**Tabela `clientes` — colunas de endereço faltantes:**
-```sql
-ALTER TABLE public.clientes
-  ADD COLUMN IF NOT EXISTS cep text NULL,
-  ADD COLUMN IF NOT EXISTS logradouro text NULL,
-  ADD COLUMN IF NOT EXISTS numero text NULL,
-  ADD COLUMN IF NOT EXISTS complemento text NULL,
-  ADD COLUMN IF NOT EXISTS bairro text NULL;
-```
+**Cliente:**
+- `{{cliente.razao_social}}`, `{{cliente.nome_fantasia}}`, `{{cliente.cnpj}}`, `{{cliente.inscricao_estadual}}`
+- `{{cliente.endereco_completo}}`, `{{cliente.cidade}}`, `{{cliente.uf}}`, `{{cliente.cep}}`
+- `{{cliente.telefone}}`, `{{cliente.email}}`
 
-**Tabela `contratos` — colunas para PDF e status de geração:**
-```sql
-ALTER TABLE public.contratos
-  ADD COLUMN IF NOT EXISTS pdf_url text NULL,
-  ADD COLUMN IF NOT EXISTS status_geracao text NULL DEFAULT 'Pendente';
-```
+**Contato:**
+- `{{contato.nome_decisor}}`, `{{contato.telefone_decisor}}`
 
-**Storage bucket para PDFs:**
-```sql
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('contratos-pdf', 'contratos-pdf', false)
-ON CONFLICT (id) DO NOTHING;
-```
+**Contrato:**
+- `{{contrato.numero}}`, `{{contrato.status}}`
 
-**RLS no bucket:**
-- Admin e financeiro podem ler/escrever
-- Service role da Edge Function usa `SUPABASE_SERVICE_ROLE_KEY` (já bypass de RLS)
+**Plano:**
+- `{{plano.nome}}`, `{{plano.valor_mensalidade}}`
 
-### 2. Edge Function: `gerar-contrato-pdf`
+**Modulos:**
+- `{{modulos.inclusos_lista}}` - lista formatada dos modulos do plano
+- `{{modulos.adicionais_lista}}` - lista de modulos adicionais contratados
+- `{{modulos.tabela_detalhada}}` - tabela HTML com detalhamento (so aparece se houver adicionais)
 
-A Edge Function será responsável por toda a lógica pesada de backend:
+**Valores:**
+- `{{valores.implantacao.original}}`, `{{valores.implantacao.desconto}}`, `{{valores.implantacao.final}}`
+- `{{valores.mensalidade.original}}`, `{{valores.mensalidade.desconto}}`, `{{valores.mensalidade.final}}`
+- `{{valores.total_geral}}`, `{{valores.total_extenso}}`
 
-**Entrada:** `{ contrato_id: string }`
+**Pagamento:**
+- `{{pagamento.implantacao.forma}}`, `{{pagamento.implantacao.parcelas}}`
+- `{{pagamento.mensalidade.forma}}`, `{{pagamento.mensalidade.parcelas}}`
+- `{{pagamento.observacoes}}`
 
-**Fluxo interno:**
-1. Buscar contrato com joins: `cliente`, `pedido`, `plano`
-2. Buscar contatos do cliente (decisor)
-3. Buscar parâmetros da filial (`filial_parametros`)
-4. Buscar modelo ativo: primeiro da filial do pedido, depois global
-5. Baixar o DOCX do bucket `modelos-contrato`
-6. Extrair o XML (`word/document.xml`) do ZIP do DOCX
-7. Substituir todos os marcadores `#CAMPO#` com os valores reais
-8. Recompor o DOCX modificado
-9. Converter para PDF usando `https://esm.sh/docx-pdf` ou equivalente disponível no Deno
-10. Fazer upload do PDF em `contratos-pdf/{contrato_id}.pdf`
-11. Gerar signed URL e salvar em `contratos.pdf_url`
-12. Atualizar `contratos.status_geracao = "Gerado"`
+**Sistema:**
+- `{{data.atual}}`, `{{data.atual_extenso}}`
+- `{{logo.url}}`
 
-**Mapeamento completo de variáveis:**
-
-| Marcador | Fonte |
-|---|---|
-| `#CLIENTE_RAZAO#` | `clientes.razao_social` |
-| `#CLIENTE_FANTASIA#` | `clientes.nome_fantasia` |
-| `#CLIENTE_CNPJ#` | `clientes.cnpj_cpf` |
-| `#CLIENTE_INSC_ESTADUAL#` | `clientes.inscricao_estadual` |
-| `#CLIENTE_ENDERECO_RUA#` | `clientes.logradouro` |
-| `#CLIENTE_NUMERO#` | `clientes.numero` |
-| `#CLIENTE_COMPLEMENTO#` | `clientes.complemento` |
-| `#CLIENTE_BAIRRO#` | `clientes.bairro` |
-| `#CLIENTE_CIDADE#` | `clientes.cidade` |
-| `#CLIENTE_UF#` | `clientes.uf` |
-| `#CLIENTE_CEP#` | `clientes.cep` |
-| `#CLIENTE_TELEFONE#` | `clientes.telefone` |
-| `#CLIENTE_EMAIL#` | `clientes.email` |
-| `#PLANO_SERVICOS_VALOR#` | Plano nome + valor mensalidade padrão |
-| `#MENSALIDADES_TOTAIS_COM_DESCRICAO_DO_PLANO#` | Plano descrição + módulos adicionais com valores |
-| `#VALOR_TOTAL_IMPLANTACAO_TREINAMENTO#` | `pedidos.valor_implantacao_final` formatado |
-| `#VALOR_TOTAL_SERVICO_UNICO_EXTENSO#` | `pedidos.valor_total` por extenso em português |
-| `#PROPOSTA_OBSERVACOES_NEGOCIACAO#` | `pedidos.observacoes` |
-| `#FORMA_DE_PAGAMENTO_MENSALIDADE#` | `pedidos.pagamento_mensalidade_forma` + parcelas |
-| `#VALOR_TOTAL_MENSALIDADE#` | `pedidos.valor_mensalidade_final` formatado |
-| `#PROPOSTA_OBSERVACOES_GERAIS#` | `pedidos.pagamento_mensalidade_observacao` |
-| `#NOME_DECISOR#` | Contato com `decisor = true` do cliente |
-
-> Nota sobre conversão de valor por extenso: implementaremos um conversor numérico → texto em português dentro da própria Edge Function (ex: R$ 5.000,00 → "cinco mil reais").
-
-### 3. Estratégia de Conversão DOCX → PDF
-
-A conversão de DOCX para PDF em ambiente Deno (sem acesso a LibreOffice/Word) é o ponto mais delicado. A abordagem será:
-
-**Opção adotada: Substituição no XML + geração de PDF via HTML intermediário**
-
-- Extrair o texto do `document.xml` do DOCX com marcadores substituídos
-- Construir um HTML estruturado com os dados do contrato
-- Usar a biblioteca `https://esm.sh/@sparticuz/chromium` (Puppeteer headless) — porém não está disponível em Deno Edge Functions
-
-**Abordagem mais viável para Deno Edge Functions:**
-- Usar `jsr:@pdf-lib/pdf-lib` para geração de PDF simples (mas perde formatação do DOCX)
-- **OU** entregar o DOCX preenchido para download (sem converter para PDF) e indicar ao usuário que o PDF pode ser gerado via LibreOffice/Word ao abrir o arquivo
-
-**Decisão de implementação:**
-Dado que conversão DOCX→PDF em Deno Edge Functions não tem solução nativa de alta fidelidade sem serviços externos, adotaremos a seguinte estratégia em duas etapas:
-
-**Etapa 1 (implementada agora):**
-- A Edge Function gera o **DOCX preenchido** (substitui variáveis, recompõe o ZIP)
-- Salva o DOCX preenchido no bucket `contratos-pdf` com extensão `.docx`
-- Atualiza o contrato com `pdf_url` (na verdade a URL do DOCX preenchido) e `status_geracao = "Gerado"`
-- O usuário baixa o DOCX já preenchido e converte localmente se necessário
-
-**Etapa 2 (futura):**
-- Integrar serviço externo de conversão (ex: CloudConvert API, LibreOffice na nuvem, ou serviço dedicado)
-
-### 4. Alterações no Frontend (`src/pages/Contratos.tsx`)
-
-**Novo estado:**
-```typescript
-const [gerando, setGerando] = useState(false);
-```
-
-**Função `handleGerarContrato`:**
-1. Busca modelo ativo na filial do pedido ou global
-2. Se não encontrar, exibe `toast.error` e para
-3. Chama Edge Function `gerar-contrato-pdf` com `{ contrato_id }`
-4. Ao retornar, atualiza o contrato na lista local com `pdf_url` e `status_geracao`
-5. Exibe `toast.success`
-
-**UI no modal de detalhes:**
-- Botão "Gerar Contrato" fica com `disabled` e spinner enquanto `gerando`
-- Após gerado, aparece botão "Baixar Contrato" com ícone de download
-- Badge indicando `status_geracao` (Pendente / Gerado)
-
-**Carregamento de dados adicionais no contrato:**
-- Adicionar ao select de `loadData()`: `clientes(nome_fantasia, filial_id, razao_social, cnpj_cpf, inscricao_estadual, cidade, uf, cep, logradouro, numero, complemento, bairro, telefone, email)`
-- Adicionar `pdf_url, status_geracao` ao select de contratos
-
-### 5. Ajustes em `Clientes.tsx` e `Pedidos.tsx`
-
-- Garantir que os campos de endereço (`cep`, `logradouro`, `numero`, `complemento`, `bairro`) sejam incluídos no `payload` de salvamento (a migração adiciona as colunas, e o form já tem os campos na UI)
+**Filial:**
+- `{{filial.nome}}`
 
 ---
 
-## Arquivos que serão modificados
+## 4. Preview do Contrato
 
-1. **`supabase/migrations/`** — Nova migração: adicionar colunas em `clientes` (endereço) e `contratos` (pdf_url, status_geracao), criar bucket `contratos-pdf`
-2. **`supabase/functions/gerar-contrato-pdf/index.ts`** — Nova Edge Function
-3. **`src/pages/Contratos.tsx`** — Lógica de geração + UI de download/visualização
-4. **`src/pages/Clientes.tsx`** — Incluir novos campos de endereço no payload de save
-5. **`src/integrations/supabase/types.ts`** — Não editar manualmente (auto-gerado)
+Botao "Preview" na tela de modelos e na tela de contratos:
 
----
-
-## Sequência de Execução
-
-1. Rodar migração de banco (colunas de endereço em `clientes`, `pdf_url`/`status_geracao` em `contratos`, bucket `contratos-pdf`)
-2. Criar e deployar Edge Function `gerar-contrato-pdf`
-3. Atualizar `Clientes.tsx` para persistir endereço completo
-4. Atualizar `Contratos.tsx` com nova lógica de geração + UI de download
+- Abre um Dialog com iframe renderizando o HTML com variaveis substituidas por dados de exemplo (no editor) ou dados reais do contrato (na tela de contratos)
+- Permite validar o layout antes de gerar o PDF final
 
 ---
 
-## Observações Importantes
+## 5. Geracao de PDF (Edge Function Refatorada)
 
-- O bucket `contratos-pdf` será privado; o acesso ao arquivo será via signed URL com validade de 1 hora (gerada no momento do download)
-- O arquivo gerado será um **DOCX preenchido** (não PDF nativo), renomeado como `.docx` no storage; a conversão para PDF real será uma evolução futura
-- A variável `#VALOR_TOTAL_SERVICO_UNICO_EXTENSO#` será convertida para texto por extenso usando função interna na Edge Function
-- Se o marcador não corresponder a nenhum dado disponível, será substituído por string vazia (não deixará o marcador `#CAMPO#` visível no documento final)
-- Integração ZapSign não será feita nesta etapa, conforme solicitado
+A Edge Function `gerar-contrato-pdf` sera simplificada drasticamente:
+
+**Fluxo novo:**
+1. Buscar o `document_template` ativo (filial > global)
+2. Buscar dados do contrato/pedido/cliente (mesmas queries atuais)
+3. Substituir `{{variaveis}}` no HTML por valores reais
+4. Converter HTML para PDF usando a biblioteca `jspdf` + `html2canvas` OU enviar para um servico de renderizacao
+5. Upload do PDF ao bucket `contratos-pdf`
+6. Atualizar status do contrato
+
+**Abordagem de conversao HTML->PDF**: Usar a API `Deno` com `puppeteer` nao eh viavel em Edge Functions. A alternativa sera:
+- Renderizar o HTML completo como string
+- Usar a biblioteca `pdf-lib` para criar o PDF parseando o HTML renderizado com um parser leve
+- OU usar um servico externo gratuito/nativo para a conversao
+
+**Decisao tecnica**: Manter `pdf-lib` mas alimentar com dados parseados do HTML em vez de DOCX. O HTML sera parseado para extrair blocos de texto, tabelas e imagens, e o PDF sera construido programaticamente com melhor controle de layout.
+
+---
+
+## 6. Regras de Negocio
+
+- Apenas 1 modelo ativo por tipo + filial (enforced por trigger no banco)
+- Se nao houver modelo ativo, botao "Gerar Contrato" fica desabilitado com tooltip explicativo
+- Bloco `{{modulos.tabela_detalhada}}` so renderiza se houver modulos adicionais
+- Versionamento automatico: ao editar um modelo, a versao incrementa
+
+---
+
+## 7. Arquivos que serao criados/modificados
+
+| Arquivo | Acao |
+|---------|------|
+| `supabase/migrations/...` | Criar tabela `document_templates` + trigger unicidade + RLS |
+| `src/pages/ModelosContrato.tsx` | Reescrever com editor HTML + painel de variaveis |
+| `src/components/ContractVariablesPanel.tsx` | **Novo** - Painel lateral de variaveis |
+| `src/components/ContractPreview.tsx` | **Novo** - Componente de preview HTML |
+| `src/lib/contract-variables.ts` | **Novo** - Definicao de variaveis e funcao de substituicao |
+| `supabase/functions/gerar-contrato-pdf/index.ts` | Refatorar para usar HTML em vez de DOCX |
+| `src/pages/Contratos.tsx` | Ajustar chamada de geracao + adicionar botao Preview |
+| `src/integrations/supabase/types.ts` | Atualizado automaticamente |
+| `src/lib/supabase-types.ts` | Adicionar interface DocumentTemplate |
+
+---
+
+## 8. Sequencia de Implementacao
+
+1. Criar tabela `document_templates` no banco (migracao)
+2. Criar `contract-variables.ts` com definicoes e funcao de substituicao
+3. Criar `ContractVariablesPanel.tsx` (painel lateral)
+4. Criar `ContractPreview.tsx` (preview com iframe)
+5. Reescrever `ModelosContrato.tsx` com editor + painel + preview
+6. Refatorar Edge Function `gerar-contrato-pdf` para HTML
+7. Ajustar `Contratos.tsx` para usar novo sistema
+
