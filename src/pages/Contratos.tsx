@@ -63,6 +63,8 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
 interface ModuloAdicionadoItem {
   modulo_id: string;
@@ -259,7 +261,6 @@ export default function Contratos() {
 
   // ── Gerar Contrato ─────────────────────────────────────────────────────────
   async function handleGerarContrato(contrato: Contrato) {
-    // Abrir popup imediatamente no estado "gerando"
     setGerarContratoAlvo(contrato);
     setGerarStatus("gerando");
     setGerarSignedUrl(null);
@@ -267,20 +268,85 @@ export default function Contratos() {
     setGerando(true);
 
     try {
+      // 1. Buscar HTML renderizado do backend
       const { data, error } = await supabase.functions.invoke("gerar-contrato-pdf", {
-        body: { contrato_id: contrato.id },
+        body: { contrato_id: contrato.id, action: "render" },
       });
 
-      if (error || data?.error) {
+      if (error || data?.error || !data?.html) {
+        toast.error(data?.error || "Erro ao buscar modelo de contrato");
         setGerarStatus("erro");
         return;
       }
 
-      // Atualizar contrato na lista local
+      // 2. Renderizar HTML em container oculto e capturar com html2canvas
+      const container = document.createElement("div");
+      container.style.cssText = "position:fixed;left:-9999px;top:0;width:800px;background:white;";
+      container.innerHTML = data.html;
+      document.body.appendChild(container);
+
+      // Aguardar imagens carregarem
+      const images = container.querySelectorAll("img");
+      await Promise.all(
+        Array.from(images).map(
+          (img) =>
+            new Promise<void>((resolve) => {
+              if (img.complete) return resolve();
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+            })
+        )
+      );
+
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        width: 800,
+        windowWidth: 800,
+      });
+
+      document.body.removeChild(container);
+
+      // 3. Gerar PDF a partir do canvas
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pdf = new jsPDF("p", "mm", "a4");
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = -(imgHeight - heightLeft);
+        pdf.addPage();
+        pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      // 4. Converter PDF para base64 e enviar ao backend para upload
+      const pdfBase64 = pdf.output("datauristring").split(",")[1];
+
+      const { data: uploadData, error: uploadError } = await supabase.functions.invoke(
+        "gerar-contrato-pdf",
+        { body: { contrato_id: contrato.id, action: "upload", pdf_base64: pdfBase64 } }
+      );
+
+      if (uploadError || uploadData?.error) {
+        toast.error("Erro ao salvar PDF");
+        setGerarStatus("erro");
+        return;
+      }
+
+      // 5. Atualizar estado local
       const updatedContrato = {
         ...contrato,
         status_geracao: "Gerado",
-        pdf_url: data.storage_path,
+        pdf_url: uploadData.storage_path,
       };
       setContratos((prev) =>
         prev.map((c) => (c.id === contrato.id ? updatedContrato : c))
@@ -289,10 +355,11 @@ export default function Contratos() {
         setSelected(updatedContrato);
       }
 
-      setGerarSignedUrl(data.signed_url || null);
+      setGerarSignedUrl(uploadData.signed_url || null);
       setGerarContratoAlvo(updatedContrato);
       setGerarStatus("concluido");
-    } catch {
+    } catch (err) {
+      console.error("Erro ao gerar contrato:", err);
       setGerarStatus("erro");
     } finally {
       setGerando(false);
