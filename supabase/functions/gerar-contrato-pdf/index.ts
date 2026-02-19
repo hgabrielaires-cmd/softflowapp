@@ -254,20 +254,24 @@ async function extrairTextoDOCX(docxBytes: Uint8Array): Promise<string[]> {
 
     const xml = new TextDecoder("utf-8").decode(docEntry.data);
 
-    // Extrair parágrafos <w:p> e obter texto concatenado dos <w:t>
+    // Extrair parágrafos <w:p> e obter texto limpo
     const paragrafos: string[] = [];
     const paraRegex = /<w:p[ >][\s\S]*?<\/w:p>/g;
     let paraMatch;
     while ((paraMatch = paraRegex.exec(xml)) !== null) {
       const paraXml = paraMatch[0];
+      // Check for tab elements to add spacing
+      const hasTab = /<w:tab\s*\/>/.test(paraXml);
       const textos: string[] = [];
       const tRegex = /<w:t(?:[^>]*)>([\s\S]*?)<\/w:t>/g;
       let tMatch;
       while ((tMatch = tRegex.exec(paraXml)) !== null) {
-        textos.push(tMatch[1]);
+        // Clean any XML tags that may have leaked into text content
+        const cleanText = tMatch[1].replace(/<[^>]+>/g, "");
+        textos.push(cleanText);
       }
-      const linha = textos.join("").trim();
-      paragrafos.push(linha); // manter vazios para preservar espaçamento
+      const linha = textos.join(hasTab ? "    " : "").replace(/\s+/g, " ").trim();
+      paragrafos.push(linha);
     }
     return paragrafos;
   } catch (e) {
