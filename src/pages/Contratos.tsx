@@ -279,24 +279,11 @@ export default function Contratos() {
         return;
       }
 
-      // 2. Renderizar HTML em container oculto
-      const A4_WIDTH_PX = 794; // ~210mm at 96dpi
-      const A4_HEIGHT_PX = 1123; // ~297mm at 96dpi
+      // 2. Renderizar HTML em container oculto e capturar com html2canvas
+      const A4_WIDTH_PX = 794;
       const container = document.createElement("div");
       container.style.cssText = `position:fixed;left:-9999px;top:0;width:${A4_WIDTH_PX}px;background:white;`;
-      // Inject CSS to help avoid bad breaks
-      const styleTag = document.createElement("style");
-      styleTag.textContent = `
-        * { box-sizing: border-box; }
-        h1,h2,h3,h4,h5,h6 { page-break-after: avoid; break-after: avoid; }
-        tr, p, li, .no-break { page-break-inside: avoid; break-inside: avoid; }
-        table { page-break-inside: auto; break-inside: auto; }
-        img { page-break-inside: avoid; break-inside: avoid; max-width: 100%; }
-      `;
-      container.appendChild(styleTag);
-      const contentDiv = document.createElement("div");
-      contentDiv.innerHTML = data.html;
-      container.appendChild(contentDiv);
+      container.innerHTML = data.html;
       document.body.appendChild(container);
 
       // Aguardar imagens carregarem
@@ -312,61 +299,44 @@ export default function Contratos() {
         )
       );
 
-      // 3. Dividir conteúdo em páginas respeitando elementos
-      const pdf = new jsPDF("p", "mm", "a4");
-      const imgWidth = 210;
-      const pageHeight = 297;
       const scale = 2;
+      const canvas = await html2canvas(container, {
+        scale,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        width: A4_WIDTH_PX,
+        windowWidth: A4_WIDTH_PX,
+      });
 
-      // Collect all top-level block children to paginate
-      const allChildren = Array.from(contentDiv.children) as HTMLElement[];
-      let currentPageDiv = document.createElement("div");
-      currentPageDiv.style.cssText = `width:${A4_WIDTH_PX}px;background:white;padding:0;margin:0;`;
-      const pages: HTMLElement[] = [];
-      let currentHeight = 0;
+      document.body.removeChild(container);
 
-      for (const child of allChildren) {
-        const childHeight = child.getBoundingClientRect().height;
-        // If adding this child exceeds the page, start a new page
-        if (currentHeight + childHeight > A4_HEIGHT_PX && currentPageDiv.children.length > 0) {
-          pages.push(currentPageDiv);
-          currentPageDiv = document.createElement("div");
-          currentPageDiv.style.cssText = `width:${A4_WIDTH_PX}px;background:white;padding:0;margin:0;`;
-          currentHeight = 0;
-        }
-        // If a single element is taller than a page, just add it (will overflow but won't break mid-element)
-        currentPageDiv.appendChild(child.cloneNode(true));
-        currentHeight += childHeight;
-      }
-      if (currentPageDiv.children.length > 0) {
-        pages.push(currentPageDiv);
-      }
+      // 3. Gerar PDF fatiando o canvas em páginas A4
+      const imgWidthMM = 210;
+      const pageHeightMM = 297;
+      const pxPerMM = canvas.width / imgWidthMM;
+      const pageHeightPx = Math.floor(pageHeightMM * pxPerMM);
 
-      // If no pages were created, fall back to single capture
-      if (pages.length === 0) {
-        pages.push(contentDiv);
-      }
+      const pdf = new jsPDF("p", "mm", "a4");
+      const totalPages = Math.ceil(canvas.height / pageHeightPx);
 
-      // Render each page as a separate canvas
-      for (let i = 0; i < pages.length; i++) {
-        const pageDiv = pages[i];
-        pageDiv.style.minHeight = `${A4_HEIGHT_PX}px`;
-        container.appendChild(pageDiv);
-
-        const canvas = await html2canvas(pageDiv, {
-          scale,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: "#ffffff",
-          width: A4_WIDTH_PX,
-          windowWidth: A4_WIDTH_PX,
-        });
-
-        container.removeChild(pageDiv);
-
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      for (let i = 0; i < totalPages; i++) {
         if (i > 0) pdf.addPage();
-        pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgWidth, Math.min(imgHeight, pageHeight));
+
+        const sourceY = i * pageHeightPx;
+        const sliceHeight = Math.min(pageHeightPx, canvas.height - sourceY);
+
+        // Create a canvas slice for this page
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sliceHeight;
+        const ctx = pageCanvas.getContext("2d")!;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        ctx.drawImage(canvas, 0, sourceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+
+        const sliceHeightMM = (sliceHeight / pxPerMM);
+        pdf.addImage(pageCanvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgWidthMM, sliceHeightMM);
       }
 
       // 4. Converter PDF para base64 e enviar ao backend para upload
