@@ -284,19 +284,21 @@ export default function Contratos() {
       const A4_HEIGHT_PX = 1123;
       const MARGIN_BOTTOM_PX = 40;
       const container = document.createElement("div");
-      container.style.cssText = `position:fixed;left:-9999px;top:0;width:${A4_WIDTH_PX}px;background:white;`;
+      container.style.cssText = `position:fixed;left:-9999px;top:0;width:${A4_WIDTH_PX}px;background:white;padding:76px 56px;box-sizing:border-box;font-family:Arial,sans-serif;font-size:12pt;line-height:1.5;color:#000;`;
       container.innerHTML = data.html;
       document.body.appendChild(container);
 
-      // Aguardar imagens carregarem
+      // Aguardar imagens carregarem (com timeout de 5s e crossOrigin)
       const images = container.querySelectorAll("img");
+      images.forEach((img) => { img.crossOrigin = "anonymous"; });
       await Promise.all(
         Array.from(images).map(
           (img) =>
             new Promise<void>((resolve) => {
               if (img.complete) return resolve();
-              img.onload = () => resolve();
-              img.onerror = () => resolve();
+              const timeout = setTimeout(() => resolve(), 5000);
+              img.onload = () => { clearTimeout(timeout); resolve(); };
+              img.onerror = () => { clearTimeout(timeout); resolve(); };
             })
         )
       );
@@ -317,22 +319,30 @@ export default function Contratos() {
       const totalHeight = container.scrollHeight;
       const containerRect = container.getBoundingClientRect();
 
-      const blockSelectors = "p, h1, h2, h3, h4, h5, h6, table, div, section, hr, img, ul, ol, blockquote";
+      const blockSelectors = "p, h1, h2, h3, h4, h5, h6, table, tr, section, hr, img, ul, ol, blockquote, li";
       const blocks = container.querySelectorAll(blockSelectors);
 
-      // Coletar tops e bottoms de elementos
+      // Coletar tops e bottoms de elementos significativos (altura > 20px)
       const edges: { top: number; bottom: number }[] = [];
       blocks.forEach((el) => {
         const rect = el.getBoundingClientRect();
+        const elHeight = rect.height;
+        if (elHeight < 20) return; // Ignorar elementos muito pequenos
         const top = Math.round(rect.top - containerRect.top);
         const bottom = Math.round(rect.bottom - containerRect.top);
         if (top > 0 && top < totalHeight) {
           edges.push({ top, bottom });
         }
       });
-      edges.sort((a, b) => a.top - b.top);
+      // Remover duplicatas e ordenar
+      const uniqueTops = Array.from(new Set(edges.map((e) => e.top))).sort((a, b) => a - b);
+      const edgeMap = new Map<number, number>();
+      edges.forEach((e) => {
+        const existing = edgeMap.get(e.top);
+        if (!existing || e.bottom > existing) edgeMap.set(e.top, e.bottom);
+      });
 
-      // Construir breakpoints
+      // Construir breakpoints com look-ahead
       const breakPoints: number[] = [0];
 
       while (breakPoints[breakPoints.length - 1] < totalHeight) {
@@ -344,20 +354,24 @@ export default function Contratos() {
           break;
         }
 
-        // Procurar o melhor corte: último "top" de elemento que não corte nada
-        let bestBreak = maxEnd;
-        for (let i = edges.length - 1; i >= 0; i--) {
-          const edge = edges[i];
-          if (edge.top <= maxEnd && edge.top > pageStart + 100) {
-            // Se o elemento cruza o limite da página, cortar ANTES dele
-            if (edge.bottom > maxEnd) {
-              bestBreak = edge.top;
-              break;
-            }
+        // Encontrar o último "top" de elemento que cabe inteiro na página
+        let bestBreak = -1;
+        for (let i = uniqueTops.length - 1; i >= 0; i--) {
+          const t = uniqueTops[i];
+          if (t > maxEnd) continue;
+          if (t <= pageStart + 100) break; // Margem de segurança no topo
+          const bottom = edgeMap.get(t) || t;
+          // Se o elemento cruza o limite, cortar ANTES dele
+          if (bottom > maxEnd) {
+            bestBreak = t;
+            break;
           }
+          // Elemento cabe inteiro - cortar logo APÓS ele
+          bestBreak = bottom;
+          break;
         }
 
-        // Se não avançou o suficiente, forçar avanço
+        // Se não encontrou um bom corte, forçar avanço
         if (bestBreak <= pageStart + 200) {
           bestBreak = maxEnd;
         }
@@ -369,7 +383,8 @@ export default function Contratos() {
 
       // 5. Fatiar o canvas único e montar PDF
       const pdf = new jsPDF("p", "mm", "a4");
-      const imgWidthMM = 210;
+      const marginMM = 10;
+      const imgWidthMM = 210 - marginMM * 2; // 190mm úteis
       const pageHeightMM = 297;
       const canvasWidth = fullCanvas.width;
 
@@ -388,15 +403,16 @@ export default function Contratos() {
         if (ctx) {
           ctx.drawImage(
             fullCanvas,
-            0, Math.round(sliceTop * scale),           // source x, y
-            canvasWidth, Math.round(sliceHeight * scale), // source w, h
-            0, 0,                                         // dest x, y
-            canvasWidth, Math.round(sliceHeight * scale)  // dest w, h
+            0, Math.round(sliceTop * scale),
+            canvasWidth, Math.round(sliceHeight * scale),
+            0, 0,
+            canvasWidth, Math.round(sliceHeight * scale)
           );
         }
 
         const sliceHeightMM = (sliceHeight / A4_WIDTH_PX) * imgWidthMM;
-        pdf.addImage(sliceCanvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgWidthMM, Math.min(sliceHeightMM, pageHeightMM));
+        const adjustedHeightMM = Math.min(sliceHeightMM, pageHeightMM - marginMM * 2);
+        pdf.addImage(sliceCanvas.toDataURL("image/jpeg", 0.95), "JPEG", marginMM, marginMM, imgWidthMM, adjustedHeightMM);
       }
 
       // 4. Converter PDF para base64 e enviar ao backend para upload
