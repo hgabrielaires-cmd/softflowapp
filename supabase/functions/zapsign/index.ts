@@ -141,9 +141,12 @@ Deno.serve(async (req) => {
 
       console.log("Enviando para ZapSign:", JSON.stringify({ name: docName, signers_count: signers.length }));
 
-      const zapsignResponse = await fetch(`${ZAPSIGN_API}/docs/?api_token=${ZAPSIGN_API_TOKEN}`, {
+      const zapsignResponse = await fetch(`${ZAPSIGN_API}/docs/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${ZAPSIGN_API_TOKEN}`,
+        },
         body: JSON.stringify(zapsignPayload),
       });
 
@@ -223,8 +226,11 @@ Deno.serve(async (req) => {
       }
 
       const zapsignResponse = await fetch(
-        `${ZAPSIGN_API}/docs/${token}/?api_token=${ZAPSIGN_API_TOKEN}`,
-        { method: "GET" }
+        `${ZAPSIGN_API}/docs/${token}/`,
+        {
+          method: "GET",
+          headers: { "Authorization": `Bearer ${ZAPSIGN_API_TOKEN}` },
+        }
       );
 
       if (!zapsignResponse.ok) {
