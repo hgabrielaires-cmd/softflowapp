@@ -2,9 +2,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
-import { Filial, DocumentTemplate } from "@/lib/supabase-types";
+import { Filial, DocumentTemplate, TemplateClause, ContractClause } from "@/lib/supabase-types";
 import { ContractVariablesPanel } from "@/components/ContractVariablesPanel";
 import { ContractPreview } from "@/components/ContractPreview";
+import { ClauseEditor } from "@/components/ClauseEditor";
+import { ClauseLibrary } from "@/components/ClauseLibrary";
 import { getExampleData } from "@/lib/contract-variables";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,57 +14,52 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   FileText, Plus, Loader2, MoreHorizontal,
-  Pencil, Trash2, Building2, CheckCircle, XCircle, Eye, Copy, Upload, Image,
+  Pencil, Trash2, Building2, CheckCircle, XCircle, Eye, Copy, Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const TIPOS: { value: DocumentTemplate["tipo"]; label: string }[] = [
   { value: "CONTRATO_BASE", label: "Contrato Base" },
   { value: "ADITIVO", label: "Termo Aditivo" },
   { value: "CANCELAMENTO", label: "Cancelamento" },
 ];
+
+// Helper to build final HTML from clauses
+function buildHtmlFromClauses(clauses: TemplateClause[]): string {
+  const activeClauses = clauses
+    .filter((c) => c.ativo)
+    .sort((a, b) => a.ordem - b.ordem);
+
+  if (activeClauses.length === 0) return "";
+
+  return activeClauses
+    .map((c, i) => {
+      const titulo = `<p style="margin-top:20px;margin-bottom:8px;"><strong>CLÁUSULA ${i + 1}ª - ${c.titulo.toUpperCase()}</strong></p>`;
+      return titulo + "\n" + c.conteudo_html;
+    })
+    .join("\n\n");
+}
 
 export default function ModelosContrato() {
   const { isAdmin } = useAuth();
@@ -78,6 +75,11 @@ export default function ModelosContrato() {
   const [editingModelo, setEditingModelo] = useState<DocumentTemplate | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
+  const [libraryOpen, setLibraryOpen] = useState(false);
+
+  // Clause state
+  const [clauses, setClauses] = useState<TemplateClause[]>([]);
+  const [loadingClauses, setLoadingClauses] = useState(false);
 
   const [form, setForm] = useState({
     nome: "",
@@ -86,6 +88,7 @@ export default function ModelosContrato() {
     ativo: true,
     conteudo_html: "",
     logo_url: "" as string | null,
+    usa_clausulas: true,
   });
 
   async function loadData() {
@@ -105,9 +108,22 @@ export default function ModelosContrato() {
 
   useEffect(() => { loadData(); }, []);
 
+  async function loadTemplateClauses(templateId: string) {
+    setLoadingClauses(true);
+    const { data, error } = await supabase
+      .from("template_clauses")
+      .select("*")
+      .eq("template_id", templateId)
+      .order("ordem");
+    if (error) toast.error("Erro ao carregar cláusulas: " + error.message);
+    setClauses((data || []) as TemplateClause[]);
+    setLoadingClauses(false);
+  }
+
   function openNew() {
     setEditingModelo(null);
-    setForm({ nome: "", filial_id: "todas", tipo: "CONTRATO_BASE", ativo: true, conteudo_html: "", logo_url: "" });
+    setForm({ nome: "", filial_id: "todas", tipo: "CONTRATO_BASE", ativo: true, conteudo_html: "", logo_url: "", usa_clausulas: true });
+    setClauses([]);
     setOpenEditor(true);
   }
 
@@ -120,7 +136,13 @@ export default function ModelosContrato() {
       ativo: modelo.ativo,
       conteudo_html: modelo.conteudo_html,
       logo_url: modelo.logo_url ?? "",
+      usa_clausulas: modelo.usa_clausulas,
     });
+    if (modelo.usa_clausulas) {
+      loadTemplateClauses(modelo.id);
+    } else {
+      setClauses([]);
+    }
     setOpenEditor(true);
   }
 
@@ -133,7 +155,14 @@ export default function ModelosContrato() {
       ativo: false,
       conteudo_html: modelo.conteudo_html,
       logo_url: modelo.logo_url ?? "",
+      usa_clausulas: modelo.usa_clausulas,
     });
+    if (modelo.usa_clausulas) {
+      // Load clauses to duplicate them
+      loadTemplateClauses(modelo.id);
+    } else {
+      setClauses([]);
+    }
     setOpenEditor(true);
   }
 
@@ -156,6 +185,7 @@ export default function ModelosContrato() {
     toast.success("Logo enviada!");
   }
 
+  // Legacy HTML editor - insert variable
   const handleInsertVariable = useCallback((variable: string) => {
     const textarea = editorRef.current;
     if (!textarea) {
@@ -167,7 +197,6 @@ export default function ModelosContrato() {
     const text = form.conteudo_html;
     const newText = text.substring(0, start) + variable + text.substring(end);
     setForm((f) => ({ ...f, conteudo_html: newText }));
-    // Reposicionar cursor após a variável inserida
     requestAnimationFrame(() => {
       textarea.focus();
       const newPos = start + variable.length;
@@ -175,32 +204,130 @@ export default function ModelosContrato() {
     });
   }, [form.conteudo_html]);
 
+  // Clause handlers
+  function handleClauseChange(id: string, field: keyof TemplateClause, value: string) {
+    setClauses((prev) => prev.map((c) => c.id === id ? { ...c, [field]: value } : c));
+  }
+
+  function handleClauseMoveUp(id: string) {
+    setClauses((prev) => {
+      const idx = prev.findIndex((c) => c.id === id);
+      if (idx <= 0) return prev;
+      const next = [...prev];
+      [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+      return next.map((c, i) => ({ ...c, ordem: i }));
+    });
+  }
+
+  function handleClauseMoveDown(id: string) {
+    setClauses((prev) => {
+      const idx = prev.findIndex((c) => c.id === id);
+      if (idx < 0 || idx >= prev.length - 1) return prev;
+      const next = [...prev];
+      [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+      return next.map((c, i) => ({ ...c, ordem: i }));
+    });
+  }
+
+  function handleClauseRemove(id: string) {
+    setClauses((prev) => prev.filter((c) => c.id !== id).map((c, i) => ({ ...c, ordem: i })));
+  }
+
+  function handleAddNewClause() {
+    const newClause: TemplateClause = {
+      id: crypto.randomUUID(),
+      template_id: editingModelo?.id || "",
+      clause_id: null,
+      titulo: "Nova Cláusula",
+      conteudo_html: "",
+      ordem: clauses.length,
+      ativo: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setClauses((prev) => [...prev, newClause]);
+  }
+
+  function handleSelectFromLibrary(clause: ContractClause) {
+    const newClause: TemplateClause = {
+      id: crypto.randomUUID(),
+      template_id: editingModelo?.id || "",
+      clause_id: clause.id,
+      titulo: clause.titulo,
+      conteudo_html: clause.conteudo_html,
+      ordem: clauses.length,
+      ativo: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setClauses((prev) => [...prev, newClause]);
+    toast.success(`Cláusula "${clause.titulo}" adicionada`);
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
-    if (!form.conteudo_html.trim()) { toast.error("O conteúdo HTML do modelo é obrigatório"); return; }
+
+    if (form.usa_clausulas) {
+      if (clauses.length === 0) { toast.error("Adicione pelo menos uma cláusula"); return; }
+    } else {
+      if (!form.conteudo_html.trim()) { toast.error("O conteúdo HTML do modelo é obrigatório"); return; }
+    }
 
     setSaving(true);
+
+    // Build HTML from clauses for cache/compatibility
+    const conteudoHtml = form.usa_clausulas
+      ? buildHtmlFromClauses(clauses)
+      : form.conteudo_html;
 
     const payload = {
       nome: form.nome.trim(),
       filial_id: form.filial_id === "todas" ? null : form.filial_id,
       tipo: form.tipo,
       ativo: form.ativo,
-      conteudo_html: form.conteudo_html,
+      conteudo_html: conteudoHtml,
       logo_url: form.logo_url || null,
+      usa_clausulas: form.usa_clausulas,
     };
+
+    let templateId = editingModelo?.id;
 
     if (editingModelo) {
       const { error } = await supabase.from("document_templates").update(payload).eq("id", editingModelo.id);
       if (error) { toast.error("Erro ao atualizar: " + error.message); setSaving(false); return; }
-      toast.success("Modelo atualizado!");
     } else {
-      const { error } = await supabase.from("document_templates").insert(payload);
+      const { data, error } = await supabase.from("document_templates").insert(payload).select("id").single();
       if (error) { toast.error("Erro ao criar: " + error.message); setSaving(false); return; }
-      toast.success("Modelo criado!");
+      templateId = data.id;
     }
 
+    // Save clauses if using clause system
+    if (form.usa_clausulas && templateId) {
+      // Delete existing clauses for this template
+      await supabase.from("template_clauses").delete().eq("template_id", templateId);
+
+      // Insert all clauses
+      if (clauses.length > 0) {
+        const clausePayloads = clauses.map((c, i) => ({
+          template_id: templateId!,
+          clause_id: c.clause_id || null,
+          titulo: c.titulo,
+          conteudo_html: c.conteudo_html,
+          ordem: i,
+          ativo: c.ativo,
+        }));
+
+        const { error: clauseError } = await supabase.from("template_clauses").insert(clausePayloads);
+        if (clauseError) {
+          toast.error("Erro ao salvar cláusulas: " + clauseError.message);
+          setSaving(false);
+          return;
+        }
+      }
+    }
+
+    toast.success(editingModelo ? "Modelo atualizado!" : "Modelo criado!");
     setSaving(false);
     setOpenEditor(false);
     loadData();
@@ -236,6 +363,11 @@ export default function ModelosContrato() {
     setPreviewOpen(true);
   }
 
+  function handlePreviewFromEditor() {
+    const html = form.usa_clausulas ? buildHtmlFromClauses(clauses) : form.conteudo_html;
+    handlePreview(html, form.logo_url);
+  }
+
   function getTipoLabel(tipo: string) {
     return TIPOS.find((t) => t.value === tipo)?.label || tipo;
   }
@@ -261,7 +393,7 @@ export default function ModelosContrato() {
               Modelos de Contrato
             </h1>
             <p className="text-sm text-muted-foreground">
-              Gerencie os modelos HTML para geração de contratos
+              Gerencie os modelos para geração de contratos
             </p>
           </div>
           <Button className="gap-2" onClick={openNew}>
@@ -277,6 +409,7 @@ export default function ModelosContrato() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Filial</TableHead>
+                <TableHead>Modo</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Versão</TableHead>
                 <TableHead>Criado em</TableHead>
@@ -286,13 +419,13 @@ export default function ModelosContrato() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12">
+                  <TableCell colSpan={8} className="text-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : modelos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-16 text-muted-foreground">
                     <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     Nenhum modelo cadastrado ainda
                   </TableCell>
@@ -311,6 +444,11 @@ export default function ModelosContrato() {
                     ) : (
                       <span className="text-xs text-muted-foreground">Global</span>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="text-xs">
+                      {m.usa_clausulas ? "Cláusulas" : "HTML"}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <button
@@ -379,7 +517,7 @@ export default function ModelosContrato() {
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSave} className="flex flex-col flex-1 overflow-hidden">
-            {/* Top bar com campos */}
+            {/* Top bar */}
             <div className="px-6 py-3 border-b border-border shrink-0 flex flex-wrap gap-3 items-end">
               <div className="space-y-1 min-w-[200px] flex-1">
                 <Label className="text-xs">Nome *</Label>
@@ -394,9 +532,7 @@ export default function ModelosContrato() {
               <div className="space-y-1 w-[180px]">
                 <Label className="text-xs">Tipo *</Label>
                 <Select value={form.tipo} onValueChange={(v) => setForm((f) => ({ ...f, tipo: v as DocumentTemplate["tipo"] }))}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {TIPOS.map((t) => (
                       <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
@@ -407,9 +543,7 @@ export default function ModelosContrato() {
               <div className="space-y-1 w-[200px]">
                 <Label className="text-xs">Filial</Label>
                 <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todas">Global (todas)</SelectItem>
                     {filiais.map((f) => (
@@ -417,7 +551,7 @@ export default function ModelosContrato() {
                     ))}
                   </SelectContent>
                 </Select>
-               </div>
+              </div>
               {/* Logo upload */}
               <div className="space-y-1 min-w-[180px]">
                 <Label className="text-xs">Logo do Modelo</Label>
@@ -451,40 +585,108 @@ export default function ModelosContrato() {
               </div>
             </div>
 
-            {/* Editor + Painel de variáveis */}
+            {/* Editor area */}
             <div className="flex flex-1 overflow-hidden">
-              {/* Editor HTML */}
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="px-6 py-2 flex items-center justify-between bg-muted/30 border-b border-border shrink-0">
-                  <span className="text-xs font-medium text-muted-foreground">Editor HTML</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs gap-1"
-                    onClick={() => handlePreview(form.conteudo_html, form.logo_url)}
-                  >
-                    <Eye className="h-3 w-3" /> Preview
-                  </Button>
+              {form.usa_clausulas ? (
+                /* ── Clause-based editor ── */
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="px-6 py-2 flex items-center justify-between bg-muted/30 border-b border-border shrink-0">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Cláusulas do Contrato ({clauses.length})
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button" variant="outline" size="sm" className="h-7 text-xs gap-1"
+                        onClick={() => setLibraryOpen(true)}
+                      >
+                        <Plus className="h-3 w-3" /> Da Biblioteca
+                      </Button>
+                      <Button
+                        type="button" variant="outline" size="sm" className="h-7 text-xs gap-1"
+                        onClick={handleAddNewClause}
+                      >
+                        <Plus className="h-3 w-3" /> Nova Cláusula
+                      </Button>
+                      <Button
+                        type="button" variant="outline" size="sm" className="h-7 text-xs gap-1"
+                        onClick={handlePreviewFromEditor}
+                      >
+                        <Eye className="h-3 w-3" /> Preview
+                      </Button>
+                    </div>
+                  </div>
+                  <ScrollArea className="flex-1 px-4 py-3">
+                    {loadingClauses ? (
+                      <div className="flex justify-center py-12">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : clauses.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                        <FileText className="h-10 w-10 mb-3 opacity-30" />
+                        <p className="text-sm">Nenhuma cláusula adicionada</p>
+                        <p className="text-xs mt-1">Clique em "+ Nova Cláusula" ou busque na biblioteca</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {clauses
+                          .sort((a, b) => a.ordem - b.ordem)
+                          .map((c, i) => (
+                            <ClauseEditor
+                              key={c.id}
+                              clause={c}
+                              index={i}
+                              total={clauses.length}
+                              onChange={handleClauseChange}
+                              onMoveUp={handleClauseMoveUp}
+                              onMoveDown={handleClauseMoveDown}
+                              onRemove={handleClauseRemove}
+                            />
+                          ))}
+                      </div>
+                    )}
+                  </ScrollArea>
                 </div>
-                <textarea
-                  ref={editorRef}
-                  value={form.conteudo_html}
-                  onChange={(e) => setForm((f) => ({ ...f, conteudo_html: e.target.value }))}
-                  className="flex-1 w-full resize-none p-4 font-mono text-sm bg-background text-foreground focus:outline-none border-0"
-                  placeholder="Cole ou escreva o HTML do seu contrato aqui...&#10;&#10;Use variáveis como {{cliente.nome_fantasia}} para campos dinâmicos.&#10;Clique nas variáveis ao lado para inserir automaticamente."
-                  spellCheck={false}
-                />
-              </div>
-
-              {/* Painel lateral de variáveis */}
-              <div className="w-[280px] border-l border-border bg-muted/20 shrink-0 overflow-hidden">
-                <ContractVariablesPanel onInsert={handleInsertVariable} />
-              </div>
+              ) : (
+                /* ── Legacy HTML editor ── */
+                <>
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <div className="px-6 py-2 flex items-center justify-between bg-muted/30 border-b border-border shrink-0">
+                      <span className="text-xs font-medium text-muted-foreground">Editor HTML</span>
+                      <Button
+                        type="button" variant="outline" size="sm" className="h-7 text-xs gap-1"
+                        onClick={() => handlePreview(form.conteudo_html, form.logo_url)}
+                      >
+                        <Eye className="h-3 w-3" /> Preview
+                      </Button>
+                    </div>
+                    <textarea
+                      ref={editorRef}
+                      value={form.conteudo_html}
+                      onChange={(e) => setForm((f) => ({ ...f, conteudo_html: e.target.value }))}
+                      className="flex-1 w-full resize-none p-4 font-mono text-sm bg-background text-foreground focus:outline-none border-0"
+                      placeholder="Cole ou escreva o HTML do seu contrato aqui..."
+                      spellCheck={false}
+                    />
+                  </div>
+                  <div className="w-[280px] border-l border-border bg-muted/20 shrink-0 overflow-hidden">
+                    <ContractVariablesPanel onInsert={handleInsertVariable} />
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Footer */}
             <DialogFooter className="px-6 py-3 border-t border-border shrink-0">
+              <div className="flex items-center gap-2 mr-auto">
+                <Switch
+                  checked={form.usa_clausulas}
+                  onCheckedChange={(v) => setForm((f) => ({ ...f, usa_clausulas: v }))}
+                  id="clausulas-switch"
+                />
+                <Label htmlFor="clausulas-switch" className="text-xs cursor-pointer">
+                  Modo Cláusulas
+                </Label>
+              </div>
               <Button type="button" variant="outline" onClick={() => setOpenEditor(false)}>
                 Cancelar
               </Button>
@@ -496,6 +698,14 @@ export default function ModelosContrato() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Clause Library */}
+      <ClauseLibrary
+        open={libraryOpen}
+        onOpenChange={setLibraryOpen}
+        onSelect={handleSelectFromLibrary}
+        onCreateNew={handleAddNewClause}
+      />
 
       {/* Preview */}
       <ContractPreview

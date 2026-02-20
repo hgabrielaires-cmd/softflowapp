@@ -132,6 +132,39 @@ export type Database = {
           },
         ]
       }
+      contract_clauses: {
+        Row: {
+          ativo: boolean
+          conteudo_html: string
+          created_at: string
+          id: string
+          ordem_padrao: number
+          tipo: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          conteudo_html?: string
+          created_at?: string
+          id?: string
+          ordem_padrao?: number
+          tipo?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          conteudo_html?: string
+          created_at?: string
+          id?: string
+          ordem_padrao?: number
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contratos: {
         Row: {
           cliente_id: string
@@ -213,6 +246,7 @@ export type Database = {
           nome: string
           tipo: string
           updated_at: string
+          usa_clausulas: boolean
           versao: number
         }
         Insert: {
@@ -225,6 +259,7 @@ export type Database = {
           nome: string
           tipo: string
           updated_at?: string
+          usa_clausulas?: boolean
           versao?: number
         }
         Update: {
@@ -237,6 +272,7 @@ export type Database = {
           nome?: string
           tipo?: string
           updated_at?: string
+          usa_clausulas?: boolean
           versao?: number
         }
         Relationships: [
@@ -887,6 +923,57 @@ export type Database = {
             columns: ["pedido_id"]
             isOneToOne: false
             referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_clauses: {
+        Row: {
+          ativo: boolean
+          clause_id: string | null
+          conteudo_html: string
+          created_at: string
+          id: string
+          ordem: number
+          template_id: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          clause_id?: string | null
+          conteudo_html?: string
+          created_at?: string
+          id?: string
+          ordem?: number
+          template_id: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          clause_id?: string | null
+          conteudo_html?: string
+          created_at?: string
+          id?: string
+          ordem?: number
+          template_id?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_clauses_clause_id_fkey"
+            columns: ["clause_id"]
+            isOneToOne: false
+            referencedRelation: "contract_clauses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_clauses_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
             referencedColumns: ["id"]
           },
         ]
