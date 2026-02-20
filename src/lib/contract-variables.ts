@@ -147,9 +147,9 @@ export function substituirVariaveis(html: string, dados: Record<string, string>)
     return value;
   });
 
-  // Adicionar max-width ao body se não existir
+  // Adicionar estilos base ao body (idênticos ao container de PDF para fidelidade)
   if (!result.includes("max-width") && !result.includes("<style")) {
-    result = `<style>body { max-width: 800px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; }</style>` + result;
+    result = `<style>body { max-width: 794px; margin: 0 auto; padding: 76px 56px; box-sizing: border-box; font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.5; color: #000; }</style>` + result;
   }
 
   return result;
