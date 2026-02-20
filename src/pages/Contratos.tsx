@@ -63,8 +63,6 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
 
 interface ModuloAdicionadoItem {
   modulo_id: string;
@@ -268,172 +266,22 @@ export default function Contratos() {
     setGerando(true);
 
     try {
-      // 1. Buscar HTML renderizado do backend
+      // Gerar PDF server-side via Browserless
       const { data, error } = await supabase.functions.invoke("gerar-contrato-pdf", {
-        body: { contrato_id: contrato.id, action: "render" },
+        body: { contrato_id: contrato.id, action: "generate" },
       });
 
-      if (error || data?.error || !data?.html) {
-        toast.error(data?.error || "Erro ao buscar modelo de contrato");
+      if (error || data?.error || !data?.success) {
+        toast.error(data?.error || "Erro ao gerar contrato");
         setGerarStatus("erro");
         return;
       }
 
-      // 2. Renderizar HTML em container oculto
-      const A4_WIDTH_PX = 794;
-      const A4_HEIGHT_PX = 1123;
-      const MARGIN_BOTTOM_PX = 40;
-      const container = document.createElement("div");
-      container.style.cssText = `position:fixed;left:-9999px;top:0;width:${A4_WIDTH_PX}px;background:white;padding:76px 56px;box-sizing:border-box;font-family:Arial,sans-serif;font-size:12pt;line-height:1.5;color:#000;`;
-      container.innerHTML = data.html;
-      document.body.appendChild(container);
-
-      // Aguardar imagens carregarem (com timeout de 5s e crossOrigin)
-      const images = container.querySelectorAll("img");
-      images.forEach((img) => { img.crossOrigin = "anonymous"; });
-      await Promise.all(
-        Array.from(images).map(
-          (img) =>
-            new Promise<void>((resolve) => {
-              if (img.complete) return resolve();
-              const timeout = setTimeout(() => resolve(), 5000);
-              img.onload = () => { clearTimeout(timeout); resolve(); };
-              img.onerror = () => { clearTimeout(timeout); resolve(); };
-            })
-        )
-      );
-
-      // 3. Capturar TODO o conteúdo em um único canvas (evita inconsistências)
-      const scale = 2;
-      const fullCanvas = await html2canvas(container, {
-        scale,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-        width: A4_WIDTH_PX,
-        windowWidth: A4_WIDTH_PX,
-      });
-
-      // 4. Encontrar pontos seguros de quebra usando posições de elementos
-      const safePageHeight = A4_HEIGHT_PX - MARGIN_BOTTOM_PX;
-      const totalHeight = container.scrollHeight;
-      const containerRect = container.getBoundingClientRect();
-
-      const blockSelectors = "p, h1, h2, h3, h4, h5, h6, table, tr, section, hr, img, ul, ol, blockquote, li";
-      const blocks = container.querySelectorAll(blockSelectors);
-
-      // Coletar tops e bottoms de elementos significativos (altura > 20px)
-      const edges: { top: number; bottom: number }[] = [];
-      blocks.forEach((el) => {
-        const rect = el.getBoundingClientRect();
-        const elHeight = rect.height;
-        if (elHeight < 20) return; // Ignorar elementos muito pequenos
-        const top = Math.round(rect.top - containerRect.top);
-        const bottom = Math.round(rect.bottom - containerRect.top);
-        if (top > 0 && top < totalHeight) {
-          edges.push({ top, bottom });
-        }
-      });
-      // Remover duplicatas e ordenar
-      const uniqueTops = Array.from(new Set(edges.map((e) => e.top))).sort((a, b) => a - b);
-      const edgeMap = new Map<number, number>();
-      edges.forEach((e) => {
-        const existing = edgeMap.get(e.top);
-        if (!existing || e.bottom > existing) edgeMap.set(e.top, e.bottom);
-      });
-
-      // Construir breakpoints com look-ahead
-      const breakPoints: number[] = [0];
-
-      while (breakPoints[breakPoints.length - 1] < totalHeight) {
-        const pageStart = breakPoints[breakPoints.length - 1];
-        const maxEnd = pageStart + safePageHeight;
-
-        if (maxEnd >= totalHeight) {
-          breakPoints.push(totalHeight);
-          break;
-        }
-
-        // Encontrar o último "top" de elemento que cabe inteiro na página
-        let bestBreak = -1;
-        for (let i = uniqueTops.length - 1; i >= 0; i--) {
-          const t = uniqueTops[i];
-          if (t > maxEnd) continue;
-          if (t <= pageStart + 100) break; // Margem de segurança no topo
-          const bottom = edgeMap.get(t) || t;
-          // Se o elemento cruza o limite, cortar ANTES dele
-          if (bottom > maxEnd) {
-            bestBreak = t;
-            break;
-          }
-          // Elemento cabe inteiro - cortar logo APÓS ele
-          bestBreak = bottom;
-          break;
-        }
-
-        // Se não encontrou um bom corte, forçar avanço
-        if (bestBreak <= pageStart + 200) {
-          bestBreak = maxEnd;
-        }
-
-        breakPoints.push(bestBreak);
-      }
-
-      document.body.removeChild(container);
-
-      // 5. Fatiar o canvas único e montar PDF
-      const pdf = new jsPDF("p", "mm", "a4");
-      const marginMM = 10;
-      const imgWidthMM = 210 - marginMM * 2; // 190mm úteis
-      const pageHeightMM = 297;
-      const canvasWidth = fullCanvas.width;
-
-      for (let i = 0; i < breakPoints.length - 1; i++) {
-        if (i > 0) pdf.addPage();
-
-        const sliceTop = breakPoints[i];
-        const sliceBottom = breakPoints[i + 1];
-        const sliceHeight = sliceBottom - sliceTop;
-
-        // Criar canvas da fatia a partir do canvas completo
-        const sliceCanvas = document.createElement("canvas");
-        sliceCanvas.width = canvasWidth;
-        sliceCanvas.height = Math.round(sliceHeight * scale);
-        const ctx = sliceCanvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(
-            fullCanvas,
-            0, Math.round(sliceTop * scale),
-            canvasWidth, Math.round(sliceHeight * scale),
-            0, 0,
-            canvasWidth, Math.round(sliceHeight * scale)
-          );
-        }
-
-        const sliceHeightMM = (sliceHeight / A4_WIDTH_PX) * imgWidthMM;
-        const adjustedHeightMM = Math.min(sliceHeightMM, pageHeightMM - marginMM * 2);
-        pdf.addImage(sliceCanvas.toDataURL("image/jpeg", 0.95), "JPEG", marginMM, marginMM, imgWidthMM, adjustedHeightMM);
-      }
-
-      // 4. Converter PDF para base64 e enviar ao backend para upload
-      const pdfBase64 = pdf.output("datauristring").split(",")[1];
-
-      const { data: uploadData, error: uploadError } = await supabase.functions.invoke(
-        "gerar-contrato-pdf",
-        { body: { contrato_id: contrato.id, action: "upload", pdf_base64: pdfBase64 } }
-      );
-
-      if (uploadError || uploadData?.error) {
-        toast.error("Erro ao salvar PDF");
-        setGerarStatus("erro");
-        return;
-      }
-
-      // 5. Atualizar estado local
+      // Atualizar estado local
       const updatedContrato = {
         ...contrato,
         status_geracao: "Gerado",
-        pdf_url: uploadData.storage_path,
+        pdf_url: data.storage_path,
       };
       setContratos((prev) =>
         prev.map((c) => (c.id === contrato.id ? updatedContrato : c))
@@ -442,7 +290,7 @@ export default function Contratos() {
         setSelected(updatedContrato);
       }
 
-      setGerarSignedUrl(uploadData.signed_url || null);
+      setGerarSignedUrl(data.signed_url || null);
       setGerarContratoAlvo(updatedContrato);
       setGerarStatus("concluido");
     } catch (err) {

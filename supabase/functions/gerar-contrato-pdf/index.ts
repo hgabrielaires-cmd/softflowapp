@@ -19,6 +19,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { contrato_id, action, pdf_base64 } = body;
+    const BROWSERLESS_API_KEY = Deno.env.get("BROWSERLESS_API_KEY");
 
     if (!contrato_id) {
       return new Response(JSON.stringify({ error: "contrato_id obrigatório" }), {
@@ -327,9 +328,90 @@ Deno.serve(async (req) => {
       return value;
     });
 
-    // Logo: se {{logo.url}} ficou como texto puro, colocar na tag img
-    // (se o template já usa <img src="{{logo.url}}">, a substituição já resolveu)
+    // Se action === "generate", gerar PDF via Browserless
+    if (action === "generate") {
+      if (!BROWSERLESS_API_KEY) {
+        return new Response(
+          JSON.stringify({ error: "BROWSERLESS_API_KEY não configurada" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
+      // Envolver HTML em documento completo com estilos A4
+      const fullHtml = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  @page { size: A4; margin: 0; }
+  body { max-width: 794px; margin: 0 auto; padding: 76px 56px; box-sizing: border-box; font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.5; color: #000; }
+  table { border-collapse: collapse; }
+  img { max-width: 100%; }
+</style>
+</head><body>${htmlFinal}</body></html>`;
+
+      // Chamar Browserless PDF API
+      const browserlessUrl = `https://production-sfo.browserless.io/pdf?token=${BROWSERLESS_API_KEY}`;
+      const pdfResponse = await fetch(browserlessUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          html: fullHtml,
+          options: {
+            format: "A4",
+            printBackground: true,
+            margin: { top: "0px", right: "0px", bottom: "0px", left: "0px" },
+          },
+          gotoOptions: { waitUntil: "networkidle0", timeout: 30000 },
+        }),
+      });
+
+      if (!pdfResponse.ok) {
+        const errText = await pdfResponse.text();
+        console.error("Browserless error:", pdfResponse.status, errText);
+        return new Response(
+          JSON.stringify({ error: `Erro ao gerar PDF: ${pdfResponse.status} - ${errText}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const pdfBuffer = await pdfResponse.arrayBuffer();
+      const pdfBytes = new Uint8Array(pdfBuffer);
+      const outputPath = `${contrato_id}.pdf`;
+
+      // Upload para storage
+      const { error: uploadError } = await supabase.storage
+        .from("contratos-pdf")
+        .upload(outputPath, pdfBytes, {
+          contentType: "application/pdf",
+          upsert: true,
+        });
+
+      if (uploadError) {
+        return new Response(
+          JSON.stringify({ error: "Erro ao salvar PDF: " + uploadError.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: signedData } = await supabase.storage
+        .from("contratos-pdf")
+        .createSignedUrl(outputPath, 3600);
+
+      await supabase
+        .from("contratos")
+        .update({ pdf_url: outputPath, status_geracao: "Gerado" })
+        .eq("id", contrato_id);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          signed_url: signedData?.signedUrl || null,
+          storage_path: outputPath,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Default: retornar HTML renderizado (para preview)
     return new Response(
       JSON.stringify({
         success: true,
