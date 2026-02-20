@@ -1,28 +1,39 @@
 
-## Plano: Anexo I como segunda pagina compacta
+## Mover Anexo I para logo apos os dados de Contratante/Contratado
 
-### Objetivo
-Forcar o Anexo I para iniciar na segunda pagina (page-break) e reduzir o tamanho do cabecalho azul + subtitulo para que todo o conteudo (Plano, Modulos, Resumo de Valores) caiba na mesma pagina.
+### O que sera feito
 
-### Alteracoes no template HTML (via SQL UPDATE)
+O bloco do **ANEXO I** (que contem Plano Selecionado, Modulos Adicionais, Resumo de Valores/Pagamento, descontos e observacoes) sera **movido** da posicao atual (apos as clausulas e assinaturas, no final do documento) para **logo apos os dados de CONTRATANTE e CONTRATADO**, iniciando na **pagina 2** com um `page-break-before`.
 
-**1. Restaurar page-break-before no header do Anexo**
-- Trocar `style="margin-top: 40px;"` por `style="page-break-before:always; margin-top:0; padding:6px; font-size:13px;"`
-- Isso forca o Anexo para a pagina 2 e reduz o padding e fonte do banner azul
+### Estrutura atual do documento
 
-**2. Reduzir o subtitulo "ESPECIFICACOES TECNICAS E COMERCIAIS"**
-- Reduzir `font-size:12px` para `font-size:10px` e `margin-bottom:20px` para `margin-bottom:8px`
+1. Cabecalho com Logo + Numero do Contrato
+2. Dados CONTRATADA (Filial) e CONTRATANTE (Cliente)
+3. Texto introdutorio
+4. Clausulas 1 a 16
+5. Assinaturas
+6. **ANEXO I** (plano, modulos, valores, pagamento, descontos)
+7. Clausulas A a F do Anexo
+8. Assinaturas finais
 
-**3. Reduzir espacamento dos data-box**
-- Trocar `margin-bottom:12px` para `margin-bottom:6px` nos blocos de Plano e Modulos
-- Reduzir padding interno via CSS da classe `.data-box`
+### Nova estrutura proposta
+
+1. Cabecalho com Logo + Numero do Contrato
+2. Dados CONTRATADA (Filial) e CONTRATANTE (Cliente)
+3. **ANEXO I** (plano, modulos, valores, pagamento, descontos) -- com page-break-before para iniciar na pagina 2
+4. Texto introdutorio
+5. Clausulas 1 a 16
+6. Clausulas A a F do Anexo
+7. Assinaturas finais
 
 ### Detalhes tecnicos
 
-Serao executados 1-2 updates SQL no campo `conteudo_html` da tabela `document_templates` (id `90b43be1-...`):
+A alteracao sera feita via SQL UPDATE no template `document_templates` (id `90b43be1-...`):
 
-- REPLACE do div `anexo-header` para incluir `page-break-before:always` com padding/font reduzidos
-- REPLACE do paragrafo de especificacoes para fonte menor e menos margem
-- REPLACE dos `margin-bottom:12px` para `margin-bottom:6px` nos data-box do anexo
+1. **Recortar** o bloco HTML do ANEXO I: desde `<div class="anexo-header"...>ANEXO I...` ate o fechamento do ultimo `data-box` (Resumo de Valores), incluindo os 3 blocos (Plano, Modulos, Valores/Pagamento/Descontos/Observacoes).
 
-Tambem sera ajustado o CSS da classe `.anexo-header` no bloco `<style>` para reduzir o `margin: 40px 0 25px` para `margin: 0 0 8px` e `padding: 12px` para `padding: 6px`.
+2. **Inserir** esse bloco logo apos o fechamento do `</div>` do `data-grid` (que contem CONTRATADA e CONTRATANTE), mantendo o `page-break-before:always` no cabecalho do Anexo para garantir que inicie na pagina 2.
+
+3. **Remover** o bloco original da posicao antiga (antes das Clausulas A-F).
+
+Nenhum arquivo de codigo sera alterado -- apenas o conteudo HTML armazenado no banco de dados.
