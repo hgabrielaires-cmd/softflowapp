@@ -320,6 +320,13 @@ Deno.serve(async (req) => {
 
     // 7. Substituir variáveis no HTML
     let htmlFinal = templateHtml;
+
+    // Forçar quebra de página antes do ANEXO I
+    htmlFinal = htmlFinal.replace(
+      /((?:<[^>]*>)*ANEXO\s+I\s*[-–—]\s*ESPECIFICA)/gi,
+      '<div style="page-break-before:always;"></div>$1'
+    );
+
     htmlFinal = htmlFinal.replace(/\{\{([^}]+)\}\}/g, (match: string, key: string) => {
       const trimmedKey = key.trim();
       if (trimmedKey === "modulos.tabela_detalhada" && !dados[trimmedKey]) return "";
