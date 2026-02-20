@@ -503,7 +503,7 @@ export default function Contratos() {
   }
 
   // ── Gerador de Termo de Aceite ──────────────────────────────────────────────
-  function gerarTermoAceite(contrato: Contrato): string {
+  function gerarTermoAceite(contrato: Contrato, linkAssinatura?: string): string {
     const pedido = contrato.pedidos;
     const plano = contrato.planos;
     const nomeUsuario = profile?.full_name || "{nome_usuario}";
@@ -565,7 +565,7 @@ Valor pré-pago.${regrasMens ? "\n" + regrasMens : ""}
 
 ✍️ *TERMO DE ACEITE:*
 
-{link_assinatura}
+${linkAssinatura || "{link_assinatura}"}
 
 Implantação confirmada para:
 
@@ -935,7 +935,9 @@ Estou à disposição.`;
 
               {/* Termo de Aceite — apenas admin/financeiro */}
               {canManage && selected.pedidos && (() => {
-                const mensagem = gerarTermoAceite(selected);
+                const zRec = zapsignRecords[selected.id];
+                const linkAssinatura = zRec?.signers?.[1]?.sign_url || zRec?.signers?.[0]?.sign_url || undefined;
+                const mensagem = gerarTermoAceite(selected, linkAssinatura);
                 return (
                   <div className="border-t border-border pt-4 space-y-2">
                     <div className="flex items-center justify-between">
@@ -956,9 +958,16 @@ Estou à disposição.`;
                     <div className="rounded-lg border border-border bg-muted/40 p-3 max-h-64 overflow-y-auto">
                       <pre className="text-xs whitespace-pre-wrap font-sans text-foreground leading-relaxed">{mensagem}</pre>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      💡 Substitua <code className="bg-muted px-1 rounded">{"{link_assinatura}"}</code> e <code className="bg-muted px-1 rounded">{"{datas_implantacao}"}</code> antes de enviar.
-                    </p>
+                    {!linkAssinatura && (
+                      <p className="text-xs text-muted-foreground">
+                        💡 Envie o contrato para assinatura eletrônica para preencher automaticamente o <code className="bg-muted px-1 rounded">{"{link_assinatura}"}</code>. Substitua <code className="bg-muted px-1 rounded">{"{datas_implantacao}"}</code> antes de enviar.
+                      </p>
+                    )}
+                    {linkAssinatura && (
+                      <p className="text-xs text-muted-foreground">
+                        ✅ Link de assinatura preenchido automaticamente. Substitua <code className="bg-muted px-1 rounded">{"{datas_implantacao}"}</code> antes de enviar.
+                      </p>
+                    )}
                   </div>
                 );
               })()}
