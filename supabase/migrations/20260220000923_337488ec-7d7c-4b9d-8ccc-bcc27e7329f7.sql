@@ -1,0 +1,1 @@
+ALTER TABLE public.filiais ADD COLUMN razao_social text NULL;
