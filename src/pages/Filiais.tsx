@@ -34,6 +34,7 @@ export default function Filiais() {
   const [editing, setEditing] = useState<Filial | null>(null);
   const [nome, setNome] = useState("");
   const [razaoSocial, setRazaoSocial] = useState("");
+  const [responsavel, setResponsavel] = useState("");
   const [ativa, setAtiva] = useState(true);
   const [cnpj, setCnpj] = useState("");
   const [inscricaoEstadual, setInscricaoEstadual] = useState("");
@@ -64,7 +65,7 @@ export default function Filiais() {
   useEffect(() => { loadFiliais(); }, []);
 
   function resetForm() {
-    setNome(""); setRazaoSocial(""); setAtiva(true); setCnpj(""); setInscricaoEstadual(""); setIeIsento(false);
+    setNome(""); setRazaoSocial(""); setResponsavel(""); setAtiva(true); setCnpj(""); setInscricaoEstadual(""); setIeIsento(false);
     setEndereco({ logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "", cep: "", telefone: "", email: "" });
     setCnpjError(""); setCepError("");
     setLogoFile(null); setLogoPreview(null); setRemoveLogo(false);
@@ -78,6 +79,7 @@ export default function Filiais() {
     setEditing(filial);
     setNome(filial.nome);
     setRazaoSocial(filial.razao_social || "");
+    setResponsavel(filial.responsavel || "");
     setAtiva(filial.ativa);
     setCnpj(filial.cnpj || "");
     const isIsento = filial.inscricao_estadual === "ISENTO";
@@ -170,13 +172,13 @@ export default function Filiais() {
         if (logoFile) logo_url = await uploadLogo(editing.id);
         else if (removeLogo) logo_url = null;
         const { error } = await supabase.from("filiais")
-          .update({ nome: nome.trim(), razao_social: razaoSocial.trim() || null, ativa, logo_url, cnpj: cnpj.trim() || null, inscricao_estadual: ie, ...endereco })
+          .update({ nome: nome.trim(), razao_social: razaoSocial.trim() || null, responsavel: responsavel.trim() || null, ativa, logo_url, cnpj: cnpj.trim() || null, inscricao_estadual: ie, ...endereco })
           .eq("id", editing.id);
         if (error) throw error;
         toast.success("Filial atualizada com sucesso");
       } else {
         const { data: inserted, error } = await supabase.from("filiais")
-          .insert({ nome: nome.trim(), razao_social: razaoSocial.trim() || null, ativa, cnpj: cnpj.trim() || null, inscricao_estadual: ie, ...endereco })
+          .insert({ nome: nome.trim(), razao_social: razaoSocial.trim() || null, responsavel: responsavel.trim() || null, ativa, cnpj: cnpj.trim() || null, inscricao_estadual: ie, ...endereco })
           .select("id").single();
         if (error) throw error;
         if (logoFile && inserted) {
@@ -327,6 +329,10 @@ export default function Filiais() {
               <div className="space-y-1.5">
                 <Label>Razão Social</Label>
                 <Input placeholder="Ex: Softflow Tecnologia Ltda" value={razaoSocial} onChange={(e) => setRazaoSocial(e.target.value)} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Responsável (quem assina o contrato)</Label>
+                <Input placeholder="Ex: José da Silva" value={responsavel} onChange={(e) => setResponsavel(e.target.value)} />
               </div>
 
               {/* CEP com busca */}

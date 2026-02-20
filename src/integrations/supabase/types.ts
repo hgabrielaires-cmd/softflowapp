@@ -266,6 +266,7 @@ export type Database = {
           nome: string
           numero: string | null
           razao_social: string | null
+          responsavel: string | null
           telefone: string | null
           uf: string | null
         }
@@ -285,6 +286,7 @@ export type Database = {
           nome: string
           numero?: string | null
           razao_social?: string | null
+          responsavel?: string | null
           telefone?: string | null
           uf?: string | null
         }
@@ -304,6 +306,7 @@ export type Database = {
           nome?: string
           numero?: string | null
           razao_social?: string | null
+          responsavel?: string | null
           telefone?: string | null
           uf?: string | null
         }
