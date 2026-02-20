@@ -347,6 +347,7 @@ Deno.serve(async (req) => {
       "pagamento.mensalidade.forma": formaMensalidade,
       "pagamento.mensalidade.parcelas": parcelasMensalidade ? `${parcelasMensalidade}x` : "",
       "pagamento.observacoes": pedido?.pagamento_mensalidade_observacao || pedido?.pagamento_implantacao_observacao || "",
+      "pedido.observacoes_geral": pedido?.observacoes || "",
       "data.atual": dataAtual,
       "data.atual_extenso": dataExtenso,
       "logo.url": logoUrl,
