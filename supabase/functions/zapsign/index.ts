@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Token ${ZAPSIGN_API_TOKEN}`,
+          "Authorization": `Bearer ${ZAPSIGN_API_TOKEN}`,
         },
         body: JSON.stringify(zapsignPayload),
       });
@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
         `${ZAPSIGN_API}/docs/${token}/`,
         {
           method: "GET",
-          headers: { "Authorization": `Token ${ZAPSIGN_API_TOKEN}` },
+          headers: { "Authorization": `Bearer ${ZAPSIGN_API_TOKEN}` },
         }
       );
 
