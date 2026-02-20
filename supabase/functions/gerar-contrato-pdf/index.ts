@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
           valor_implantacao_original, valor_mensalidade_original,
           desconto_implantacao_tipo, desconto_implantacao_valor,
           desconto_mensalidade_tipo, desconto_mensalidade_valor,
-          observacoes, pagamento_mensalidade_observacao, pagamento_mensalidade_forma,
+          observacoes, motivo_desconto, pagamento_mensalidade_observacao, pagamento_mensalidade_forma,
           pagamento_mensalidade_parcelas, pagamento_implantacao_forma,
           pagamento_implantacao_parcelas, pagamento_implantacao_observacao,
           modulos_adicionais
@@ -233,9 +233,9 @@ Deno.serve(async (req) => {
     const mensDesconto = mensOriginal - mensFinal;
     const totalGeral = pedido?.valor_total ?? 0;
 
-    // Buscar motivo do desconto (solicitações aprovadas)
-    let motivoDesconto = "";
-    if (pedido?.id && (implDesconto > 0 || mensDesconto > 0)) {
+    // Buscar motivo do desconto: primeiro do campo motivo_desconto, depois de solicitações aprovadas
+    let motivoDesconto = pedido?.motivo_desconto || "";
+    if (!motivoDesconto && pedido?.id && (implDesconto > 0 || mensDesconto > 0)) {
       const { data: solicitacao } = await supabase
         .from("solicitacoes_desconto")
         .select("observacoes")
@@ -244,7 +244,7 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      motivoDesconto = solicitacao?.observacoes || pedido?.observacoes || "";
+      motivoDesconto = solicitacao?.observacoes || "";
     }
 
     // Gerar HTML condicional de desconto

@@ -73,6 +73,9 @@ export const CONTRACT_VARIABLE_CATEGORIES: VariableCategory[] = [
       { key: "valores.mensalidade.final", label: "Mensalidade Final", example: "R$ 450,00" },
       { key: "valores.total_geral", label: "Total Geral", example: "R$ 2.250,00" },
       { key: "valores.total_extenso", label: "Total por Extenso", example: "dois mil duzentos e cinquenta reais" },
+      { key: "valores.desconto_implantacao_html", label: "Desconto Implantação (HTML)", example: "(condicional)" },
+      { key: "valores.desconto_mensalidade_html", label: "Desconto Mensalidade (HTML)", example: "(condicional)" },
+      { key: "valores.motivo_desconto_html", label: "Motivo do Desconto (HTML)", example: "(condicional)" },
     ],
   },
   {
