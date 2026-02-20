@@ -93,6 +93,7 @@ export const CONTRACT_VARIABLE_CATEGORIES: VariableCategory[] = [
       { key: "data.atual", label: "Data Atual", example: "19/02/2026" },
       { key: "data.atual_extenso", label: "Data Atual por Extenso", example: "19 de fevereiro de 2026" },
       { key: "logo.url", label: "URL da Logo", example: "https://..." },
+      { key: "empresa.logo", label: "Logo da Empresa (alias)", example: "https://..." },
     ],
   },
   {
@@ -140,7 +141,7 @@ export function substituirVariaveis(html: string, dados: Record<string, string>)
     const value = dados[trimmedKey];
     if (value === undefined) return match;
     // Se logo.url aparece fora de um atributo src, renderizar como tag <img>
-    if (trimmedKey === "logo.url" && value) {
+    if ((trimmedKey === "logo.url" || trimmedKey === "empresa.logo") && value) {
       return `<img src="${value}" alt="Logo" style="max-height: 80px; max-width: 200px;" />`;
     }
     return value;
