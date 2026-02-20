@@ -196,8 +196,10 @@ Deno.serve(async (req) => {
 
     const modulos = (pedido?.modulos_adicionais || []) as any[];
 
-    const modulosInclusosLista = planoModulos.length > 0
-      ? "<ul>" + planoModulos.map((pm: any) => `<li>${pm.modulos?.nome || "Módulo"}</li>`).join("") + "</ul>"
+    // Módulos inclusos: extrair da descrição do plano (separado por vírgula)
+    const planoDescricao = plano?.descricao || "";
+    const modulosInclusosLista = planoDescricao
+      ? "<ul style=\"margin:4px 0;padding-left:18px;\">" + planoDescricao.split(",").map((item: string) => item.trim()).filter((item: string) => item.length > 0).map((item: string) => `<li>${item}</li>`).join("") + "</ul>"
       : "<p>—</p>";
 
     const modulosAdicionaisLista = modulos.length > 0
