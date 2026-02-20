@@ -279,8 +279,10 @@ export default function Contratos() {
         return;
       }
 
-      // 2. Renderizar HTML em container oculto e capturar com html2canvas
+      // 2. Renderizar HTML em container oculto
       const A4_WIDTH_PX = 794;
+      const A4_HEIGHT_PX = 1123; // 297mm em pixels (794 * 297/210)
+      const MARGIN_BOTTOM_PX = 40; // margem de segurança inferior
       const container = document.createElement("div");
       container.style.cssText = `position:fixed;left:-9999px;top:0;width:${A4_WIDTH_PX}px;background:white;`;
       container.innerHTML = data.html;
@@ -299,45 +301,90 @@ export default function Contratos() {
         )
       );
 
-      const scale = 2;
-      const canvas = await html2canvas(container, {
-        scale,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-        width: A4_WIDTH_PX,
-        windowWidth: A4_WIDTH_PX,
+      // 3. Encontrar pontos seguros de quebra de página
+      // Coletar todos os elementos de bloco e seus offsets
+      const allElements = container.querySelectorAll("p, h1, h2, h3, h4, h5, h6, div, table, tr, li, ul, ol, blockquote, section, hr, br, img");
+      const safePageHeight = A4_HEIGHT_PX - MARGIN_BOTTOM_PX;
+
+      // Encontrar os Y de corte seguros (entre elementos, nunca no meio)
+      const breakPoints: number[] = [0];
+      let currentPageBottom = safePageHeight;
+
+      // Coletar bordas (top) de todos os elementos
+      interface ElementEdge { top: number; bottom: number; }
+      const edges: ElementEdge[] = [];
+      allElements.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        edges.push({
+          top: rect.top - containerRect.top,
+          bottom: rect.bottom - containerRect.top,
+        });
       });
+      edges.sort((a, b) => a.top - b.top);
 
-      document.body.removeChild(container);
+      const totalHeight = container.scrollHeight;
 
-      // 3. Gerar PDF fatiando o canvas em páginas A4
+      while (currentPageBottom < totalHeight) {
+        // Encontrar o melhor ponto de corte: o maior "top" de elemento que cabe na página
+        let bestBreak = currentPageBottom;
+
+        // Procurar de trás para frente: o último topo de elemento <= currentPageBottom
+        for (let i = edges.length - 1; i >= 0; i--) {
+          if (edges[i].top <= currentPageBottom && edges[i].top > breakPoints[breakPoints.length - 1]) {
+            // Verificar se este elemento não está sendo cortado
+            if (edges[i].bottom > currentPageBottom) {
+              // Elemento seria cortado - usar o topo dele como ponto de corte
+              bestBreak = edges[i].top;
+              break;
+            } else {
+              // Elemento cabe inteiro - cortar após ele
+              bestBreak = currentPageBottom;
+              break;
+            }
+          }
+        }
+
+        // Se bestBreak não avançou (todos elementos enormes), forçar corte
+        if (bestBreak <= breakPoints[breakPoints.length - 1]) {
+          bestBreak = currentPageBottom;
+        }
+
+        breakPoints.push(bestBreak);
+        currentPageBottom = bestBreak + safePageHeight;
+      }
+      breakPoints.push(totalHeight);
+
+      // 4. Capturar cada página como canvas separado e montar PDF
+      const scale = 2;
+      const pdf = new jsPDF("p", "mm", "a4");
       const imgWidthMM = 210;
       const pageHeightMM = 297;
-      const pxPerMM = canvas.width / imgWidthMM;
-      const pageHeightPx = Math.floor(pageHeightMM * pxPerMM);
 
-      const pdf = new jsPDF("p", "mm", "a4");
-      const totalPages = Math.ceil(canvas.height / pageHeightPx);
-
-      for (let i = 0; i < totalPages; i++) {
+      for (let i = 0; i < breakPoints.length - 1; i++) {
         if (i > 0) pdf.addPage();
 
-        const sourceY = i * pageHeightPx;
-        const sliceHeight = Math.min(pageHeightPx, canvas.height - sourceY);
+        const sliceTop = breakPoints[i];
+        const sliceBottom = breakPoints[i + 1];
+        const sliceHeight = sliceBottom - sliceTop;
 
-        // Create a canvas slice for this page
-        const pageCanvas = document.createElement("canvas");
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = sliceHeight;
-        const ctx = pageCanvas.getContext("2d")!;
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        ctx.drawImage(canvas, 0, sourceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+        // Capturar apenas a fatia usando html2canvas com window scroll
+        const sliceCanvas = await html2canvas(container, {
+          scale,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: "#ffffff",
+          width: A4_WIDTH_PX,
+          windowWidth: A4_WIDTH_PX,
+          y: sliceTop,
+          height: sliceHeight,
+        });
 
-        const sliceHeightMM = (sliceHeight / pxPerMM);
-        pdf.addImage(pageCanvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgWidthMM, sliceHeightMM);
+        const sliceHeightMM = (sliceHeight / A4_WIDTH_PX) * imgWidthMM;
+        pdf.addImage(sliceCanvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgWidthMM, Math.min(sliceHeightMM, pageHeightMM));
       }
+
+      document.body.removeChild(container);
 
       // 4. Converter PDF para base64 e enviar ao backend para upload
       const pdfBase64 = pdf.output("datauristring").split(",")[1];
