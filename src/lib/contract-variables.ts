@@ -140,15 +140,12 @@ export function substituirVariaveis(html: string, dados: Record<string, string>)
     }
     const value = dados[trimmedKey];
     if (value === undefined) return match;
-    // Se logo.url aparece fora de um atributo src, renderizar como tag <img>
+    // Para variáveis de logo, retornar apenas a URL (o HTML já contém a tag <img src="...">)
     if ((trimmedKey === "logo.url" || trimmedKey === "empresa.logo") && value) {
-      return `<img src="${value}" alt="Logo" style="max-height: 80px; max-width: 200px;" />`;
+      return value;
     }
     return value;
   });
-
-  // Corrigir caso logo.url já esteja dentro de src="<img ...>" (duplo wrapping)
-  result = result.replace(/src="<img\s+src="([^"]+)"[^>]*\/?>"/gi, 'src="$1"');
 
   // Adicionar max-width ao body se não existir
   if (!result.includes("max-width") && !result.includes("<style")) {
