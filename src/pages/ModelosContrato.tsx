@@ -229,7 +229,7 @@ export default function ModelosContrato() {
   function handlePreview(html: string, logoUrl?: string | null) {
     setPreviewHtml(html);
     if (logoUrl) {
-      setPreviewDados({ ...getExampleData(), "logo.url": logoUrl });
+      setPreviewDados({ ...getExampleData(), "logo.url": logoUrl, "empresa.logo": logoUrl });
     } else {
       setPreviewDados(undefined);
     }

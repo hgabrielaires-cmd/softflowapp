@@ -17,9 +17,14 @@ interface ContractPreviewProps {
 
 export function ContractPreview({ open, onOpenChange, html, dados, title }: ContractPreviewProps) {
   const dataToUse = dados || getExampleData();
-  // Garantir que logo.url no exemplo tenha um placeholder visual válido
-  if (!dados && !dataToUse["logo.url"]?.startsWith("http")) {
-    dataToUse["logo.url"] = "";
+  // Garantir que variáveis de logo no exemplo tenham um placeholder visual válido
+  if (!dados) {
+    if (!dataToUse["logo.url"]?.startsWith("http")) {
+      dataToUse["logo.url"] = "";
+    }
+    if (!dataToUse["empresa.logo"]?.startsWith("http")) {
+      dataToUse["empresa.logo"] = "";
+    }
   }
   const rendered = substituirVariaveis(html, dataToUse);
 
