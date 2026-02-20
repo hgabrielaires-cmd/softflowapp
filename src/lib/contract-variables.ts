@@ -100,6 +100,7 @@ export const CONTRACT_VARIABLE_CATEGORIES: VariableCategory[] = [
     icon: "🏢",
     variables: [
       { key: "filial.nome", label: "Nome da Filial", example: "Filial São Paulo" },
+      { key: "filial.razao_social", label: "Razão Social", example: "Softflow Tecnologia Ltda" },
       { key: "filial.cnpj", label: "CNPJ da Filial", example: "12.345.678/0001-99" },
       { key: "filial.inscricao_estadual", label: "Inscrição Estadual", example: "123456789" },
       { key: "filial.logradouro", label: "Logradouro", example: "Av. Paulista" },
