@@ -14,7 +14,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const ZAPSIGN_API_TOKEN = Deno.env.get("ZAPSIGN_API_TOKEN");
+    const ZAPSIGN_API_TOKEN = Deno.env.get("ZAPSIGN_API_TOKEN")?.trim();
+    console.log("ZAPSIGN_API_TOKEN loaded:", ZAPSIGN_API_TOKEN ? `${ZAPSIGN_API_TOKEN.substring(0, 6)}...${ZAPSIGN_API_TOKEN.substring(ZAPSIGN_API_TOKEN.length - 4)} (len=${ZAPSIGN_API_TOKEN.length})` : "NOT SET");
     if (!ZAPSIGN_API_TOKEN) {
       return new Response(
         JSON.stringify({ error: "ZAPSIGN_API_TOKEN não configurado" }),
