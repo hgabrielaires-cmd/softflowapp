@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ZAPSIGN_API = "https://br.api.zapsign.com.br/api/v1";
+const ZAPSIGN_API = "https://api.zapsign.com.br/api/v1";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
