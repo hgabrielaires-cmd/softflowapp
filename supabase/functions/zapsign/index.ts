@@ -151,7 +151,17 @@ Deno.serve(async (req) => {
         body: JSON.stringify(zapsignPayload),
       });
 
-      const zapsignData = await zapsignResponse.json();
+      const zapsignResponseText = await zapsignResponse.text();
+      let zapsignData: any;
+      try {
+        zapsignData = JSON.parse(zapsignResponseText);
+      } catch {
+        console.error("ZapSign retornou resposta não-JSON:", zapsignResponse.status, zapsignResponseText);
+        return new Response(
+          JSON.stringify({ error: `Erro ZapSign (${zapsignResponse.status}): ${zapsignResponseText.substring(0, 200)}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       if (!zapsignResponse.ok) {
         console.error("ZapSign error:", zapsignResponse.status, JSON.stringify(zapsignData));
@@ -234,16 +244,24 @@ Deno.serve(async (req) => {
         }
       );
 
+      const zapsignStatusText = await zapsignResponse.text();
       if (!zapsignResponse.ok) {
-        const errText = await zapsignResponse.text();
-        console.error("ZapSign status error:", zapsignResponse.status, errText);
+        console.error("ZapSign status error:", zapsignResponse.status, zapsignStatusText);
         return new Response(
           JSON.stringify({ error: `Erro ao consultar ZapSign: ${zapsignResponse.status}` }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const zapsignData = await zapsignResponse.json();
+      let zapsignData: any;
+      try {
+        zapsignData = JSON.parse(zapsignStatusText);
+      } catch {
+        return new Response(
+          JSON.stringify({ error: `Resposta inválida da ZapSign: ${zapsignStatusText.substring(0, 200)}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       // Mapear status do ZapSign
       let mappedStatus = "Enviado";
