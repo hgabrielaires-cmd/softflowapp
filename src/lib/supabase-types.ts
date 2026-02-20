@@ -148,7 +148,31 @@ export interface DocumentTemplate {
   ativo: boolean;
   versao: number;
   logo_url: string | null;
+  usa_clausulas: boolean;
   created_at: string;
   updated_at: string;
   filiais?: { nome: string } | null;
+}
+
+export interface ContractClause {
+  id: string;
+  titulo: string;
+  conteudo_html: string;
+  tipo: string;
+  ordem_padrao: number;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TemplateClause {
+  id: string;
+  template_id: string;
+  clause_id: string | null;
+  titulo: string;
+  conteudo_html: string;
+  ordem: number;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
 }

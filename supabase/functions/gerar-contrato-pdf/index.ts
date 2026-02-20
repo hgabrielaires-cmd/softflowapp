@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
     }
 
     // 5. Buscar template HTML ativo (filial > global)
-    let template = null;
+    let template: any = null;
     if (filialId) {
       const { data } = await supabase
         .from("document_templates")
@@ -155,9 +155,36 @@ Deno.serve(async (req) => {
       template = data;
     }
 
-    if (!template?.conteudo_html) {
+    if (!template) {
       return new Response(
-        JSON.stringify({ error: "Nenhum modelo de contrato HTML ativo encontrado para esta filial." }),
+        JSON.stringify({ error: "Nenhum modelo de contrato ativo encontrado para esta filial." }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 5b. Se usa cláusulas, buscar template_clauses e montar HTML
+    let templateHtml = template.conteudo_html || "";
+    if (template.usa_clausulas) {
+      const { data: templateClauses } = await supabase
+        .from("template_clauses")
+        .select("*")
+        .eq("template_id", template.id)
+        .eq("ativo", true)
+        .order("ordem");
+
+      if (templateClauses && templateClauses.length > 0) {
+        templateHtml = templateClauses
+          .map((c: any, i: number) => {
+            const titulo = `<p style="margin-top:20px;margin-bottom:8px;"><strong>CLÁUSULA ${i + 1}ª - ${(c.titulo || "").toUpperCase()}</strong></p>`;
+            return titulo + "\n" + (c.conteudo_html || "");
+          })
+          .join("\n\n");
+      }
+    }
+
+    if (!templateHtml) {
+      return new Response(
+        JSON.stringify({ error: "Modelo de contrato sem conteúdo." }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -291,7 +318,7 @@ Deno.serve(async (req) => {
     };
 
     // 7. Substituir variáveis no HTML
-    let htmlFinal = template.conteudo_html;
+    let htmlFinal = templateHtml;
     htmlFinal = htmlFinal.replace(/\{\{([^}]+)\}\}/g, (match: string, key: string) => {
       const trimmedKey = key.trim();
       if (trimmedKey === "modulos.tabela_detalhada" && !dados[trimmedKey]) return "";
