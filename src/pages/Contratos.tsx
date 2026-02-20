@@ -281,8 +281,8 @@ export default function Contratos() {
 
       // 2. Renderizar HTML em container oculto
       const A4_WIDTH_PX = 794;
-      const A4_HEIGHT_PX = 1123; // 297mm em pixels (794 * 297/210)
-      const MARGIN_BOTTOM_PX = 40; // margem de segurança inferior
+      const A4_HEIGHT_PX = 1123;
+      const MARGIN_BOTTOM_PX = 40;
       const container = document.createElement("div");
       container.style.cssText = `position:fixed;left:-9999px;top:0;width:${A4_WIDTH_PX}px;background:white;`;
       container.innerHTML = data.html;
@@ -301,63 +301,77 @@ export default function Contratos() {
         )
       );
 
-      // 3. Encontrar pontos seguros de quebra de página
+      // 3. Capturar TODO o conteúdo em um único canvas (evita inconsistências)
+      const scale = 2;
+      const fullCanvas = await html2canvas(container, {
+        scale,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        width: A4_WIDTH_PX,
+        windowWidth: A4_WIDTH_PX,
+      });
+
+      // 4. Encontrar pontos seguros de quebra usando posições de elementos
       const safePageHeight = A4_HEIGHT_PX - MARGIN_BOTTOM_PX;
       const totalHeight = container.scrollHeight;
       const containerRect = container.getBoundingClientRect();
 
-      // Coletar os "tops" de todos elementos de bloco de primeiro nível
-      // (blocos que se quer manter inteiros: divs, parágrafos, tabelas, seções)
-      const blockSelectors = "p, h1, h2, h3, h4, h5, h6, table, tr, div.no-break, section, .clause, .header, .info-grid, .summary-section, .signatures, .page-break, hr, img, ul, ol, blockquote";
+      const blockSelectors = "p, h1, h2, h3, h4, h5, h6, table, div, section, hr, img, ul, ol, blockquote";
       const blocks = container.querySelectorAll(blockSelectors);
-      
-      // Coletar bordas únicas ordenadas (tops de elementos)
-      const topEdges = new Set<number>();
-      topEdges.add(0);
+
+      // Coletar tops e bottoms de elementos
+      const edges: { top: number; bottom: number }[] = [];
       blocks.forEach((el) => {
         const rect = el.getBoundingClientRect();
         const top = Math.round(rect.top - containerRect.top);
+        const bottom = Math.round(rect.bottom - containerRect.top);
         if (top > 0 && top < totalHeight) {
-          topEdges.add(top);
+          edges.push({ top, bottom });
         }
       });
-      const sortedTops = Array.from(topEdges).sort((a, b) => a - b);
+      edges.sort((a, b) => a.top - b.top);
 
-      // Construir breakpoints: para cada página, encontrar o último "top" que cabe
+      // Construir breakpoints
       const breakPoints: number[] = [0];
-      
+
       while (breakPoints[breakPoints.length - 1] < totalHeight) {
         const pageStart = breakPoints[breakPoints.length - 1];
         const maxEnd = pageStart + safePageHeight;
-        
+
         if (maxEnd >= totalHeight) {
           breakPoints.push(totalHeight);
           break;
         }
-        
-        // Encontrar o último top de elemento que está antes de maxEnd
-        let bestBreak = maxEnd; // fallback: cortar no limite
-        for (let i = sortedTops.length - 1; i >= 0; i--) {
-          if (sortedTops[i] <= maxEnd && sortedTops[i] > pageStart + 100) {
-            // Verificar se há algum elemento que seria cortado neste ponto
-            bestBreak = sortedTops[i];
-            break;
+
+        // Procurar o melhor corte: último "top" de elemento que não corte nada
+        let bestBreak = maxEnd;
+        for (let i = edges.length - 1; i >= 0; i--) {
+          const edge = edges[i];
+          if (edge.top <= maxEnd && edge.top > pageStart + 100) {
+            // Se o elemento cruza o limite da página, cortar ANTES dele
+            if (edge.bottom > maxEnd) {
+              bestBreak = edge.top;
+              break;
+            }
           }
         }
-        
-        // Segurança: se não avançou pelo menos 200px, forçar avanço
+
+        // Se não avançou o suficiente, forçar avanço
         if (bestBreak <= pageStart + 200) {
           bestBreak = maxEnd;
         }
-        
+
         breakPoints.push(bestBreak);
       }
 
-      // 4. Capturar cada página como canvas separado e montar PDF
-      const scale = 2;
+      document.body.removeChild(container);
+
+      // 5. Fatiar o canvas único e montar PDF
       const pdf = new jsPDF("p", "mm", "a4");
       const imgWidthMM = 210;
       const pageHeightMM = 297;
+      const canvasWidth = fullCanvas.width;
 
       for (let i = 0; i < breakPoints.length - 1; i++) {
         if (i > 0) pdf.addPage();
@@ -366,22 +380,24 @@ export default function Contratos() {
         const sliceBottom = breakPoints[i + 1];
         const sliceHeight = sliceBottom - sliceTop;
 
-        const sliceCanvas = await html2canvas(container, {
-          scale,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: "#ffffff",
-          width: A4_WIDTH_PX,
-          windowWidth: A4_WIDTH_PX,
-          y: sliceTop,
-          height: sliceHeight,
-        });
+        // Criar canvas da fatia a partir do canvas completo
+        const sliceCanvas = document.createElement("canvas");
+        sliceCanvas.width = canvasWidth;
+        sliceCanvas.height = Math.round(sliceHeight * scale);
+        const ctx = sliceCanvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(
+            fullCanvas,
+            0, Math.round(sliceTop * scale),           // source x, y
+            canvasWidth, Math.round(sliceHeight * scale), // source w, h
+            0, 0,                                         // dest x, y
+            canvasWidth, Math.round(sliceHeight * scale)  // dest w, h
+          );
+        }
 
         const sliceHeightMM = (sliceHeight / A4_WIDTH_PX) * imgWidthMM;
         pdf.addImage(sliceCanvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgWidthMM, Math.min(sliceHeightMM, pageHeightMM));
       }
-
-      document.body.removeChild(container);
 
       // 4. Converter PDF para base64 e enviar ao backend para upload
       const pdfBase64 = pdf.output("datauristring").split(",")[1];
