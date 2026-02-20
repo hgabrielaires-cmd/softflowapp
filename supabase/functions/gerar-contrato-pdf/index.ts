@@ -326,6 +326,15 @@ Deno.serve(async (req) => {
       "contato.email_decisor": decisor?.email || "",
       "contrato.numero": contrato.numero_exibicao || "",
       "contrato.status": contrato.status || "",
+      "contrato.data_geracao": (() => {
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const yyyy = now.getFullYear();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        return `${dd}/${mm}/${yyyy} às ${hh}:${min}`;
+      })(),
       "plano.nome": plano?.nome || "",
       "plano.valor_mensalidade": fmtBRL(plano?.valor_mensalidade_padrao ?? 0),
       "modulos.inclusos_lista": modulosInclusosLista,
