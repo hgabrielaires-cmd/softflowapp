@@ -235,6 +235,50 @@ export type Database = {
           },
         ]
       }
+      contratos_zapsign: {
+        Row: {
+          contrato_id: string
+          created_at: string
+          id: string
+          sign_url: string | null
+          signers: Json | null
+          status: string
+          updated_at: string
+          zapsign_doc_id: string | null
+          zapsign_doc_token: string
+        }
+        Insert: {
+          contrato_id: string
+          created_at?: string
+          id?: string
+          sign_url?: string | null
+          signers?: Json | null
+          status?: string
+          updated_at?: string
+          zapsign_doc_id?: string | null
+          zapsign_doc_token: string
+        }
+        Update: {
+          contrato_id?: string
+          created_at?: string
+          id?: string
+          sign_url?: string | null
+          signers?: Json | null
+          status?: string
+          updated_at?: string
+          zapsign_doc_id?: string | null
+          zapsign_doc_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_zapsign_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: true
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_templates: {
         Row: {
           ativo: boolean
