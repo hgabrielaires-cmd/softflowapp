@@ -343,14 +343,18 @@ Deno.serve(async (req) => {
 <style>
   @page { size: A4; margin: 18mm 14mm 18mm 14mm; }
   body { margin: 0; padding: 0; font-family: Arial, sans-serif; font-size: 10.5pt; line-height: 1.35; color: #000; }
-  table { border-collapse: collapse; }
+  table { border-collapse: collapse; page-break-inside: avoid; }
   img { max-width: 100%; }
   p { margin: 2px 0; }
   h1, h2, h3, h4, h5, h6 { margin: 6px 0 2px 0; }
-  ul, ol { margin: 2px 0; padding-left: 18px; }
+  ul, ol { margin: 2px 0; padding-left: 18px; page-break-inside: avoid; }
   li { margin: 1px 0; }
   div { margin: 0; }
   hr { margin: 4px 0; }
+  /* Manter anexo/seções técnicas juntas na mesma página */
+  table + table { page-break-before: avoid; }
+  p + table { page-break-between: avoid; }
+  strong { page-break-after: avoid; }
 </style>
 </head><body>${htmlFinal}</body></html>`;
 
