@@ -138,6 +138,7 @@ Deno.serve(async (req) => {
         lang: "pt-br",
         send_automatic_email: false,
         disable_signer_emails: false,
+        sandbox: true,
       };
 
       console.log("Enviando para ZapSign:", JSON.stringify({ name: docName, signers_count: signers.length }));
