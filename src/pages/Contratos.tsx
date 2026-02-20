@@ -59,6 +59,9 @@ import {
   CheckCircle2,
   Send,
   FileDown,
+  RefreshCw,
+  ClipboardCopy,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -127,6 +130,14 @@ interface Contrato {
   } | null;
 }
 
+interface ZapSignRecord {
+  contrato_id: string;
+  zapsign_doc_token: string;
+  status: string;
+  signers: { name: string; email: string; token: string; status: string; sign_url: string; signed_at?: string }[];
+  sign_url: string | null;
+}
+
 function fmtBRL(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
@@ -155,6 +166,10 @@ export default function Contratos() {
   const [gerarSignedUrl, setGerarSignedUrl] = useState<string | null>(null);
   const [gerarContratoAlvo, setGerarContratoAlvo] = useState<Contrato | null>(null);
   const [gerarMsgIndex, setGerarMsgIndex] = useState(0);
+  const [zapsignRecords, setZapsignRecords] = useState<Record<string, ZapSignRecord>>({});
+  const [enviandoZapsign, setEnviandoZapsign] = useState(false);
+  const [openZapsignDetail, setOpenZapsignDetail] = useState(false);
+  const [zapsignDetailContrato, setZapsignDetailContrato] = useState<Contrato | null>(null);
 
   const GERAR_MSGS = [
     "Ajustando os detalhes finais…",
@@ -211,6 +226,14 @@ export default function Contratos() {
     (paramsData || []).forEach((p: any) => { paramsMap[p.filial_id] = p; });
     setFilialParametros(paramsMap);
     setLoading(false);
+
+    // Carregar registros ZapSign
+    const { data: zapsignData } = await supabase
+      .from("contratos_zapsign")
+      .select("*");
+    const zMap: Record<string, ZapSignRecord> = {};
+    (zapsignData || []).forEach((z: any) => { zMap[z.contrato_id] = z as ZapSignRecord; });
+    setZapsignRecords(zMap);
   }
 
   useEffect(() => {
@@ -329,7 +352,91 @@ export default function Contratos() {
     }
   }
 
-  function getStatusBadge(status: string) {
+  // ── Enviar para ZapSign ────────────────────────────────────────────────────
+  async function handleEnviarZapSign(contrato: Contrato) {
+    if (!contrato.pdf_url || contrato.status_geracao !== "Gerado") {
+      toast.error("Gere o PDF do contrato antes de enviar para assinatura.");
+      return;
+    }
+    setEnviandoZapsign(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("zapsign", {
+        body: { action: "send", contrato_id: contrato.id },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error || "Erro ao enviar para ZapSign");
+        return;
+      }
+      toast.success("Contrato enviado para assinatura no ZapSign!");
+      // Atualizar registros locais
+      setZapsignRecords((prev) => ({
+        ...prev,
+        [contrato.id]: {
+          contrato_id: contrato.id,
+          zapsign_doc_token: data.doc_token,
+          status: "Enviado",
+          signers: data.signers || [],
+          sign_url: data.signers?.[0]?.sign_url || null,
+        },
+      }));
+    } catch (err) {
+      console.error("Erro ZapSign:", err);
+      toast.error("Erro ao enviar para ZapSign");
+    } finally {
+      setEnviandoZapsign(false);
+    }
+  }
+
+  async function handleAtualizarStatusZapSign(contratoId: string) {
+    try {
+      const { data, error } = await supabase.functions.invoke("zapsign", {
+        body: { action: "status", contrato_id: contratoId },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error || "Erro ao consultar status");
+        return;
+      }
+      setZapsignRecords((prev) => ({
+        ...prev,
+        [contratoId]: {
+          ...prev[contratoId],
+          status: data.status,
+          signers: data.signers || prev[contratoId]?.signers || [],
+        },
+      }));
+      toast.success(`Status atualizado: ${data.status}`);
+    } catch (err) {
+      console.error("Erro ao atualizar status:", err);
+      toast.error("Erro ao consultar ZapSign");
+    }
+  }
+
+  function getZapSignStatusBadge(status: string | undefined) {
+    if (!status) return null;
+    if (status === "Assinado")
+      return (
+        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs flex items-center gap-1 w-fit">
+          <CheckCircle2 className="h-3 w-3" />
+          Assinado
+        </Badge>
+      );
+    if (status === "Recusado")
+      return (
+        <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 text-xs flex items-center gap-1 w-fit">
+          <XCircle className="h-3 w-3" />
+          Recusado
+        </Badge>
+      );
+    if (status === "Pendente" || status === "Enviado")
+      return (
+        <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 text-xs flex items-center gap-1 w-fit">
+          <Send className="h-3 w-3" />
+          {status}
+        </Badge>
+      );
+    return <Badge variant="secondary" className="text-xs w-fit">{status}</Badge>;
+  }
+
     if (status === "Ativo")
       return (
         <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400">
@@ -543,6 +650,7 @@ Estou à disposição.`;
                 <TableHead>Contrato</TableHead>
                 <TableHead>Pedido</TableHead>
                 <TableHead>Doc.</TableHead>
+                <TableHead>Assinatura</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -550,13 +658,13 @@ Estou à disposição.`;
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-12">
+                  <TableCell colSpan={10} className="text-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center py-16 text-muted-foreground">
                     <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     Nenhum contrato encontrado
                   </TableCell>
@@ -577,6 +685,7 @@ Estou à disposição.`;
                     <TableCell>{getStatusBadge(contrato.status)}</TableCell>
                     <TableCell>{getPedidoStatusBadges(contrato)}</TableCell>
                     <TableCell>{getStatusGeracaoBadge(contrato.status_geracao)}</TableCell>
+                    <TableCell>{getZapSignStatusBadge(zapsignRecords[contrato.id]?.status)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(contrato.created_at), "dd/MM/yyyy", { locale: ptBR })}
                     </TableCell>
@@ -616,6 +725,45 @@ Estou à disposição.`;
                               <Download className="h-4 w-4 mr-2" />
                               Baixar Contrato
                             </DropdownMenuItem>
+                          )}
+                          {canManage && contrato.status_geracao === "Gerado" && contrato.pdf_url && (
+                            <>
+                              <DropdownMenuSeparator />
+                              {!zapsignRecords[contrato.id] ? (
+                                <DropdownMenuItem
+                                  className="cursor-pointer"
+                                  onClick={() => handleEnviarZapSign(contrato)}
+                                  disabled={enviandoZapsign}
+                                >
+                                  {enviandoZapsign ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <Send className="h-4 w-4 mr-2" />
+                                  )}
+                                  Enviar para ZapSign
+                                </DropdownMenuItem>
+                              ) : (
+                                <>
+                                  <DropdownMenuItem
+                                    className="cursor-pointer"
+                                    onClick={() => {
+                                      setZapsignDetailContrato(contrato);
+                                      setOpenZapsignDetail(true);
+                                    }}
+                                  >
+                                    <ExternalLink className="h-4 w-4 mr-2" />
+                                    Ver ZapSign
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="cursor-pointer"
+                                    onClick={() => handleAtualizarStatusZapSign(contrato.id)}
+                                  >
+                                    <RefreshCw className="h-4 w-4 mr-2" />
+                                    Atualizar Status
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </>
                           )}
                           {canManage && (
                             <DropdownMenuItem
@@ -988,15 +1136,19 @@ Estou à disposição.`;
 
                   <Button
                     variant="outline"
-                    className="w-full gap-2 relative"
-                    disabled
-                    title="Integração em construção"
+                    className="w-full gap-2"
+                    onClick={() => {
+                      setOpenGerarPopup(false);
+                      if (gerarContratoAlvo) handleEnviarZapSign(gerarContratoAlvo);
+                    }}
+                    disabled={enviandoZapsign || !gerarContratoAlvo}
                   >
-                    <Send className="h-4 w-4" />
+                    {enviandoZapsign ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
                     Enviar para ZapSign
-                    <span className="absolute -top-2 -right-2 bg-amber-400 text-amber-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
-                      Em breve
-                    </span>
                   </Button>
                 </div>
 
@@ -1045,6 +1197,78 @@ Estou à disposição.`;
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ZapSign Detail Dialog */}
+      {zapsignDetailContrato && zapsignRecords[zapsignDetailContrato.id] && (
+        <Dialog open={openZapsignDetail} onOpenChange={setOpenZapsignDetail}>
+          <DialogContent className="max-w-md" aria-describedby="zapsign-desc">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <Send className="h-5 w-5 text-primary" />
+                ZapSign — {zapsignDetailContrato.numero_exibicao}
+              </DialogTitle>
+              <DialogDescription id="zapsign-desc" className="sr-only">
+                Detalhes da assinatura no ZapSign
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Status</span>
+                {getZapSignStatusBadge(zapsignRecords[zapsignDetailContrato.id].status)}
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Signatários</p>
+                {zapsignRecords[zapsignDetailContrato.id].signers.map((signer, i) => (
+                  <div key={i} className="rounded-lg border border-border p-3 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{signer.name}</span>
+                      <Badge variant="secondary" className="text-xs">{signer.status || "pendente"}</Badge>
+                    </div>
+                    {signer.email && <p className="text-xs text-muted-foreground">{signer.email}</p>}
+                    {signer.sign_url && (
+                      <div className="flex gap-1 pt-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs gap-1"
+                          onClick={() => {
+                            navigator.clipboard.writeText(signer.sign_url);
+                            toast.success("Link copiado!");
+                          }}
+                        >
+                          <ClipboardCopy className="h-3 w-3" />
+                          Copiar Link
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs gap-1"
+                          onClick={() => window.open(signer.sign_url, "_blank")}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          Abrir
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-1"
+                  onClick={() => handleAtualizarStatusZapSign(zapsignDetailContrato.id)}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Atualizar Status
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </AppLayout>
   );
 }
