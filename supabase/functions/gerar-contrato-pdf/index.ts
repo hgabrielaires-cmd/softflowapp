@@ -212,12 +212,14 @@ Deno.serve(async (req) => {
             <th style="border:1px solid #ccc;padding:6px;text-align:left;">Módulo</th>
             <th style="border:1px solid #ccc;padding:6px;text-align:center;">Qtd</th>
             <th style="border:1px solid #ccc;padding:6px;text-align:right;">Implantação</th>
+            <th style="border:1px solid #ccc;padding:6px;text-align:right;">Valor Unit.</th>
             <th style="border:1px solid #ccc;padding:6px;text-align:right;">Mensalidade</th>
           </tr></thead>
           <tbody>${modulos.map((m: any) => `<tr>
             <td style="border:1px solid #ccc;padding:6px;">${m.nome}</td>
             <td style="border:1px solid #ccc;padding:6px;text-align:center;">${m.quantidade}x</td>
             <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmtBRL(m.valor_implantacao_modulo * m.quantidade)}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmtBRL(m.valor_mensalidade_modulo)}</td>
             <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}</td>
           </tr>`).join("")}</tbody>
         </table>`
