@@ -341,10 +341,14 @@ Deno.serve(async (req) => {
       const fullHtml = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
 <style>
-  @page { size: A4; margin: 0; }
-  body { max-width: 794px; margin: 0 auto; padding: 76px 56px; box-sizing: border-box; font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.5; color: #000; }
+  @page { size: A4; margin: 20mm 15mm 20mm 15mm; }
+  body { margin: 0; padding: 0; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4; color: #000; }
   table { border-collapse: collapse; }
   img { max-width: 100%; }
+  p { margin: 4px 0; }
+  h1, h2, h3, h4, h5, h6 { margin: 8px 0 4px 0; }
+  ul, ol { margin: 4px 0; padding-left: 20px; }
+  div { margin: 0; }
 </style>
 </head><body>${htmlFinal}</body></html>`;
 
