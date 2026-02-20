@@ -138,6 +138,7 @@ interface FormState {
   comissao_implantacao_percentual: string;
   comissao_mensalidade_percentual: string;
   observacoes: string;
+  motivo_desconto: string;
   // Valores originais (auto-preenchidos, readonly)
   valor_implantacao_original: number;
   valor_mensalidade_original: number;
@@ -170,6 +171,7 @@ const emptyForm: FormState = {
   comissao_implantacao_percentual: "5",
   comissao_mensalidade_percentual: "5",
   observacoes: "",
+  motivo_desconto: "",
   valor_implantacao_original: 0,
   valor_mensalidade_original: 0,
   desconto_implantacao_tipo: "R$",
@@ -600,6 +602,7 @@ export default function Pedidos() {
       comissao_implantacao_percentual: ((pedido as any).comissao_implantacao_percentual ?? pedido.comissao_percentual ?? 5).toString(),
       comissao_mensalidade_percentual: ((pedido as any).comissao_mensalidade_percentual ?? pedido.comissao_percentual ?? 5).toString(),
       observacoes: pedido.observacoes || "",
+      motivo_desconto: (pedido as any).motivo_desconto || "",
       valor_implantacao_original: pedido.valor_implantacao_original ?? pedido.valor_implantacao,
       valor_mensalidade_original: pedido.valor_mensalidade_original ?? pedido.valor_mensalidade,
       desconto_implantacao_tipo: (pedido.desconto_implantacao_tipo as "R$" | "%") || "R$",
@@ -681,6 +684,7 @@ export default function Pedidos() {
         comissao_percentual: comissaoPercentualLegado,
         comissao_valor: comissaoValorTotal,
         observacoes: form.observacoes || null,
+        motivo_desconto: form.motivo_desconto || null,
         valor_implantacao_original: valorImplantacaoOriginal,
         valor_mensalidade_original: valorMensalidadeOriginal,
         desconto_implantacao_tipo: form.desconto_implantacao_tipo,
@@ -1584,6 +1588,17 @@ export default function Pedidos() {
                         <Input readOnly value={fmtBRL(valorMensalidadeFinal)} className="w-36 bg-background font-mono text-sm text-primary font-semibold" />
                       </div>
                     </div>
+
+                    {/* Motivo do desconto */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Motivo do desconto</Label>
+                      <Textarea
+                        placeholder="Informe o motivo do desconto..."
+                        value={form.motivo_desconto}
+                        onChange={(e) => setForm((f) => ({ ...f, motivo_desconto: e.target.value }))}
+                        rows={2}
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -2102,6 +2117,13 @@ export default function Pedidos() {
                         <span className="font-mono text-muted-foreground">{fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}/mês</span>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {(vp as any).motivo_desconto && (
+                  <div className="border-t border-border pt-3 space-y-0.5">
+                    <p className="text-xs text-muted-foreground">Motivo do Desconto</p>
+                    <p className="text-xs">{(vp as any).motivo_desconto}</p>
                   </div>
                 )}
 

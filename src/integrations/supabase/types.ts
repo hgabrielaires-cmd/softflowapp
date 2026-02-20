@@ -545,6 +545,7 @@ export type Database = {
           financeiro_status: string
           id: string
           modulos_adicionais: Json | null
+          motivo_desconto: string | null
           observacoes: string | null
           pagamento_implantacao_desconto_percentual: number | null
           pagamento_implantacao_forma: string | null
@@ -589,6 +590,7 @@ export type Database = {
           financeiro_status?: string
           id?: string
           modulos_adicionais?: Json | null
+          motivo_desconto?: string | null
           observacoes?: string | null
           pagamento_implantacao_desconto_percentual?: number | null
           pagamento_implantacao_forma?: string | null
@@ -633,6 +635,7 @@ export type Database = {
           financeiro_status?: string
           id?: string
           modulos_adicionais?: Json | null
+          motivo_desconto?: string | null
           observacoes?: string | null
           pagamento_implantacao_desconto_percentual?: number | null
           pagamento_implantacao_forma?: string | null
