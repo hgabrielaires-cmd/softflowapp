@@ -233,6 +233,49 @@ Deno.serve(async (req) => {
     const mensDesconto = mensOriginal - mensFinal;
     const totalGeral = pedido?.valor_total ?? 0;
 
+    // Buscar motivo do desconto (solicitações aprovadas)
+    let motivoDesconto = "";
+    if (pedido?.id && (implDesconto > 0 || mensDesconto > 0)) {
+      const { data: solicitacao } = await supabase
+        .from("solicitacoes_desconto")
+        .select("observacoes")
+        .eq("pedido_id", pedido.id)
+        .eq("status", "Aprovado")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      motivoDesconto = solicitacao?.observacoes || pedido?.observacoes || "";
+    }
+
+    // Gerar HTML condicional de desconto
+    const temDescontoImpl = implDesconto > 0;
+    const temDescontoMens = mensDesconto > 0;
+    const temDesconto = temDescontoImpl || temDescontoMens;
+
+    const descontoStyle = 'style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:10px;margin-top:10px;"';
+
+    const descontoImplHtml = temDescontoImpl
+      ? `<div ${descontoStyle}>
+          <strong style="color:#856404;">⚡ Desconto Implantação:</strong><br>
+          <span style="text-decoration:line-through;color:#999;">${fmtBRL(implOriginal)}</span> → <strong style="color:#28a745;">${fmtBRL(implFinal)}</strong>
+          <span style="color:#856404;font-size:10px;"> (economia de ${fmtBRL(implDesconto)})</span>
+        </div>`
+      : "";
+
+    const descontoMensHtml = temDescontoMens
+      ? `<div ${descontoStyle}>
+          <strong style="color:#856404;">⚡ Desconto Mensalidade:</strong><br>
+          <span style="text-decoration:line-through;color:#999;">${fmtBRL(mensOriginal)}</span> → <strong style="color:#28a745;">${fmtBRL(mensFinal)}</strong>
+          <span style="color:#856404;font-size:10px;"> (economia de ${fmtBRL(mensDesconto)})</span>
+        </div>`
+      : "";
+
+    const motivoDescontoHtml = temDesconto && motivoDesconto
+      ? `<div style="background:#e8f5e9;border:1px solid #81c784;border-radius:4px;padding:8px;margin-top:8px;font-size:10.5px;">
+          <strong style="color:#2e7d32;">📋 Motivo do desconto:</strong> ${motivoDesconto}
+        </div>`
+      : "";
+
     const enderecoCliente = [
       cliente?.logradouro,
       cliente?.numero ? `, ${cliente.numero}` : "",
@@ -296,6 +339,9 @@ Deno.serve(async (req) => {
       "valores.mensalidade.final": fmtBRL(mensFinal),
       "valores.total_geral": fmtBRL(totalGeral),
       "valores.total_extenso": valorPorExtenso(totalGeral),
+      "valores.desconto_implantacao_html": descontoImplHtml,
+      "valores.desconto_mensalidade_html": descontoMensHtml,
+      "valores.motivo_desconto_html": motivoDescontoHtml,
       "pagamento.implantacao.forma": formaImplantacao,
       "pagamento.implantacao.parcelas": parcelasImplantacao ? `${parcelasImplantacao}x` : "",
       "pagamento.mensalidade.forma": formaMensalidade,
