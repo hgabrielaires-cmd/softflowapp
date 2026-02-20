@@ -302,58 +302,56 @@ export default function Contratos() {
       );
 
       // 3. Encontrar pontos seguros de quebra de página
-      // Coletar todos os elementos de bloco e seus offsets
-      const allElements = container.querySelectorAll("p, h1, h2, h3, h4, h5, h6, div, table, tr, li, ul, ol, blockquote, section, hr, br, img");
       const safePageHeight = A4_HEIGHT_PX - MARGIN_BOTTOM_PX;
-
-      // Encontrar os Y de corte seguros (entre elementos, nunca no meio)
-      const breakPoints: number[] = [0];
-      let currentPageBottom = safePageHeight;
-
-      // Coletar bordas (top) de todos os elementos
-      interface ElementEdge { top: number; bottom: number; }
-      const edges: ElementEdge[] = [];
-      allElements.forEach((el) => {
-        const rect = el.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-        edges.push({
-          top: rect.top - containerRect.top,
-          bottom: rect.bottom - containerRect.top,
-        });
-      });
-      edges.sort((a, b) => a.top - b.top);
-
       const totalHeight = container.scrollHeight;
+      const containerRect = container.getBoundingClientRect();
 
-      while (currentPageBottom < totalHeight) {
-        // Encontrar o melhor ponto de corte: o maior "top" de elemento que cabe na página
-        let bestBreak = currentPageBottom;
+      // Coletar os "tops" de todos elementos de bloco de primeiro nível
+      // (blocos que se quer manter inteiros: divs, parágrafos, tabelas, seções)
+      const blockSelectors = "p, h1, h2, h3, h4, h5, h6, table, tr, div.no-break, section, .clause, .header, .info-grid, .summary-section, .signatures, .page-break, hr, img, ul, ol, blockquote";
+      const blocks = container.querySelectorAll(blockSelectors);
+      
+      // Coletar bordas únicas ordenadas (tops de elementos)
+      const topEdges = new Set<number>();
+      topEdges.add(0);
+      blocks.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        const top = Math.round(rect.top - containerRect.top);
+        if (top > 0 && top < totalHeight) {
+          topEdges.add(top);
+        }
+      });
+      const sortedTops = Array.from(topEdges).sort((a, b) => a - b);
 
-        // Procurar de trás para frente: o último topo de elemento <= currentPageBottom
-        for (let i = edges.length - 1; i >= 0; i--) {
-          if (edges[i].top <= currentPageBottom && edges[i].top > breakPoints[breakPoints.length - 1]) {
-            // Verificar se este elemento não está sendo cortado
-            if (edges[i].bottom > currentPageBottom) {
-              // Elemento seria cortado - usar o topo dele como ponto de corte
-              bestBreak = edges[i].top;
-              break;
-            } else {
-              // Elemento cabe inteiro - cortar após ele
-              bestBreak = currentPageBottom;
-              break;
-            }
+      // Construir breakpoints: para cada página, encontrar o último "top" que cabe
+      const breakPoints: number[] = [0];
+      
+      while (breakPoints[breakPoints.length - 1] < totalHeight) {
+        const pageStart = breakPoints[breakPoints.length - 1];
+        const maxEnd = pageStart + safePageHeight;
+        
+        if (maxEnd >= totalHeight) {
+          breakPoints.push(totalHeight);
+          break;
+        }
+        
+        // Encontrar o último top de elemento que está antes de maxEnd
+        let bestBreak = maxEnd; // fallback: cortar no limite
+        for (let i = sortedTops.length - 1; i >= 0; i--) {
+          if (sortedTops[i] <= maxEnd && sortedTops[i] > pageStart + 100) {
+            // Verificar se há algum elemento que seria cortado neste ponto
+            bestBreak = sortedTops[i];
+            break;
           }
         }
-
-        // Se bestBreak não avançou (todos elementos enormes), forçar corte
-        if (bestBreak <= breakPoints[breakPoints.length - 1]) {
-          bestBreak = currentPageBottom;
+        
+        // Segurança: se não avançou pelo menos 200px, forçar avanço
+        if (bestBreak <= pageStart + 200) {
+          bestBreak = maxEnd;
         }
-
+        
         breakPoints.push(bestBreak);
-        currentPageBottom = bestBreak + safePageHeight;
       }
-      breakPoints.push(totalHeight);
 
       // 4. Capturar cada página como canvas separado e montar PDF
       const scale = 2;
@@ -368,7 +366,6 @@ export default function Contratos() {
         const sliceBottom = breakPoints[i + 1];
         const sliceHeight = sliceBottom - sliceTop;
 
-        // Capturar apenas a fatia usando html2canvas com window scroll
         const sliceCanvas = await html2canvas(container, {
           scale,
           useCORS: true,
