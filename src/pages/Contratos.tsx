@@ -437,6 +437,7 @@ export default function Contratos() {
     return <Badge variant="secondary" className="text-xs w-fit">{status}</Badge>;
   }
 
+  function getStatusBadge(status: string) {
     if (status === "Ativo")
       return (
         <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400">
