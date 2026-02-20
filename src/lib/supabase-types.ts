@@ -57,6 +57,7 @@ export interface Pedido {
 export interface Filial {
   id: string;
   nome: string;
+  razao_social: string | null;
   ativa: boolean;
   logo_url: string | null;
   cnpj: string | null;
