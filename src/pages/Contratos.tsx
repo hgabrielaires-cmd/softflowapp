@@ -1234,17 +1234,7 @@ Estou à disposição.`;
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Signatários</p>
                 {zapsignRecords[zapsignDetailContrato.id].signers.map((signer, i) => (
                   <div key={i} className="rounded-lg border border-border p-3 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{signer.name}</span>
-                      {(() => {
-                        const s = signer.status?.toLowerCase();
-                        if (s === "signed")
-                          return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs">Assinado</Badge>;
-                        if (s === "refused" || s === "canceled")
-                          return <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 text-xs">Recusado</Badge>;
-                        return <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 text-xs">Aguardando assinatura</Badge>;
-                      })()}
-                    </div>
+                    <span className="text-sm font-medium">{signer.name}</span>
                     {signer.email && <p className="text-xs text-muted-foreground">{signer.email}</p>}
                     {signer.sign_url && (
                       <div className="flex gap-1 pt-1">
@@ -1271,6 +1261,16 @@ Estou à disposição.`;
                         </Button>
                       </div>
                     )}
+                    <div className="pt-1">
+                      {(() => {
+                        const s = signer.status?.toLowerCase();
+                        if (s === "signed")
+                          return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs">Assinado</Badge>;
+                        if (s === "refused" || s === "canceled")
+                          return <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 text-xs">Recusado</Badge>;
+                        return <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 text-xs">Aguardando assinatura</Badge>;
+                      })()}
+                    </div>
                   </div>
                 ))}
               </div>
