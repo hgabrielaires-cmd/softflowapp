@@ -292,7 +292,7 @@ export function MessageTemplates() {
 
       {/* Editor Dialog */}
       <Dialog open={openEditor} onOpenChange={setOpenEditor}>
-        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-primary" />
@@ -350,7 +350,7 @@ export function MessageTemplates() {
                   value={form.conteudo}
                   onChange={(e) => setForm((f) => ({ ...f, conteudo: e.target.value }))}
                   placeholder="Digite o conteúdo da mensagem..."
-                  className="flex-1 min-h-[200px] resize-none font-mono text-sm"
+                  className="flex-1 min-h-[350px] resize-none font-mono text-sm"
                 />
               </div>
               <div className="w-[220px] shrink-0 flex flex-col space-y-1 min-h-0">
