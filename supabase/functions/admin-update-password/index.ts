@@ -62,6 +62,7 @@ serve(async (req) => {
 
     const { error } = await adminClient.auth.admin.updateUserById(user_id, {
       password,
+      email_confirm: true,
     });
 
     if (error) {

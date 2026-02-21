@@ -190,6 +190,11 @@ export default function Usuarios() {
       if (error) throw error;
       if (!data.user) throw new Error("Usuário não criado");
 
+      // Confirmar e-mail e definir senha via admin (evita "Email not confirmed")
+      await supabase.functions.invoke("admin-update-password", {
+        body: { user_id: data.user.id, password: senhaTemporaria },
+      });
+
       await supabase.from("profiles").update({
         filial_id: (inviteFilialId && inviteFilialId !== "todas") ? inviteFilialId : null,
         comissao_percentual: parseFloat(inviteComissaoImp) || 5,
