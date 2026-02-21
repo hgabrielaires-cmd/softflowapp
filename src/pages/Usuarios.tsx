@@ -39,9 +39,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, UserX, UserCheck, Shield, Loader2, Mail, Pencil, ShieldCheck } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface UserWithRoles extends Profile {
   roles: AppRole[];
@@ -56,6 +58,7 @@ export default function Usuarios() {
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [savingPermission, setSavingPermission] = useState<string | null>(null);
 
   // Create dialog
   const [openInvite, setOpenInvite] = useState(false);
@@ -177,7 +180,6 @@ export default function Usuarios() {
     if (!editingUser) return;
     setSaving(true);
     try {
-      // Update profile
       const { error: profileError } = await supabase.from("profiles").update({
         full_name: editName,
         filial_id: (editFilialId && editFilialId !== "todas") ? editFilialId : null,
@@ -193,7 +195,6 @@ export default function Usuarios() {
 
       if (profileError) throw profileError;
 
-      // Update role: find existing and UPDATE (avoids losing admin rights mid-operation)
       const { data: existingRole } = await supabase
         .from("user_roles")
         .select("id")
@@ -230,11 +231,29 @@ export default function Usuarios() {
     loadUsers();
   }
 
+  // ── Toggle special permission inline ────────────────────
+  async function toggleSpecialPermission(user: UserWithRoles, field: 'gestor_desconto' | 'permitir_cnpj_duplicado') {
+    const currentValue = (user as any)[field] ?? false;
+    setSavingPermission(`${user.id}-${field}`);
+    const { error } = await supabase.from("profiles").update({
+      [field]: !currentValue,
+    } as any).eq("user_id", user.user_id);
+    if (error) {
+      toast.error("Erro ao atualizar permissão");
+    } else {
+      toast.success("Permissão atualizada!");
+      loadUsers();
+    }
+    setSavingPermission(null);
+  }
+
   const filtered = users.filter(
     (u) =>
       u.full_name.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase())
   );
+
+  const activeUsers = filtered.filter(u => u.active);
 
   const FilialSelect = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
     <Select value={value} onValueChange={onChange}>
@@ -252,7 +271,7 @@ export default function Usuarios() {
 
   return (
     <AppLayout>
-      <div className="space-y-5">
+      <div className="space-y-5 w-full max-w-[1400px]">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Usuários</h1>
@@ -265,130 +284,262 @@ export default function Usuarios() {
           </Button>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou e-mail..."
-            className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+        <Tabs defaultValue="usuarios" className="w-full">
+          <TabsList>
+            <TabsTrigger value="usuarios" className="gap-2">
+              <Users className="h-4 w-4" />
+              Usuários
+            </TabsTrigger>
+            <TabsTrigger value="permissoes" className="gap-2">
+              <KeyRound className="h-4 w-4" />
+              Permissões Especiais
+            </TabsTrigger>
+            <TabsTrigger value="notificacoes" className="gap-2">
+              <Bell className="h-4 w-4" />
+              Notificações
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Table */}
-        <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead>Nome</TableHead>
-                <TableHead>E-mail</TableHead>
-                <TableHead>Cargo</TableHead>
-                <TableHead>Filial</TableHead>
-                <TableHead>Comissão</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                  </TableCell>
-                </TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                    Nenhum usuário encontrado
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.full_name}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{user.email}</TableCell>
-                    <TableCell>
-                      <span className="text-sm">
-                        {user.roles[0] ? ROLE_LABELS[user.roles[0]] : <span className="text-muted-foreground">—</span>}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {user.filial_id
-                        ? (user.filial_nome || filiais.find(f => f.id === user.filial_id)?.nome || "—")
-                        : <span className="text-xs text-primary font-medium">🌐 Todas</span>
-                      }
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {(user as any).comissao_implantacao_percentual != null
-                        ? `Imp: ${(user as any).comissao_implantacao_percentual}% / Mens: ${(user as any).comissao_mensalidade_percentual ?? user.comissao_percentual ?? 0}%`
-                        : user.comissao_percentual != null ? `${user.comissao_percentual}%` : "—"
-                      }
-                    </TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        user.active ? "bg-sky-100 text-sky-700" : "bg-gray-100 text-gray-500"
-                      }`}>
-                        {user.active ? "Ativo" : "Inativo"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {/* Edit */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => openEditDialog(user)}
-                          title="Editar usuário"
-                        >
-                          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                        </Button>
-
-                        {/* Toggle active */}
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title={user.active ? "Desativar" : "Ativar"}>
-                              {user.active ? (
-                                <UserX className="h-4 w-4 text-muted-foreground" />
-                              ) : (
-                                <UserCheck className="h-4 w-4 text-primary" />
-                              )}
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                {user.active ? "Desativar usuário?" : "Reativar usuário?"}
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                {user.active
-                                  ? `${user.full_name} perderá acesso ao sistema.`
-                                  : `${user.full_name} terá acesso restaurado.`}
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => toggleActive(user)}>
-                                Confirmar
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          {!loading && (
-            <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground flex items-center gap-1.5">
-              <Shield className="h-3.5 w-3.5" />
-              {filtered.length} usuário(s) encontrado(s)
+          {/* ══ Tab Usuários ══ */}
+          <TabsContent value="usuarios" className="space-y-4">
+            {/* Search */}
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome ou e-mail..."
+                className="pl-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
-          )}
-        </div>
+
+            {/* Table */}
+            <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>Nome</TableHead>
+                    <TableHead>E-mail</TableHead>
+                    <TableHead>Cargo</TableHead>
+                    <TableHead>Filial</TableHead>
+                    <TableHead>Comissão</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-12">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                      </TableCell>
+                    </TableRow>
+                  ) : filtered.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                        Nenhum usuário encontrado
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filtered.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-medium">{user.full_name}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{user.email}</TableCell>
+                        <TableCell>
+                          <span className="text-sm">
+                            {user.roles[0] ? ROLE_LABELS[user.roles[0]] : <span className="text-muted-foreground">—</span>}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {user.filial_id
+                            ? (user.filial_nome || filiais.find(f => f.id === user.filial_id)?.nome || "—")
+                            : <span className="text-xs text-primary font-medium">🌐 Todas</span>
+                          }
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {(user as any).comissao_implantacao_percentual != null
+                            ? `Imp: ${(user as any).comissao_implantacao_percentual}% / Mens: ${(user as any).comissao_mensalidade_percentual ?? user.comissao_percentual ?? 0}%`
+                            : user.comissao_percentual != null ? `${user.comissao_percentual}%` : "—"
+                          }
+                        </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            user.active ? "bg-sky-100 text-sky-700" : "bg-gray-100 text-gray-500"
+                          }`}>
+                            {user.active ? "Ativo" : "Inativo"}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => openEditDialog(user)}
+                              title="Editar usuário"
+                            >
+                              <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                            </Button>
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" title={user.active ? "Desativar" : "Ativar"}>
+                                  {user.active ? (
+                                    <UserX className="h-4 w-4 text-muted-foreground" />
+                                  ) : (
+                                    <UserCheck className="h-4 w-4 text-primary" />
+                                  )}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    {user.active ? "Desativar usuário?" : "Reativar usuário?"}
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    {user.active
+                                      ? `${user.full_name} perderá acesso ao sistema.`
+                                      : `${user.full_name} terá acesso restaurado.`}
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => toggleActive(user)}>
+                                    Confirmar
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+              {!loading && (
+                <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Shield className="h-3.5 w-3.5" />
+                  {filtered.length} usuário(s) encontrado(s)
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* ══ Tab Permissões Especiais ══ */}
+          <TabsContent value="permissoes" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Card Gestor de Desconto */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-primary" />
+                    Gestor de Desconto
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    Usuários que podem aprovar/reprovar solicitações de desconto acima do limite permitido.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {activeUsers.map((user) => {
+                        const isGestor = (user as any).gestor_desconto ?? false;
+                        const isSaving = savingPermission === `${user.id}-gestor_desconto`;
+                        return (
+                          <div key={user.id} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-foreground truncate">{user.full_name}</p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {user.roles[0] ? ROLE_LABELS[user.roles[0]] : "—"}
+                                  {user.filial_nome ? ` · ${user.filial_nome}` : ""}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+                              <Switch
+                                checked={isGestor}
+                                onCheckedChange={() => toggleSpecialPermission(user, 'gestor_desconto')}
+                                disabled={isSaving}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Card Permitir CNPJ Duplicado */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-amber-500" />
+                    Permitir Cadastro CNPJ Duplicado
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    Usuários que podem cadastrar clientes com CNPJ já existente no sistema.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {activeUsers.map((user) => {
+                        const permiteCnpj = (user as any).permitir_cnpj_duplicado ?? false;
+                        const isSaving = savingPermission === `${user.id}-permitir_cnpj_duplicado`;
+                        return (
+                          <div key={user.id} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-foreground truncate">{user.full_name}</p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {user.roles[0] ? ROLE_LABELS[user.roles[0]] : "—"}
+                                  {user.filial_nome ? ` · ${user.filial_nome}` : ""}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+                              <Switch
+                                checked={permiteCnpj}
+                                onCheckedChange={() => toggleSpecialPermission(user, 'permitir_cnpj_duplicado')}
+                                disabled={isSaving}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* ══ Tab Notificações ══ */}
+          <TabsContent value="notificacoes" className="space-y-4">
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <Bell className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-1">Configurações de Notificações</h3>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  Em breve será possível configurar preferências de notificações por usuário, como alertas de novos pedidos, aprovações e lembretes.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* ── Create Dialog ── */}
@@ -488,7 +639,7 @@ export default function Usuarios() {
               <div className="flex items-center justify-between pt-1">
                 <div className="space-y-0.5">
                   <Label className="flex items-center gap-1.5 cursor-pointer">
-                    <ShieldCheck className="h-4 w-4 text-warning" />
+                    <ShieldCheck className="h-4 w-4 text-amber-500" />
                     Permitir Cadastro CNPJ Duplicado
                   </Label>
                   <p className="text-xs text-muted-foreground">Permite cadastrar clientes com CNPJ já existente no módulo de Clientes</p>
@@ -598,7 +749,7 @@ export default function Usuarios() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label className="flex items-center gap-1.5 cursor-pointer">
-                      <ShieldCheck className="h-4 w-4 text-warning" />
+                      <ShieldCheck className="h-4 w-4 text-amber-500" />
                       Permitir Cadastro CNPJ Duplicado
                     </Label>
                     <p className="text-xs text-muted-foreground">Permite cadastrar clientes com CNPJ já existente</p>
