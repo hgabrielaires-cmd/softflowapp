@@ -40,7 +40,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone } from "lucide-react";
+import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 
@@ -315,6 +315,42 @@ export default function Usuarios() {
     }
   }
 
+  // ── Reenviar boas-vindas ────────────────────────────────
+  async function handleReenviarBoasVindas(user: UserWithRoles) {
+    const telefone = (user as any).telefone;
+    if (!telefone) {
+      toast.error("Usuário não possui telefone cadastrado. Edite o usuário e informe o telefone.");
+      return;
+    }
+
+    try {
+      toast.loading("Reenviando boas-vindas...", { id: "reenviar" });
+
+      // Gerar nova senha de 8 dígitos
+      const novaSenha = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join("");
+
+      // Atualizar senha via edge function (usa service role)
+      const { error: pwError } = await supabase.functions.invoke("admin-update-password", {
+        body: { user_id: user.user_id, password: novaSenha },
+      });
+
+      if (pwError) throw pwError;
+
+      // Marcar que deve trocar senha
+      await supabase.from("profiles").update({
+        deve_trocar_senha: true,
+      } as any).eq("user_id", user.user_id);
+
+      // Enviar WhatsApp
+      await enviarWhatsappBoasVindas(user.full_name, user.email, novaSenha, telefone);
+
+      toast.success("Boas-vindas reenviada com sucesso! Nova senha gerada.", { id: "reenviar" });
+    } catch (err: unknown) {
+      console.error("Erro ao reenviar boas-vindas:", err);
+      toast.error(err instanceof Error ? err.message : "Erro ao reenviar boas-vindas", { id: "reenviar" });
+    }
+  }
+
 
   const filtered = users.filter(
     (u) =>
@@ -437,9 +473,19 @@ export default function Usuarios() {
                           size="icon"
                           className="h-7 w-7"
                           onClick={() => handleResetPassword(user)}
-                          title="Redefinir senha"
+                          title="Redefinir senha por e-mail"
                         >
                           <Key className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => handleReenviarBoasVindas(user)}
+                          title="Reenviar boas-vindas (WhatsApp)"
+                        >
+                          <Send className="h-3.5 w-3.5 text-muted-foreground" />
                         </Button>
 
                         <AlertDialog>
