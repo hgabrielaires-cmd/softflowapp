@@ -292,7 +292,7 @@ export function MessageTemplates() {
 
       {/* Editor Dialog */}
       <Dialog open={openEditor} onOpenChange={setOpenEditor}>
-        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-primary" />
@@ -355,7 +355,7 @@ export function MessageTemplates() {
               </div>
               <div className="w-[220px] shrink-0 flex flex-col space-y-1 min-h-0">
                 <Label className="text-xs">Variáveis disponíveis</Label>
-                <div className="flex-1 overflow-auto rounded-md border border-border bg-muted/30 p-2 space-y-1">
+                <div className="flex-1 overflow-y-auto rounded-md border border-border bg-muted/30 p-2 space-y-1">
                   {VARIAVEIS_DISPONIVEIS.map((v) => (
                     <button
                       key={v.var}
