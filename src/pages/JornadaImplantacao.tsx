@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Minus, Pencil, Trash2, Search, ChevronDown, ChevronRight } from "lucide-react";
 import type { Jornada, JornadaEtapa, JornadaAtividade, MesaAtendimento, ChecklistItem, Filial } from "@/lib/supabase-types";
 
 // ─── Local state types for creation ──────────────────────────────────────────
@@ -637,7 +637,22 @@ export default function JornadaImplantacao() {
             </div>
             <div>
               <label className="text-sm font-medium">Horas Estimadas</label>
-              <Input type="number" min={0} step={0.5} value={atividadeForm.horas_estimadas} onChange={(e) => setAtividadeForm((p) => ({ ...p, horas_estimadas: parseFloat(e.target.value) || 0 }))} />
+              <div className="flex items-center gap-2 mt-1">
+                <Button type="button" variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => setAtividadeForm((p) => ({ ...p, horas_estimadas: Math.max(0, p.horas_estimadas - 0.5) }))}>
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <span className="text-lg font-semibold w-14 text-center">{atividadeForm.horas_estimadas}h</span>
+                <Button type="button" variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => setAtividadeForm((p) => ({ ...p, horas_estimadas: p.horas_estimadas + 0.5 }))}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex gap-1 mt-2">
+                {[0.5, 1, 2, 4, 8].map((v) => (
+                  <Button key={v} type="button" variant={atividadeForm.horas_estimadas === v ? "default" : "outline"} size="sm" className="h-7 text-xs flex-1" onClick={() => setAtividadeForm((p) => ({ ...p, horas_estimadas: v }))}>
+                    {v}h
+                  </Button>
+                ))}
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium">Descrição</label>
