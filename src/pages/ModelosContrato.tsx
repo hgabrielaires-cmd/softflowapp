@@ -7,12 +7,14 @@ import { ContractVariablesPanel } from "@/components/ContractVariablesPanel";
 import { ContractPreview } from "@/components/ContractPreview";
 import { ClauseEditor } from "@/components/ClauseEditor";
 import { ClauseLibrary } from "@/components/ClauseLibrary";
+import { MessageTemplates } from "@/components/MessageTemplates";
 import { getExampleData } from "@/lib/contract-variables";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -32,7 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   FileText, Plus, Loader2, MoreHorizontal,
-  Pencil, Trash2, Building2, CheckCircle, XCircle, Eye, Copy, Upload,
+  Pencil, Trash2, Building2, CheckCircle, XCircle, Eye, Copy, Upload, MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -386,125 +388,145 @@ export default function ModelosContrato() {
     <AppLayout>
       <div className="space-y-5">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <FileText className="h-6 w-6 text-primary" />
-              Modelos de Contrato
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Gerencie os modelos para geração de contratos
-            </p>
-          </div>
-          <Button className="gap-2" onClick={openNew}>
-            <Plus className="h-4 w-4" /> Novo Modelo
-          </Button>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <FileText className="h-6 w-6 text-primary" />
+            Modelos & Templates
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Gerencie modelos de contrato e templates de mensagens
+          </p>
         </div>
 
-        {/* Tabela */}
-        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead>Nome</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Filial</TableHead>
-                <TableHead>Modo</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Versão</TableHead>
-                <TableHead>Criado em</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                  </TableCell>
-                </TableRow>
-              ) : modelos.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-16 text-muted-foreground">
-                    <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                    Nenhum modelo cadastrado ainda
-                  </TableCell>
-                </TableRow>
-              ) : modelos.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell className="font-medium">{m.nome}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-xs">{getTipoLabel(m.tipo)}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    {m.filiais ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                        <Building2 className="h-3 w-3" /> {m.filiais.nome}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Global</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="text-xs">
-                      {m.usa_clausulas ? "Cláusulas" : "HTML"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <button
-                      onClick={() => handleToggleAtivo(m)}
-                      className="flex items-center gap-1.5 group"
-                      title={m.ativo ? "Clique para inativar" : "Clique para ativar"}
-                    >
-                      {m.ativo ? (
-                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 gap-1 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
-                          <CheckCircle className="h-3 w-3" /> Ativo
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="gap-1">
-                          <XCircle className="h-3 w-3" /> Inativo
-                        </Badge>
-                      )}
-                    </button>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-xs text-muted-foreground">v{m.versao}</span>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                    {format(new Date(m.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuItem onClick={() => openEdit(m)} className="cursor-pointer">
-                          <Pencil className="h-4 w-4 mr-2" /> Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handlePreview(m.conteudo_html, m.logo_url)} className="cursor-pointer">
-                          <Eye className="h-4 w-4 mr-2" /> Preview
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDuplicate(m)} className="cursor-pointer">
-                          <Copy className="h-4 w-4 mr-2" /> Duplicar
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => setDeletingId(m.id)}
-                          className="cursor-pointer text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" /> Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <Tabs defaultValue="contratos" className="w-full">
+          <TabsList>
+            <TabsTrigger value="contratos" className="gap-1.5">
+              <FileText className="h-3.5 w-3.5" /> Modelos de Contrato
+            </TabsTrigger>
+            <TabsTrigger value="mensagens" className="gap-1.5">
+              <MessageSquare className="h-3.5 w-3.5" /> Templates de Mensagens
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="contratos">
+            <div className="space-y-4">
+              <div className="flex justify-end">
+                <Button className="gap-2" onClick={openNew}>
+                  <Plus className="h-4 w-4" /> Novo Modelo
+                </Button>
+              </div>
+
+              {/* Tabela */}
+              <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Filial</TableHead>
+                      <TableHead>Modo</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Versão</TableHead>
+                      <TableHead>Criado em</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-12">
+                          <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                        </TableCell>
+                      </TableRow>
+                    ) : modelos.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-16 text-muted-foreground">
+                          <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                          Nenhum modelo cadastrado ainda
+                        </TableCell>
+                      </TableRow>
+                    ) : modelos.map((m) => (
+                      <TableRow key={m.id}>
+                        <TableCell className="font-medium">{m.nome}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">{getTipoLabel(m.tipo)}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {m.filiais ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              <Building2 className="h-3 w-3" /> {m.filiais.nome}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Global</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-xs">
+                            {m.usa_clausulas ? "Cláusulas" : "HTML"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <button
+                            onClick={() => handleToggleAtivo(m)}
+                            className="flex items-center gap-1.5 group"
+                            title={m.ativo ? "Clique para inativar" : "Clique para ativar"}
+                          >
+                            {m.ativo ? (
+                              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 gap-1 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
+                                <CheckCircle className="h-3 w-3" /> Ativo
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="gap-1">
+                                <XCircle className="h-3 w-3" /> Inativo
+                              </Badge>
+                            )}
+                          </button>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs text-muted-foreground">v{m.versao}</span>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                          {format(new Date(m.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuItem onClick={() => openEdit(m)} className="cursor-pointer">
+                                <Pencil className="h-4 w-4 mr-2" /> Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handlePreview(m.conteudo_html, m.logo_url)} className="cursor-pointer">
+                                <Eye className="h-4 w-4 mr-2" /> Preview
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDuplicate(m)} className="cursor-pointer">
+                                <Copy className="h-4 w-4 mr-2" /> Duplicar
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => setDeletingId(m.id)}
+                                className="cursor-pointer text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="mensagens">
+            <MessageTemplates />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Editor fullscreen dialog */}
