@@ -482,17 +482,19 @@ export default function Pedidos() {
     setFiliais((filiaisData || []) as Filial[]);
     setVendedores((vendedoresData || []) as Profile[]);
 
-    // Buscar status ZapSign para pedidos com contrato_id
-    const contratoIds = pedidosList
-      .map(p => p.contrato_id)
-      .filter((id): id is string => !!id);
-    if (contratoIds.length > 0) {
-      const { data: zapsignData } = await supabase
-        .from("contratos_zapsign")
-        .select("contrato_id, status")
-        .in("contrato_id", contratoIds);
+    // Buscar status ZapSign para pedidos — via contratos.pedido_id → contratos_zapsign
+    const pedidoIds = pedidosList.map(p => p.id);
+    if (pedidoIds.length > 0) {
+      const { data: contratosData } = await supabase
+        .from("contratos")
+        .select("id, pedido_id, contratos_zapsign(status)")
+        .in("pedido_id", pedidoIds);
       const map: Record<string, string> = {};
-      (zapsignData || []).forEach((z: any) => { map[z.contrato_id] = z.status; });
+      (contratosData || []).forEach((c: any) => {
+        if (c.pedido_id && c.contratos_zapsign?.status) {
+          map[c.pedido_id] = c.contratos_zapsign.status;
+        }
+      });
       setZapsignMap(map);
     } else {
       setZapsignMap({});
@@ -1127,7 +1129,7 @@ export default function Pedidos() {
                       <TableCell>
                         <div className="space-y-1">
                           {(() => {
-                            const zsStatus = pedido.contrato_id ? zapsignMap[pedido.contrato_id] : undefined;
+                            const zsStatus = zapsignMap[pedido.id];
                             if (finStatus === "Aguardando") {
                               return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Aguardando</span>;
                             }
@@ -2134,7 +2136,7 @@ export default function Pedidos() {
                   <div className="space-y-0.5">
                     <p className="text-xs text-muted-foreground">Status financeiro</p>
                     {(() => {
-                      const zsStatus = vp.contrato_id ? zapsignMap[vp.contrato_id] : undefined;
+                      const zsStatus = zapsignMap[vp.id];
                       if (zsStatus === "Assinado") {
                         return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700"><CheckCircle className="h-3 w-3" />Contrato assinado</span>;
                       }
