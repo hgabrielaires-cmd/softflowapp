@@ -319,10 +319,12 @@ export default function JornadaImplantacao() {
 
   function moveEtapa(index: number, direction: "up" | "down") {
     setEtapas((prev) => {
-      const next = [...prev];
       const targetIndex = direction === "up" ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= next.length) return prev;
-      [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+      if (targetIndex < 0 || targetIndex >= prev.length) return prev;
+      const next = prev.map((e) => ({ ...e, atividades: [...e.atividades] }));
+      const temp = next[index];
+      next[index] = next[targetIndex];
+      next[targetIndex] = temp;
       return next.map((e, i) => ({ ...e, ordem: i }));
     });
   }
@@ -483,6 +485,24 @@ export default function JornadaImplantacao() {
             </TabsList>
 
             <TabsContent value="dados" className="space-y-4 mt-4">
+              {(() => {
+                const totalMin = etapas.reduce((sum, e) => sum + e.atividades.reduce((s, a) => s + a.horas_estimadas * 60, 0), 0);
+                if (totalMin <= 0) return null;
+                const h = Math.floor(totalMin / 60);
+                const m = Math.round(totalMin % 60);
+                return (
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 flex items-center gap-3">
+                    <div className="rounded-full bg-primary/10 p-2">
+                      <Eye className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Total de horas estimadas (todas as etapas)</p>
+                      <p className="text-xl font-bold text-primary">{h}:{m.toString().padStart(2, "0")}h</p>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div>
                 <label className="text-sm font-medium">Filial</label>
                 <Select value={form.filial_id || "global"} onValueChange={(v) => setForm((p) => ({ ...p, filial_id: v === "global" ? "" : v }))}>
@@ -526,23 +546,6 @@ export default function JornadaImplantacao() {
                 <label className="text-sm font-medium">Descrição</label>
                 <Textarea value={form.descricao} onChange={(e) => setForm((p) => ({ ...p, descricao: e.target.value }))} placeholder="Descrição preenchida automaticamente do vínculo..." rows={4} />
               </div>
-
-              {(() => {
-                const totalMin = etapas.reduce((sum, e) => sum + e.atividades.reduce((s, a) => s + a.horas_estimadas * 60, 0), 0);
-                const h = Math.floor(totalMin / 60);
-                const m = Math.round(totalMin % 60);
-                return (
-                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 flex items-center gap-3">
-                    <div className="rounded-full bg-primary/10 p-2">
-                      <Eye className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Total de horas estimadas (todas as etapas)</p>
-                      <p className="text-xl font-bold text-primary">{h}:{m.toString().padStart(2, "0")}h</p>
-                    </div>
-                  </div>
-                );
-              })()}
             </TabsContent>
 
             <TabsContent value="etapas" className="space-y-4 mt-4">
