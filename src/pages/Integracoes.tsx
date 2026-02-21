@@ -221,7 +221,7 @@ function IntegrationCard({ def, config, onOpenConfig }: IntegrationCardProps) {
           {cfg.label}
         </Badge>
         <div className="flex justify-center pt-2">
-          <div className={`h-32 w-32 rounded-2xl flex items-center justify-center ${def.hasLogo ? "bg-muted/30" : isAtivo ? def.accentColor + " text-white" : "bg-muted text-muted-foreground"}`}>
+          <div className={`h-32 w-32 rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${def.hasLogo ? "bg-muted/30" : isAtivo ? def.accentColor + " text-white" : "bg-muted text-muted-foreground"}`}>
             {def.icon}
           </div>
         </div>
