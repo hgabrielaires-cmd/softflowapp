@@ -530,6 +530,9 @@ export default function JornadaImplantacao() {
                   {etapas.map((etapa, idx) => {
                     const isExpanded = expandedEtapas.has(etapa.tempId);
                     const mesaNome = mesas.find((m) => m.id === etapa.mesa_atendimento_id)?.nome;
+                    const totalHoras = etapa.atividades.reduce((sum, a) => sum + a.horas_estimadas, 0);
+                    const totalH = Math.floor(totalHoras);
+                    const totalM = Math.round((totalHoras - totalH) * 60);
                     return (
                       <div key={etapa.tempId} className="border rounded-lg">
                         <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50" onClick={() => toggleExpanded(etapa.tempId)}>
@@ -538,6 +541,7 @@ export default function JornadaImplantacao() {
                             <span className="font-medium text-sm">{idx + 1}. {etapa.nome}</span>
                             {mesaNome && <Badge variant="secondary" className="text-xs">{mesaNome}</Badge>}
                             <span className="text-xs text-muted-foreground">({etapa.atividades.length} atividades)</span>
+                            {etapa.atividades.length > 0 && <Badge variant="outline" className="text-xs font-mono">{totalH}:{totalM.toString().padStart(2, "0")}h</Badge>}
                           </div>
                           <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditEtapa(etapa)}><Pencil className="h-3.5 w-3.5" /></Button>
