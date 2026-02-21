@@ -1,25 +1,21 @@
 
-
-## Melhorar visual dos cards de integracoes com logos maiores
+## Padronizar badges de status na lista de contratos
 
 ### O que sera feito
 
-1. **Aumentar as logos para destaque visual** - Trocar o tamanho das logos de `h-14 w-14` para `h-20 w-20`, tornando-as o elemento principal do card.
+1. **Centralizar a legenda "Aguardando assinatura"** - Na funcao `getZapSignStatusBadge`, a legenda `text-[10px]` hoje tem `pl-1` (padding esquerdo) que desalinha. Trocar para `text-center` para ficar centralizada abaixo do badge "Enviado".
 
-2. **Reorganizar o layout do card** - Colocar a logo centralizada no topo do card (acima do titulo), removendo o layout lado-a-lado atual. O titulo e descricao ficam abaixo da logo, centralizados.
-
-3. **Ajustar o container da logo** - Aumentar o container para acomodar a logo maior, com padding adequado e fundo sutil (ex: `bg-muted/30` com borda arredondada) para dar destaque.
-
-4. **Manter funcionalidade** - Badge de status, lista de funcionalidades e botao "Ver configuracoes" continuam funcionando normalmente.
+2. **Padronizar todos os badges de status** - Garantir que todos os badges (`getStatusBadge`, `getStatusGeracaoBadge`, `getTipoBadge`, `getPedidoStatusBadges`, `getZapSignStatusBadge`) sigam o mesmo padrao visual:
+   - Todos com `text-xs`
+   - Todos com `flex items-center gap-1`
+   - Todos com `w-fit`
+   - Icone de 3x3 antes do texto quando aplicavel
 
 ### Detalhes tecnicos
 
-**Arquivo:** `src/pages/Integracoes.tsx`
+**Arquivo:** `src/pages/Contratos.tsx`
 
-- No array `integrationDefs`, alterar className das imgs de `h-14 w-14` para `h-20 w-20`
-- No componente `IntegrationCard`, reestruturar o `CardHeader`:
-  - Logo centralizada no topo com container `h-24 w-24 mx-auto`
-  - Badge de status posicionado no canto superior direito (absolute)
-  - Titulo e descricao centralizados abaixo da logo
-- Manter o `CardContent` com a lista de detalhes e botao de configuracao sem alteracao
-
+- **`getZapSignStatusBadge`** (linha 437): trocar `pl-1` por `text-center w-full` na span de "Aguardando assinatura"
+- **`getStatusBadge`** (linhas 443-451): adicionar `text-xs flex items-center gap-1 w-fit` nos badges de "Ativo" e "Encerrado", e adicionar icones (CheckCircle2 para Ativo, icone neutro para Encerrado)
+- **`getTipoBadge`** (linhas 468-488): adicionar `text-xs w-fit` nos badges que nao tem
+- **`getPedidoStatusBadges`** (linhas 490-506): adicionar `flex items-center gap-1` nos badges que nao tem
