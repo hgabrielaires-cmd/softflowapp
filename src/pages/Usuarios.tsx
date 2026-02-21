@@ -137,7 +137,7 @@ export default function Usuarios() {
       .limit(1)
       .single();
 
-    const linkSistema = window.location.origin + "/login";
+    const linkSistema = "https://softflowapp.lovable.app/login";
     
     let mensagem = template?.conteudo || `Olá ${nome}! Bem-vindo ao SoftFlow!\n\nE-mail: ${email}\nSenha: ${senha}\n\nAcesse: ${linkSistema}`;
     
