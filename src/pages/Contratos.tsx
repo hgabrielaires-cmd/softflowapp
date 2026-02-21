@@ -427,7 +427,7 @@ export default function Contratos() {
           Recusado
         </Badge>
       );
-    if (status === "Enviado")
+    if (status === "Enviado" || status === "Pendente")
       return (
         <div className="flex flex-col gap-0.5 w-fit">
           <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 text-xs flex items-center gap-1 w-fit">
@@ -436,13 +436,6 @@ export default function Contratos() {
           </Badge>
           <span className="text-[10px] text-amber-600 pl-1">Aguardando assinatura</span>
         </div>
-      );
-    if (status === "Pendente")
-      return (
-        <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 text-xs flex items-center gap-1 w-fit">
-          <Send className="h-3 w-3" />
-          Aguardando assinatura
-        </Badge>
       );
     return <Badge variant="secondary" className="text-xs w-fit">{status}</Badge>;
   }
