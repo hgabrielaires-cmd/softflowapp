@@ -147,13 +147,17 @@ function Sidebar({ collapsed, profile, roles, initials, onNavigate, onSignOut, o
     <div className="flex flex-col h-full">
       <div className={cn("flex items-center gap-3 px-4 py-5 border-b border-sidebar-border flex-shrink-0", collapsed && "justify-center px-2")}>
         {collapsed ? (
-          <img src={iconSoftflow} alt="Softflow" className="h-8 w-8 object-contain" style={{ filter: 'brightness(0) invert(1)' }} />
+          <button onClick={() => onNavigate("/dashboard")} className="focus:outline-none">
+            <img src={iconSoftflow} alt="Softflow" className="h-10 w-10 object-contain" style={{ filter: 'brightness(0) invert(1)' }} />
+          </button>
         ) : (
-          <img src={logoSoftflowBranca} alt="Softflow" className="h-12 object-contain mx-auto" />
+          <button onClick={() => onNavigate("/dashboard")} className="focus:outline-none mx-auto">
+            <img src={logoSoftflowBranca} alt="Softflow" className="h-24 object-contain" />
+          </button>
         )}
       </div>
 
-      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {navGroups.map((group) => {
           if (!groupVisible(group, roles)) return null;
           const items = visibleItemsInGroup(group, roles);
