@@ -201,6 +201,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/parametros/helpdesk"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <ComingSoon module="Helpdesk" title="Jornada de Implantação" description="Em desenvolvimento. Configuração da jornada de implantação para clientes." />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
