@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,6 +72,7 @@ const VARIAVEIS_DISPONIVEIS = [
 ];
 
 export function MessageTemplates() {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [openEditor, setOpenEditor] = useState(false);
@@ -178,7 +179,21 @@ export function MessageTemplates() {
   }
 
   function insertVariable(v: string) {
-    setForm((f) => ({ ...f, conteudo: f.conteudo + v }));
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = form.conteudo;
+      const newText = text.substring(0, start) + v + text.substring(end);
+      setForm((f) => ({ ...f, conteudo: newText }));
+      requestAnimationFrame(() => {
+        textarea.focus();
+        const pos = start + v.length;
+        textarea.setSelectionRange(pos, pos);
+      });
+    } else {
+      setForm((f) => ({ ...f, conteudo: f.conteudo + v }));
+    }
   }
 
   function getCategoriaLabel(cat: string) {
@@ -348,6 +363,7 @@ export function MessageTemplates() {
               <div className="flex-1 flex flex-col space-y-1">
                 <Label className="text-xs">Conteúdo da Mensagem *</Label>
                 <Textarea
+                  ref={textareaRef}
                   value={form.conteudo}
                   onChange={(e) => setForm((f) => ({ ...f, conteudo: e.target.value }))}
                   placeholder="Digite o conteúdo da mensagem..."
