@@ -1122,6 +1122,7 @@ export type Database = {
           created_at: string
           desconto_limite_implantacao: number | null
           desconto_limite_mensalidade: number | null
+          deve_trocar_senha: boolean
           email: string
           filial: string | null
           filial_favorita_id: string | null
@@ -1144,6 +1145,7 @@ export type Database = {
           created_at?: string
           desconto_limite_implantacao?: number | null
           desconto_limite_mensalidade?: number | null
+          deve_trocar_senha?: boolean
           email: string
           filial?: string | null
           filial_favorita_id?: string | null
@@ -1166,6 +1168,7 @@ export type Database = {
           created_at?: string
           desconto_limite_implantacao?: number | null
           desconto_limite_mensalidade?: number | null
+          deve_trocar_senha?: boolean
           email?: string
           filial?: string | null
           filial_favorita_id?: string | null

@@ -40,7 +40,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key } from "lucide-react";
+import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 
@@ -126,14 +126,64 @@ export default function Usuarios() {
     loadUsers();
   }, []);
 
+  // ── Enviar WhatsApp de boas-vindas ──────────────────────
+  async function enviarWhatsappBoasVindas(nome: string, email: string, senha: string, telefone: string) {
+    // Buscar template de boas-vindas
+    const { data: template } = await supabase
+      .from("message_templates")
+      .select("conteudo")
+      .eq("categoria", "boas_vindas")
+      .eq("ativo", true)
+      .limit(1)
+      .single();
+
+    const linkSistema = window.location.origin + "/login";
+    
+    let mensagem = template?.conteudo || `Olá ${nome}! Bem-vindo ao SoftFlow!\n\nE-mail: ${email}\nSenha: ${senha}\n\nAcesse: ${linkSistema}`;
+    
+    mensagem = mensagem
+      .replace(/\{usuario\.nome\}/g, nome)
+      .replace(/\{usuario\.email\}/g, email)
+      .replace(/\{usuario\.senha\}/g, senha)
+      .replace(/\{link_sistema\}/g, linkSistema);
+
+    // Buscar config da integração WhatsApp
+    const { data: config } = await supabase
+      .from("integracoes_config")
+      .select("*")
+      .eq("nome", "whatsapp")
+      .single();
+
+    if (!config || !config.ativo || !config.server_url || !config.token) {
+      throw new Error("Integração WhatsApp não configurada");
+    }
+
+    const { error } = await supabase.functions.invoke("evolution-api", {
+      body: {
+        action: "send_text",
+        server_url: config.server_url,
+        api_key: config.token,
+        instance_name: "Softflow_WhatsApp",
+        number: telefone,
+        text: mensagem,
+      },
+    });
+
+    if (error) throw error;
+  }
+
   // ── Create ──────────────────────────────────────────────
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
     setInviting(true);
+
+    // Gerar senha numérica de 8 dígitos
+    const senhaTemporaria = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join("");
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email: inviteEmail,
-        password: Math.random().toString(36).slice(-12) + "Aa1!",
+        password: senhaTemporaria,
         options: { data: { full_name: inviteName } },
       });
 
@@ -151,9 +201,20 @@ export default function Usuarios() {
         permitir_cnpj_duplicado: invitePermitirCnpjDuplicado,
         recebe_comissao: inviteRecebeComissao,
         telefone: inviteTelefone || null,
+        deve_trocar_senha: true,
       } as any).eq("user_id", data.user.id);
 
       await supabase.from("user_roles").insert({ user_id: data.user.id, role: inviteRole });
+
+      // Enviar WhatsApp de boas-vindas se o telefone foi informado
+      if (inviteTelefone) {
+        try {
+          await enviarWhatsappBoasVindas(inviteName, inviteEmail, senhaTemporaria, inviteTelefone);
+        } catch (whatsErr) {
+          console.error("Erro ao enviar WhatsApp:", whatsErr);
+          toast.warning("Usuário criado, mas não foi possível enviar o WhatsApp de boas-vindas.");
+        }
+      }
 
       toast.success(`Usuário ${inviteName} criado com sucesso!`);
       setOpenInvite(false);

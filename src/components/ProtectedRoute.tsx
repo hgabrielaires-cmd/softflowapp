@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { user, roles, loading } = useAuth();
+  const { user, roles, loading, deveTrocarSenha } = useAuth();
 
   if (loading) {
     return (
@@ -25,6 +25,11 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Forçar troca de senha no primeiro acesso
+  if (deveTrocarSenha) {
+    return <Navigate to="/trocar-senha" replace />;
   }
 
   if (requiredRole && !roles.includes(requiredRole) && !roles.includes("admin")) {
