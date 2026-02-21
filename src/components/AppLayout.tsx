@@ -148,11 +148,11 @@ function Sidebar({ collapsed, profile, roles, initials, onNavigate, onSignOut, o
       <div className={cn("flex items-center gap-3 px-4 py-5 border-b border-sidebar-border flex-shrink-0", collapsed && "justify-center px-2")}>
         {collapsed ? (
           <button onClick={() => onNavigate("/dashboard")} className="focus:outline-none">
-            <img src={iconSoftflow} alt="Softflow" className="h-10 w-10 object-contain" style={{ filter: 'brightness(0) invert(1)' }} />
+            <img src={iconSoftflow} alt="Softflow" className="h-10 w-10 object-contain" loading="eager" fetchPriority="high" decoding="async" style={{ filter: 'brightness(0) invert(1)' }} />
           </button>
         ) : (
           <button onClick={() => onNavigate("/dashboard")} className="focus:outline-none mx-auto">
-            <img src={logoSoftflowBranca} alt="Softflow" className="h-24 object-contain" />
+            <img src={logoSoftflowBranca} alt="Softflow" className="h-24 object-contain" loading="eager" fetchPriority="high" decoding="async" />
           </button>
         )}
       </div>
