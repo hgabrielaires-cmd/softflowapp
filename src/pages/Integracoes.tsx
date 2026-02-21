@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import logoZapsign from "@/assets/logo-zapsign.svg";
 import logoWhatsapp from "@/assets/logo-whatsapp.svg";
+import logoBrowserless from "@/assets/logo-browserless.svg";
 import { AppLayout } from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +38,7 @@ interface IntegrationDef {
 const integrationDefs: IntegrationDef[] = [
   {
     key: "zapsign",
-    icon: <img src={logoZapsign} alt="ZapSign" className="h-10 w-10 object-contain" />,
+    icon: <img src={logoZapsign} alt="ZapSign" className="h-14 w-14 object-contain" />,
     hasLogo: true,
     title: "ZapSign",
     description: "Assinatura eletrônica de contratos",
@@ -53,7 +54,7 @@ const integrationDefs: IntegrationDef[] = [
   },
   {
     key: "whatsapp",
-    icon: <img src={logoWhatsapp} alt="WhatsApp" className="h-10 w-10 object-contain" />,
+    icon: <img src={logoWhatsapp} alt="WhatsApp" className="h-14 w-14 object-contain" />,
     hasLogo: true,
     title: "WhatsApp",
     description: "Comunicação com clientes via WhatsApp",
@@ -69,7 +70,8 @@ const integrationDefs: IntegrationDef[] = [
   },
   {
     key: "browserless",
-    icon: <Monitor className="h-5 w-5" />,
+    icon: <img src={logoBrowserless} alt="Browserless" className="h-14 w-14 object-contain" />,
+    hasLogo: true,
     title: "Browserless (PDV)",
     description: "Geração de PDFs via renderização server-side",
     accentColor: "gradient-brand",
@@ -216,7 +218,7 @@ function IntegrationCard({ def, config, onOpenConfig }: IntegrationCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className={`h-11 w-11 rounded-xl flex items-center justify-center shadow-sm ${def.hasLogo ? "bg-transparent" : isAtivo ? def.accentColor + " text-white" : "bg-muted text-muted-foreground"}`}>
+            <div className={`h-14 w-14 rounded-xl flex items-center justify-center shrink-0 ${def.hasLogo ? "bg-transparent" : isAtivo ? def.accentColor + " text-white" : "bg-muted text-muted-foreground"}`}>
               {def.icon}
             </div>
             <div>
