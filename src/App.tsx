@@ -21,6 +21,7 @@ import ModelosContrato from "./pages/ModelosContrato";
 import PerfisUsuario from "./pages/PerfisUsuario";
 import Fornecedores from "./pages/Fornecedores";
 import Integracoes from "./pages/Integracoes";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route
               path="/dashboard"
               element={
