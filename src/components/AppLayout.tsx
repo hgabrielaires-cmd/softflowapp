@@ -55,6 +55,7 @@ const navGroups: NavGroup[] = [
     items: [
       { icon: <Calendar className="h-4 w-4" />, label: "Agenda Operacional", to: "/agenda" },
       { icon: <Ticket className="h-4 w-4" />, label: "Tickets", to: "/tickets" },
+      { icon: <Calendar className="h-4 w-4" />, label: "Fila de Agendamento", to: "/fila-agendamento" },
     ],
   },
   {
@@ -65,9 +66,6 @@ const navGroups: NavGroup[] = [
       { icon: <BookOpen className="h-4 w-4" />, label: "Planos", to: "/planos", roles: ["admin"] },
       { icon: <Building2 className="h-4 w-4" />, label: "Fornecedores", to: "/fornecedores", roles: ["admin", "financeiro"] },
       { icon: <Wrench className="h-4 w-4" />, label: "Catálogo de Serviços", to: "/servicos", roles: ["admin"] },
-      { icon: <Headphones className="h-4 w-4" />, label: "Helpdesk", to: "#helpdesk-cadastros", children: [
-        { icon: <Calendar className="h-4 w-4" />, label: "Fila de Agendamento", to: "/fila-agendamento" },
-      ] },
     ],
   },
   {
