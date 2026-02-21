@@ -11,6 +11,8 @@ interface AuthContextType {
   roles: AppRole[];
   isAdmin: boolean;
   loading: boolean;
+  deveTrocarSenha: boolean;
+  clearDeveTrocarSenha: () => void;
   signOut: () => Promise<void>;
 }
 
@@ -21,6 +23,8 @@ const AuthContext = createContext<AuthContextType>({
   roles: [],
   isAdmin: false,
   loading: true,
+  deveTrocarSenha: false,
+  clearDeveTrocarSenha: () => {},
   signOut: async () => {},
 });
 
@@ -29,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const [deveTrocarSenha, setDeveTrocarSenha] = useState(false);
   const [loading, setLoading] = useState(true);
 
   async function fetchProfile(userId: string): Promise<Profile | null> {
@@ -45,6 +50,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
       setProfile(data as Profile);
+      // Verificar se deve trocar senha
+      if ((data as any).deve_trocar_senha === true) {
+        setDeveTrocarSenha(true);
+      }
     }
     return data as Profile | null;
   }
@@ -97,10 +106,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRoles([]);
   }
 
+  function clearDeveTrocarSenha() {
+    setDeveTrocarSenha(false);
+  }
+
   const isAdmin = roles.includes("admin");
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, roles, isAdmin, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, roles, isAdmin, loading, deveTrocarSenha, clearDeveTrocarSenha, signOut }}>
       {children}
     </AuthContext.Provider>
   );

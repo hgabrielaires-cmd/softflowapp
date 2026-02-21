@@ -24,6 +24,7 @@ import Servicos from "./pages/Servicos";
 import Integracoes from "./pages/Integracoes";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import TrocarSenha from "./pages/TrocarSenha";
 import MesasAtendimento from "./pages/MesasAtendimento";
 import JornadaImplantacao from "./pages/JornadaImplantacao";
 
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/trocar-senha" element={<TrocarSenha />} />
             <Route
               path="/dashboard"
               element={
