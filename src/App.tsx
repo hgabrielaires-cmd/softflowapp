@@ -20,6 +20,7 @@ import Notificacoes from "./pages/Notificacoes";
 import ModelosContrato from "./pages/ModelosContrato";
 import PerfisUsuario from "./pages/PerfisUsuario";
 import Fornecedores from "./pages/Fornecedores";
+import Servicos from "./pages/Servicos";
 import Integracoes from "./pages/Integracoes";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -190,6 +191,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="admin">
                   <Fornecedores />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/servicos"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <Servicos />
                 </ProtectedRoute>
               }
             />
