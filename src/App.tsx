@@ -20,6 +20,7 @@ import Notificacoes from "./pages/Notificacoes";
 import ModelosContrato from "./pages/ModelosContrato";
 import PerfisUsuario from "./pages/PerfisUsuario";
 import Fornecedores from "./pages/Fornecedores";
+import Integracoes from "./pages/Integracoes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -194,7 +195,7 @@ const App = () => (
               path="/integracoes"
               element={
                 <ProtectedRoute requiredRole="admin">
-                  <ComingSoon module="Parâmetros" title="Integrações" description="Em desenvolvimento. Configuração de integrações externas." />
+                  <Integracoes />
                 </ProtectedRoute>
               }
             />
