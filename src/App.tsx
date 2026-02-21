@@ -228,6 +228,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/fila-agendamento"
+              element={
+                <ProtectedRoute>
+                  <ComingSoon module="Helpdesk" title="Fila de Agendamento" description="Em desenvolvimento. Gestão da fila de agendamento de atendimentos." />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
