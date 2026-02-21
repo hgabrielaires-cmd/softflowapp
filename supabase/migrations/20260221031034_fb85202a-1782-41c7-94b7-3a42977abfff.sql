@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN recebe_comissao boolean NOT NULL DEFAULT true;

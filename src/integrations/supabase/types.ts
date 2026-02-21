@@ -849,6 +849,7 @@ export type Database = {
           gestor_desconto: boolean | null
           id: string
           permitir_cnpj_duplicado: boolean | null
+          recebe_comissao: boolean
           updated_at: string
           user_id: string
         }
@@ -869,6 +870,7 @@ export type Database = {
           gestor_desconto?: boolean | null
           id?: string
           permitir_cnpj_duplicado?: boolean | null
+          recebe_comissao?: boolean
           updated_at?: string
           user_id: string
         }
@@ -889,6 +891,7 @@ export type Database = {
           gestor_desconto?: boolean | null
           id?: string
           permitir_cnpj_duplicado?: boolean | null
+          recebe_comissao?: boolean
           updated_at?: string
           user_id?: string
         }
