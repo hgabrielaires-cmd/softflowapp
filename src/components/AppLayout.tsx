@@ -29,6 +29,7 @@ interface NavSubItem {
   label: string;
   to: string;
   roles?: AppRole[];
+  children?: NavSubItem[];
 }
 
 interface NavGroup {
@@ -97,7 +98,10 @@ const navGroups: NavGroup[] = [
       { icon: <Users className="h-4 w-4" />, label: "Usuários", to: "/usuarios" },
       { icon: <Globe className="h-4 w-4" />, label: "Perfis de Usuário", to: "/perfis-usuario" },
       { icon: <FileText className="h-4 w-4" />, label: "Modelos de Documentos", to: "/modelos-contrato" },
-      { icon: <Headphones className="h-4 w-4" />, label: "Helpdesk", to: "/jornadas" },
+      { icon: <Headphones className="h-4 w-4" />, label: "Helpdesk", to: "#helpdesk", children: [
+        { icon: <ListOrdered className="h-4 w-4" />, label: "Jornadas de Implantação", to: "/jornadas" },
+        { icon: <Headphones className="h-4 w-4" />, label: "Mesas de Atendimento", to: "/mesas-atendimento" },
+      ] },
       { icon: <Bell className="h-4 w-4" />, label: "Notificações", to: "/notificacoes" },
       { icon: <Plug className="h-4 w-4" />, label: "Integrações", to: "/integracoes" },
     ],
@@ -118,6 +122,13 @@ function itemVisible(item: NavSubItem, roles: AppRole[]): boolean {
 
 function visibleItemsInGroup(group: NavGroup, roles: AppRole[]): NavSubItem[] {
   return group.items.filter((item) => itemVisible(item, roles));
+}
+
+function isItemOrChildActive(item: NavSubItem, pathname: string): boolean {
+  if (item.children) {
+    return item.children.some((c) => pathname === c.to || pathname.startsWith(c.to + "/"));
+  }
+  return pathname === item.to || pathname.startsWith(item.to + "/");
 }
 
 // ─── Sidebar Component ────────────────────────────────────────────────────────
@@ -167,7 +178,7 @@ function Sidebar({ collapsed, profile, roles, initials, onNavigate, onSignOut, o
           const items = visibleItemsInGroup(group, roles);
           if (items.length === 0) return null;
 
-          const isGroupActive = items.some((item) => location.pathname === item.to || location.pathname.startsWith(item.to + "/"));
+          const isGroupActive = items.some((item) => isItemOrChildActive(item, location.pathname));
           const isOpen = openGroups[group.groupLabel] ?? false;
 
           if (collapsed) {
@@ -207,6 +218,40 @@ function Sidebar({ collapsed, profile, roles, initials, onNavigate, onSignOut, o
               <CollapsibleContent className="space-y-0.5 overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
                 <div className="pt-0.5 pb-1 space-y-0.5">
                   {items.map((item) => {
+                    if (item.children) {
+                      const childActive = item.children.some((c) => location.pathname === c.to || location.pathname.startsWith(c.to + "/"));
+                      const subKey = `sub_${item.label}`;
+                      const isSubOpen = openGroups[subKey] ?? false;
+                      return (
+                        <Collapsible key={item.to} open={isSubOpen} onOpenChange={() => toggleGroup(subKey)}>
+                          <CollapsibleTrigger asChild>
+                            <button className={cn("flex items-center justify-between w-full pl-8 pr-3 py-2 rounded-lg text-sm font-medium transition-all duration-150",
+                              childActive ? "text-sidebar-primary-foreground" : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                            )}>
+                              <div className="flex items-center gap-3">
+                                <span className="flex-shrink-0 opacity-70">{item.icon}</span>
+                                <span>{item.label}</span>
+                              </div>
+                              <ChevronDown className={cn("h-3 w-3 transition-transform duration-200 text-sidebar-foreground/40", isSubOpen && "rotate-180")} />
+                            </button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="space-y-0.5 overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+                            {item.children.map((child) => {
+                              const cActive = location.pathname === child.to || location.pathname.startsWith(child.to + "/");
+                              return (
+                                <NavLink key={child.to} to={child.to} onClick={onMobileClose}
+                                  className={cn("flex items-center gap-3 pl-12 pr-3 py-1.5 rounded-lg text-sm transition-all duration-150",
+                                    cActive ? "bg-sidebar-primary text-sidebar-primary-foreground" : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                                  )}>
+                                  <span className="flex-shrink-0 opacity-70">{child.icon}</span>
+                                  <span>{child.label}</span>
+                                </NavLink>
+                              );
+                            })}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      );
+                    }
                     const active = location.pathname === item.to || location.pathname.startsWith(item.to + "/");
                     return (
                       <NavLink key={item.to} to={item.to} onClick={onMobileClose}
