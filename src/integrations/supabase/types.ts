@@ -1131,6 +1131,7 @@ export type Database = {
           id: string
           permitir_cnpj_duplicado: boolean | null
           recebe_comissao: boolean
+          telefone: string | null
           updated_at: string
           user_id: string
         }
@@ -1152,6 +1153,7 @@ export type Database = {
           id?: string
           permitir_cnpj_duplicado?: boolean | null
           recebe_comissao?: boolean
+          telefone?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1173,6 +1175,7 @@ export type Database = {
           id?: string
           permitir_cnpj_duplicado?: boolean | null
           recebe_comissao?: boolean
+          telefone?: string | null
           updated_at?: string
           user_id?: string
         }

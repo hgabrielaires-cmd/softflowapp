@@ -73,6 +73,7 @@ export default function Usuarios() {
   const [inviteGestorDesconto, setInviteGestorDesconto] = useState(false);
   const [invitePermitirCnpjDuplicado, setInvitePermitirCnpjDuplicado] = useState(false);
   const [inviteRecebeComissao, setInviteRecebeComissao] = useState(true);
+  const [inviteTelefone, setInviteTelefone] = useState("");
   const [inviting, setInviting] = useState(false);
 
   // Edit dialog
@@ -88,6 +89,7 @@ export default function Usuarios() {
   const [editGestorDesconto, setEditGestorDesconto] = useState(false);
   const [editPermitirCnpjDuplicado, setEditPermitirCnpjDuplicado] = useState(false);
   const [editRecebeComissao, setEditRecebeComissao] = useState(true);
+  const [editTelefone, setEditTelefone] = useState("");
   const [editActive, setEditActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -148,13 +150,14 @@ export default function Usuarios() {
         gestor_desconto: inviteGestorDesconto,
         permitir_cnpj_duplicado: invitePermitirCnpjDuplicado,
         recebe_comissao: inviteRecebeComissao,
+        telefone: inviteTelefone || null,
       } as any).eq("user_id", data.user.id);
 
       await supabase.from("user_roles").insert({ user_id: data.user.id, role: inviteRole });
 
       toast.success(`Usuário ${inviteName} criado com sucesso!`);
       setOpenInvite(false);
-      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true);
+      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone("");
       loadUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
@@ -175,6 +178,7 @@ export default function Usuarios() {
     setEditGestorDesconto((user as any).gestor_desconto ?? false);
     setEditPermitirCnpjDuplicado((user as any).permitir_cnpj_duplicado ?? false);
     setEditRecebeComissao((user as any).recebe_comissao ?? true);
+    setEditTelefone((user as any).telefone || "");
     setEditActive(user.active);
     setOpenEdit(true);
   }
@@ -195,6 +199,7 @@ export default function Usuarios() {
         gestor_desconto: editGestorDesconto,
         permitir_cnpj_duplicado: editPermitirCnpjDuplicado,
         recebe_comissao: editRecebeComissao,
+        telefone: editTelefone || null,
         active: editActive,
       } as any).eq("user_id", editingUser.user_id);
 
@@ -437,15 +442,26 @@ export default function Usuarios() {
                 required
               />
             </div>
-            <div className="space-y-1.5">
-              <Label>E-mail</Label>
-              <Input
-                type="email"
-                placeholder="joao@softplus.com.br"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                required
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>E-mail</Label>
+                <Input
+                  type="email"
+                  placeholder="joao@softplus.com.br"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Telefone</Label>
+                <Input
+                  type="tel"
+                  placeholder="(11) 99999-9999"
+                  value={inviteTelefone}
+                  onChange={(e) => setInviteTelefone(e.target.value)}
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -579,9 +595,20 @@ export default function Usuarios() {
                       required
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>E-mail</Label>
-                    <Input value={editingUser?.email || ""} disabled className="bg-muted text-muted-foreground" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>E-mail</Label>
+                      <Input value={editingUser?.email || ""} disabled className="bg-muted text-muted-foreground" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Telefone</Label>
+                      <Input
+                        type="tel"
+                        placeholder="(11) 99999-9999"
+                        value={editTelefone}
+                        onChange={(e) => setEditTelefone(e.target.value)}
+                      />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
