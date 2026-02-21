@@ -433,6 +433,33 @@ export type Database = {
           },
         ]
       }
+      integracoes_config: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          nome: string
+          token: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+          token?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+          token?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       modelos_contrato: {
         Row: {
           arquivo_docx_url: string | null
