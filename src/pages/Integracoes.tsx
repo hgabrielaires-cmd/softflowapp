@@ -276,7 +276,9 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
               onChange={(e) => setServerUrl(e.target.value)}
               placeholder="http://seu-ip:8080"
             />
-            <p className="text-xs text-muted-foreground">URL do servidor onde a Evolution API está rodando.</p>
+            <p className="text-xs text-muted-foreground">
+              URL do servidor onde a Evolution API está rodando. Use <strong>http://</strong> (não https) para portas customizadas.
+            </p>
           </div>
 
           {/* API Key */}

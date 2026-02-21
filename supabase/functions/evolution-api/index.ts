@@ -46,7 +46,16 @@ serve(async (req) => {
       });
     }
 
-    const baseUrl = server_url.replace(/\/+$/, "");
+    // Auto-fix: if user typed https:// for a non-443 port, switch to http://
+    let normalizedUrl = server_url.replace(/\/+$/, "");
+    try {
+      const parsed = new URL(normalizedUrl);
+      if (parsed.protocol === "https:" && parsed.port && parsed.port !== "443") {
+        normalizedUrl = normalizedUrl.replace(/^https:/, "http:");
+      }
+    } catch { /* keep as-is */ }
+    const baseUrl = normalizedUrl;
+
     const headers = {
       "Content-Type": "application/json",
       apikey: api_key,
