@@ -62,6 +62,7 @@ export default function JornadaImplantacao() {
   const [currentEtapaTempId, setCurrentEtapaTempId] = useState("");
   const [editingAtividade, setEditingAtividade] = useState<LocalAtividade | null>(null);
   const [atividadeForm, setAtividadeForm] = useState({ nome: "", descricao: "", horas_estimadas: 0, checklist: [] as ChecklistItem[], tipo_responsabilidade: "Interna" });
+  const [horasText, setHorasText] = useState("0:00");
   const [expandedEtapas, setExpandedEtapas] = useState<Set<string>>(new Set());
 
   // ─── Queries ────────────────────────────────────────────────────────────────
@@ -321,6 +322,7 @@ export default function JornadaImplantacao() {
     setCurrentEtapaTempId(etapaTempId);
     setEditingAtividade(null);
     setAtividadeForm({ nome: "", descricao: "", horas_estimadas: 0, checklist: [], tipo_responsabilidade: "Interna" });
+    setHorasText("0:00");
     setAtividadeDialogOpen(true);
   }
 
@@ -334,6 +336,9 @@ export default function JornadaImplantacao() {
       checklist: [...atividade.checklist],
       tipo_responsabilidade: atividade.tipo_responsabilidade,
     });
+    const h = Math.floor(atividade.horas_estimadas);
+    const m = Math.round((atividade.horas_estimadas - h) * 60);
+    setHorasText(`${h}:${m.toString().padStart(2, "0")}`);
     setAtividadeDialogOpen(true);
   }
 
@@ -640,27 +645,18 @@ export default function JornadaImplantacao() {
               <Input
                 placeholder="0:00"
                 className="mt-1 w-32 font-mono text-base"
-                value={(() => {
-                  const h = Math.floor(atividadeForm.horas_estimadas);
-                  const m = Math.round((atividadeForm.horas_estimadas - h) * 60);
-                  return `${h}:${m.toString().padStart(2, "0")}`;
-                })()}
+                value={horasText}
                 onChange={(e) => {
-                  let val = e.target.value.replace(/[^0-9:]/g, "");
-                  // Allow typing freely - parse on every change
-                  const parts = val.split(":");
-                  const hours = parseInt(parts[0] || "0", 10) || 0;
-                  const mins = Math.min(59, parseInt(parts[1] || "0", 10) || 0);
-                  const decimal = hours + mins / 60;
-                  setAtividadeForm((p) => ({ ...p, horas_estimadas: Math.round(decimal * 100) / 100 }));
+                  const val = e.target.value.replace(/[^0-9:]/g, "");
+                  setHorasText(val);
                 }}
-                onBlur={(e) => {
-                  // Normalize display on blur
-                  const parts = e.target.value.split(":");
+                onBlur={() => {
+                  const parts = horasText.split(":");
                   const hours = parseInt(parts[0] || "0", 10) || 0;
                   const mins = Math.min(59, parseInt(parts[1] || "0", 10) || 0);
                   const decimal = hours + mins / 60;
                   setAtividadeForm((p) => ({ ...p, horas_estimadas: Math.round(decimal * 100) / 100 }));
+                  setHorasText(`${hours}:${mins.toString().padStart(2, "0")}`);
                 }}
               />
               <p className="text-xs text-muted-foreground mt-1">Ex: 0:15 = 15min, 1:30 = 1h30min</p>
