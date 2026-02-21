@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, User, Building2, Shield, Star } from "lucide-react";
+import { Loader2, User, Building2, Shield, Star, KeyRound } from "lucide-react";
 
 export default function Perfil() {
   const { profile, roles } = useAuth();
@@ -16,6 +16,12 @@ export default function Perfil() {
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [filialFavoritaId, setFilialFavoritaId] = useState<string | null>(null);
   const [savingFavorita, setSavingFavorita] = useState(false);
+
+  // Password change
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
     supabase.from("filiais").select("*").eq("ativa", true).order("nome").then(({ data }) => {
@@ -26,7 +32,6 @@ export default function Perfil() {
   useEffect(() => {
     if (profile) {
       setName(profile.full_name);
-      // Carregar filial favorita
       supabase.from("profiles").select("filial_favorita_id").eq("user_id", profile.user_id).single().then(({ data }) => {
         if (data) setFilialFavoritaId((data as any).filial_favorita_id || null);
       });
@@ -47,6 +52,29 @@ export default function Perfil() {
       toast.success("Perfil atualizado com sucesso");
     }
     setSaving(false);
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("A nova senha deve ter pelo menos 6 caracteres");
+      return;
+    }
+    setSavingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      toast.error(error.message || "Erro ao alterar senha");
+    } else {
+      toast.success("Senha alterada com sucesso!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    }
+    setSavingPassword(false);
   }
 
   async function handleFavoritar(filialId: string) {
@@ -78,7 +106,6 @@ export default function Perfil() {
 
         {/* Dados pessoais */}
         <div className="bg-card rounded-xl border border-border p-6 shadow-card space-y-5">
-          {/* Avatar / Initials */}
           <div className="flex items-center gap-4 pb-4 border-b border-border">
             <div className="h-14 w-14 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xl font-bold">
               {profile?.full_name?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "?"}
@@ -121,6 +148,40 @@ export default function Perfil() {
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Salvar alterações
+            </Button>
+          </form>
+        </div>
+
+        {/* Alterar senha */}
+        <div className="bg-card rounded-xl border border-border p-6 shadow-card space-y-4">
+          <div className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold text-foreground">Alterar Senha</h2>
+          </div>
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Nova senha</Label>
+              <Input
+                type="password"
+                placeholder="Mínimo 6 caracteres"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Confirmar nova senha</Label>
+              <Input
+                type="password"
+                placeholder="Repita a nova senha"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" disabled={savingPassword}>
+              {savingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Alterar senha
             </Button>
           </form>
         </div>

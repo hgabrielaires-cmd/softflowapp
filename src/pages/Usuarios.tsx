@@ -40,7 +40,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound } from "lucide-react";
+import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 
@@ -236,6 +236,19 @@ export default function Usuarios() {
     loadUsers();
   }
 
+  // ── Reset password ────────────────────────────────────────
+  async function handleResetPassword(user: UserWithRoles) {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success(`E-mail de redefinição de senha enviado para ${user.email}`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro ao enviar e-mail de redefinição");
+    }
+  }
+
 
   const filtered = users.filter(
     (u) =>
@@ -353,6 +366,16 @@ export default function Usuarios() {
                           <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                         </Button>
 
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => handleResetPassword(user)}
+                          title="Redefinir senha"
+                        >
+                          <Key className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-7 w-7" title={user.active ? "Desativar" : "Ativar"}>
@@ -400,7 +423,7 @@ export default function Usuarios() {
 
       {/* ── Create Dialog ── */}
       <Dialog open={openInvite} onOpenChange={setOpenInvite}>
-        <DialogContent className="max-w-md flex flex-col max-h-[90vh]">
+        <DialogContent className="max-w-xl flex flex-col max-h-[90vh]">
           <DialogHeader className="shrink-0">
             <DialogTitle>Criar novo usuário</DialogTitle>
           </DialogHeader>
@@ -524,7 +547,7 @@ export default function Usuarios() {
 
       {/* ── Edit Dialog ── */}
       <Dialog open={openEdit} onOpenChange={setOpenEdit}>
-        <DialogContent className="max-w-lg flex flex-col max-h-[90vh]">
+        <DialogContent className="max-w-xl flex flex-col max-h-[90vh]">
           <DialogHeader className="shrink-0">
             <DialogTitle>Editar usuário</DialogTitle>
           </DialogHeader>
