@@ -292,14 +292,14 @@ export function MessageTemplates() {
 
       {/* Editor Dialog */}
       <Dialog open={openEditor} onOpenChange={setOpenEditor}>
-        <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-primary" />
               {editingTemplate ? "Editar Template" : "Novo Template de Mensagem"}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSave} className="flex flex-col flex-1 overflow-hidden gap-4">
+          <form onSubmit={handleSave} className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1 col-span-2">
                 <Label className="text-xs">Nome *</Label>
@@ -343,19 +343,19 @@ export function MessageTemplates() {
               </div>
             </div>
 
-            <div className="flex-1 flex gap-3 overflow-hidden min-h-0">
-              <div className="flex-1 flex flex-col space-y-1 min-h-0">
+            <div className="flex gap-3">
+              <div className="flex-1 flex flex-col space-y-1">
                 <Label className="text-xs">Conteúdo da Mensagem *</Label>
                 <Textarea
                   value={form.conteudo}
                   onChange={(e) => setForm((f) => ({ ...f, conteudo: e.target.value }))}
                   placeholder="Digite o conteúdo da mensagem..."
-                  className="flex-1 min-h-[350px] resize-none font-mono text-sm"
+                  className="min-h-[400px] resize-vertical font-mono text-sm"
                 />
               </div>
-              <div className="w-[220px] shrink-0 flex flex-col space-y-1 min-h-0">
+              <div className="w-[220px] shrink-0 flex flex-col space-y-1">
                 <Label className="text-xs">Variáveis disponíveis</Label>
-                <div className="flex-1 overflow-y-auto rounded-md border border-border bg-muted/30 p-2 space-y-1">
+                <div className="max-h-[400px] overflow-y-auto rounded-md border border-border bg-muted/30 p-2 space-y-1">
                   {VARIAVEIS_DISPONIVEIS.map((v) => (
                     <button
                       key={v.var}
