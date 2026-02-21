@@ -460,6 +460,42 @@ export type Database = {
         }
         Relationships: []
       }
+      message_templates: {
+        Row: {
+          ativo: boolean
+          categoria: string
+          conteudo: string
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          categoria?: string
+          conteudo?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string
+          conteudo?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       modelos_contrato: {
         Row: {
           arquivo_docx_url: string | null
