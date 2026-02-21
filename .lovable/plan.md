@@ -1,41 +1,28 @@
 
 
-## Adicionar status de assinatura na tela de Pedidos
+## Melhorias no menu lateral (sidebar)
 
 ### O que sera feito
 
-Transformar a coluna "Financeiro" na lista de pedidos em uma coluna de progresso que mostra a evolucao do pedido: **Aprovado** -> **Contrato liberado** -> **Aguardando assinatura** -> **Contrato assinado** (ou **Recusado**). O mesmo sera exibido no dialog de visualizar pedido.
+1. **Remover a barra de rolagem feia** - Substituir o `overflow-y-auto` da nav por scroll nativo da pagina, ou usar uma scrollbar customizada invisivel/thin que so aparece no hover.
 
-### Mudancas na logica de dados
+2. **Aumentar a logo em 200%** - A logo atual tem `h-12`. Sera aumentada para `h-24` (dobro do tamanho).
 
-1. **Buscar dados do ZapSign** - No `loadData()`, apos carregar os pedidos, buscar os registros de `contratos_zapsign` para os pedidos que possuem `contrato_id` (nao nulo). Armazenar em um estado `Map<contrato_id, status_zapsign>`.
-
-2. **Novo estado** - Adicionar `zapsignMap` como `Record<string, string>` que mapeia `contrato_id` para o status da assinatura (Enviado, Pendente, Assinado, Recusado).
-
-### Mudancas na coluna "Financeiro" da lista
-
-Substituir a logica atual (que mostra badge do finStatus + "Contrato liberado") por uma progressao:
-
-- Se `finStatus === "Aguardando"` -> Badge "Aguardando" (amber)
-- Se `finStatus === "Reprovado"` -> Badge "Reprovado" (vermelho) + motivo
-- Se `finStatus === "Cancelado"` -> Badge "Cancelado" (cinza)
-- Se `finStatus === "Aprovado"` e `!contratoLiberado` -> Badge "Aprovado" (verde)
-- Se `finStatus === "Aprovado"` e `contratoLiberado` e sem assinatura ZapSign -> Badge "Contrato liberado" (verde com icone)
-- Se `finStatus === "Aprovado"` e `contratoLiberado` e ZapSign status "Enviado" ou "Pendente" -> Badge "Aguardando assinatura" (amber/laranja)
-- Se `finStatus === "Aprovado"` e ZapSign status "Assinado" -> Badge "Contrato assinado" (verde escuro/emerald)
-- Se ZapSign status "Recusado" -> Badge "Assinatura recusada" (vermelho)
-
-### Mudancas no dialog de visualizar pedido
-
-Na secao de status (linhas 2086-2108), adicionar o status da assinatura ZapSign abaixo do "Contrato liberado", seguindo o mesmo padrao visual.
+3. **Logo clicavel para o Dashboard** - Envolver a logo (tanto expandida quanto colapsada) em um link/botao que navega para `/dashboard`.
 
 ### Detalhes tecnicos
 
-**Arquivo:** `src/pages/Pedidos.tsx`
+**Arquivo:** `src/components/AppLayout.tsx`
 
-- Novo estado: `const [zapsignMap, setZapsignMap] = useState<Record<string, string>>({});`
-- No `loadData()`, apos carregar pedidos, extrair os `contrato_id` nao nulos e fazer uma query a `contratos_zapsign` para buscar o status de cada um
-- Na coluna Financeiro (linhas 1108-1121), substituir a logica condicional pela progressao descrita acima
-- No dialog de visualizar (linhas 2086-2108), adicionar badge de assinatura quando aplicavel
-- Icones: reutilizar `Send`, `CheckCircle`, `FileText` ja importados
+- **Scrollbar** (linha 156): Trocar `overflow-y-auto` por classes customizadas com scrollbar thin/invisivel usando CSS utilitario do Tailwind (`scrollbar-thin scrollbar-thumb-transparent hover:scrollbar-thumb-sidebar-border`) ou aplicar estilo inline/CSS para esconder a scrollbar mas manter o scroll funcional (`overflow-y-auto` + `scrollbar-width: none` / `-webkit-scrollbar: display none`). A abordagem mais limpa sera usar `overflow-y-auto` com classes CSS que escondem a scrollbar visualmente.
+
+- **Logo expandida** (linha 152): Trocar `h-12` por `h-24` na img da logo branca. Envolver em `<button onClick={() => navigate('/dashboard')}>` ou `<NavLink to="/dashboard">`.
+
+- **Logo colapsada** (linha 150): Trocar `h-8 w-8` por `h-10 w-10` (proporcional). Envolver no mesmo link clicavel.
+
+- **CSS** (em `src/index.css` ou inline): Adicionar estilo para esconder scrollbar no nav do sidebar:
+  ```css
+  .sidebar-nav-scroll::-webkit-scrollbar { display: none; }
+  .sidebar-nav-scroll { scrollbar-width: none; }
+  ```
 
