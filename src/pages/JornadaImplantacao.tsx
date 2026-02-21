@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Minus, Pencil, Trash2, Search, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight } from "lucide-react";
 import type { Jornada, JornadaEtapa, JornadaAtividade, MesaAtendimento, ChecklistItem, Filial } from "@/lib/supabase-types";
 
 // ─── Local state types for creation ──────────────────────────────────────────
@@ -558,7 +558,7 @@ export default function JornadaImplantacao() {
                                     <div className="space-y-0.5">
                                       <p className="text-sm font-medium">{a.nome}</p>
                                       <div className="flex gap-2 text-xs text-muted-foreground">
-                                        <span>{a.horas_estimadas}h estimadas</span>
+                                        <span>{Math.floor(a.horas_estimadas)}:{(Math.round((a.horas_estimadas - Math.floor(a.horas_estimadas)) * 60)).toString().padStart(2, "0")}h estimadas</span>
                                         <span>•</span>
                                         <span>{a.tipo_responsabilidade}</span>
                                         {a.checklist.length > 0 && <><span>•</span><span>{a.checklist.length} itens checklist</span></>}
@@ -636,23 +636,34 @@ export default function JornadaImplantacao() {
               <Input value={atividadeForm.nome} onChange={(e) => setAtividadeForm((p) => ({ ...p, nome: e.target.value }))} />
             </div>
             <div>
-              <label className="text-sm font-medium">Horas Estimadas</label>
-              <div className="flex items-center gap-2 mt-1">
-                <Button type="button" variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => setAtividadeForm((p) => ({ ...p, horas_estimadas: Math.max(0, p.horas_estimadas - 0.5) }))}>
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="text-lg font-semibold w-14 text-center">{atividadeForm.horas_estimadas}h</span>
-                <Button type="button" variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => setAtividadeForm((p) => ({ ...p, horas_estimadas: p.horas_estimadas + 0.5 }))}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="flex gap-1 mt-2">
-                {[0.5, 1, 2, 4, 8].map((v) => (
-                  <Button key={v} type="button" variant={atividadeForm.horas_estimadas === v ? "default" : "outline"} size="sm" className="h-7 text-xs flex-1" onClick={() => setAtividadeForm((p) => ({ ...p, horas_estimadas: v }))}>
-                    {v}h
-                  </Button>
-                ))}
-              </div>
+              <label className="text-sm font-medium">Horas Estimadas (hh:mm)</label>
+              <Input
+                placeholder="0:00"
+                className="mt-1 w-32 font-mono text-base"
+                value={(() => {
+                  const h = Math.floor(atividadeForm.horas_estimadas);
+                  const m = Math.round((atividadeForm.horas_estimadas - h) * 60);
+                  return `${h}:${m.toString().padStart(2, "0")}`;
+                })()}
+                onChange={(e) => {
+                  let val = e.target.value.replace(/[^0-9:]/g, "");
+                  // Allow typing freely - parse on every change
+                  const parts = val.split(":");
+                  const hours = parseInt(parts[0] || "0", 10) || 0;
+                  const mins = Math.min(59, parseInt(parts[1] || "0", 10) || 0);
+                  const decimal = hours + mins / 60;
+                  setAtividadeForm((p) => ({ ...p, horas_estimadas: Math.round(decimal * 100) / 100 }));
+                }}
+                onBlur={(e) => {
+                  // Normalize display on blur
+                  const parts = e.target.value.split(":");
+                  const hours = parseInt(parts[0] || "0", 10) || 0;
+                  const mins = Math.min(59, parseInt(parts[1] || "0", 10) || 0);
+                  const decimal = hours + mins / 60;
+                  setAtividadeForm((p) => ({ ...p, horas_estimadas: Math.round(decimal * 100) / 100 }));
+                }}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Ex: 0:15 = 15min, 1:30 = 1h30min</p>
             </div>
             <div>
               <label className="text-sm font-medium">Descrição</label>
