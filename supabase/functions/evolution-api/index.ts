@@ -37,7 +37,7 @@ serve(async (req) => {
       });
     }
 
-    const { action, server_url, api_key, instance_name } = await req.json();
+    const { action, server_url, api_key, instance_name, number, text } = await req.json();
 
     if (!server_url || !api_key) {
       return new Response(JSON.stringify({ error: "server_url e api_key são obrigatórios" }), {
@@ -130,6 +130,37 @@ serve(async (req) => {
         result = await res.json();
         if (!res.ok) {
           return new Response(JSON.stringify({ error: "Erro ao buscar instâncias", details: result }), {
+            status: res.status,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        break;
+      }
+
+      case "send_text": {
+        if (!number || !text) {
+          return new Response(JSON.stringify({ error: "number e text são obrigatórios" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const name = instance_name || "Softflow_WhatsApp";
+        // Format number: remove non-digits, ensure country code
+        let formattedNumber = number.replace(/\D/g, "");
+        if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
+        if (!formattedNumber.startsWith("55")) formattedNumber = "55" + formattedNumber;
+
+        const res = await fetch(`${baseUrl}/message/sendText/${name}`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            number: formattedNumber,
+            text: text,
+          }),
+        });
+        result = await res.json();
+        if (!res.ok) {
+          return new Response(JSON.stringify({ error: "Erro ao enviar mensagem", details: result }), {
             status: res.status,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });

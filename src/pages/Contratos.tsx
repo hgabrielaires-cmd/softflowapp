@@ -191,7 +191,8 @@ export default function Contratos() {
   }, [gerarStatus]);
 
   // Contatos do cliente selecionado (para Termo de Aceite)
-  const [contatosCliente, setContatosCliente] = useState<{ nome: string; decisor: boolean; ativo: boolean }[]>([]);
+  const [contatosCliente, setContatosCliente] = useState<{ nome: string; telefone: string | null; decisor: boolean; ativo: boolean }[]>([]);
+  const [enviandoWhatsapp, setEnviandoWhatsapp] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -245,10 +246,10 @@ export default function Contratos() {
   async function loadContatosCliente(clienteId: string) {
     const { data } = await supabase
       .from("cliente_contatos")
-      .select("nome, decisor, ativo")
+      .select("nome, telefone, decisor, ativo")
       .eq("cliente_id", clienteId)
       .eq("ativo", true);
-    setContatosCliente((data || []) as { nome: string; decisor: boolean; ativo: boolean }[]);
+    setContatosCliente((data || []) as { nome: string; telefone: string | null; decisor: boolean; ativo: boolean }[]);
   }
 
   async function handleOpenDetail(contrato: Contrato) {
@@ -533,6 +534,50 @@ export default function Contratos() {
         )}
       </div>
     );
+  }
+
+  // ── Enviar WhatsApp via Evolution API (teste) ──
+  async function handleEnviarWhatsapp(mensagem: string) {
+    const decisor = contatosCliente.find(c => c.decisor) || contatosCliente[0];
+    if (!decisor?.telefone) {
+      toast.error("Decisor não possui telefone cadastrado");
+      return;
+    }
+
+    setEnviandoWhatsapp(true);
+    try {
+      // Buscar config da integração WhatsApp
+      const { data: config } = await supabase
+        .from("integracoes_config")
+        .select("server_url, token, ativo")
+        .eq("nome", "whatsapp")
+        .single();
+
+      if (!config?.ativo || !config?.server_url || !config?.token) {
+        toast.error("Integração WhatsApp não está configurada ou ativa");
+        setEnviandoWhatsapp(false);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("evolution-api", {
+        body: {
+          action: "send_text",
+          server_url: config.server_url,
+          api_key: config.token,
+          number: decisor.telefone,
+          text: mensagem,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success(`Mensagem enviada para ${decisor.nome} (${decisor.telefone})`);
+    } catch (err: any) {
+      toast.error("Erro ao enviar WhatsApp: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setEnviandoWhatsapp(false);
+    }
   }
 
   // ── Gerador de Termo de Aceite ──────────────────────────────────────────────
@@ -1032,6 +1077,17 @@ Estou à disposição.`;
                         ✅ Link de assinatura preenchido automaticamente. Substitua <code className="bg-muted px-1 rounded">{"{datas_implantacao}"}</code> antes de enviar.
                       </p>
                     )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-2 mt-2"
+                      disabled={enviandoWhatsapp}
+                      onClick={() => handleEnviarWhatsapp(mensagem)}
+                    >
+                      {enviandoWhatsapp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      {enviandoWhatsapp ? "Enviando..." : "Enviar WhatsApp"}
+                    </Button>
                   </div>
                 );
               })()}
