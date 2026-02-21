@@ -171,6 +171,7 @@ export default function Contratos() {
   const [enviandoZapsign, setEnviandoZapsign] = useState(false);
   const [openZapsignDetail, setOpenZapsignDetail] = useState(false);
   const [zapsignDetailContrato, setZapsignDetailContrato] = useState<Contrato | null>(null);
+  const [linkedMessageTemplate, setLinkedMessageTemplate] = useState<{ conteudo: string } | null>(null);
 
   const GERAR_MSGS = [
     "Ajustando os detalhes finais…",
@@ -250,10 +251,30 @@ export default function Contratos() {
     setContatosCliente((data || []) as { nome: string; decisor: boolean; ativo: boolean }[]);
   }
 
-  function handleOpenDetail(contrato: Contrato) {
+  async function handleOpenDetail(contrato: Contrato) {
     setSelected(contrato);
     setOpenDetail(true);
+    setLinkedMessageTemplate(null);
     if (contrato.cliente_id) loadContatosCliente(contrato.cliente_id);
+    // Load linked message template via document_template
+    try {
+      const { data: docTemplate } = await supabase
+        .from("document_templates")
+        .select("message_template_id")
+        .eq("tipo", "CONTRATO_BASE")
+        .eq("ativo", true)
+        .not("message_template_id", "is", null)
+        .limit(1)
+        .maybeSingle();
+      if (docTemplate?.message_template_id) {
+        const { data: msgTemplate } = await supabase
+          .from("message_templates")
+          .select("conteudo")
+          .eq("id", docTemplate.message_template_id)
+          .single();
+        if (msgTemplate) setLinkedMessageTemplate(msgTemplate);
+      }
+    } catch { /* fallback to hardcoded */ }
   }
 
   const filtered = contratos.filter((c) => {
@@ -520,6 +541,7 @@ export default function Contratos() {
     const plano = contrato.planos;
     const nomeUsuario = profile?.full_name || "{nome_usuario}";
     const nomeFantasia = contrato.clientes?.nome_fantasia || "{nome_fantasia}";
+    const razaoSocial = contrato.clientes?.razao_social || "{razao_social}";
     const nomePlano = plano?.nome || "{plano}";
     const descricaoPlano = plano?.descricao || "";
     const modulosTexto = descricaoPlano
@@ -547,6 +569,36 @@ export default function Contratos() {
     const decisor = contatosCliente.find(c => c.decisor) || contatosCliente[0];
     const nomeDecisor = decisor?.nome || "{nome_decisor}";
 
+    // Se há template vinculado, usa ele com substituição de variáveis
+    if (linkedMessageTemplate) {
+      const formasPagamento = parcelasCartao || pixDesconto > 0
+        ? `Formas disponíveis:${parcelasCartao ? `\n- Até ${parcelasCartao}x no cartão sem juros` : ""}${pixDesconto > 0 ? `\n- PIX ${pixDesconto}% desconto` : ""}`
+        : "";
+      const adicionaisBlock = adicionais.length > 0
+        ? `🔘 *ADICIONAIS*\n\n${adicionaisTexto}\n\nTotal adicionais: ${fmtBRL(totalAdicionais)}`
+        : "";
+
+      return linkedMessageTemplate.conteudo
+        .replace(/\{contato\.nome\}/g, nomeDecisor)
+        .replace(/\{cliente\.nome_fantasia\}/g, nomeFantasia)
+        .replace(/\{cliente\.razao_social\}/g, razaoSocial)
+        .replace(/\{contrato\.numero\}/g, contrato.numero_exibicao)
+        .replace(/\{plano\.nome\}/g, nomePlano)
+        .replace(/\{plano\.modulos\}/g, modulosTexto)
+        .replace(/\{plano\.valor_base\}/g, valorMensBase)
+        .replace(/\{modulos\.adicionais\}/g, adicionaisBlock)
+        .replace(/\{valores\.implantacao\}/g, fmtBRL(impFinal))
+        .replace(/\{valores\.mensalidade\}/g, fmtBRL(mensFinal))
+        .replace(/\{regras\.mensalidade\}/g, regrasMens)
+        .replace(/\{regras\.implantacao\}/g, regrasImpl)
+        .replace(/\{formas\.pagamento\}/g, formasPagamento)
+        .replace(/\{link_assinatura\}/g, linkAssinatura || "{link_assinatura}")
+        .replace(/\{empresa\.nome\}/g, "Softplus Tecnologia")
+        .replace(/\{vendedor\.nome\}/g, nomeUsuario)
+        .replace(/\{usuario\.nome\}/g, nomeUsuario);
+    }
+
+    // Fallback hardcoded
     return `Olá ${nomeDecisor}, bom dia!
 
 Tudo bem?
