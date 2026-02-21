@@ -38,7 +38,7 @@ interface IntegrationDef {
 const integrationDefs: IntegrationDef[] = [
   {
     key: "zapsign",
-    icon: <img src={logoZapsign} alt="ZapSign" className="h-20 w-20 object-contain" />,
+    icon: <img src={logoZapsign} alt="ZapSign" className="h-28 w-28 object-contain" />,
     hasLogo: true,
     title: "ZapSign",
     description: "Assinatura eletrônica de contratos",
@@ -54,7 +54,7 @@ const integrationDefs: IntegrationDef[] = [
   },
   {
     key: "whatsapp",
-    icon: <img src={logoWhatsapp} alt="WhatsApp" className="h-20 w-20 object-contain" />,
+    icon: <img src={logoWhatsapp} alt="WhatsApp" className="h-28 w-28 object-contain" />,
     hasLogo: true,
     title: "WhatsApp",
     description: "Comunicação com clientes via WhatsApp",
@@ -70,7 +70,7 @@ const integrationDefs: IntegrationDef[] = [
   },
   {
     key: "browserless",
-    icon: <img src={logoBrowserless} alt="Browserless" className="h-20 w-20 object-contain" />,
+    icon: <img src={logoBrowserless} alt="Browserless" className="h-28 w-28 object-contain" />,
     hasLogo: true,
     title: "Browserless (PDV)",
     description: "Geração de PDFs via renderização server-side",
@@ -220,12 +220,10 @@ function IntegrationCard({ def, config, onOpenConfig }: IntegrationCardProps) {
           {cfg.icon}
           {cfg.label}
         </Badge>
-        <div className="flex flex-col items-center text-center pt-2">
-          <div className={`h-24 w-24 rounded-2xl flex items-center justify-center mb-3 ${def.hasLogo ? "bg-muted/30" : isAtivo ? def.accentColor + " text-white" : "bg-muted text-muted-foreground"}`}>
+        <div className="flex justify-center pt-2">
+          <div className={`h-32 w-32 rounded-2xl flex items-center justify-center ${def.hasLogo ? "bg-muted/30" : isAtivo ? def.accentColor + " text-white" : "bg-muted text-muted-foreground"}`}>
             {def.icon}
           </div>
-          <CardTitle className="text-base font-semibold">{def.title}</CardTitle>
-          <CardDescription className="text-xs mt-1">{def.description}</CardDescription>
         </div>
       </CardHeader>
 
