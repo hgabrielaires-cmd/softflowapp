@@ -287,6 +287,7 @@ export type Database = {
           filial_id: string | null
           id: string
           logo_url: string | null
+          message_template_id: string | null
           nome: string
           tipo: string
           updated_at: string
@@ -300,6 +301,7 @@ export type Database = {
           filial_id?: string | null
           id?: string
           logo_url?: string | null
+          message_template_id?: string | null
           nome: string
           tipo: string
           updated_at?: string
@@ -313,6 +315,7 @@ export type Database = {
           filial_id?: string | null
           id?: string
           logo_url?: string | null
+          message_template_id?: string | null
           nome?: string
           tipo?: string
           updated_at?: string
@@ -325,6 +328,13 @@ export type Database = {
             columns: ["filial_id"]
             isOneToOne: false
             referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_templates_message_template_id_fkey"
+            columns: ["message_template_id"]
+            isOneToOne: false
+            referencedRelation: "message_templates"
             referencedColumns: ["id"]
           },
         ]

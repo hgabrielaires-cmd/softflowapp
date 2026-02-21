@@ -84,6 +84,8 @@ export default function ModelosContrato() {
   const [clauses, setClauses] = useState<TemplateClause[]>([]);
   const [loadingClauses, setLoadingClauses] = useState(false);
 
+  const [messageTemplates, setMessageTemplates] = useState<{ id: string; nome: string; tipo: string }[]>([]);
+
   const [form, setForm] = useState({
     nome: "",
     filial_id: "todas",
@@ -92,20 +94,23 @@ export default function ModelosContrato() {
     conteudo_html: "",
     logo_url: "" as string | null,
     usa_clausulas: true,
+    message_template_id: "nenhum",
   });
 
   async function loadData() {
     setLoading(true);
-    const [{ data: modelosData, error }, { data: filiaisData }] = await Promise.all([
+    const [{ data: modelosData, error }, { data: filiaisData }, { data: msgTemplatesData }] = await Promise.all([
       supabase
         .from("document_templates")
         .select("*, filiais(nome)")
         .order("created_at", { ascending: false }),
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
+      supabase.from("message_templates").select("id, nome, tipo").eq("tipo", "whatsapp").eq("ativo", true).order("nome"),
     ]);
     if (error) toast.error("Erro ao carregar modelos: " + error.message);
     setModelos((modelosData || []) as unknown as DocumentTemplate[]);
     setFiliais((filiaisData || []) as Filial[]);
+    setMessageTemplates((msgTemplatesData || []) as { id: string; nome: string; tipo: string }[]);
     setLoading(false);
   }
 
@@ -125,7 +130,7 @@ export default function ModelosContrato() {
 
   function openNew() {
     setEditingModelo(null);
-    setForm({ nome: "", filial_id: "todas", tipo: "CONTRATO_BASE", ativo: true, conteudo_html: "", logo_url: "", usa_clausulas: true });
+    setForm({ nome: "", filial_id: "todas", tipo: "CONTRATO_BASE", ativo: true, conteudo_html: "", logo_url: "", usa_clausulas: true, message_template_id: "nenhum" });
     setClauses([]);
     setOpenEditor(true);
   }
@@ -140,6 +145,7 @@ export default function ModelosContrato() {
       conteudo_html: modelo.conteudo_html,
       logo_url: modelo.logo_url ?? "",
       usa_clausulas: modelo.usa_clausulas,
+      message_template_id: (modelo as any).message_template_id ?? "nenhum",
     });
     if (modelo.usa_clausulas) {
       loadTemplateClauses(modelo.id);
@@ -159,6 +165,7 @@ export default function ModelosContrato() {
       conteudo_html: modelo.conteudo_html,
       logo_url: modelo.logo_url ?? "",
       usa_clausulas: modelo.usa_clausulas,
+      message_template_id: (modelo as any).message_template_id ?? "nenhum",
     });
     if (modelo.usa_clausulas) {
       // Load clauses to duplicate them
@@ -292,6 +299,7 @@ export default function ModelosContrato() {
       conteudo_html: conteudoHtml,
       logo_url: form.logo_url || null,
       usa_clausulas: form.usa_clausulas,
+      message_template_id: form.message_template_id === "nenhum" ? null : form.message_template_id,
     };
 
     let templateId = editingModelo?.id;
@@ -612,6 +620,18 @@ export default function ModelosContrato() {
                   id="ativo-switch"
                 />
                 <Label htmlFor="ativo-switch" className="text-xs cursor-pointer">Ativo</Label>
+              </div>
+              <div className="space-y-1 w-[250px]">
+                <Label className="text-xs">Template WhatsApp</Label>
+                <Select value={form.message_template_id} onValueChange={(v) => setForm((f) => ({ ...f, message_template_id: v }))}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nenhum">Nenhum</SelectItem>
+                    {messageTemplates.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
