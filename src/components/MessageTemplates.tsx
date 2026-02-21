@@ -68,6 +68,7 @@ const VARIAVEIS_DISPONIVEIS = [
   { var: "{valores.mensalidade}", desc: "Valor mensalidade" },
   { var: "{link_assinatura}", desc: "Link de assinatura" },
   { var: "{empresa.nome}", desc: "Nome da empresa" },
+  { var: "{vendedor.nome}", desc: "Nome do vendedor" },
 ];
 
 export function MessageTemplates() {
