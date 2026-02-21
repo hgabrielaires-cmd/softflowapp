@@ -24,6 +24,8 @@ import Servicos from "./pages/Servicos";
 import Integracoes from "./pages/Integracoes";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import MesasAtendimento from "./pages/MesasAtendimento";
+import JornadaImplantacao from "./pages/JornadaImplantacao";
 
 const queryClient = new QueryClient();
 
@@ -211,10 +213,18 @@ const App = () => (
               }
             />
             <Route
-              path="/parametros/helpdesk"
+              path="/jornadas"
               element={
                 <ProtectedRoute requiredRole="admin">
-                  <ComingSoon module="Helpdesk" title="Jornada de Implantação" description="Em desenvolvimento. Configuração da jornada de implantação para clientes." />
+                  <JornadaImplantacao />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mesas-atendimento"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <MesasAtendimento />
                 </ProtectedRoute>
               }
             />

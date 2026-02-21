@@ -526,6 +526,172 @@ export type Database = {
         }
         Relationships: []
       }
+      jornada_atividades: {
+        Row: {
+          checklist: Json
+          created_at: string
+          descricao: string | null
+          etapa_id: string
+          horas_estimadas: number
+          id: string
+          nome: string
+          ordem: number
+          tipo_responsabilidade: string
+          updated_at: string
+        }
+        Insert: {
+          checklist?: Json
+          created_at?: string
+          descricao?: string | null
+          etapa_id: string
+          horas_estimadas?: number
+          id?: string
+          nome: string
+          ordem?: number
+          tipo_responsabilidade?: string
+          updated_at?: string
+        }
+        Update: {
+          checklist?: Json
+          created_at?: string
+          descricao?: string | null
+          etapa_id?: string
+          horas_estimadas?: number
+          id?: string
+          nome?: string
+          ordem?: number
+          tipo_responsabilidade?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jornada_atividades_etapa_id_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "jornada_etapas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jornada_etapas: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          jornada_id: string
+          mesa_atendimento_id: string | null
+          nome: string
+          ordem: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          jornada_id: string
+          mesa_atendimento_id?: string | null
+          nome: string
+          ordem?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          jornada_id?: string
+          mesa_atendimento_id?: string | null
+          nome?: string
+          ordem?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jornada_etapas_jornada_id_fkey"
+            columns: ["jornada_id"]
+            isOneToOne: false
+            referencedRelation: "jornadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jornada_etapas_mesa_atendimento_id_fkey"
+            columns: ["mesa_atendimento_id"]
+            isOneToOne: false
+            referencedRelation: "mesas_atendimento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jornadas: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          filial_id: string | null
+          id: string
+          nome: string
+          updated_at: string
+          vinculo_id: string
+          vinculo_tipo: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          filial_id?: string | null
+          id?: string
+          nome: string
+          updated_at?: string
+          vinculo_id: string
+          vinculo_tipo: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          filial_id?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string
+          vinculo_id?: string
+          vinculo_tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jornadas_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mesas_atendimento: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       message_templates: {
         Row: {
           ativo: boolean
