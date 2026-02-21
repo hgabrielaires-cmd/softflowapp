@@ -97,7 +97,7 @@ const navGroups: NavGroup[] = [
       { icon: <Users className="h-4 w-4" />, label: "Usuários", to: "/usuarios" },
       { icon: <Globe className="h-4 w-4" />, label: "Perfis de Usuário", to: "/perfis-usuario" },
       { icon: <FileText className="h-4 w-4" />, label: "Modelos de Documentos", to: "/modelos-contrato" },
-      
+      { icon: <Headphones className="h-4 w-4" />, label: "Helpdesk", to: "/jornadas" },
       { icon: <Bell className="h-4 w-4" />, label: "Notificações", to: "/notificacoes" },
       { icon: <Plug className="h-4 w-4" />, label: "Integrações", to: "/integracoes" },
     ],
