@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import logoZapsign from "@/assets/logo-zapsign.svg";
 import { AppLayout } from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +35,7 @@ interface IntegrationDef {
 const integrationDefs: IntegrationDef[] = [
   {
     key: "zapsign",
-    icon: <FileSignature className="h-5 w-5" />,
+    icon: <img src={logoZapsign} alt="ZapSign" className="h-6 w-6 object-contain" />,
     title: "ZapSign",
     description: "Assinatura eletrônica de contratos",
     accentColor: "bg-emerald",
