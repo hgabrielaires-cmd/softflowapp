@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import logoZapsign from "@/assets/logo-zapsign.svg";
+import logoWhatsapp from "@/assets/logo-whatsapp.svg";
 import { AppLayout } from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +28,7 @@ interface IntegrationDef {
   title: string;
   description: string;
   accentColor: string;
+  hasLogo?: boolean;
   details: string[];
   tokenLabel: string;
   tokenPlaceholder: string;
@@ -35,7 +37,8 @@ interface IntegrationDef {
 const integrationDefs: IntegrationDef[] = [
   {
     key: "zapsign",
-    icon: <img src={logoZapsign} alt="ZapSign" className="h-6 w-6 object-contain" />,
+    icon: <img src={logoZapsign} alt="ZapSign" className="h-10 w-10 object-contain" />,
+    hasLogo: true,
     title: "ZapSign",
     description: "Assinatura eletrônica de contratos",
     accentColor: "bg-emerald",
@@ -50,7 +53,8 @@ const integrationDefs: IntegrationDef[] = [
   },
   {
     key: "whatsapp",
-    icon: <MessageCircle className="h-5 w-5" />,
+    icon: <img src={logoWhatsapp} alt="WhatsApp" className="h-10 w-10 object-contain" />,
+    hasLogo: true,
     title: "WhatsApp",
     description: "Comunicação com clientes via WhatsApp",
     accentColor: "bg-[hsl(142,70%,45%)]",
@@ -122,7 +126,7 @@ function ConfigDialog({ open, onOpenChange, def, config, onSave }: ConfigDialogP
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${def.accentColor} text-white shadow-sm`}>
+            <div className={`h-10 w-10 rounded-xl flex items-center justify-center shadow-sm ${def.hasLogo ? "bg-transparent" : def.accentColor + " text-white"}`}>
               {def.icon}
             </div>
             <div>
@@ -212,7 +216,7 @@ function IntegrationCard({ def, config, onOpenConfig }: IntegrationCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${isAtivo ? def.accentColor : "bg-muted"} ${isAtivo ? "text-white" : "text-muted-foreground"} shadow-sm`}>
+            <div className={`h-11 w-11 rounded-xl flex items-center justify-center shadow-sm ${def.hasLogo ? "bg-transparent" : isAtivo ? def.accentColor + " text-white" : "bg-muted text-muted-foreground"}`}>
               {def.icon}
             </div>
             <div>
