@@ -222,6 +222,7 @@ export default function Pedidos() {
   const [loading, setLoading] = useState(true);
   const [filialFavoritaId, setFilialFavoritaId] = useState<string | null>(null);
   const [filialParametros, setFilialParametros] = useState<any | null>(null);
+  const [zapsignMap, setZapsignMap] = useState<Record<string, string>>({});
 
   // Módulos disponíveis do plano selecionado (para busca)
   const [modulosDisponiveis, setModulosDisponiveis] = useState<ModuloOpcional[]>([]);
@@ -474,11 +475,29 @@ export default function Pedidos() {
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
       supabase.from("profiles").select("*").order("full_name"),
     ]);
-    setPedidos((pedidosData || []) as unknown as PedidoWithJoins[]);
+    const pedidosList = (pedidosData || []) as unknown as PedidoWithJoins[];
+    setPedidos(pedidosList);
     setClientes((clientesData || []) as Cliente[]);
     setPlanos(planosData || []);
     setFiliais((filiaisData || []) as Filial[]);
     setVendedores((vendedoresData || []) as Profile[]);
+
+    // Buscar status ZapSign para pedidos com contrato_id
+    const contratoIds = pedidosList
+      .map(p => p.contrato_id)
+      .filter((id): id is string => !!id);
+    if (contratoIds.length > 0) {
+      const { data: zapsignData } = await supabase
+        .from("contratos_zapsign")
+        .select("contrato_id, status")
+        .in("contrato_id", contratoIds);
+      const map: Record<string, string> = {};
+      (zapsignData || []).forEach((z: any) => { map[z.contrato_id] = z.status; });
+      setZapsignMap(map);
+    } else {
+      setZapsignMap({});
+    }
+
     setLoading(false);
   }
 
@@ -1107,17 +1126,40 @@ export default function Pedidos() {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${FIN_STATUS_COLORS[finStatus] || "bg-muted text-muted-foreground"}`}>
-                            {finStatus}
-                          </span>
-                          {contratoLiberado && (
-                            <div className="flex items-center gap-1 text-xs text-success font-medium">
-                              <CheckCircle className="h-3 w-3" /> Contrato liberado
-                            </div>
-                          )}
-                          {isReprovado && finMotivo && (
-                            <p className="text-xs text-destructive max-w-[180px] truncate" title={finMotivo}>⚠ {finMotivo}</p>
-                          )}
+                          {(() => {
+                            const zsStatus = pedido.contrato_id ? zapsignMap[pedido.contrato_id] : undefined;
+                            if (finStatus === "Aguardando") {
+                              return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Aguardando</span>;
+                            }
+                            if (finStatus === "Reprovado") {
+                              return (
+                                <>
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600">Reprovado</span>
+                                  {finMotivo && <p className="text-xs text-destructive max-w-[180px] truncate" title={finMotivo}>⚠ {finMotivo}</p>}
+                                </>
+                              );
+                            }
+                            if (finStatus === "Cancelado") {
+                              return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Cancelado</span>;
+                            }
+                            // Aprovado - progressão
+                            if (zsStatus === "Recusado") {
+                              return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600"><XCircle className="h-3 w-3" />Assinatura recusada</span>;
+                            }
+                            if (zsStatus === "Assinado") {
+                              return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700"><CheckCircle className="h-3 w-3" />Contrato assinado</span>;
+                            }
+                            if (zsStatus === "Enviado" || zsStatus === "Pendente") {
+                              return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700"><Send className="h-3 w-3" />Aguardando assinatura</span>;
+                            }
+                            if (contratoLiberado) {
+                              return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700"><FileText className="h-3 w-3" />Contrato liberado</span>;
+                            }
+                            if (isAprovado) {
+                              return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Aprovado</span>;
+                            }
+                            return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${FIN_STATUS_COLORS[finStatus] || "bg-muted text-muted-foreground"}`}>{finStatus}</span>;
+                          })()}
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
@@ -2091,15 +2133,27 @@ export default function Pedidos() {
                   </div>
                   <div className="space-y-0.5">
                     <p className="text-xs text-muted-foreground">Status financeiro</p>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${FIN_STATUS_COLORS[finStatus] || "bg-muted text-muted-foreground"}`}>
-                      {finStatus}
-                    </span>
+                    {(() => {
+                      const zsStatus = vp.contrato_id ? zapsignMap[vp.contrato_id] : undefined;
+                      if (zsStatus === "Assinado") {
+                        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700"><CheckCircle className="h-3 w-3" />Contrato assinado</span>;
+                      }
+                      if (zsStatus === "Recusado") {
+                        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600"><XCircle className="h-3 w-3" />Assinatura recusada</span>;
+                      }
+                      if (zsStatus === "Enviado" || zsStatus === "Pendente") {
+                        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700"><Send className="h-3 w-3" />Aguardando assinatura</span>;
+                      }
+                      if (vp.contrato_liberado) {
+                        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700"><FileText className="h-3 w-3" />Contrato liberado</span>;
+                      }
+                      return (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${FIN_STATUS_COLORS[finStatus] || "bg-muted text-muted-foreground"}`}>
+                          {finStatus}
+                        </span>
+                      );
+                    })()}
                   </div>
-                  {vp.contrato_liberado && (
-                    <div className="col-span-2 flex items-center gap-1 text-xs text-success font-medium">
-                      <CheckCircle className="h-3 w-3" /> Contrato liberado
-                    </div>
-                  )}
                   {vp.financeiro_motivo && (
                     <div className="col-span-2 space-y-0.5">
                       <p className="text-xs text-muted-foreground">Motivo reprovação</p>
