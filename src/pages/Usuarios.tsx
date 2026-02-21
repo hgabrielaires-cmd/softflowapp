@@ -72,6 +72,7 @@ export default function Usuarios() {
   const [inviteDescontoLimiteMens, setInviteDescontoLimiteMens] = useState("0");
   const [inviteGestorDesconto, setInviteGestorDesconto] = useState(false);
   const [invitePermitirCnpjDuplicado, setInvitePermitirCnpjDuplicado] = useState(false);
+  const [inviteRecebeComissao, setInviteRecebeComissao] = useState(true);
   const [inviting, setInviting] = useState(false);
 
   // Edit dialog
@@ -86,6 +87,7 @@ export default function Usuarios() {
   const [editDescontoLimiteMens, setEditDescontoLimiteMens] = useState("0");
   const [editGestorDesconto, setEditGestorDesconto] = useState(false);
   const [editPermitirCnpjDuplicado, setEditPermitirCnpjDuplicado] = useState(false);
+  const [editRecebeComissao, setEditRecebeComissao] = useState(true);
   const [editActive, setEditActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -145,13 +147,14 @@ export default function Usuarios() {
         desconto_limite_mensalidade: parseFloat(inviteDescontoLimiteMens) || 0,
         gestor_desconto: inviteGestorDesconto,
         permitir_cnpj_duplicado: invitePermitirCnpjDuplicado,
+        recebe_comissao: inviteRecebeComissao,
       } as any).eq("user_id", data.user.id);
 
       await supabase.from("user_roles").insert({ user_id: data.user.id, role: inviteRole });
 
       toast.success(`Usuário ${inviteName} criado com sucesso!`);
       setOpenInvite(false);
-      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false);
+      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true);
       loadUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
@@ -171,6 +174,7 @@ export default function Usuarios() {
     setEditDescontoLimiteMens(((user as any).desconto_limite_mensalidade ?? 0).toString());
     setEditGestorDesconto((user as any).gestor_desconto ?? false);
     setEditPermitirCnpjDuplicado((user as any).permitir_cnpj_duplicado ?? false);
+    setEditRecebeComissao((user as any).recebe_comissao ?? true);
     setEditActive(user.active);
     setOpenEdit(true);
   }
@@ -190,6 +194,7 @@ export default function Usuarios() {
         desconto_limite_mensalidade: parseFloat(editDescontoLimiteMens) || 0,
         gestor_desconto: editGestorDesconto,
         permitir_cnpj_duplicado: editPermitirCnpjDuplicado,
+        recebe_comissao: editRecebeComissao,
         active: editActive,
       } as any).eq("user_id", editingUser.user_id);
 
@@ -437,25 +442,33 @@ export default function Usuarios() {
               </div>
             </div>
             <div className="rounded-lg border border-border p-3 space-y-3">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comissão</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label>Comissão implantação (%)</Label>
-                  <Input
-                    type="number" min="0" max="100" step="0.01" placeholder="5"
-                    value={inviteComissaoImp}
-                    onChange={(e) => setInviteComissaoImp(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Comissão mensalidade (%)</Label>
-                  <Input
-                    type="number" min="0" max="100" step="0.01" placeholder="5"
-                    value={inviteComissaoMens}
-                    onChange={(e) => setInviteComissaoMens(e.target.value)}
-                  />
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comissão</p>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground">Recebe comissão</Label>
+                  <Switch checked={inviteRecebeComissao} onCheckedChange={setInviteRecebeComissao} />
                 </div>
               </div>
+              {inviteRecebeComissao && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Comissão implantação (%)</Label>
+                    <Input
+                      type="number" min="0" max="100" step="0.01" placeholder="5"
+                      value={inviteComissaoImp}
+                      onChange={(e) => setInviteComissaoImp(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Comissão mensalidade (%)</Label>
+                    <Input
+                      type="number" min="0" max="100" step="0.01" placeholder="5"
+                      value={inviteComissaoMens}
+                      onChange={(e) => setInviteComissaoMens(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             <div className="rounded-lg border border-border p-3 space-y-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Limite de Desconto</p>
@@ -565,25 +578,33 @@ export default function Usuarios() {
                     </div>
                   </div>
                   <div className="rounded-lg border border-border p-3 space-y-3">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comissão</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label>Comissão implantação (%)</Label>
-                        <Input
-                          type="number" min="0" max="100" step="0.01"
-                          value={editComissaoImp}
-                          onChange={(e) => setEditComissaoImp(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Comissão mensalidade (%)</Label>
-                        <Input
-                          type="number" min="0" max="100" step="0.01"
-                          value={editComissaoMens}
-                          onChange={(e) => setEditComissaoMens(e.target.value)}
-                        />
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comissão</p>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs text-muted-foreground">Recebe comissão</Label>
+                        <Switch checked={editRecebeComissao} onCheckedChange={setEditRecebeComissao} />
                       </div>
                     </div>
+                    {editRecebeComissao && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label>Comissão implantação (%)</Label>
+                          <Input
+                            type="number" min="0" max="100" step="0.01"
+                            value={editComissaoImp}
+                            onChange={(e) => setEditComissaoImp(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>Comissão mensalidade (%)</Label>
+                          <Input
+                            type="number" min="0" max="100" step="0.01"
+                            value={editComissaoMens}
+                            onChange={(e) => setEditComissaoMens(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="rounded-lg border border-border p-3 space-y-3">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Limite de Desconto</p>
