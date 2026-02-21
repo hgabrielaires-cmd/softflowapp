@@ -62,6 +62,7 @@ import {
   RefreshCw,
   ClipboardCopy,
   ExternalLink,
+  MinusCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -434,7 +435,7 @@ export default function Contratos() {
             <Send className="h-3 w-3" />
             Enviado
           </Badge>
-          <span className="text-[10px] text-amber-600 pl-1">Aguardando assinatura</span>
+          <span className="text-[10px] text-amber-600 text-center w-full">Aguardando assinatura</span>
         </div>
       );
     return <Badge variant="secondary" className="text-xs w-fit">{status}</Badge>;
@@ -443,11 +444,17 @@ export default function Contratos() {
   function getStatusBadge(status: string) {
     if (status === "Ativo")
       return (
-        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400">
+        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs flex items-center gap-1 w-fit">
+          <CheckCircle2 className="h-3 w-3" />
           Ativo
         </Badge>
       );
-    return <Badge variant="secondary">Encerrado</Badge>;
+    return (
+      <Badge variant="secondary" className="text-xs flex items-center gap-1 w-fit">
+        <MinusCircle className="h-3 w-3" />
+        Encerrado
+      </Badge>
+    );
   }
 
   function getStatusGeracaoBadge(statusGeracao: string | null) {
@@ -468,23 +475,23 @@ export default function Contratos() {
   function getTipoBadge(tipo: string) {
     if (tipo === "Base")
       return (
-        <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/10">
+        <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/10 text-xs flex items-center gap-1 w-fit">
           Base
         </Badge>
       );
     if (tipo === "Upgrade")
       return (
-        <Badge className="bg-violet-100 text-violet-700 border-violet-200 hover:bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400">
+        <Badge className="bg-violet-100 text-violet-700 border-violet-200 hover:bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400 text-xs flex items-center gap-1 w-fit">
           Upgrade
         </Badge>
       );
     if (tipo === "Downgrade")
       return (
-        <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400">
+        <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 text-xs flex items-center gap-1 w-fit">
           Downgrade
         </Badge>
       );
-    return <Badge variant="outline">{tipo}</Badge>;
+    return <Badge variant="outline" className="text-xs w-fit">{tipo}</Badge>;
   }
 
   function getPedidoStatusBadges(contrato: Contrato) {
@@ -492,12 +499,14 @@ export default function Contratos() {
     return (
       <div className="flex flex-col gap-1">
         {contrato.pedidos.financeiro_status === "Aprovado" && (
-          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs w-fit">
-            ✓ Aprovado
+          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs flex items-center gap-1 w-fit">
+            <CheckCircle2 className="h-3 w-3" />
+            Aprovado
           </Badge>
         )}
         {contrato.pedidos.contrato_liberado && (
-          <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 text-xs w-fit">
+          <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 text-xs flex items-center gap-1 w-fit">
+            <CheckCircle2 className="h-3 w-3" />
             Liberado
           </Badge>
         )}
