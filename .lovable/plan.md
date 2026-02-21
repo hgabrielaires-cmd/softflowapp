@@ -1,28 +1,16 @@
 
 
-## Melhorias no menu lateral (sidebar)
+## Ampliar area de edicao do template de mensagem
 
-### O que sera feito
+O dialog de edicao do template esta pequeno, fazendo com que a area de texto do conteudo da mensagem fique muito curta para editar mensagens longas.
 
-1. **Remover a barra de rolagem feia** - Substituir o `overflow-y-auto` da nav por scroll nativo da pagina, ou usar uma scrollbar customizada invisivel/thin que so aparece no hover.
+### Alteracoes
 
-2. **Aumentar a logo em 200%** - A logo atual tem `h-12`. Sera aumentada para `h-24` (dobro do tamanho).
+**Arquivo:** `src/components/MessageTemplates.tsx`
 
-3. **Logo clicavel para o Dashboard** - Envolver a logo (tanto expandida quanto colapsada) em um link/botao que navega para `/dashboard`.
+1. Aumentar a largura maxima do dialog de `max-w-3xl` para `max-w-5xl`
+2. Aumentar a altura minima do Textarea de `min-h-[200px]` para `min-h-[350px]`
+3. Aumentar a altura maxima do dialog de `max-h-[85vh]` para `max-h-[90vh]`
 
-### Detalhes tecnicos
-
-**Arquivo:** `src/components/AppLayout.tsx`
-
-- **Scrollbar** (linha 156): Trocar `overflow-y-auto` por classes customizadas com scrollbar thin/invisivel usando CSS utilitario do Tailwind (`scrollbar-thin scrollbar-thumb-transparent hover:scrollbar-thumb-sidebar-border`) ou aplicar estilo inline/CSS para esconder a scrollbar mas manter o scroll funcional (`overflow-y-auto` + `scrollbar-width: none` / `-webkit-scrollbar: display none`). A abordagem mais limpa sera usar `overflow-y-auto` com classes CSS que escondem a scrollbar visualmente.
-
-- **Logo expandida** (linha 152): Trocar `h-12` por `h-24` na img da logo branca. Envolver em `<button onClick={() => navigate('/dashboard')}>` ou `<NavLink to="/dashboard">`.
-
-- **Logo colapsada** (linha 150): Trocar `h-8 w-8` por `h-10 w-10` (proporcional). Envolver no mesmo link clicavel.
-
-- **CSS** (em `src/index.css` ou inline): Adicionar estilo para esconder scrollbar no nav do sidebar:
-  ```css
-  .sidebar-nav-scroll::-webkit-scrollbar { display: none; }
-  .sidebar-nav-scroll { scrollbar-width: none; }
-  ```
+Isso dara muito mais espaco para visualizar e editar o conteudo da mensagem sem precisar rolar tanto dentro do campo de texto.
 
