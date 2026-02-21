@@ -526,6 +526,23 @@ export default function JornadaImplantacao() {
                 <label className="text-sm font-medium">Descrição</label>
                 <Textarea value={form.descricao} onChange={(e) => setForm((p) => ({ ...p, descricao: e.target.value }))} placeholder="Descrição preenchida automaticamente do vínculo..." rows={4} />
               </div>
+
+              {(() => {
+                const totalMin = etapas.reduce((sum, e) => sum + e.atividades.reduce((s, a) => s + a.horas_estimadas * 60, 0), 0);
+                const h = Math.floor(totalMin / 60);
+                const m = Math.round(totalMin % 60);
+                return (
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 flex items-center gap-3">
+                    <div className="rounded-full bg-primary/10 p-2">
+                      <Eye className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Total de horas estimadas (todas as etapas)</p>
+                      <p className="text-xl font-bold text-primary">{h}:{m.toString().padStart(2, "0")}h</p>
+                    </div>
+                  </div>
+                );
+              })()}
             </TabsContent>
 
             <TabsContent value="etapas" className="space-y-4 mt-4">
