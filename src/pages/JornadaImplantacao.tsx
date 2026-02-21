@@ -13,7 +13,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Eye } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Jornada, JornadaEtapa, JornadaAtividade, MesaAtendimento, ChecklistItem, Filial } from "@/lib/supabase-types";
 
 // ─── Local state types for creation ──────────────────────────────────────────
@@ -574,6 +575,24 @@ export default function JornadaImplantacao() {
                                       </div>
                                     </div>
                                     <div className="flex gap-1">
+                                      {a.checklist.length > 0 && (
+                                        <Popover>
+                                          <PopoverTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6"><Eye className="h-3 w-3" /></Button>
+                                          </PopoverTrigger>
+                                          <PopoverContent className="w-64 p-3" side="left">
+                                            <p className="text-xs font-semibold mb-2">Checklist ({a.checklist.length} itens)</p>
+                                            <ul className="space-y-1">
+                                              {a.checklist.map((item, idx) => (
+                                                <li key={idx} className="flex items-start gap-2 text-xs">
+                                                  <span className="text-muted-foreground mt-0.5">•</span>
+                                                  <span>{item.texto || "(sem texto)"}</span>
+                                                </li>
+                                              ))}
+                                            </ul>
+                                          </PopoverContent>
+                                        </Popover>
+                                      )}
                                       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEditAtividade(etapa.tempId, a)}><Pencil className="h-3 w-3" /></Button>
                                       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeAtividade(etapa.tempId, a.tempId)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
                                     </div>
