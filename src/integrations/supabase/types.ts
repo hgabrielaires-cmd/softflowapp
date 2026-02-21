@@ -975,6 +975,39 @@ export type Database = {
         }
         Relationships: []
       }
+      servicos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          unidade_medida: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          unidade_medida?: string
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          unidade_medida?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       solicitacoes_desconto: {
         Row: {
           aprovado_em: string | null
