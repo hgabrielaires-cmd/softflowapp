@@ -8,6 +8,7 @@ import { ContractPreview } from "@/components/ContractPreview";
 import { ClauseEditor } from "@/components/ClauseEditor";
 import { ClauseLibrary } from "@/components/ClauseLibrary";
 import { MessageTemplates } from "@/components/MessageTemplates";
+import { OrdemAtendimentoTab } from "@/components/OrdemAtendimentoTab";
 import { getExampleData } from "@/lib/contract-variables";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   FileText, Plus, Loader2, MoreHorizontal,
-  Pencil, Trash2, Building2, CheckCircle, XCircle, Eye, Copy, Upload, MessageSquare,
+  Pencil, Trash2, Building2, CheckCircle, XCircle, Eye, Copy, Upload, MessageSquare, ClipboardList,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -391,10 +392,10 @@ export default function ModelosContrato() {
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <FileText className="h-6 w-6 text-primary" />
-            Modelos & Templates
+            Modelos de Documentos
           </h1>
           <p className="text-sm text-muted-foreground">
-            Gerencie modelos de contrato e templates de mensagens
+            Gerencie modelos de contrato, templates de mensagens e ordens de atendimento
           </p>
         </div>
 
@@ -405,6 +406,9 @@ export default function ModelosContrato() {
             </TabsTrigger>
             <TabsTrigger value="mensagens" className="gap-1.5">
               <MessageSquare className="h-3.5 w-3.5" /> Templates de Mensagens
+            </TabsTrigger>
+            <TabsTrigger value="ordem" className="gap-1.5">
+              <ClipboardList className="h-3.5 w-3.5" /> Ordem de Atendimento
             </TabsTrigger>
           </TabsList>
 
@@ -525,6 +529,10 @@ export default function ModelosContrato() {
 
           <TabsContent value="mensagens">
             <MessageTemplates />
+          </TabsContent>
+
+          <TabsContent value="ordem">
+            <OrdemAtendimentoTab filiais={filiais} />
           </TabsContent>
         </Tabs>
       </div>
