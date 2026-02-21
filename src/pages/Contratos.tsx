@@ -427,11 +427,21 @@ export default function Contratos() {
           Recusado
         </Badge>
       );
-    if (status === "Pendente" || status === "Enviado")
+    if (status === "Enviado")
+      return (
+        <div className="flex flex-col gap-0.5 w-fit">
+          <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 text-xs flex items-center gap-1 w-fit">
+            <Send className="h-3 w-3" />
+            Enviado
+          </Badge>
+          <span className="text-[10px] text-amber-600 pl-1">Aguardando assinatura</span>
+        </div>
+      );
+    if (status === "Pendente")
       return (
         <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 text-xs flex items-center gap-1 w-fit">
           <Send className="h-3 w-3" />
-          {status}
+          Aguardando assinatura
         </Badge>
       );
     return <Badge variant="secondary" className="text-xs w-fit">{status}</Badge>;
@@ -1233,7 +1243,14 @@ Estou à disposição.`;
                   <div key={i} className="rounded-lg border border-border p-3 space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{signer.name}</span>
-                      <Badge variant="secondary" className="text-xs">{signer.status || "pendente"}</Badge>
+                      {(() => {
+                        const s = signer.status?.toLowerCase();
+                        if (s === "signed")
+                          return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs">Assinado</Badge>;
+                        if (s === "refused" || s === "canceled")
+                          return <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 text-xs">Recusado</Badge>;
+                        return <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 text-xs">Aguardando assinatura</Badge>;
+                      })()}
                     </div>
                     {signer.email && <p className="text-xs text-muted-foreground">{signer.email}</p>}
                     {signer.sign_url && (
