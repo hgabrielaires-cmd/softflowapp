@@ -53,9 +53,9 @@ const navGroups: NavGroup[] = [
     groupLabel: "Helpdesk",
     groupIcon: <Headphones className="h-4 w-4" />,
     items: [
+      { icon: <Calendar className="h-4 w-4" />, label: "Fila de Agendamento", to: "/fila-agendamento" },
       { icon: <Calendar className="h-4 w-4" />, label: "Agenda Operacional", to: "/agenda" },
       { icon: <Ticket className="h-4 w-4" />, label: "Tickets", to: "/tickets" },
-      { icon: <Calendar className="h-4 w-4" />, label: "Fila de Agendamento", to: "/fila-agendamento" },
     ],
   },
   {
