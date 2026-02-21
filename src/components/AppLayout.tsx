@@ -54,6 +54,8 @@ const navGroups: NavGroup[] = [
     items: [
       { icon: <Calendar className="h-4 w-4" />, label: "Agenda Operacional", to: "/agenda" },
       { icon: <Ticket className="h-4 w-4" />, label: "Tickets", to: "/tickets" },
+      { icon: <ListOrdered className="h-4 w-4" />, label: "Jornadas de Implantação", to: "/jornadas", roles: ["admin"] },
+      { icon: <Headphones className="h-4 w-4" />, label: "Mesas de Atendimento", to: "/mesas-atendimento", roles: ["admin"] },
     ],
   },
   {
@@ -95,7 +97,7 @@ const navGroups: NavGroup[] = [
       { icon: <Users className="h-4 w-4" />, label: "Usuários", to: "/usuarios" },
       { icon: <Globe className="h-4 w-4" />, label: "Perfis de Usuário", to: "/perfis-usuario" },
       { icon: <FileText className="h-4 w-4" />, label: "Modelos de Documentos", to: "/modelos-contrato" },
-      { icon: <Headphones className="h-4 w-4" />, label: "Helpdesk", to: "/parametros/helpdesk" },
+      
       { icon: <Bell className="h-4 w-4" />, label: "Notificações", to: "/notificacoes" },
       { icon: <Plug className="h-4 w-4" />, label: "Integrações", to: "/integracoes" },
     ],

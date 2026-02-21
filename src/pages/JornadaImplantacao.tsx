@@ -1,0 +1,684 @@
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { AppLayout } from "@/components/AppLayout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight } from "lucide-react";
+import type { Jornada, JornadaEtapa, JornadaAtividade, MesaAtendimento, ChecklistItem, Filial } from "@/lib/supabase-types";
+
+// ─── Local state types for creation ──────────────────────────────────────────
+
+interface LocalAtividade {
+  tempId: string;
+  id?: string;
+  nome: string;
+  descricao: string;
+  horas_estimadas: number;
+  checklist: ChecklistItem[];
+  tipo_responsabilidade: string;
+  ordem: number;
+}
+
+interface LocalEtapa {
+  tempId: string;
+  id?: string;
+  nome: string;
+  descricao: string;
+  mesa_atendimento_id: string;
+  ordem: number;
+  atividades: LocalAtividade[];
+}
+
+const emptyForm = {
+  nome: "",
+  descricao: "",
+  filial_id: "",
+  vinculo_tipo: "",
+  vinculo_id: "",
+};
+
+export default function JornadaImplantacao() {
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [filterVinculo, setFilterVinculo] = useState("todos");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<Jornada | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [etapas, setEtapas] = useState<LocalEtapa[]>([]);
+  const [etapaDialogOpen, setEtapaDialogOpen] = useState(false);
+  const [editingEtapa, setEditingEtapa] = useState<LocalEtapa | null>(null);
+  const [etapaForm, setEtapaForm] = useState({ nome: "", descricao: "", mesa_atendimento_id: "" });
+  const [atividadeDialogOpen, setAtividadeDialogOpen] = useState(false);
+  const [currentEtapaTempId, setCurrentEtapaTempId] = useState("");
+  const [editingAtividade, setEditingAtividade] = useState<LocalAtividade | null>(null);
+  const [atividadeForm, setAtividadeForm] = useState({ nome: "", descricao: "", horas_estimadas: 0, checklist: [] as ChecklistItem[], tipo_responsabilidade: "Interna" });
+  const [expandedEtapas, setExpandedEtapas] = useState<Set<string>>(new Set());
+
+  // ─── Queries ────────────────────────────────────────────────────────────────
+
+  const { data: jornadas = [], isLoading } = useQuery({
+    queryKey: ["jornadas"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("jornadas").select("*, filiais(nome)").order("nome");
+      if (error) throw error;
+      return data.map((j: any) => ({ ...j, filial: j.filiais ? { nome: j.filiais.nome } : null })) as Jornada[];
+    },
+  });
+
+  const { data: filiais = [] } = useQuery({
+    queryKey: ["filiais"],
+    queryFn: async () => {
+      const { data } = await supabase.from("filiais").select("*").eq("ativa", true).order("nome");
+      return (data || []) as Filial[];
+    },
+  });
+
+  const { data: planos = [] } = useQuery({
+    queryKey: ["planos_ativos"],
+    queryFn: async () => {
+      const { data } = await supabase.from("planos").select("id, nome, descricao").eq("ativo", true).order("nome");
+      return data || [];
+    },
+  });
+
+  const { data: modulos = [] } = useQuery({
+    queryKey: ["modulos_ativos"],
+    queryFn: async () => {
+      const { data } = await supabase.from("modulos").select("id, nome").eq("ativo", true).order("nome");
+      return data || [];
+    },
+  });
+
+  const { data: servicos = [] } = useQuery({
+    queryKey: ["servicos_ativos"],
+    queryFn: async () => {
+      const { data } = await supabase.from("servicos").select("id, nome, descricao").eq("ativo", true).order("nome");
+      return data || [];
+    },
+  });
+
+  const { data: mesas = [] } = useQuery({
+    queryKey: ["mesas_atendimento"],
+    queryFn: async () => {
+      const { data } = await supabase.from("mesas_atendimento").select("*").eq("ativo", true).order("nome");
+      return (data || []) as MesaAtendimento[];
+    },
+  });
+
+  // ─── Auto-fill description ─────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!form.vinculo_tipo || !form.vinculo_id) return;
+    let desc = "";
+    if (form.vinculo_tipo === "plano") {
+      const p = planos.find((x) => x.id === form.vinculo_id);
+      desc = p?.descricao || "";
+    } else if (form.vinculo_tipo === "servico") {
+      const s = servicos.find((x) => x.id === form.vinculo_id);
+      desc = s?.descricao || "";
+    }
+    if (desc) setForm((prev) => ({ ...prev, descricao: desc }));
+  }, [form.vinculo_tipo, form.vinculo_id]);
+
+  // ─── Get vinculo items based on type ───────────────────────────────────────
+
+  function getVinculoItems() {
+    if (form.vinculo_tipo === "plano") return planos.map((p) => ({ id: p.id, nome: p.nome }));
+    if (form.vinculo_tipo === "modulo") return modulos.map((m) => ({ id: m.id, nome: m.nome }));
+    if (form.vinculo_tipo === "servico") return servicos.map((s) => ({ id: s.id, nome: s.nome }));
+    return [];
+  }
+
+  function getVinculoLabel(tipo: string, id: string) {
+    if (tipo === "plano") return planos.find((p) => p.id === id)?.nome || id;
+    if (tipo === "modulo") return modulos.find((m) => m.id === id)?.nome || id;
+    if (tipo === "servico") return servicos.find((s) => s.id === id)?.nome || id;
+    return id;
+  }
+
+  // ─── Save jornada ──────────────────────────────────────────────────────────
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        nome: form.nome,
+        descricao: form.descricao || null,
+        filial_id: form.filial_id || null,
+        vinculo_tipo: form.vinculo_tipo,
+        vinculo_id: form.vinculo_id,
+      };
+
+      let jornadaId: string;
+
+      if (editing) {
+        const { error } = await supabase.from("jornadas").update(payload).eq("id", editing.id);
+        if (error) throw error;
+        jornadaId = editing.id;
+        // Delete old etapas (cascade deletes atividades)
+        await supabase.from("jornada_etapas").delete().eq("jornada_id", jornadaId);
+      } else {
+        const { data, error } = await supabase.from("jornadas").insert(payload).select("id").single();
+        if (error) throw error;
+        jornadaId = data.id;
+      }
+
+      // Insert etapas and atividades
+      for (const etapa of etapas) {
+        const { data: etapaData, error: etapaErr } = await supabase.from("jornada_etapas").insert({
+          jornada_id: jornadaId,
+          nome: etapa.nome,
+          descricao: etapa.descricao || null,
+          mesa_atendimento_id: etapa.mesa_atendimento_id || null,
+          ordem: etapa.ordem,
+        }).select("id").single();
+        if (etapaErr) throw etapaErr;
+
+        if (etapa.atividades.length > 0) {
+          const atividades = etapa.atividades.map((a) => ({
+            etapa_id: etapaData.id,
+            nome: a.nome,
+            descricao: a.descricao || null,
+            horas_estimadas: a.horas_estimadas,
+            checklist: JSON.stringify(a.checklist),
+            tipo_responsabilidade: a.tipo_responsabilidade,
+            ordem: a.ordem,
+          }));
+          const { error: atErr } = await supabase.from("jornada_atividades").insert(atividades);
+          if (atErr) throw atErr;
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jornadas"] });
+      toast.success(editing ? "Jornada atualizada!" : "Jornada criada!");
+      closeDialog();
+    },
+    onError: (e) => { console.error(e); toast.error("Erro ao salvar jornada."); },
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, ativo }: { id: string; ativo: boolean }) => {
+      const { error } = await supabase.from("jornadas").update({ ativo }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["jornadas"] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("jornadas").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jornadas"] });
+      toast.success("Jornada excluída!");
+    },
+    onError: () => toast.error("Erro ao excluir jornada."),
+  });
+
+  // ─── Open/Close dialogs ────────────────────────────────────────────────────
+
+  function openNew() {
+    setEditing(null);
+    setForm({ ...emptyForm });
+    setEtapas([]);
+    setDialogOpen(true);
+  }
+
+  async function openEdit(jornada: Jornada) {
+    setEditing(jornada);
+    setForm({
+      nome: jornada.nome,
+      descricao: jornada.descricao || "",
+      filial_id: jornada.filial_id || "",
+      vinculo_tipo: jornada.vinculo_tipo,
+      vinculo_id: jornada.vinculo_id,
+    });
+
+    // Load etapas and atividades
+    const { data: etapasData } = await supabase.from("jornada_etapas").select("*").eq("jornada_id", jornada.id).order("ordem");
+    const localEtapas: LocalEtapa[] = [];
+    for (const e of etapasData || []) {
+      const { data: ativData } = await supabase.from("jornada_atividades").select("*").eq("etapa_id", e.id).order("ordem");
+      localEtapas.push({
+        tempId: crypto.randomUUID(),
+        id: e.id,
+        nome: e.nome,
+        descricao: e.descricao || "",
+        mesa_atendimento_id: e.mesa_atendimento_id || "",
+        ordem: e.ordem,
+        atividades: (ativData || []).map((a: any) => ({
+          tempId: crypto.randomUUID(),
+          id: a.id,
+          nome: a.nome,
+          descricao: a.descricao || "",
+          horas_estimadas: a.horas_estimadas,
+          checklist: Array.isArray(a.checklist) ? a.checklist : [],
+          tipo_responsabilidade: a.tipo_responsabilidade,
+          ordem: a.ordem,
+        })),
+      });
+    }
+    setEtapas(localEtapas);
+    setDialogOpen(true);
+  }
+
+  function closeDialog() {
+    setDialogOpen(false);
+    setEditing(null);
+    setForm({ ...emptyForm });
+    setEtapas([]);
+  }
+
+  // ─── Etapa CRUD ────────────────────────────────────────────────────────────
+
+  function openNewEtapa() {
+    setEditingEtapa(null);
+    setEtapaForm({ nome: "", descricao: "", mesa_atendimento_id: "" });
+    setEtapaDialogOpen(true);
+  }
+
+  function openEditEtapa(etapa: LocalEtapa) {
+    setEditingEtapa(etapa);
+    setEtapaForm({ nome: etapa.nome, descricao: etapa.descricao, mesa_atendimento_id: etapa.mesa_atendimento_id });
+    setEtapaDialogOpen(true);
+  }
+
+  function saveEtapa() {
+    if (!etapaForm.nome.trim()) return;
+    if (editingEtapa) {
+      setEtapas((prev) => prev.map((e) => e.tempId === editingEtapa.tempId ? { ...e, ...etapaForm } : e));
+    } else {
+      setEtapas((prev) => [...prev, {
+        tempId: crypto.randomUUID(),
+        nome: etapaForm.nome,
+        descricao: etapaForm.descricao,
+        mesa_atendimento_id: etapaForm.mesa_atendimento_id,
+        ordem: prev.length,
+        atividades: [],
+      }]);
+    }
+    setEtapaDialogOpen(false);
+  }
+
+  function removeEtapa(tempId: string) {
+    setEtapas((prev) => prev.filter((e) => e.tempId !== tempId));
+  }
+
+  // ─── Atividade CRUD ────────────────────────────────────────────────────────
+
+  function openNewAtividade(etapaTempId: string) {
+    setCurrentEtapaTempId(etapaTempId);
+    setEditingAtividade(null);
+    setAtividadeForm({ nome: "", descricao: "", horas_estimadas: 0, checklist: [], tipo_responsabilidade: "Interna" });
+    setAtividadeDialogOpen(true);
+  }
+
+  function openEditAtividade(etapaTempId: string, atividade: LocalAtividade) {
+    setCurrentEtapaTempId(etapaTempId);
+    setEditingAtividade(atividade);
+    setAtividadeForm({
+      nome: atividade.nome,
+      descricao: atividade.descricao,
+      horas_estimadas: atividade.horas_estimadas,
+      checklist: [...atividade.checklist],
+      tipo_responsabilidade: atividade.tipo_responsabilidade,
+    });
+    setAtividadeDialogOpen(true);
+  }
+
+  function saveAtividade() {
+    if (!atividadeForm.nome.trim()) return;
+    setEtapas((prev) => prev.map((e) => {
+      if (e.tempId !== currentEtapaTempId) return e;
+      if (editingAtividade) {
+        return { ...e, atividades: e.atividades.map((a) => a.tempId === editingAtividade.tempId ? { ...a, ...atividadeForm } : a) };
+      }
+      return { ...e, atividades: [...e.atividades, { tempId: crypto.randomUUID(), ...atividadeForm, ordem: e.atividades.length }] };
+    }));
+    setAtividadeDialogOpen(false);
+  }
+
+  function removeAtividade(etapaTempId: string, atividadeTempId: string) {
+    setEtapas((prev) => prev.map((e) => e.tempId !== etapaTempId ? e : { ...e, atividades: e.atividades.filter((a) => a.tempId !== atividadeTempId) }));
+  }
+
+  // ─── Checklist helpers ─────────────────────────────────────────────────────
+
+  function addChecklistItem() {
+    setAtividadeForm((prev) => ({ ...prev, checklist: [...prev.checklist, { texto: "", concluido: false }] }));
+  }
+
+  function updateChecklistText(index: number, texto: string) {
+    setAtividadeForm((prev) => ({ ...prev, checklist: prev.checklist.map((c, i) => i === index ? { ...c, texto } : c) }));
+  }
+
+  function removeChecklistItem(index: number) {
+    setAtividadeForm((prev) => ({ ...prev, checklist: prev.checklist.filter((_, i) => i !== index) }));
+  }
+
+  // ─── Toggle expanded etapa ─────────────────────────────────────────────────
+
+  function toggleExpanded(tempId: string) {
+    setExpandedEtapas((prev) => {
+      const next = new Set(prev);
+      if (next.has(tempId)) next.delete(tempId); else next.add(tempId);
+      return next;
+    });
+  }
+
+  // ─── Filter ────────────────────────────────────────────────────────────────
+
+  const filtered = jornadas.filter((j) => {
+    if (search && !j.nome.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterVinculo !== "todos" && j.vinculo_tipo !== filterVinculo) return false;
+    return true;
+  });
+
+  const canSave = form.nome.trim() && form.vinculo_tipo && form.vinculo_id;
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-foreground">Jornadas de Implantação</h1>
+          <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" />Nova Jornada</Button>
+        </div>
+
+        <div className="flex gap-3 items-center flex-wrap">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar por nome..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          </div>
+          <Select value={filterVinculo} onValueChange={setFilterVinculo}>
+            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os vínculos</SelectItem>
+              <SelectItem value="plano">Plano</SelectItem>
+              <SelectItem value="modulo">Módulo Adicional</SelectItem>
+              <SelectItem value="servico">Serviço</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="border rounded-lg">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Vínculo</TableHead>
+                <TableHead>Filial</TableHead>
+                <TableHead className="w-24 text-center">Ativo</TableHead>
+                <TableHead className="w-24 text-center">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+              ) : filtered.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhuma jornada encontrada.</TableCell></TableRow>
+              ) : (
+                filtered.map((j) => (
+                  <TableRow key={j.id}>
+                    <TableCell className="font-medium">{j.nome}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">{j.vinculo_tipo}</Badge>
+                      <span className="ml-2 text-sm text-muted-foreground">{getVinculoLabel(j.vinculo_tipo, j.vinculo_id)}</span>
+                    </TableCell>
+                    <TableCell>{j.filial?.nome || <span className="text-muted-foreground">Global</span>}</TableCell>
+                    <TableCell className="text-center">
+                      <Switch checked={j.ativo} onCheckedChange={(v) => toggleMutation.mutate({ id: j.id, ativo: v })} />
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(j)}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(j.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* ─── Main Dialog ──────────────────────────────────────────────────────── */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editing ? "Editar Jornada" : "Nova Jornada de Implantação"}</DialogTitle>
+          </DialogHeader>
+
+          <Tabs defaultValue="dados">
+            <TabsList className="w-full">
+              <TabsTrigger value="dados" className="flex-1">Dados da Jornada</TabsTrigger>
+              <TabsTrigger value="etapas" className="flex-1">Etapas e Atividades</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="dados" className="space-y-4 mt-4">
+              <div>
+                <label className="text-sm font-medium">Filial</label>
+                <Select value={form.filial_id || "global"} onValueChange={(v) => setForm((p) => ({ ...p, filial_id: v === "global" ? "" : v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="global">Global (todas as filiais)</SelectItem>
+                    {filiais.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Nome da Jornada *</label>
+                <Input value={form.nome} onChange={(e) => setForm((p) => ({ ...p, nome: e.target.value }))} placeholder="Ex: Implantação e Treinamento Plano Essencial" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Tipo de Vínculo *</label>
+                  <Select value={form.vinculo_tipo} onValueChange={(v) => setForm((p) => ({ ...p, vinculo_tipo: v, vinculo_id: "", descricao: "" }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="plano">Plano</SelectItem>
+                      <SelectItem value="modulo">Módulo Adicional</SelectItem>
+                      <SelectItem value="servico">Serviço</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Vínculo *</label>
+                  <Select value={form.vinculo_id} onValueChange={(v) => setForm((p) => ({ ...p, vinculo_id: v }))} disabled={!form.vinculo_tipo}>
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      {getVinculoItems().map((item) => <SelectItem key={item.id} value={item.id}>{item.nome}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Descrição</label>
+                <Textarea value={form.descricao} onChange={(e) => setForm((p) => ({ ...p, descricao: e.target.value }))} placeholder="Descrição preenchida automaticamente do vínculo..." rows={4} />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="etapas" className="space-y-4 mt-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-semibold">Etapas</h3>
+                <Button size="sm" onClick={openNewEtapa}><Plus className="h-4 w-4 mr-1" />Adicionar Etapa</Button>
+              </div>
+
+              {etapas.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhuma etapa cadastrada. Clique em "Adicionar Etapa" para começar.</p>
+              ) : (
+                <div className="space-y-3">
+                  {etapas.map((etapa, idx) => {
+                    const isExpanded = expandedEtapas.has(etapa.tempId);
+                    const mesaNome = mesas.find((m) => m.id === etapa.mesa_atendimento_id)?.nome;
+                    return (
+                      <div key={etapa.tempId} className="border rounded-lg">
+                        <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50" onClick={() => toggleExpanded(etapa.tempId)}>
+                          <div className="flex items-center gap-2">
+                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            <span className="font-medium text-sm">{idx + 1}. {etapa.nome}</span>
+                            {mesaNome && <Badge variant="secondary" className="text-xs">{mesaNome}</Badge>}
+                            <span className="text-xs text-muted-foreground">({etapa.atividades.length} atividades)</span>
+                          </div>
+                          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditEtapa(etapa)}><Pencil className="h-3.5 w-3.5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeEtapa(etapa.tempId)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                          </div>
+                        </div>
+
+                        {isExpanded && (
+                          <div className="px-3 pb-3 border-t space-y-2">
+                            {etapa.descricao && <p className="text-xs text-muted-foreground mt-2">{etapa.descricao}</p>}
+                            <div className="flex justify-between items-center mt-2">
+                              <span className="text-xs font-medium">Atividades</span>
+                              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openNewAtividade(etapa.tempId)}>
+                                <Plus className="h-3 w-3 mr-1" />Adicionar Atividade
+                              </Button>
+                            </div>
+                            {etapa.atividades.length === 0 ? (
+                              <p className="text-xs text-muted-foreground text-center py-4">Nenhuma atividade.</p>
+                            ) : (
+                              <div className="space-y-1.5">
+                                {etapa.atividades.map((a) => (
+                                  <div key={a.tempId} className="flex items-start justify-between bg-muted/30 rounded-md p-2">
+                                    <div className="space-y-0.5">
+                                      <p className="text-sm font-medium">{a.nome}</p>
+                                      <div className="flex gap-2 text-xs text-muted-foreground">
+                                        <span>{a.horas_estimadas}h estimadas</span>
+                                        <span>•</span>
+                                        <span>{a.tipo_responsabilidade}</span>
+                                        {a.checklist.length > 0 && <><span>•</span><span>{a.checklist.length} itens checklist</span></>}
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-1">
+                                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEditAtividade(etapa.tempId, a)}><Pencil className="h-3 w-3" /></Button>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeAtividade(etapa.tempId, a.tempId)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
+            <Button onClick={() => saveMutation.mutate()} disabled={!canSave || saveMutation.isPending}>
+              {saveMutation.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Etapa Dialog ─────────────────────────────────────────────────────── */}
+      <Dialog open={etapaDialogOpen} onOpenChange={setEtapaDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingEtapa ? "Editar Etapa" : "Adicionar Etapa"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Nome da Etapa *</label>
+              <Input value={etapaForm.nome} onChange={(e) => setEtapaForm((p) => ({ ...p, nome: e.target.value }))} placeholder="Ex: Validação de equipamentos e Rede" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Descrição</label>
+              <Textarea value={etapaForm.descricao} onChange={(e) => setEtapaForm((p) => ({ ...p, descricao: e.target.value }))} placeholder="Ex: Nessa etapa certifique-se que está tudo dentro do padrão." />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Mesa de Atendimento</label>
+              <Select value={etapaForm.mesa_atendimento_id || "none"} onValueChange={(v) => setEtapaForm((p) => ({ ...p, mesa_atendimento_id: v === "none" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  {mesas.map((m) => <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEtapaDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={saveEtapa} disabled={!etapaForm.nome.trim()}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Atividade Dialog ─────────────────────────────────────────────────── */}
+      <Dialog open={atividadeDialogOpen} onOpenChange={setAtividadeDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingAtividade ? "Editar Atividade" : "Adicionar Atividade"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Nome da Atividade *</label>
+              <Input value={atividadeForm.nome} onChange={(e) => setAtividadeForm((p) => ({ ...p, nome: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Horas Estimadas</label>
+              <Input type="number" min={0} step={0.5} value={atividadeForm.horas_estimadas} onChange={(e) => setAtividadeForm((p) => ({ ...p, horas_estimadas: parseFloat(e.target.value) || 0 }))} />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Descrição</label>
+              <Textarea value={atividadeForm.descricao} onChange={(e) => setAtividadeForm((p) => ({ ...p, descricao: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Tipo de Responsabilidade</label>
+              <Select value={atividadeForm.tipo_responsabilidade} onValueChange={(v) => setAtividadeForm((p) => ({ ...p, tipo_responsabilidade: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Interna">Interna</SelectItem>
+                  <SelectItem value="Externa">Externa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium">Checklist</label>
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={addChecklistItem}><Plus className="h-3 w-3 mr-1" />Adicionar Item</Button>
+              </div>
+              {atividadeForm.checklist.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-3">Nenhum item no checklist.</p>
+              ) : (
+                <div className="space-y-2">
+                  {atividadeForm.checklist.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Checkbox checked={false} disabled className="opacity-50" />
+                      <Input value={item.texto} onChange={(e) => updateChecklistText(idx, e.target.value)} placeholder="Item do checklist..." className="flex-1 h-8 text-sm" />
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeChecklistItem(idx)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAtividadeDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={saveAtividade} disabled={!atividadeForm.nome.trim()}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </AppLayout>
+  );
+}

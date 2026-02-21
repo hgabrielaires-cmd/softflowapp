@@ -176,3 +176,55 @@ export interface TemplateClause {
   created_at: string;
   updated_at: string;
 }
+
+export interface MesaAtendimento {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Jornada {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  filial_id: string | null;
+  vinculo_tipo: string;
+  vinculo_id: string;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+  filial?: Filial | null;
+}
+
+export interface JornadaEtapa {
+  id: string;
+  jornada_id: string;
+  nome: string;
+  descricao: string | null;
+  mesa_atendimento_id: string | null;
+  ordem: number;
+  created_at: string;
+  updated_at: string;
+  mesa_atendimento?: MesaAtendimento | null;
+}
+
+export interface ChecklistItem {
+  texto: string;
+  concluido: boolean;
+}
+
+export interface JornadaAtividade {
+  id: string;
+  etapa_id: string;
+  nome: string;
+  descricao: string | null;
+  horas_estimadas: number;
+  checklist: ChecklistItem[];
+  tipo_responsabilidade: string;
+  ordem: number;
+  created_at: string;
+  updated_at: string;
+}
