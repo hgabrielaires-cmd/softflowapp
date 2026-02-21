@@ -505,6 +505,7 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          server_url: string | null
           token: string | null
           updated_at: string
         }
@@ -513,6 +514,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome: string
+          server_url?: string | null
           token?: string | null
           updated_at?: string
         }
@@ -521,6 +523,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome?: string
+          server_url?: string | null
           token?: string | null
           updated_at?: string
         }
