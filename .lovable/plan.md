@@ -1,44 +1,25 @@
 
 
-## Ajuste: Centralizar assinaturas no meio da página 10
+## Melhorar visual dos cards de integracoes com logos maiores
 
-### Problema atual
-As assinaturas ainda estão muito no topo da última página. O espaçamento atual é:
-- `.footer-note` (aviso "Atenção"): `margin: 10px 0 30px 0;` (apenas 30px abaixo)
-- `.signature-section`: `margin-top: 50px;`
+### O que sera feito
 
-Total de espaço antes das assinaturas: ~80px -- insuficiente para centralizá-las na página.
+1. **Aumentar as logos para destaque visual** - Trocar o tamanho das logos de `h-14 w-14` para `h-20 w-20`, tornando-as o elemento principal do card.
 
-### Solução
-Aumentar o `margin-top` da `.signature-section` de `50px` para `280px`, o que empurra as assinaturas para o meio da página. Não alterar nenhuma outra seção.
+2. **Reorganizar o layout do card** - Colocar a logo centralizada no topo do card (acima do titulo), removendo o layout lado-a-lado atual. O titulo e descricao ficam abaixo da logo, centralizados.
 
-Além disso, aumentar o bottom margin do `.footer-note` de `30px` para `60px` para dar mais respiro entre o aviso e as assinaturas.
+3. **Ajustar o container da logo** - Aumentar o container para acomodar a logo maior, com padding adequado e fundo sutil (ex: `bg-muted/30` com borda arredondada) para dar destaque.
 
-### Detalhes técnicos
-Duas queries SQL `UPDATE` com `replace()`:
+4. **Manter funcionalidade** - Badge de status, lista de funcionalidades e botao "Ver configuracoes" continuam funcionando normalmente.
 
-**1. Footer-note (aviso "Atenção") -- mais espaço abaixo:**
-```sql
-UPDATE document_templates
-SET conteudo_html = replace(
-  conteudo_html,
-  'margin: 10px 0 30px 0;',
-  'margin: 10px 0 60px 0;'
-)
-WHERE id = '90b43be1-9659-4550-aedb-b39245d61657';
-```
+### Detalhes tecnicos
 
-**2. Signature-section -- descer para o meio da página:**
-```sql
-UPDATE document_templates
-SET conteudo_html = replace(
-  conteudo_html,
-  'margin-top: 50px;',
-  'margin-top: 280px;'
-)
-WHERE id = '90b43be1-9659-4550-aedb-b39245d61657';
-```
+**Arquivo:** `src/pages/Integracoes.tsx`
 
-Nota: há apenas 1 ocorrência de cada string no template, então apenas a seção de assinaturas será afetada.
+- No array `integrationDefs`, alterar className das imgs de `h-14 w-14` para `h-20 w-20`
+- No componente `IntegrationCard`, reestruturar o `CardHeader`:
+  - Logo centralizada no topo com container `h-24 w-24 mx-auto`
+  - Badge de status posicionado no canto superior direito (absolute)
+  - Titulo e descricao centralizados abaixo da logo
+- Manter o `CardContent` com a lista de detalhes e botao de configuracao sem alteracao
 
-Após as alterações, o PDF do contrato 2026-0007 será regenerado para validação visual.
