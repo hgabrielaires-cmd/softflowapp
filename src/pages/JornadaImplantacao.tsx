@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Eye } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Eye, ArrowUp, ArrowDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Jornada, JornadaEtapa, JornadaAtividade, MesaAtendimento, ChecklistItem, Filial } from "@/lib/supabase-types";
 
@@ -317,6 +317,16 @@ export default function JornadaImplantacao() {
     setEtapas((prev) => prev.filter((e) => e.tempId !== tempId));
   }
 
+  function moveEtapa(index: number, direction: "up" | "down") {
+    setEtapas((prev) => {
+      const next = [...prev];
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= next.length) return prev;
+      [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+      return next.map((e, i) => ({ ...e, ordem: i }));
+    });
+  }
+
   // ─── Atividade CRUD ────────────────────────────────────────────────────────
 
   function openNewAtividade(etapaTempId: string) {
@@ -545,6 +555,8 @@ export default function JornadaImplantacao() {
                             {etapa.atividades.length > 0 && <Badge variant="outline" className="text-xs font-mono">{totalH}:{totalM.toString().padStart(2, "0")}h</Badge>}
                           </div>
                           <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" disabled={idx === 0} onClick={() => moveEtapa(idx, "up")}><ArrowUp className="h-3.5 w-3.5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" disabled={idx === etapas.length - 1} onClick={() => moveEtapa(idx, "down")}><ArrowDown className="h-3.5 w-3.5" /></Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditEtapa(etapa)}><Pencil className="h-3.5 w-3.5" /></Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeEtapa(etapa.tempId)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                           </div>
