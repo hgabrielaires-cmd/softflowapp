@@ -128,6 +128,7 @@ interface Contrato {
     pagamento_mensalidade_parcelas: number | null;
     filial_id: string;
     vendedor_id: string;
+    tipo_pedido?: string;
   } | null;
 }
 
@@ -221,7 +222,7 @@ export default function Contratos() {
             modulos_adicionais, observacoes,
             pagamento_mensalidade_observacao, pagamento_mensalidade_forma,
             pagamento_mensalidade_parcelas, pagamento_implantacao_observacao,
-            filial_id, vendedor_id
+            filial_id, vendedor_id, tipo_pedido
           )
         `)
         .order("numero_registro", { ascending: false }),
@@ -813,7 +814,16 @@ Estou à disposição.`;
                     <TableCell className="text-sm text-muted-foreground">
                       {contrato.planos?.nome || "—"}
                     </TableCell>
-                    <TableCell>{getTipoBadge(contrato.tipo)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-0.5">
+                        {getTipoBadge(contrato.tipo)}
+                        {contrato.tipo === "Aditivo" && contrato.pedidos?.tipo_pedido && (
+                          <span className="text-[10px] text-muted-foreground pl-0.5">
+                            {contrato.pedidos.tipo_pedido === "Upgrade" ? "↑ Upgrade" : contrato.pedidos.tipo_pedido === "Aditivo" ? "＋ Módulos Adicionais" : ""}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{getStatusBadge(contrato.status)}</TableCell>
                     <TableCell>{getPedidoStatusBadges(contrato)}</TableCell>
                     <TableCell>{getStatusGeracaoBadge(contrato.status_geracao)}</TableCell>
