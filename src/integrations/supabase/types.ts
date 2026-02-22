@@ -912,6 +912,7 @@ export type Database = {
           plano_id: string
           servicos_pedido: Json | null
           status_pedido: string
+          tipo_atendimento: string | null
           tipo_pedido: string
           updated_at: string
           valor_implantacao: number
@@ -960,6 +961,7 @@ export type Database = {
           plano_id: string
           servicos_pedido?: Json | null
           status_pedido?: string
+          tipo_atendimento?: string | null
           tipo_pedido?: string
           updated_at?: string
           valor_implantacao?: number
@@ -1008,6 +1010,7 @@ export type Database = {
           plano_id?: string
           servicos_pedido?: Json | null
           status_pedido?: string
+          tipo_atendimento?: string | null
           tipo_pedido?: string
           updated_at?: string
           valor_implantacao?: number
