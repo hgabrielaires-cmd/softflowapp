@@ -945,6 +945,144 @@ export type Database = {
           },
         ]
       }
+      painel_atendimento: {
+        Row: {
+          cliente_id: string
+          contrato_id: string
+          created_at: string
+          etapa_id: string
+          filial_id: string
+          id: string
+          jornada_id: string | null
+          observacoes: string | null
+          pedido_id: string | null
+          plano_id: string | null
+          responsavel_id: string | null
+          sla_horas: number
+          tipo_operacao: string
+          updated_at: string
+        }
+        Insert: {
+          cliente_id: string
+          contrato_id: string
+          created_at?: string
+          etapa_id: string
+          filial_id: string
+          id?: string
+          jornada_id?: string | null
+          observacoes?: string | null
+          pedido_id?: string | null
+          plano_id?: string | null
+          responsavel_id?: string | null
+          sla_horas?: number
+          tipo_operacao: string
+          updated_at?: string
+        }
+        Update: {
+          cliente_id?: string
+          contrato_id?: string
+          created_at?: string
+          etapa_id?: string
+          filial_id?: string
+          id?: string
+          jornada_id?: string | null
+          observacoes?: string | null
+          pedido_id?: string | null
+          plano_id?: string | null
+          responsavel_id?: string | null
+          sla_horas?: number
+          tipo_operacao?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "painel_atendimento_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_atendimento_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_atendimento_etapa_id_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "painel_etapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_atendimento_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_atendimento_jornada_id_fkey"
+            columns: ["jornada_id"]
+            isOneToOne: false
+            referencedRelation: "jornadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_atendimento_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_atendimento_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_atendimento_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      painel_etapas: {
+        Row: {
+          ativo: boolean
+          cor: string | null
+          created_at: string
+          id: string
+          nome: string
+          ordem: number
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cor?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+          ordem?: number
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cor?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pedidos: {
         Row: {
           cliente_id: string
