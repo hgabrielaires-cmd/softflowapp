@@ -90,6 +90,9 @@ export default function Financeiro() {
   const [motivoReprova, setMotivoReprova] = useState("");
   const [processando, setProcessando] = useState(false);
   const [aprovadorDesconto, setAprovadorDesconto] = useState<string | null>(null);
+  const [openValores, setOpenValores] = useState(false);
+  const [pedidoPlano, setPedidoPlano] = useState<any>(null);
+  const [pedidoModulos, setPedidoModulos] = useState<any[]>([]);
 
   const canAccess = isAdmin || isFinanceiro;
 
@@ -315,104 +318,83 @@ export default function Financeiro() {
 
       {/* Detail Dialog */}
       {selected && (
+        <>
         <Dialog open={openDetail} onOpenChange={setOpenDetail}>
-          <DialogContent className="max-w-md" aria-describedby="detail-desc">
+          <DialogContent className="max-w-sm" aria-describedby="detail-desc">
             <DialogHeader>
               <DialogTitle>Detalhe do Pedido</DialogTitle>
               <DialogDescription id="detail-desc">Analise os dados antes de aprovar ou reprovar.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                <div><p className="text-muted-foreground text-xs">Cliente</p><p className="font-semibold">{selected.clientes?.nome_fantasia}</p></div>
-                <div><p className="text-muted-foreground text-xs">Plano</p><p className="font-semibold">{selected.planos?.nome}</p></div>
-                <div><p className="text-muted-foreground text-xs">Filial</p><p className="font-semibold">{selected.filiais?.nome}</p></div>
-                <div><p className="text-muted-foreground text-xs">Data</p><p className="font-semibold">{format(new Date(selected.created_at), "dd/MM/yyyy", { locale: ptBR })}</p></div>
+            <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div><p className="text-muted-foreground text-xs">Cliente</p><p className="font-semibold text-sm">{selected.clientes?.nome_fantasia}</p></div>
+                <div><p className="text-muted-foreground text-xs">Plano</p><p className="font-semibold text-sm">{selected.planos?.nome}</p></div>
+                <div><p className="text-muted-foreground text-xs">Filial</p><p className="font-semibold text-sm">{selected.filiais?.nome}</p></div>
+                <div><p className="text-muted-foreground text-xs">Data</p><p className="font-semibold text-sm">{format(new Date(selected.created_at), "dd/MM/yyyy", { locale: ptBR })}</p></div>
               </div>
 
-              {/* Valores com descontos */}
-              <div className="bg-muted rounded-lg p-3 space-y-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Valores do Pedido</p>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Implantação (original)</span>
-                    <span className="font-mono">{selected.valor_implantacao_original.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
-                  </div>
-                  {selected.desconto_implantacao_valor > 0 && (
-                    <div className="flex justify-between text-xs text-destructive">
-                      <span>Desconto implantação ({selected.desconto_implantacao_tipo})</span>
-                      <span className="font-mono">- {selected.desconto_implantacao_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span>Implantação final</span>
-                    <span className="font-mono">{selected.valor_implantacao_final.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
-                  </div>
-
-                  <div className="border-t border-border pt-1 mt-1" />
-
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Mensalidade (original)</span>
-                    <span className="font-mono">{selected.valor_mensalidade_original.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
-                  </div>
-                  {selected.desconto_mensalidade_valor > 0 && (
-                    <div className="flex justify-between text-xs text-destructive">
-                      <span>Desconto mensalidade ({selected.desconto_mensalidade_tipo})</span>
-                      <span className="font-mono">- {selected.desconto_mensalidade_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span>Mensalidade final</span>
-                    <span className="font-mono">{selected.valor_mensalidade_final.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
-                  </div>
-
-                  <div className="border-t border-border pt-1 mt-1" />
-
-                  <div className="flex justify-between text-sm font-bold">
-                    <span>Valor Total</span>
-                    <span className="font-mono">{selected.valor_total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
-                  </div>
+              {/* Valores resumidos */}
+              <div className="bg-muted rounded-lg p-3 space-y-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Valores do Pedido</p>
+                  <Button variant="outline" size="sm" className="h-6 text-xs px-2" onClick={async () => {
+                    setOpenValores(true);
+                    // Load plano and modulos for the detail popup
+                    const [{ data: planoData }, { data: modulosData }] = await Promise.all([
+                      supabase.from("planos").select("*").eq("id", selected.plano_id).maybeSingle(),
+                      supabase.from("plano_modulos").select("*, modulos(*)").eq("plano_id", selected.plano_id),
+                    ]);
+                    setPedidoPlano(planoData);
+                    setPedidoModulos(modulosData || []);
+                  }}>
+                    Detalhes
+                  </Button>
                 </div>
-
-                {selected.motivo_desconto && (
-                  <div className="mt-2 pt-2 border-t border-border">
-                    <p className="text-muted-foreground text-xs">Motivo do desconto</p>
-                    <p className="text-xs">{selected.motivo_desconto}</p>
-                  </div>
-                )}
-
+                <div className="flex justify-between text-xs">
+                  <span>Implantação final</span>
+                  <span className="font-mono font-semibold">{selected.valor_implantacao_final.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span>Mensalidade final</span>
+                  <span className="font-mono font-semibold">{selected.valor_mensalidade_final.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                </div>
+                <div className="flex justify-between text-sm font-bold border-t border-border pt-1">
+                  <span>Valor Total</span>
+                  <span className="font-mono">{selected.valor_total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                </div>
                 {aprovadorDesconto && (
-                  <div className="mt-2 pt-2 border-t border-border">
+                  <div className="pt-1 border-t border-border">
                     <p className="text-muted-foreground text-xs">Desconto aprovado por</p>
                     <p className="text-xs font-semibold">{aprovadorDesconto}</p>
                   </div>
                 )}
               </div>
-              {/* Comissões separadas */}
-              <div className="bg-muted rounded-lg p-3 space-y-2">
+
+              {/* Comissões */}
+              <div className="bg-muted rounded-lg p-3 space-y-1">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comissões do Vendedor</p>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Implantação / Treinamento</span>
-                    <span className="font-mono">{(selected.comissao_implantacao_percentual ?? selected.comissao_percentual)}% → {(selected.comissao_implantacao_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Mensalidade</span>
-                    <span className="font-mono">{(selected.comissao_mensalidade_percentual ?? selected.comissao_percentual)}% → {(selected.comissao_mensalidade_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Serviço</span>
-                    <span className="font-mono">{((selected as any).comissao_servico_percentual ?? 0)}% → {((selected as any).comissao_servico_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
-                  </div>
-                  <div className="flex justify-between text-xs font-semibold border-t border-border pt-1">
-                    <span>Total comissão</span>
-                    <span className="font-mono">{selected.comissao_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
-                  </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Implantação</span>
+                  <span className="font-mono">{(selected.comissao_implantacao_percentual ?? selected.comissao_percentual)}% → {(selected.comissao_implantacao_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Mensalidade</span>
+                  <span className="font-mono">{(selected.comissao_mensalidade_percentual ?? selected.comissao_percentual)}% → {(selected.comissao_mensalidade_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Serviço</span>
+                  <span className="font-mono">{((selected as any).comissao_servico_percentual ?? 0)}% → {((selected as any).comissao_servico_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                </div>
+                <div className="flex justify-between text-xs font-semibold border-t border-border pt-1">
+                  <span>Total</span>
+                  <span className="font-mono">{selected.comissao_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
                 </div>
               </div>
+
               {selected.observacoes && (
                 <div className="bg-muted rounded-lg p-3">
                   <p className="text-muted-foreground text-xs mb-1">Observações do vendedor</p>
-                  <p>{selected.observacoes}</p>
+                  <p className="text-xs">{selected.observacoes}</p>
                 </div>
               )}
             </div>
@@ -427,6 +409,125 @@ export default function Financeiro() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Sub-dialog: Detalhes dos Valores */}
+        <Dialog open={openValores} onOpenChange={setOpenValores}>
+          <DialogContent className="max-w-md" aria-describedby="valores-desc">
+            <DialogHeader>
+              <DialogTitle>Detalhes do Pedido</DialogTitle>
+              <DialogDescription id="valores-desc">Plano, módulos adicionais, valores e descontos.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 text-sm max-h-[65vh] overflow-y-auto pr-1">
+              {/* Plano */}
+              {pedidoPlano && (
+                <div className="bg-muted rounded-lg p-3 space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Plano</p>
+                  <p className="font-semibold">{pedidoPlano.nome}</p>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Implantação padrão</span>
+                    <span className="font-mono">{(pedidoPlano.valor_implantacao_padrao || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Mensalidade padrão</span>
+                    <span className="font-mono">{(pedidoPlano.valor_mensalidade_padrao || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Módulos adicionais */}
+              {(() => {
+                const mods = (selected as any).modulos_adicionais;
+                const modsList = Array.isArray(mods) ? mods : [];
+                if (modsList.length === 0) return null;
+                return (
+                  <div className="bg-muted rounded-lg p-3 space-y-1">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Módulos Adicionais</p>
+                    {modsList.map((m: any, i: number) => (
+                      <div key={i} className="flex justify-between text-xs border-b border-border pb-1 last:border-0 last:pb-0">
+                        <span>{m.nome} {m.quantidade > 1 ? `(x${m.quantidade})` : ""}</span>
+                        <div className="text-right font-mono">
+                          <span>{((m.valor_mensalidade_modulo || 0) * (m.quantidade || 1)).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}/mês</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* Serviços */}
+              {(() => {
+                const servs = (selected as any).servicos_pedido;
+                const servsList = Array.isArray(servs) ? servs : [];
+                if (servsList.length === 0) return null;
+                return (
+                  <div className="bg-muted rounded-lg p-3 space-y-1">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Serviços</p>
+                    {servsList.map((s: any, i: number) => (
+                      <div key={i} className="flex justify-between text-xs">
+                        <span>{s.nome} {s.quantidade > 1 ? `(x${s.quantidade})` : ""}</span>
+                        <span className="font-mono">{((s.valor || 0) * (s.quantidade || 1)).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* Valores e descontos */}
+              <div className="bg-muted rounded-lg p-3 space-y-1">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Valores e Descontos</p>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Implantação (original)</span>
+                  <span className="font-mono">{selected.valor_implantacao_original.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                </div>
+                {selected.desconto_implantacao_valor > 0 && (
+                  <div className="flex justify-between text-xs text-destructive">
+                    <span>Desconto implantação ({selected.desconto_implantacao_tipo})</span>
+                    <span className="font-mono">- {selected.desconto_implantacao_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs font-semibold">
+                  <span>Implantação final</span>
+                  <span className="font-mono">{selected.valor_implantacao_final.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                </div>
+                <div className="border-t border-border pt-1 mt-1" />
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Mensalidade (original)</span>
+                  <span className="font-mono">{selected.valor_mensalidade_original.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                </div>
+                {selected.desconto_mensalidade_valor > 0 && (
+                  <div className="flex justify-between text-xs text-destructive">
+                    <span>Desconto mensalidade ({selected.desconto_mensalidade_tipo})</span>
+                    <span className="font-mono">- {selected.desconto_mensalidade_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs font-semibold">
+                  <span>Mensalidade final</span>
+                  <span className="font-mono">{selected.valor_mensalidade_final.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                </div>
+                <div className="border-t border-border pt-1 mt-1" />
+                <div className="flex justify-between text-sm font-bold">
+                  <span>Valor Total</span>
+                  <span className="font-mono">{selected.valor_total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                </div>
+              </div>
+
+              {selected.motivo_desconto && (
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Motivo do desconto</p>
+                  <p className="text-xs">{selected.motivo_desconto}</p>
+                </div>
+              )}
+
+              {aprovadorDesconto && (
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Desconto aprovado por</p>
+                  <p className="text-xs font-semibold">{aprovadorDesconto}</p>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+        </>
       )}
 
       {/* Reproval Dialog */}
