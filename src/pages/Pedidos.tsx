@@ -1726,26 +1726,35 @@ export default function Pedidos() {
                 </div>
 
                 {/* Valores originais (readonly) */}
-                <div className="grid grid-cols-2 gap-3">
+                {form.tipo_pedido === "OA" ? (
+                  /* OA: Campo único "Valor do Serviço" */
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Implantação</Label>
+                    <Label className="text-xs text-muted-foreground">Valor do Serviço</Label>
                     <Input readOnly value={fmtBRL(descontoAtivo ? valorImplantacaoOriginal : valorImplantacaoFinal)} className="bg-background font-mono text-sm" />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Mensalidade</Label>
-                    <Input readOnly value={fmtBRL(descontoAtivo ? valorMensalidadeOriginal : valorMensalidadeFinal)} className="bg-background font-mono text-sm" />
+                ) : (
+                  /* Outros tipos: Implantação + Mensalidade */
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Implantação</Label>
+                      <Input readOnly value={fmtBRL(descontoAtivo ? valorImplantacaoOriginal : valorImplantacaoFinal)} className="bg-background font-mono text-sm" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Mensalidade</Label>
+                      <Input readOnly value={fmtBRL(descontoAtivo ? valorMensalidadeOriginal : valorMensalidadeFinal)} className="bg-background font-mono text-sm" />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Descontos — só exibe quando toggle ativo */}
                 {descontoAtivo && (
                   <div className="space-y-3 border-t border-border pt-3">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Descontos</p>
 
-                    {/* Desconto implantação */}
+                    {/* Desconto implantação / serviço */}
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <Label className="text-xs">Desconto — Implantação</Label>
+                        <Label className="text-xs">Desconto — {form.tipo_pedido === "OA" ? "Serviço" : "Implantação"}</Label>
                         {limiteDesconto && (
                           <span className={`text-xs font-medium ${descontoImpExcedido ? "text-destructive" : "text-muted-foreground"}`}>
                             Limite: {limiteDesconto.implantacao}% · Aplicado: {descontoImpPercAtual.toFixed(1)}%
@@ -1771,34 +1780,36 @@ export default function Pedidos() {
                       </div>
                     </div>
 
-                    {/* Desconto mensalidade */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-xs">Desconto — Mensalidade</Label>
-                        {limiteDesconto && (
-                          <span className={`text-xs font-medium ${descontoMensExcedido ? "text-destructive" : "text-muted-foreground"}`}>
-                            Limite: {limiteDesconto.mensalidade}% · Aplicado: {descontoMensPercAtual.toFixed(1)}%
-                          </span>
-                        )}
+                    {/* Desconto mensalidade — oculto para OA */}
+                    {form.tipo_pedido !== "OA" && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs">Desconto — Mensalidade</Label>
+                          {limiteDesconto && (
+                            <span className={`text-xs font-medium ${descontoMensExcedido ? "text-destructive" : "text-muted-foreground"}`}>
+                              Limite: {limiteDesconto.mensalidade}% · Aplicado: {descontoMensPercAtual.toFixed(1)}%
+                            </span>
+                          )}
+                        </div>
+                        <div className={`flex gap-2 ${descontoMensExcedido ? "ring-1 ring-destructive rounded-md p-1" : ""}`}>
+                          <Select value={form.desconto_mensalidade_tipo} onValueChange={(v) => setForm((f) => ({ ...f, desconto_mensalidade_tipo: v as "R$" | "%" }))}>
+                            <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="R$">R$</SelectItem>
+                              <SelectItem value="%">%</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            type="number" min="0" step="0.01"
+                            value={form.desconto_mensalidade_valor}
+                            onChange={(e) => setForm((f) => ({ ...f, desconto_mensalidade_valor: e.target.value }))}
+                            className={`flex-1 ${descontoMensExcedido ? "border-destructive" : ""}`}
+                            placeholder="0"
+                          />
+                          <Input readOnly value={fmtBRL(valorMensalidadeFinal)} className="w-36 bg-background font-mono text-sm text-primary font-semibold" />
+                        </div>
                       </div>
-                      <div className={`flex gap-2 ${descontoMensExcedido ? "ring-1 ring-destructive rounded-md p-1" : ""}`}>
-                        <Select value={form.desconto_mensalidade_tipo} onValueChange={(v) => setForm((f) => ({ ...f, desconto_mensalidade_tipo: v as "R$" | "%" }))}>
-                          <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="R$">R$</SelectItem>
-                            <SelectItem value="%">%</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          type="number" min="0" step="0.01"
-                          value={form.desconto_mensalidade_valor}
-                          onChange={(e) => setForm((f) => ({ ...f, desconto_mensalidade_valor: e.target.value }))}
-                          className={`flex-1 ${descontoMensExcedido ? "border-destructive" : ""}`}
-                          placeholder="0"
-                        />
-                        <Input readOnly value={fmtBRL(valorMensalidadeFinal)} className="w-36 bg-background font-mono text-sm text-primary font-semibold" />
-                      </div>
-                    </div>
+                    )}
 
                     {/* Motivo do desconto */}
                     <div className="space-y-1.5">
@@ -1837,78 +1848,128 @@ export default function Pedidos() {
                 </div>
               )}
 
-              {/* Mensalidade — simplificado */}
-              <div className="space-y-3 border-t border-border pt-3">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Mensalidade</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Tipo de cobrança</Label>
-                    <Select
-                      value={form.pagamento_mensalidade_tipo}
-                      onValueChange={(v) => setForm((f) => ({ ...f, pagamento_mensalidade_tipo: v as "Pré-pago" | "Pós-pago" }))}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Pré-pago">Pré-pago</SelectItem>
-                        <SelectItem value="Pós-pago">Pós-pago</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Observação</Label>
-                    <Input
-                      placeholder={filialParametros?.regras_padrao_mensalidade || "Ex: Vencimento todo dia 10"}
-                      value={form.pagamento_mensalidade_observacao}
-                      onChange={(e) => setForm((f) => ({ ...f, pagamento_mensalidade_observacao: e.target.value }))}
-                    />
+              {form.tipo_pedido === "OA" ? (
+                /* OA: Forma de pagamento única (sem mensalidade/implantação separadas) */
+                <div className="space-y-3 border-t border-border pt-3">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Pagamento do Serviço</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Forma de pagamento</Label>
+                      <Select value={form.pagamento_implantacao_forma} onValueChange={(v) => setForm((f) => ({ ...f, pagamento_implantacao_forma: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Boleto">Boleto</SelectItem>
+                          <SelectItem value="PIX">PIX</SelectItem>
+                          <SelectItem value="Cartão">Cartão</SelectItem>
+                          <SelectItem value="Transferência">Transferência</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Parcelas</Label>
+                      <Input
+                        type="number" min="1"
+                        placeholder={filialParametros ? `Máx ${filialParametros.parcelas_maximas_cartao}x` : "Nº de parcelas"}
+                        value={form.pagamento_implantacao_parcelas}
+                        onChange={(e) => setForm((f) => ({ ...f, pagamento_implantacao_parcelas: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Desconto adicional (%)</Label>
+                      <Input
+                        type="number" min="0" max="100" step="0.01"
+                        placeholder="0"
+                        value={form.pagamento_implantacao_desconto_percentual}
+                        onChange={(e) => setForm((f) => ({ ...f, pagamento_implantacao_desconto_percentual: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Observação</Label>
+                      <Input
+                        placeholder="Ex: Pagamento após conclusão do serviço"
+                        value={form.pagamento_implantacao_observacao}
+                        onChange={(e) => setForm((f) => ({ ...f, pagamento_implantacao_observacao: e.target.value }))}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                /* Outros tipos: Mensalidade + Implantação separados */
+                <>
+                  {/* Mensalidade — simplificado */}
+                  <div className="space-y-3 border-t border-border pt-3">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Mensalidade</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Tipo de cobrança</Label>
+                        <Select
+                          value={form.pagamento_mensalidade_tipo}
+                          onValueChange={(v) => setForm((f) => ({ ...f, pagamento_mensalidade_tipo: v as "Pré-pago" | "Pós-pago" }))}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Pré-pago">Pré-pago</SelectItem>
+                            <SelectItem value="Pós-pago">Pós-pago</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Observação</Label>
+                        <Input
+                          placeholder={filialParametros?.regras_padrao_mensalidade || "Ex: Vencimento todo dia 10"}
+                          value={form.pagamento_mensalidade_observacao}
+                          onChange={(e) => setForm((f) => ({ ...f, pagamento_mensalidade_observacao: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-              {/* Implantação */}
-              <div className="space-y-3 border-t border-border pt-3">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Implantação</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Forma de pagamento</Label>
-                    <Select value={form.pagamento_implantacao_forma} onValueChange={(v) => setForm((f) => ({ ...f, pagamento_implantacao_forma: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Boleto">Boleto</SelectItem>
-                        <SelectItem value="PIX">PIX</SelectItem>
-                        <SelectItem value="Cartão">Cartão</SelectItem>
-                        <SelectItem value="Transferência">Transferência</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  {/* Implantação */}
+                  <div className="space-y-3 border-t border-border pt-3">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Implantação</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Forma de pagamento</Label>
+                        <Select value={form.pagamento_implantacao_forma} onValueChange={(v) => setForm((f) => ({ ...f, pagamento_implantacao_forma: v }))}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Boleto">Boleto</SelectItem>
+                            <SelectItem value="PIX">PIX</SelectItem>
+                            <SelectItem value="Cartão">Cartão</SelectItem>
+                            <SelectItem value="Transferência">Transferência</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Parcelas</Label>
+                        <Input
+                          type="number" min="1"
+                          placeholder={filialParametros ? `Máx ${filialParametros.parcelas_maximas_cartao}x` : "Nº de parcelas"}
+                          value={form.pagamento_implantacao_parcelas}
+                          onChange={(e) => setForm((f) => ({ ...f, pagamento_implantacao_parcelas: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Desconto adicional (%)</Label>
+                        <Input
+                          type="number" min="0" max="100" step="0.01"
+                          placeholder="0"
+                          value={form.pagamento_implantacao_desconto_percentual}
+                          onChange={(e) => setForm((f) => ({ ...f, pagamento_implantacao_desconto_percentual: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Observação</Label>
+                        <Input
+                          placeholder={filialParametros?.regras_padrao_implantacao || "Ex: À vista no ato da implantação"}
+                          value={form.pagamento_implantacao_observacao}
+                          onChange={(e) => setForm((f) => ({ ...f, pagamento_implantacao_observacao: e.target.value }))}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Parcelas</Label>
-                    <Input
-                      type="number" min="1"
-                      placeholder={filialParametros ? `Máx ${filialParametros.parcelas_maximas_cartao}x` : "Nº de parcelas"}
-                      value={form.pagamento_implantacao_parcelas}
-                      onChange={(e) => setForm((f) => ({ ...f, pagamento_implantacao_parcelas: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Desconto adicional (%)</Label>
-                    <Input
-                      type="number" min="0" max="100" step="0.01"
-                      placeholder="0"
-                      value={form.pagamento_implantacao_desconto_percentual}
-                      onChange={(e) => setForm((f) => ({ ...f, pagamento_implantacao_desconto_percentual: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Observação</Label>
-                    <Input
-                      placeholder={filialParametros?.regras_padrao_implantacao || "Ex: À vista no ato da implantação"}
-                      value={form.pagamento_implantacao_observacao}
-                      onChange={(e) => setForm((f) => ({ ...f, pagamento_implantacao_observacao: e.target.value }))}
-                    />
-                  </div>
-                </div>
-              </div>
+                </>
+              )}
             </div>
 
             {/* ── Observações ── */}
@@ -1936,18 +1997,21 @@ export default function Pedidos() {
             </div>{/* end scrollable area */}
             <DialogFooter className="px-6 py-4 border-t border-border shrink-0">
               <Button type="button" variant="outline" onClick={() => setOpenDialog(false)}>Cancelar</Button>
-              {bloqueadoPorDesconto ? (
-                <Button type="submit" disabled={saving || !form.cliente_id || !form.plano_id} variant="secondary" className="gap-2">
-                  {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                  <ArrowUpCircle className="h-4 w-4" />
-                  Enviar para aprovação
-                </Button>
-              ) : (
-                <Button type="submit" disabled={saving || !form.cliente_id || !form.plano_id}>
-                  {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  {editingPedido ? "Salvar alterações" : "Criar pedido"}
-                </Button>
-              )}
+              {(() => {
+                const canSubmit = form.cliente_id && (form.tipo_pedido === "OA" ? form.servicos_pedido.length > 0 : !!form.plano_id);
+                return bloqueadoPorDesconto ? (
+                  <Button type="submit" disabled={saving || !canSubmit} variant="secondary" className="gap-2">
+                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                    <ArrowUpCircle className="h-4 w-4" />
+                    Enviar para aprovação
+                  </Button>
+                ) : (
+                  <Button type="submit" disabled={saving || !canSubmit}>
+                    {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    {editingPedido ? "Salvar alterações" : "Criar pedido"}
+                  </Button>
+                );
+              })()}
             </DialogFooter>
           </form>
         </DialogContent>
