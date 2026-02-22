@@ -31,8 +31,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Link, CopyPlus } from "lucide-react";
+import { Plus, Pencil, Trash2, Link, CopyPlus, DollarSign } from "lucide-react";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -48,23 +49,30 @@ interface PlanoForm {
   ativo: boolean;
   valor_implantacao_padrao: string;
   valor_mensalidade_padrao: string;
+  fornecedor_id: string;
 }
 
 function PlanosTab() {
   const [planos, setPlanos] = useState<any[]>([]);
+  const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [form, setForm] = useState<PlanoForm>({
     nome: "", descricao: "", ativo: true,
     valor_implantacao_padrao: "0", valor_mensalidade_padrao: "0",
+    fornecedor_id: "",
   });
   const [saving, setSaving] = useState(false);
 
   async function fetch() {
     setLoading(true);
-    const { data } = await supabase.from("planos").select("*").order("nome");
-    setPlanos(data || []);
+    const [{ data: p }, { data: f }] = await Promise.all([
+      supabase.from("planos").select("*, fornecedores(id, nome_fantasia)").order("nome"),
+      supabase.from("fornecedores").select("id, nome_fantasia").eq("ativo", true).order("nome_fantasia"),
+    ]);
+    setPlanos(p || []);
+    setFornecedores(f || []);
     setLoading(false);
   }
 
@@ -72,7 +80,7 @@ function PlanosTab() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ nome: "", descricao: "", ativo: true, valor_implantacao_padrao: "0", valor_mensalidade_padrao: "0" });
+    setForm({ nome: "", descricao: "", ativo: true, valor_implantacao_padrao: "0", valor_mensalidade_padrao: "0", fornecedor_id: "" });
     setDialogOpen(true);
   }
 
@@ -84,6 +92,7 @@ function PlanosTab() {
       ativo: p.ativo,
       valor_implantacao_padrao: (p.valor_implantacao_padrao ?? 0).toString(),
       valor_mensalidade_padrao: (p.valor_mensalidade_padrao ?? 0).toString(),
+      fornecedor_id: p.fornecedor_id || "",
     });
     setDialogOpen(true);
   }
@@ -91,12 +100,13 @@ function PlanosTab() {
   async function handleSave() {
     if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
     setSaving(true);
-    const payload = {
+    const payload: any = {
       nome: form.nome.trim(),
       descricao: form.descricao.trim() || null,
       ativo: form.ativo,
       valor_implantacao_padrao: parseFloat(form.valor_implantacao_padrao) || 0,
       valor_mensalidade_padrao: parseFloat(form.valor_mensalidade_padrao) || 0,
+      fornecedor_id: form.fornecedor_id || null,
     };
     if (editing) {
       const { error } = await supabase.from("planos").update(payload).eq("id", editing.id);
@@ -135,6 +145,7 @@ function PlanosTab() {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
+              <TableHead>Fornecedor</TableHead>
               <TableHead>Descrição</TableHead>
               <TableHead className="text-right">Implantação</TableHead>
               <TableHead className="text-right">Mensalidade</TableHead>
@@ -144,12 +155,13 @@ function PlanosTab() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
             ) : planos.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">Nenhum plano cadastrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Nenhum plano cadastrado</TableCell></TableRow>
             ) : planos.map((p) => (
               <TableRow key={p.id}>
                 <TableCell className="font-medium">{p.nome}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{p.fornecedores?.nome_fantasia || "—"}</TableCell>
                 <TableCell className="text-muted-foreground text-sm">{p.descricao || "—"}</TableCell>
                 <TableCell className="text-right font-mono text-sm">{fmtBRL(p.valor_implantacao_padrao ?? 0)}</TableCell>
                 <TableCell className="text-right font-mono text-sm">{fmtBRL(p.valor_mensalidade_padrao ?? 0)}</TableCell>
@@ -173,6 +185,18 @@ function PlanosTab() {
             <div className="space-y-1.5">
               <Label>Nome *</Label>
               <Input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Ex: Essencial, Pro, Premium" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Fornecedor</Label>
+              <Select value={form.fornecedor_id} onValueChange={(v) => setForm((f) => ({ ...f, fornecedor_id: v === "__none__" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecionar fornecedor (opcional)" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Nenhum</SelectItem>
+                  {fornecedores.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.nome_fantasia}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Descrição</Label>
@@ -652,6 +676,280 @@ function VinculosTab() {
   );
 }
 
+// ─── Custos Tab ─────────────────────────────────────────────────────────────────
+
+interface CustoForm {
+  preco_fornecedor: string;
+  imposto_tipo: string;
+  imposto_valor: string;
+  imposto_base: string;
+  taxa_boleto: string;
+  despesas_adicionais: string;
+  despesas_adicionais_descricao: string;
+}
+
+const CUSTO_EMPTY: CustoForm = {
+  preco_fornecedor: "0",
+  imposto_tipo: "%",
+  imposto_valor: "0",
+  imposto_base: "compra",
+  taxa_boleto: "0",
+  despesas_adicionais: "0",
+  despesas_adicionais_descricao: "",
+};
+
+function CustosTab() {
+  const [planos, setPlanos] = useState<any[]>([]);
+  const [selectedPlano, setSelectedPlano] = useState("");
+  const [custo, setCusto] = useState<any | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState<CustoForm>({ ...CUSTO_EMPTY });
+  const [saving, setSaving] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  async function fetchPlanos() {
+    const { data } = await supabase.from("planos").select("*").order("nome");
+    setPlanos(data || []);
+  }
+
+  async function fetchCusto(planoId: string) {
+    setLoading(true);
+    const { data } = await supabase.from("custos").select("*").eq("plano_id", planoId).maybeSingle();
+    setCusto(data);
+    setLoading(false);
+  }
+
+  useEffect(() => { fetchPlanos(); }, []);
+
+  useEffect(() => {
+    if (selectedPlano) fetchCusto(selectedPlano);
+    else setCusto(null);
+  }, [selectedPlano]);
+
+  function openEdit() {
+    if (custo) {
+      setForm({
+        preco_fornecedor: (custo.preco_fornecedor ?? 0).toString(),
+        imposto_tipo: custo.imposto_tipo || "%",
+        imposto_valor: (custo.imposto_valor ?? 0).toString(),
+        imposto_base: custo.imposto_base || "compra",
+        taxa_boleto: (custo.taxa_boleto ?? 0).toString(),
+        despesas_adicionais: (custo.despesas_adicionais ?? 0).toString(),
+        despesas_adicionais_descricao: custo.despesas_adicionais_descricao || "",
+      });
+    } else {
+      setForm({ ...CUSTO_EMPTY });
+    }
+    setDialogOpen(true);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    const despAdic = parseFloat(form.despesas_adicionais) || 0;
+    if (despAdic > 0 && !form.despesas_adicionais_descricao.trim()) {
+      toast.error("Descreva as despesas adicionais");
+      setSaving(false);
+      return;
+    }
+    const payload: any = {
+      plano_id: selectedPlano,
+      preco_fornecedor: parseFloat(form.preco_fornecedor) || 0,
+      imposto_tipo: form.imposto_tipo,
+      imposto_valor: parseFloat(form.imposto_valor) || 0,
+      imposto_base: form.imposto_base,
+      taxa_boleto: parseFloat(form.taxa_boleto) || 0,
+      despesas_adicionais: despAdic,
+      despesas_adicionais_descricao: despAdic > 0 ? form.despesas_adicionais_descricao.trim() : null,
+    };
+
+    if (custo) {
+      const { error } = await supabase.from("custos").update(payload).eq("id", custo.id);
+      if (error) { toast.error("Erro ao salvar custos"); setSaving(false); return; }
+      toast.success("Custos atualizados");
+    } else {
+      const { error } = await supabase.from("custos").insert(payload);
+      if (error) { toast.error("Erro ao criar custos"); setSaving(false); return; }
+      toast.success("Custos cadastrados");
+    }
+    setSaving(false);
+    setDialogOpen(false);
+    fetchCusto(selectedPlano);
+  }
+
+  async function handleDelete() {
+    if (!custo) return;
+    if (!confirm("Excluir os custos deste plano?")) return;
+    const { error } = await supabase.from("custos").delete().eq("id", custo.id);
+    if (error) { toast.error("Erro ao excluir"); return; }
+    toast.success("Custos excluídos");
+    setCusto(null);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-end gap-4 flex-wrap">
+        <div className="flex-1 max-w-xs space-y-1">
+          <Label>Selecionar plano</Label>
+          <Select value={selectedPlano} onValueChange={setSelectedPlano}>
+            <SelectTrigger><SelectValue placeholder="Escolha um plano..." /></SelectTrigger>
+            <SelectContent>
+              {planos.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {selectedPlano && (
+          <div className="flex gap-2">
+            <Button onClick={openEdit} className="gap-2">
+              <DollarSign className="h-4 w-4" />
+              {custo ? "Editar custos" : "Cadastrar custos"}
+            </Button>
+            {custo && (
+              <Button variant="destructive" size="icon" onClick={handleDelete}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {selectedPlano && !loading && custo && (
+        <div className="rounded-lg border border-border bg-card p-6 space-y-3">
+          <h3 className="font-semibold text-lg text-foreground">Custos do plano</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground">Preço fornecedor</p>
+              <p className="font-mono font-medium">{fmtBRL(custo.preco_fornecedor ?? 0)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Impostos ({custo.imposto_tipo === "%" ? "%" : "R$"})</p>
+              <p className="font-mono font-medium">
+                {custo.imposto_tipo === "%" ? `${custo.imposto_valor}%` : fmtBRL(custo.imposto_valor ?? 0)}
+                <span className="text-xs text-muted-foreground ml-1">
+                  ({custo.imposto_base === "venda" ? "s/ venda" : "s/ compra"})
+                </span>
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Taxa de boleto</p>
+              <p className="font-mono font-medium">{fmtBRL(custo.taxa_boleto ?? 0)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Despesas adicionais</p>
+              <p className="font-mono font-medium">{fmtBRL(custo.despesas_adicionais ?? 0)}</p>
+              {custo.despesas_adicionais_descricao && (
+                <p className="text-xs text-muted-foreground mt-0.5">{custo.despesas_adicionais_descricao}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedPlano && !loading && !custo && (
+        <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
+          Nenhum custo cadastrado para este plano.
+        </div>
+      )}
+
+      {loading && (
+        <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
+          Carregando...
+        </div>
+      )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>{custo ? "Editar custos" : "Cadastrar custos"}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Preço fornecedor (R$)</Label>
+              <Input
+                type="number" min="0" step="0.01"
+                value={form.preco_fornecedor}
+                onChange={(e) => setForm((f) => ({ ...f, preco_fornecedor: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Impostos</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Tipo</Label>
+                  <Select value={form.imposto_tipo} onValueChange={(v) => setForm((f) => ({ ...f, imposto_tipo: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="%">Percentual (%)</SelectItem>
+                      <SelectItem value="R$">Valor fixo (R$)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Valor</Label>
+                  <Input
+                    type="number" min="0" step="0.01"
+                    value={form.imposto_valor}
+                    onChange={(e) => setForm((f) => ({ ...f, imposto_valor: e.target.value }))}
+                  />
+                </div>
+              </div>
+              {form.imposto_tipo === "%" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Cálculo sobre</Label>
+                  <RadioGroup value={form.imposto_base} onValueChange={(v) => setForm((f) => ({ ...f, imposto_base: v }))}>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="compra" id="base-compra" />
+                      <Label htmlFor="base-compra" className="font-normal">Preço de compra (fornecedor)</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="venda" id="base-venda" />
+                      <Label htmlFor="base-venda" className="font-normal">Preço de venda</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Taxa de boleto (R$)</Label>
+              <Input
+                type="number" min="0" step="0.01"
+                value={form.taxa_boleto}
+                onChange={(e) => setForm((f) => ({ ...f, taxa_boleto: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Despesas adicionais (R$)</Label>
+              <Input
+                type="number" min="0" step="0.01"
+                value={form.despesas_adicionais}
+                onChange={(e) => setForm((f) => ({ ...f, despesas_adicionais: e.target.value }))}
+              />
+            </div>
+
+            {(parseFloat(form.despesas_adicionais) || 0) > 0 && (
+              <div className="space-y-1.5">
+                <Label>Discriminação das despesas *</Label>
+                <Textarea
+                  value={form.despesas_adicionais_descricao}
+                  onChange={(e) => setForm((f) => ({ ...f, despesas_adicionais_descricao: e.target.value }))}
+                  placeholder="Descreva as despesas adicionais..."
+                  rows={2}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Planos() {
@@ -660,17 +958,19 @@ export default function Planos() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Planos e Módulos</h1>
-          <p className="text-muted-foreground text-sm mt-1">Gerencie planos de serviço, módulos disponíveis e seus vínculos</p>
+          <p className="text-muted-foreground text-sm mt-1">Gerencie planos de serviço, módulos disponíveis, vínculos e custos</p>
         </div>
         <Tabs defaultValue="planos">
           <TabsList>
             <TabsTrigger value="planos">Planos</TabsTrigger>
             <TabsTrigger value="modulos">Módulos</TabsTrigger>
             <TabsTrigger value="vinculos">Vínculos</TabsTrigger>
+            <TabsTrigger value="custos">Custos</TabsTrigger>
           </TabsList>
           <TabsContent value="planos" className="mt-4"><PlanosTab /></TabsContent>
           <TabsContent value="modulos" className="mt-4"><ModulosTab /></TabsContent>
           <TabsContent value="vinculos" className="mt-4"><VinculosTab /></TabsContent>
+          <TabsContent value="custos" className="mt-4"><CustosTab /></TabsContent>
         </Tabs>
       </div>
     </AppLayout>
