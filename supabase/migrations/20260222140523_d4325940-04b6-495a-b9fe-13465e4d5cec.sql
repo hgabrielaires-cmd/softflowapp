@@ -1,0 +1,2 @@
+ALTER TABLE public.document_templates DROP CONSTRAINT document_templates_tipo_check;
+ALTER TABLE public.document_templates ADD CONSTRAINT document_templates_tipo_check CHECK (tipo = ANY (ARRAY['CONTRATO_BASE','ADITIVO','CANCELAMENTO','ORDEM_ATENDIMENTO']));
