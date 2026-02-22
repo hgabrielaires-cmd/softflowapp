@@ -242,20 +242,33 @@ interface ModuloForm {
   ativo: boolean;
   valor_implantacao_modulo: string;
   valor_mensalidade_modulo: string;
+  fornecedor_id: string;
 }
 
 function ModulosTab() {
   const [modulos, setModulos] = useState<any[]>([]);
+  const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
-  const [form, setForm] = useState<ModuloForm>({ nome: "", ativo: true, valor_implantacao_modulo: "", valor_mensalidade_modulo: "" });
+  const [form, setForm] = useState<ModuloForm>({ nome: "", ativo: true, valor_implantacao_modulo: "", valor_mensalidade_modulo: "", fornecedor_id: "" });
   const [saving, setSaving] = useState(false);
+
+  // Custos inline
+  const [custoDialogOpen, setCustoDialogOpen] = useState(false);
+  const [custoModulo, setCustoModulo] = useState<any | null>(null);
+  const [custoData, setCustoData] = useState<any | null>(null);
+  const [custoForm, setCustoForm] = useState<CustoForm>({ ...CUSTO_EMPTY });
+  const [custoSaving, setCustoSaving] = useState(false);
 
   async function fetch() {
     setLoading(true);
-    const { data } = await supabase.from("modulos").select("*").order("nome");
-    setModulos(data || []);
+    const [{ data: m }, { data: f }] = await Promise.all([
+      supabase.from("modulos").select("*, fornecedores(id, nome_fantasia)").order("nome"),
+      supabase.from("fornecedores").select("id, nome_fantasia").eq("ativo", true).order("nome_fantasia"),
+    ]);
+    setModulos(m || []);
+    setFornecedores(f || []);
     setLoading(false);
   }
 
@@ -263,7 +276,7 @@ function ModulosTab() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ nome: "", ativo: true, valor_implantacao_modulo: "", valor_mensalidade_modulo: "" });
+    setForm({ nome: "", ativo: true, valor_implantacao_modulo: "", valor_mensalidade_modulo: "", fornecedor_id: "" });
     setDialogOpen(true);
   }
 
@@ -274,6 +287,7 @@ function ModulosTab() {
       ativo: m.ativo,
       valor_implantacao_modulo: m.valor_implantacao_modulo != null ? m.valor_implantacao_modulo.toString() : "",
       valor_mensalidade_modulo: m.valor_mensalidade_modulo != null ? m.valor_mensalidade_modulo.toString() : "",
+      fornecedor_id: m.fornecedor_id || "",
     });
     setDialogOpen(true);
   }
@@ -281,11 +295,12 @@ function ModulosTab() {
   async function handleSave() {
     if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
     setSaving(true);
-    const payload = {
+    const payload: any = {
       nome: form.nome.trim(),
       ativo: form.ativo,
       valor_implantacao_modulo: form.valor_implantacao_modulo !== "" ? parseFloat(form.valor_implantacao_modulo) : null,
       valor_mensalidade_modulo: form.valor_mensalidade_modulo !== "" ? parseFloat(form.valor_mensalidade_modulo) : null,
+      fornecedor_id: form.fornecedor_id || null,
     };
     if (editing) {
       const { error } = await supabase.from("modulos").update(payload).eq("id", editing.id);
@@ -299,6 +314,58 @@ function ModulosTab() {
     setSaving(false);
     setDialogOpen(false);
     fetch();
+  }
+
+  async function openCustos(m: any) {
+    setCustoModulo(m);
+    const { data } = await supabase.from("custos").select("*").eq("modulo_id", m.id).maybeSingle();
+    setCustoData(data);
+    if (data) {
+      setCustoForm({
+        preco_fornecedor: (data.preco_fornecedor ?? 0).toString(),
+        imposto_tipo: data.imposto_tipo || "%",
+        imposto_valor: (data.imposto_valor ?? 0).toString(),
+        imposto_base: data.imposto_base || "compra",
+        taxa_boleto: (data.taxa_boleto ?? 0).toString(),
+        despesas_adicionais: (data.despesas_adicionais ?? 0).toString(),
+        despesas_adicionais_descricao: data.despesas_adicionais_descricao || "",
+      });
+    } else {
+      setCustoForm({ ...CUSTO_EMPTY });
+    }
+    setCustoDialogOpen(true);
+  }
+
+  async function handleSaveCusto() {
+    if (!custoModulo) return;
+    setCustoSaving(true);
+    const despAdic = parseFloat(custoForm.despesas_adicionais) || 0;
+    if (despAdic > 0 && !custoForm.despesas_adicionais_descricao.trim()) {
+      toast.error("Descreva as despesas adicionais");
+      setCustoSaving(false);
+      return;
+    }
+    const payload: any = {
+      modulo_id: custoModulo.id,
+      preco_fornecedor: parseFloat(custoForm.preco_fornecedor) || 0,
+      imposto_tipo: custoForm.imposto_tipo,
+      imposto_valor: parseFloat(custoForm.imposto_valor) || 0,
+      imposto_base: custoForm.imposto_base,
+      taxa_boleto: parseFloat(custoForm.taxa_boleto) || 0,
+      despesas_adicionais: despAdic,
+      despesas_adicionais_descricao: despAdic > 0 ? custoForm.despesas_adicionais_descricao.trim() : null,
+    };
+    if (custoData) {
+      const { error } = await supabase.from("custos").update(payload).eq("id", custoData.id);
+      if (error) { toast.error("Erro ao salvar custos"); setCustoSaving(false); return; }
+      toast.success("Custos atualizados");
+    } else {
+      const { error } = await supabase.from("custos").insert(payload);
+      if (error) { toast.error("Erro ao criar custos"); setCustoSaving(false); return; }
+      toast.success("Custos cadastrados");
+    }
+    setCustoSaving(false);
+    setCustoDialogOpen(false);
   }
 
   async function handleDelete(m: any) {
@@ -324,20 +391,22 @@ function ModulosTab() {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
+              <TableHead>Fornecedor</TableHead>
               <TableHead className="text-right">Implantação</TableHead>
               <TableHead className="text-right">Mensalidade</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-28">Ações</TableHead>
+              <TableHead className="w-36">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
             ) : modulos.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Nenhum módulo cadastrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">Nenhum módulo cadastrado</TableCell></TableRow>
             ) : modulos.map((m) => (
               <TableRow key={m.id}>
                 <TableCell className="font-medium">{m.nome}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{m.fornecedores?.nome_fantasia || "—"}</TableCell>
                 <TableCell className="text-right font-mono text-sm text-muted-foreground">
                   {m.valor_implantacao_modulo != null ? fmtBRL(m.valor_implantacao_modulo) : "—"}
                 </TableCell>
@@ -347,6 +416,7 @@ function ModulosTab() {
                 <TableCell><Switch checked={m.ativo} onCheckedChange={() => toggleAtivo(m)} /></TableCell>
                 <TableCell>
                   <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" title="Custos" onClick={() => openCustos(m)}><DollarSign className="h-3.5 w-3.5" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(m)}><Pencil className="h-3.5 w-3.5" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(m)}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
@@ -364,6 +434,18 @@ function ModulosTab() {
             <div className="space-y-1.5">
               <Label>Nome *</Label>
               <Input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Ex: PDV, iFood, Gestão Estoque" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Fornecedor</Label>
+              <Select value={form.fornecedor_id} onValueChange={(v) => setForm((f) => ({ ...f, fornecedor_id: v === "__none__" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecionar fornecedor (opcional)" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Nenhum</SelectItem>
+                  {fornecedores.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.nome_fantasia}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -393,6 +475,71 @@ function ModulosTab() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : editing ? "Salvar" : "Criar módulo"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Custos Dialog */}
+      <Dialog open={custoDialogOpen} onOpenChange={setCustoDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Custos: {custoModulo?.nome}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Preço fornecedor (R$)</Label>
+              <Input type="number" min="0" step="0.01" value={custoForm.preco_fornecedor} onChange={(e) => setCustoForm((f) => ({ ...f, preco_fornecedor: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label>Impostos</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Tipo</Label>
+                  <Select value={custoForm.imposto_tipo} onValueChange={(v) => setCustoForm((f) => ({ ...f, imposto_tipo: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="%">Percentual (%)</SelectItem>
+                      <SelectItem value="R$">Valor fixo (R$)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Valor</Label>
+                  <Input type="number" min="0" step="0.01" value={custoForm.imposto_valor} onChange={(e) => setCustoForm((f) => ({ ...f, imposto_valor: e.target.value }))} />
+                </div>
+              </div>
+              {custoForm.imposto_tipo === "%" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Cálculo sobre</Label>
+                  <RadioGroup value={custoForm.imposto_base} onValueChange={(v) => setCustoForm((f) => ({ ...f, imposto_base: v }))}>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="compra" id="mod-base-compra" />
+                      <Label htmlFor="mod-base-compra" className="font-normal">Preço de compra (fornecedor)</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="venda" id="mod-base-venda" />
+                      <Label htmlFor="mod-base-venda" className="font-normal">Preço de venda</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Taxa de boleto (R$)</Label>
+              <Input type="number" min="0" step="0.01" value={custoForm.taxa_boleto} onChange={(e) => setCustoForm((f) => ({ ...f, taxa_boleto: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Despesas adicionais (R$)</Label>
+              <Input type="number" min="0" step="0.01" value={custoForm.despesas_adicionais} onChange={(e) => setCustoForm((f) => ({ ...f, despesas_adicionais: e.target.value }))} />
+            </div>
+            {(parseFloat(custoForm.despesas_adicionais) || 0) > 0 && (
+              <div className="space-y-1.5">
+                <Label>Discriminação das despesas *</Label>
+                <Textarea value={custoForm.despesas_adicionais_descricao} onChange={(e) => setCustoForm((f) => ({ ...f, despesas_adicionais_descricao: e.target.value }))} placeholder="Descreva as despesas adicionais..." rows={2} />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCustoDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveCusto} disabled={custoSaving}>{custoSaving ? "Salvando..." : "Salvar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
