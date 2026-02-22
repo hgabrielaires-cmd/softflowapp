@@ -34,6 +34,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Building2, Phone, Mail, FileText, ArrowUpCircle, ArrowDownCircle, Package, Loader2, MapPin, AlertCircle, Users, Star, Trash2 } from "lucide-react";
+import { ClientePlanViewer } from "@/components/ClientePlanViewer";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -1095,6 +1096,9 @@ export default function Clientes() {
               <FileText className="h-4 w-4" />
               Histórico Contratual — {clienteHistorico?.nome_fantasia}
             </DialogTitle>
+            {clienteHistorico && (
+              <ClientePlanViewer clienteId={clienteHistorico.id} clienteNome={clienteHistorico.nome_fantasia} variant="text" className="ml-auto" />
+            )}
           </DialogHeader>
 
           {loadingHistorico ? (
