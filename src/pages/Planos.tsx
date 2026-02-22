@@ -385,6 +385,7 @@ interface ModuloForm {
   valor_implantacao_modulo: string;
   valor_mensalidade_modulo: string;
   fornecedor_id: string;
+  permite_revenda: boolean;
 }
 
 function ModulosTab() {
@@ -394,7 +395,7 @@ function ModulosTab() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [searchModulo, setSearchModulo] = useState("");
-  const [form, setForm] = useState<ModuloForm>({ nome: "", ativo: true, valor_implantacao_modulo: "", valor_mensalidade_modulo: "", fornecedor_id: "" });
+  const [form, setForm] = useState<ModuloForm>({ nome: "", ativo: true, valor_implantacao_modulo: "", valor_mensalidade_modulo: "", fornecedor_id: "", permite_revenda: false });
   const [saving, setSaving] = useState(false);
 
   const [custoForm, setCustoForm] = useState<CustoForm>({ ...CUSTO_EMPTY });
@@ -414,14 +415,14 @@ function ModulosTab() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ nome: "", ativo: true, valor_implantacao_modulo: "", valor_mensalidade_modulo: "", fornecedor_id: "" });
+    setForm({ nome: "", ativo: true, valor_implantacao_modulo: "", valor_mensalidade_modulo: "", fornecedor_id: "", permite_revenda: false });
     setCustoForm({ ...CUSTO_EMPTY });
     setDialogOpen(true);
   }
 
   async function openEdit(m: any) {
     setEditing(m);
-    setForm({ nome: m.nome, ativo: m.ativo, valor_implantacao_modulo: m.valor_implantacao_modulo != null ? m.valor_implantacao_modulo.toString() : "", valor_mensalidade_modulo: m.valor_mensalidade_modulo != null ? m.valor_mensalidade_modulo.toString() : "", fornecedor_id: m.fornecedor_id || "" });
+    setForm({ nome: m.nome, ativo: m.ativo, valor_implantacao_modulo: m.valor_implantacao_modulo != null ? m.valor_implantacao_modulo.toString() : "", valor_mensalidade_modulo: m.valor_mensalidade_modulo != null ? m.valor_mensalidade_modulo.toString() : "", fornecedor_id: m.fornecedor_id || "", permite_revenda: m.permite_revenda ?? false });
     const { data: custo } = await supabase.from("custos").select("*").eq("modulo_id", m.id).maybeSingle();
     setCustoForm(custo ? { preco_fornecedor: (custo.preco_fornecedor ?? 0).toString(), imposto_tipo: custo.imposto_tipo || "%", imposto_valor: (custo.imposto_valor ?? 0).toString(), imposto_base: custo.imposto_base || "compra", taxa_boleto: (custo.taxa_boleto ?? 0).toString(), despesas_adicionais: (custo.despesas_adicionais ?? 0).toString(), despesas_adicionais_descricao: custo.despesas_adicionais_descricao || "" } : { ...CUSTO_EMPTY });
     setDialogOpen(true);
@@ -432,7 +433,7 @@ function ModulosTab() {
     const despAdic = parseFloat(custoForm.despesas_adicionais) || 0;
     if (despAdic > 0 && !custoForm.despesas_adicionais_descricao.trim()) { toast.error("Descreva as despesas adicionais"); return; }
     setSaving(true);
-    const payload: any = { nome: form.nome.trim(), ativo: form.ativo, valor_implantacao_modulo: form.valor_implantacao_modulo !== "" ? parseFloat(form.valor_implantacao_modulo) : null, valor_mensalidade_modulo: form.valor_mensalidade_modulo !== "" ? parseFloat(form.valor_mensalidade_modulo) : null, fornecedor_id: form.fornecedor_id || null };
+    const payload: any = { nome: form.nome.trim(), ativo: form.ativo, valor_implantacao_modulo: form.valor_implantacao_modulo !== "" ? parseFloat(form.valor_implantacao_modulo) : null, valor_mensalidade_modulo: form.valor_mensalidade_modulo !== "" ? parseFloat(form.valor_mensalidade_modulo) : null, fornecedor_id: form.fornecedor_id || null, permite_revenda: form.permite_revenda };
     let moduloId: string;
     if (editing) {
       const { error } = await supabase.from("modulos").update(payload).eq("id", editing.id);
@@ -503,6 +504,7 @@ function ModulosTab() {
               <div className="space-y-1.5"><Label>Mensalidade (R$)</Label><Input type="number" min="0" step="0.01" value={form.valor_mensalidade_modulo} onChange={(e) => setForm((f) => ({ ...f, valor_mensalidade_modulo: e.target.value }))} placeholder="Opcional" /></div>
             </div>
             <div className="flex items-center gap-3"><Switch checked={form.ativo} onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))} /><Label>Módulo ativo</Label></div>
+            <div className="flex items-center gap-3"><Switch checked={form.permite_revenda} onCheckedChange={(v) => setForm((f) => ({ ...f, permite_revenda: v }))} /><Label>Vender mais de uma vez</Label></div>
             <CustoFormFields custoForm={custoForm} setCustoForm={setCustoForm} />
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button><Button onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : editing ? "Salvar" : "Criar módulo"}</Button></DialogFooter>
