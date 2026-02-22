@@ -86,6 +86,7 @@ interface ModuloOpcional {
   valor_implantacao_modulo: number | null;
   valor_mensalidade_modulo: number | null;
   incluso_no_plano: boolean;
+  permite_revenda: boolean;
 }
 
 interface ModuloAdicionadoItem {
@@ -408,6 +409,7 @@ export default function Pedidos() {
           valor_implantacao_modulo: v.modulo.valor_implantacao_modulo ?? 0,
           valor_mensalidade_modulo: v.modulo.valor_mensalidade_modulo ?? 0,
           incluso_no_plano: v.incluso_no_plano,
+          permite_revenda: v.modulo.permite_revenda ?? false,
         });
       }
     });
@@ -1762,7 +1764,7 @@ export default function Pedidos() {
                               ? modulosJaContratados.map(m => m.modulo_id)
                               : [];
                             const modulosFiltrados = modulosDisponiveis.filter(
-                              m => !idsJaContratados.includes(m.id)
+                              m => !idsJaContratados.includes(m.id) || m.permite_revenda
                             );
                             return modulosFiltrados.length === 0
                               ? <SelectItem value="_none" disabled>

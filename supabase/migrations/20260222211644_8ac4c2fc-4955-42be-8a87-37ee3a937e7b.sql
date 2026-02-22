@@ -1,0 +1,1 @@
+ALTER TABLE public.modulos ADD COLUMN permite_revenda boolean NOT NULL DEFAULT false;
