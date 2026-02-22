@@ -292,7 +292,7 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
                           )}
                         </div>
                         <span className="text-xs font-mono text-muted-foreground">
-                          {fmtBRL(m.valor_mensalidade_modulo)}/mês
+                          {fmtBRL(m.valor_mensalidade_modulo * (m.quantidade || 1))}/mês
                         </span>
                       </div>
                     ))}
