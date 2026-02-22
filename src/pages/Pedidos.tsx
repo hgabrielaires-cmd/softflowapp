@@ -95,6 +95,14 @@ interface ModuloAdicionadoItem {
   valor_mensalidade_modulo: number;
 }
 
+interface ServicoAdicionadoItem {
+  servico_id: string;
+  nome: string;
+  quantidade: number;
+  valor_unitario: number;
+  unidade_medida: string;
+}
+
 interface PedidoWithJoins {
   id: string;
   cliente_id: string;
@@ -150,7 +158,9 @@ interface FormState {
   // Módulos adicionais (lista de itens com quantidade)
   modulos_adicionais: ModuloAdicionadoItem[];
   // Tipo do pedido
-  tipo_pedido: "Novo" | "Upgrade" | "Aditivo";
+  tipo_pedido: "Novo" | "Upgrade" | "Aditivo" | "OA";
+  // Serviços para OA
+  servicos_pedido: ServicoAdicionadoItem[];
   contrato_id: string | null;
   // Forma de pagamento mensalidade (simplificado)
   pagamento_mensalidade_tipo: "Pré-pago" | "Pós-pago";
@@ -180,6 +190,7 @@ const emptyForm: FormState = {
   desconto_mensalidade_valor: "0",
   modulos_adicionais: [],
   tipo_pedido: "Novo",
+  servicos_pedido: [],
   contrato_id: null,
   // Mensalidade (simplificado)
   pagamento_mensalidade_tipo: "Pré-pago",
@@ -223,6 +234,9 @@ export default function Pedidos() {
   const [filialFavoritaId, setFilialFavoritaId] = useState<string | null>(null);
   const [filialParametros, setFilialParametros] = useState<any | null>(null);
   const [zapsignMap, setZapsignMap] = useState<Record<string, string>>({});
+  const [servicosCatalogo, setServicosCatalogo] = useState<{ id: string; nome: string; valor: number; unidade_medida: string }[]>([]);
+  const [servicoBuscaId, setServicoBuscaId] = useState("");
+  const [servicoBuscaQtd, setServicoBuscaQtd] = useState("1");
 
   // Módulos disponíveis do plano selecionado (para busca)
   const [modulosDisponiveis, setModulosDisponiveis] = useState<ModuloOpcional[]>([]);
@@ -291,8 +305,17 @@ export default function Pedidos() {
     (acc, m) => acc + m.valor_mensalidade_modulo * m.quantidade, 0
   );
 
-  const valorImplantacaoOriginal = (planoSelecionado?.valor_implantacao_padrao ?? form.valor_implantacao_original) + totalAdicionaisImp;
-  const valorMensalidadeOriginal = (planoSelecionado?.valor_mensalidade_padrao ?? form.valor_mensalidade_original) + totalAdicionaisMens;
+  // Total dos serviços OA
+  const totalServicosOA = form.servicos_pedido.reduce(
+    (acc, s) => acc + s.valor_unitario * s.quantidade, 0
+  );
+
+  const valorImplantacaoOriginal = form.tipo_pedido === "OA"
+    ? totalServicosOA
+    : (planoSelecionado?.valor_implantacao_padrao ?? form.valor_implantacao_original) + totalAdicionaisImp;
+  const valorMensalidadeOriginal = form.tipo_pedido === "OA"
+    ? 0
+    : (planoSelecionado?.valor_mensalidade_padrao ?? form.valor_mensalidade_original) + totalAdicionaisMens;
 
   const valorImplantacaoFinal = applyDesconto(
     valorImplantacaoOriginal,
@@ -468,12 +491,14 @@ export default function Pedidos() {
       { data: planosData },
       { data: filiaisData },
       { data: vendedoresData },
+      { data: servicosData },
     ] = await Promise.all([
       supabase.from("pedidos").select("*, clientes(nome_fantasia), planos(nome), filiais(nome)").order("created_at", { ascending: false }),
       supabase.from("clientes").select("*").eq("ativo", true).order("nome_fantasia"),
       supabase.from("planos").select("*").eq("ativo", true).order("nome"),
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
       supabase.from("profiles").select("*").order("full_name"),
+      supabase.from("servicos").select("id, nome, valor, unidade_medida").eq("ativo", true).order("nome"),
     ]);
     const pedidosList = (pedidosData || []) as unknown as PedidoWithJoins[];
     setPedidos(pedidosList);
@@ -481,6 +506,7 @@ export default function Pedidos() {
     setPlanos(planosData || []);
     setFiliais((filiaisData || []) as Filial[]);
     setVendedores((vendedoresData || []) as Profile[]);
+    setServicosCatalogo((servicosData || []) as any[]);
 
     // Buscar status ZapSign para pedidos — via contratos.pedido_id → contratos_zapsign
     const pedidoIds = pedidosList.map(p => p.id);
@@ -559,6 +585,54 @@ export default function Pedidos() {
     if (contratoAtivo.plano_id) loadPlano(contratoAtivo.plano_id, []);
   }
 
+  function handleIniciarOA() {
+    if (!contratoAtivo) return;
+    setForm((f) => ({
+      ...f,
+      plano_id: contratoAtivo.plano_id || "",
+      tipo_pedido: "OA",
+      contrato_id: contratoAtivo.id,
+      servicos_pedido: [],
+    }));
+    if (contratoAtivo.plano_id) loadPlano(contratoAtivo.plano_id, []);
+  }
+
+  function handleAdicionarServico() {
+    if (!servicoBuscaId) { toast.error("Selecione um serviço"); return; }
+    const qtd = parseInt(servicoBuscaQtd) || 1;
+    const servico = servicosCatalogo.find((s) => s.id === servicoBuscaId);
+    if (!servico) return;
+    const jaExiste = form.servicos_pedido.find((s) => s.servico_id === servicoBuscaId);
+    if (jaExiste) {
+      setForm((f) => ({
+        ...f,
+        servicos_pedido: f.servicos_pedido.map((s) =>
+          s.servico_id === servicoBuscaId ? { ...s, quantidade: s.quantidade + qtd } : s
+        ),
+      }));
+    } else {
+      setForm((f) => ({
+        ...f,
+        servicos_pedido: [...f.servicos_pedido, {
+          servico_id: servico.id,
+          nome: servico.nome,
+          quantidade: qtd,
+          valor_unitario: servico.valor,
+          unidade_medida: servico.unidade_medida,
+        }],
+      }));
+    }
+    setServicoBuscaId("");
+    setServicoBuscaQtd("1");
+  }
+
+  function handleRemoverServico(servicoId: string) {
+    setForm((f) => ({
+      ...f,
+      servicos_pedido: f.servicos_pedido.filter((s) => s.servico_id !== servicoId),
+    }));
+  }
+
   // ─── Open create/edit ─────────────────────────────────────────────────────
 
   async function carregarLimitesDesconto(vendedorUserId: string) {
@@ -632,7 +706,8 @@ export default function Pedidos() {
       desconto_mensalidade_tipo: (pedido.desconto_mensalidade_tipo as "R$" | "%") || "R$",
       desconto_mensalidade_valor: (pedido.desconto_mensalidade_valor ?? 0).toString(),
       modulos_adicionais: adicionais,
-      tipo_pedido: (pedido.tipo_pedido as "Novo" | "Upgrade" | "Aditivo") || "Novo",
+      tipo_pedido: (pedido.tipo_pedido as "Novo" | "Upgrade" | "Aditivo" | "OA") || "Novo",
+      servicos_pedido: ((pedido as any).servicos_pedido || []) as ServicoAdicionadoItem[],
       contrato_id: pedido.contrato_id || null,
       pagamento_mensalidade_tipo: ((pedido as any).pagamento_mensalidade_forma === "Pós-pago" ? "Pós-pago" : "Pré-pago") as "Pré-pago" | "Pós-pago",
       pagamento_mensalidade_observacao: (pedido as any).pagamento_mensalidade_observacao || "",
@@ -663,7 +738,11 @@ export default function Pedidos() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!form.cliente_id) { toast.error("Selecione um cliente"); return; }
-    if (!form.plano_id) { toast.error("Selecione um plano"); return; }
+    if (form.tipo_pedido === "OA") {
+      if (form.servicos_pedido.length === 0) { toast.error("Adicione pelo menos um serviço"); return; }
+    } else {
+      if (!form.plano_id) { toast.error("Selecione um plano"); return; }
+    }
     setSaving(true);
     try {
       // Garantir que vendedorId nunca seja undefined
@@ -716,6 +795,7 @@ export default function Pedidos() {
         desconto_mensalidade_valor: parseFloat(form.desconto_mensalidade_valor) || 0,
         valor_mensalidade_final: valorMensalidadeFinal,
         modulos_adicionais: form.modulos_adicionais,
+        servicos_pedido: form.servicos_pedido,
         tipo_pedido: form.tipo_pedido,
         contrato_id: form.contrato_id || null,
         comissao_implantacao_percentual: comissaoImpPerc,
@@ -1257,7 +1337,8 @@ export default function Pedidos() {
             <DialogTitle className="flex items-center gap-2">
               {form.tipo_pedido === "Upgrade" && <ArrowUpCircle className="h-4 w-4 text-primary" />}
               {form.tipo_pedido === "Aditivo" && <FileText className="h-4 w-4 text-primary" />}
-              {editingPedido ? "Editar Pedido" : `Novo Pedido${form.tipo_pedido !== "Novo" ? ` — ${form.tipo_pedido}` : ""}`}
+              {form.tipo_pedido === "OA" && <Tag className="h-4 w-4 text-teal-600" />}
+              {editingPedido ? "Editar Pedido" : `Novo Pedido${form.tipo_pedido !== "Novo" ? ` — ${form.tipo_pedido === "OA" ? "Ordem de Atendimento" : form.tipo_pedido}` : ""}`}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0">
@@ -1358,7 +1439,7 @@ export default function Pedidos() {
                       Contrato ativo: Nº {contratoAtivo.numero_registro} ({contratoAtivo.numero_exibicao})
                     </p>
                     <p className="text-xs text-amber-700 mt-0.5">Este cliente já possui contrato ativo. Selecione a ação desejada:</p>
-                    <div className="flex gap-2 mt-2">
+                    <div className="flex flex-wrap gap-2 mt-2">
                       <Button type="button" size="sm" variant="outline" className="h-7 text-xs gap-1.5 border-amber-300 text-amber-800 hover:bg-amber-100"
                         onClick={handleIniciarUpgrade}>
                         <ArrowUpCircle className="h-3.5 w-3.5" /> Upgrade de Plano
@@ -1366,6 +1447,10 @@ export default function Pedidos() {
                       <Button type="button" size="sm" variant="outline" className="h-7 text-xs gap-1.5 border-amber-300 text-amber-800 hover:bg-amber-100"
                         onClick={handleIniciarAditivo}>
                         <FileText className="h-3.5 w-3.5" /> Adicionar Módulo (Aditivo)
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" className="h-7 text-xs gap-1.5 border-teal-300 text-teal-800 hover:bg-teal-100"
+                        onClick={handleIniciarOA}>
+                        <Tag className="h-3.5 w-3.5" /> Ordem de Atendimento
                       </Button>
                     </div>
                   </div>
@@ -1383,16 +1468,22 @@ export default function Pedidos() {
                   Upgrade do contrato Nº {contratoAtivo.numero_registro} ({contratoAtivo.numero_exibicao})
                 </div>
               )}
+              {!loadingContrato && contratoAtivo && form.tipo_pedido === "OA" && (
+                <div className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs text-teal-800">
+                  <Tag className="h-3 w-3 inline mr-1" />
+                  Ordem de Atendimento vinculada ao contrato Nº {contratoAtivo.numero_registro} ({contratoAtivo.numero_exibicao})
+                </div>
+              )}
             </div>
 
             {/* ── Plano ── */}
-            {form.tipo_pedido !== "Aditivo" && (
+            {form.tipo_pedido !== "Aditivo" && form.tipo_pedido !== "OA" && (
               <div className="space-y-1.5">
                 <Label>Plano *</Label>
                 {contratoAtivo && form.tipo_pedido === "Novo" ? (
                   // Bloqueado pois tem contrato ativo e ainda não escolheu a ação
                   <div className="rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground cursor-not-allowed">
-                    Selecione uma ação acima (Upgrade ou Aditivo)
+                    Selecione uma ação acima (Upgrade, Aditivo ou OA)
                   </div>
                 ) : (
                   <Select value={form.plano_id} onValueChange={handlePlanoChange} disabled={form.tipo_pedido === "Upgrade" && !!form.plano_id}>
@@ -1410,8 +1501,83 @@ export default function Pedidos() {
                 <Input readOnly value={planos.find(p => p.id === form.plano_id)?.nome || "—"} className="bg-muted cursor-not-allowed" />
               </div>
             )}
+            {form.tipo_pedido === "OA" && form.plano_id && (
+              <div className="space-y-1.5">
+                <Label>Plano de referência</Label>
+                <Input readOnly value={planos.find(p => p.id === form.plano_id)?.nome || "—"} className="bg-muted cursor-not-allowed" />
+              </div>
+            )}
 
-            {/* ── Filial e Vendedor ── */}
+            {/* ── Serviços (para OA) ── */}
+            {form.tipo_pedido === "OA" && (
+              <div className="space-y-3">
+                <Label>Serviços *</Label>
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1 space-y-1">
+                    <Label className="text-xs text-muted-foreground">Serviço</Label>
+                    <Select value={servicoBuscaId} onValueChange={setServicoBuscaId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o serviço..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {servicosCatalogo.length === 0
+                          ? <SelectItem value="_none" disabled>Nenhum serviço cadastrado</SelectItem>
+                          : servicosCatalogo.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.nome} — {fmtBRL(s.valor)}/{s.unidade_medida}
+                            </SelectItem>
+                          ))
+                        }
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-24 space-y-1">
+                    <Label className="text-xs text-muted-foreground">Qtd</Label>
+                    <Input
+                      type="number" min="1" step="1"
+                      value={servicoBuscaQtd}
+                      onChange={(e) => setServicoBuscaQtd(e.target.value)}
+                    />
+                  </div>
+                  <Button type="button" variant="outline" onClick={handleAdicionarServico} className="gap-1.5">
+                    <Plus className="h-4 w-4" /> Adicionar
+                  </Button>
+                </div>
+
+                {form.servicos_pedido.length > 0 && (
+                  <div className="rounded-lg border border-border divide-y divide-border">
+                    {form.servicos_pedido.map((s) => (
+                      <div key={s.servico_id} className="flex items-center gap-3 px-4 py-2.5">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{s.nome}</p>
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {fmtBRL(s.valor_unitario)}/{s.unidade_medida}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Qtd: <strong>{s.quantidade}</strong></span>
+                          <div className="text-right text-xs font-mono text-foreground">
+                            {fmtBRL(s.valor_unitario * s.quantidade)}
+                          </div>
+                          <Button
+                            type="button" variant="ghost" size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => handleRemoverServico(s.servico_id)}
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="px-4 py-2 bg-muted/50 text-sm font-semibold flex justify-between">
+                      <span>Total Serviços</span>
+                      <span className="font-mono">{fmtBRL(totalServicosOA)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Filial *</Label>
@@ -1451,7 +1617,7 @@ export default function Pedidos() {
             </div>
 
             {/* ── Módulos Adicionais ── */}
-            {form.plano_id && (
+            {form.plano_id && form.tipo_pedido !== "OA" && (
               <div className="space-y-3">
                 <Label>Módulos Adicionais</Label>
 
@@ -1534,7 +1700,7 @@ export default function Pedidos() {
             )}
 
             {/* ── Precificação ── */}
-            {form.plano_id && (
+            {(form.plano_id || (form.tipo_pedido === "OA" && form.servicos_pedido.length > 0)) && (
               <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-4">
                 {/* Header com toggle de desconto */}
                 <div className="flex items-center justify-between">
