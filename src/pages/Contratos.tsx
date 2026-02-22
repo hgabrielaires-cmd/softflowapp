@@ -322,7 +322,11 @@ export default function Contratos() {
     setLinkedMessageTemplate(null);
     if (contrato.cliente_id) loadContatosCliente(contrato.cliente_id);
     // Load linked message template via document_template based on contract type
-    const tipoTemplate = contrato.tipo === "OA" ? "ORDEM_ATENDIMENTO" : "CONTRATO_BASE";
+    const tipoTemplate = contrato.tipo === "OA" ? "ORDEM_ATENDIMENTO"
+      : contrato.tipo === "Aditivo"
+        ? (contrato.pedidos?.tipo_pedido === "Upgrade" ? "ADITIVO_UPGRADE" : "ADITIVO_MODULO")
+        : contrato.tipo === "Cancelamento" ? "CANCELAMENTO"
+        : "CONTRATO_BASE";
     try {
       const { data: docTemplate } = await supabase
         .from("document_templates")
@@ -449,9 +453,9 @@ export default function Contratos() {
 
       try {
         // Carregar linked message template
-        const docTemplateType = contrato.tipo === "OA" ? "OA"
+        const docTemplateType = contrato.tipo === "OA" ? "ORDEM_ATENDIMENTO"
           : contrato.tipo === "Aditivo"
-            ? (contrato.pedidos?.tipo_pedido === "Módulo Adicional" ? "ADITIVO_MODULO" : "ADITIVO_UPGRADE")
+            ? (contrato.pedidos?.tipo_pedido === "Upgrade" ? "ADITIVO_UPGRADE" : "ADITIVO_MODULO")
             : contrato.tipo === "Cancelamento" ? "CANCELAMENTO"
             : "CONTRATO_BASE";
         const { data: docTemplate } = await supabase

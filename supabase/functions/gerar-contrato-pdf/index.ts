@@ -152,10 +152,10 @@ Deno.serve(async (req) => {
     } else if (contrato.tipo === "Aditivo") {
       // Diferencia pelo tipo_pedido do pedido vinculado
       const tipoPedido = pedido?.tipo_pedido || "";
-      if (tipoPedido === "Módulo Adicional") {
-        tipoTemplate = "ADITIVO_MODULO";
-      } else {
+      if (tipoPedido === "Upgrade") {
         tipoTemplate = "ADITIVO_UPGRADE";
+      } else {
+        tipoTemplate = "ADITIVO_MODULO";
       }
     } else if (contrato.tipo === "Cancelamento") {
       tipoTemplate = "CANCELAMENTO";
