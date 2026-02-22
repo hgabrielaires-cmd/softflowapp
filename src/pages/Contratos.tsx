@@ -474,7 +474,7 @@ export default function Contratos() {
         if (msgTemplate) setLinkedMessageTemplate(msgTemplate);
 
         const signUrl = zData.signers?.[0]?.sign_url || "";
-        const mensagem = gerarTermoAceite(updatedContrato, signUrl);
+        const mensagem = gerarTermoAceite(updatedContrato, signUrl, msgTemplate || undefined);
 
         // Buscar config WhatsApp
         const { data: config } = await supabase
@@ -795,7 +795,7 @@ export default function Contratos() {
   }
 
   // ── Gerador de Termo de Aceite ──────────────────────────────────────────────
-  function gerarTermoAceite(contrato: Contrato, linkAssinatura?: string): string {
+  function gerarTermoAceite(contrato: Contrato, linkAssinatura?: string, templateOverride?: { conteudo: string }): string {
     const pedido = contrato.pedidos;
     const plano = contrato.planos;
     const nomeUsuario = profile?.full_name || "{nome_usuario}";
@@ -829,7 +829,8 @@ export default function Contratos() {
     const nomeDecisor = decisor?.nome || "{nome_decisor}";
 
     // Se há template vinculado, usa ele com substituição de variáveis
-    if (linkedMessageTemplate) {
+    const effectiveTemplate = templateOverride || linkedMessageTemplate;
+    if (effectiveTemplate) {
       const formasPagamento = parcelasCartao || pixDesconto > 0
         ? `Formas disponíveis:${parcelasCartao ? `\n- Até ${parcelasCartao}x no cartão sem juros` : ""}${pixDesconto > 0 ? `\n- PIX ${pixDesconto}% desconto` : ""}`
         : "";
@@ -837,7 +838,7 @@ export default function Contratos() {
         ? `🔘 *ADICIONAIS*\n\n${adicionaisTexto}\n\nTotal adicionais: ${fmtBRL(totalAdicionais)}`
         : "";
 
-      return linkedMessageTemplate.conteudo
+      return effectiveTemplate.conteudo
         .replace(/\{contato\.nome\}/g, nomeDecisor)
         .replace(/\{cliente\.nome_fantasia\}/g, nomeFantasia)
         .replace(/\{cliente\.razao_social\}/g, razaoSocial)
