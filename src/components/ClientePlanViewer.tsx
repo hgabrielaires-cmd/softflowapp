@@ -34,12 +34,20 @@ interface ModuloAdicional {
   valor_mensalidade_modulo: number;
 }
 
+interface AditivoValores {
+  numero_exibicao: string;
+  valor_implantacao_final: number;
+  valor_mensalidade_final: number;
+  modulosAdicionais: ModuloAdicional[];
+}
+
 interface EspelhoData {
   plano: PlanoInfo | null;
   pedidoValores: PedidoValores | null;
   modulosPlano: ModuloInfo[];
   modulosAdicionais: ModuloAdicional[];
   contratoNumero: string;
+  aditivos: AditivoValores[];
 }
 
 function fmtBRL(v: number) {
@@ -73,7 +81,7 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
 
     const contrato = contratos?.[0];
     if (!contrato || !contrato.plano_id) {
-      setData({ plano: null, pedidoValores: null, modulosPlano: [], modulosAdicionais: [], contratoNumero: "" });
+      setData({ plano: null, pedidoValores: null, modulosPlano: [], modulosAdicionais: [], contratoNumero: "", aditivos: [] });
       setLoading(false);
       return;
     }
@@ -112,25 +120,34 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
     } : null;
 
     // Aditivos
-    const { data: aditivos } = await supabase
+    const { data: aditivosContratos } = await supabase
       .from("contratos")
-      .select("pedido_id")
+      .select("pedido_id, numero_exibicao")
       .eq("cliente_id", clienteId)
       .eq("status", "Ativo")
       .eq("tipo", "Aditivo")
       .order("created_at");
 
     let todosAdicionais = [...modulosAdicionais];
-    if (aditivos && aditivos.length > 0) {
-      const pedidoIds = aditivos.map(a => a.pedido_id).filter(Boolean) as string[];
+    const aditivosInfo: AditivoValores[] = [];
+
+    if (aditivosContratos && aditivosContratos.length > 0) {
+      const pedidoIds = aditivosContratos.map(a => a.pedido_id).filter(Boolean) as string[];
       if (pedidoIds.length > 0) {
         const { data: pedidosAditivos } = await supabase
           .from("pedidos")
-          .select("modulos_adicionais")
+          .select("id, modulos_adicionais, valor_implantacao_final, valor_mensalidade_final")
           .in("id", pedidoIds);
         (pedidosAditivos || []).forEach((p: any) => {
           const mods = (p.modulos_adicionais as ModuloAdicional[]) || [];
           todosAdicionais = [...todosAdicionais, ...mods];
+          const adContr = aditivosContratos.find(a => a.pedido_id === p.id);
+          aditivosInfo.push({
+            numero_exibicao: adContr?.numero_exibicao || "",
+            valor_implantacao_final: p.valor_implantacao_final || 0,
+            valor_mensalidade_final: p.valor_mensalidade_final || 0,
+            modulosAdicionais: mods,
+          });
         });
       }
     }
@@ -141,6 +158,7 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
       modulosPlano,
       modulosAdicionais: todosAdicionais,
       contratoNumero: contrato.numero_exibicao || "",
+      aditivos: aditivosInfo,
     });
     setLoading(false);
   }
@@ -152,6 +170,12 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
 
   const hasDescontoImpl = (data?.pedidoValores?.desconto_implantacao_valor ?? 0) > 0;
   const hasDescontoMens = (data?.pedidoValores?.desconto_mensalidade_valor ?? 0) > 0;
+
+  // Valores consolidados (base + aditivos)
+  const totalMensalidadeAditivos = (data?.aditivos || []).reduce((s, a) => s + a.valor_mensalidade_final, 0);
+  const totalImplantacaoAditivos = (data?.aditivos || []).reduce((s, a) => s + a.valor_implantacao_final, 0);
+  const mensalidadeConsolidada = (data?.pedidoValores?.valor_mensalidade_final ?? 0) + totalMensalidadeAditivos;
+  const implantacaoConsolidada = (data?.pedidoValores?.valor_implantacao_final ?? 0) + totalImplantacaoAditivos;
 
   return (
     <>
@@ -194,12 +218,12 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
                 </div>
               </div>
 
-              {/* Valores do Pedido */}
+              {/* Valores do Pedido Base */}
               {data.pedidoValores && (
                 <div className="rounded-lg border border-border p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold">Valores do Pedido</span>
+                    <span className="text-sm font-semibold">Valores do Pedido Base</span>
                   </div>
                   <div className="grid grid-cols-2 gap-4 mt-2">
                     {/* Implantação */}
@@ -243,6 +267,47 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
                           {fmtBRL(data.pedidoValores.valor_mensalidade_final)}
                         </p>
                       )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Valores dos Aditivos */}
+              {data.aditivos.length > 0 && (
+                <div className="rounded-lg border border-border p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold">Aditivos</span>
+                  </div>
+                  <div className="divide-y divide-border">
+                    {data.aditivos.map((ad, i) => (
+                      <div key={i} className="py-2 first:pt-0 last:pb-0">
+                        <p className="text-xs font-medium text-muted-foreground">{ad.numero_exibicao}</p>
+                        <div className="flex gap-4 mt-1">
+                          <span className="text-xs font-mono">Impl: {fmtBRL(ad.valor_implantacao_final)}</span>
+                          <span className="text-xs font-mono">Mens: {fmtBRL(ad.valor_mensalidade_final)}/mês</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Valores Consolidados */}
+              {data.pedidoValores && data.aditivos.length > 0 && (
+                <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold">Valores Consolidados (Base + Aditivos)</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mt-2">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Implantação Total</p>
+                      <p className="text-sm font-mono font-bold">{fmtBRL(implantacaoConsolidada)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Mensalidade Total</p>
+                      <p className="text-sm font-mono font-bold">{fmtBRL(mensalidadeConsolidada)}/mês</p>
                     </div>
                   </div>
                 </div>
