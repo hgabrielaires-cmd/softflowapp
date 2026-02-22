@@ -27,6 +27,7 @@ import NotFound from "./pages/NotFound";
 import TrocarSenha from "./pages/TrocarSenha";
 import MesasAtendimento from "./pages/MesasAtendimento";
 import JornadaImplantacao from "./pages/JornadaImplantacao";
+import PainelAtendimento from "./pages/PainelAtendimento";
 
 const queryClient = new QueryClient();
 
@@ -234,7 +235,7 @@ const App = () => (
               path="/fila-agendamento"
               element={
                 <ProtectedRoute>
-                  <ComingSoon module="Helpdesk" title="Fila de Agendamento" description="Em desenvolvimento. Gestão da fila de agendamento de atendimentos." />
+                  <PainelAtendimento />
                 </ProtectedRoute>
               }
             />
