@@ -1762,7 +1762,7 @@ export default function Pedidos() {
                               ? modulosJaContratados.map(m => m.modulo_id)
                               : [];
                             const modulosFiltrados = modulosDisponiveis.filter(
-                              m => !idsJaContratados.includes(m.id) && !m.incluso_no_plano
+                              m => !idsJaContratados.includes(m.id)
                             );
                             return modulosFiltrados.length === 0
                               ? <SelectItem value="_none" disabled>
