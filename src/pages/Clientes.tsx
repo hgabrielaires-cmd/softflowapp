@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -217,22 +217,17 @@ export default function Clientes() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-  }, []);
-
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    if (!q) return clientes;
-    return clientes.filter((c) =>
-      c.nome_fantasia.toLowerCase().includes(q) ||
-      (c.razao_social || "").toLowerCase().includes(q) ||
-      (c.cnpj_cpf || "").replace(/\D/g, "").includes(q.replace(/\D/g, "")) ||
-      (c.cnpj_cpf || "").includes(q) ||
-      (c.contato_nome || "").toLowerCase().includes(q) ||
-      (c.telefone || "").includes(q)
-    );
-  }, [search, clientes]);
+  const searchTerm = search.toLowerCase().trim();
+  const filtered = searchTerm
+    ? clientes.filter((c) =>
+        c.nome_fantasia.toLowerCase().includes(searchTerm) ||
+        (c.razao_social || "").toLowerCase().includes(searchTerm) ||
+        (c.cnpj_cpf || "").replace(/\D/g, "").includes(searchTerm.replace(/\D/g, "")) ||
+        (c.cnpj_cpf || "").includes(searchTerm) ||
+        (c.contato_nome || "").toLowerCase().includes(searchTerm) ||
+        (c.telefone || "").includes(searchTerm)
+      )
+    : clientes;
 
   function openCreate() {
     setEditing(null);
@@ -564,7 +559,7 @@ export default function Clientes() {
             id="search-clientes"
             placeholder="Buscar por nome fantasia, razão social, CNPJ ou contato..."
             value={search}
-            onChange={handleSearchChange}
+            onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
             autoComplete="off"
           />
