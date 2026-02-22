@@ -90,7 +90,7 @@ export default function ModelosContrato() {
   const [form, setForm] = useState({
     nome: "",
     filial_id: "todas",
-    tipo: "CONTRATO_BASE" as DocumentTemplate["tipo"],
+    tipo: "CONTRATO_BASE" as string,
     ativo: true,
     conteudo_html: "",
     logo_url: "" as string | null,
