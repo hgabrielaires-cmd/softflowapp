@@ -45,6 +45,15 @@ interface PedidoFila {
   valor_implantacao: number;
   valor_mensalidade: number;
   valor_total: number;
+  valor_implantacao_original: number;
+  valor_mensalidade_original: number;
+  valor_implantacao_final: number;
+  valor_mensalidade_final: number;
+  desconto_implantacao_tipo: string;
+  desconto_implantacao_valor: number;
+  desconto_mensalidade_tipo: string;
+  desconto_mensalidade_valor: number;
+  motivo_desconto: string | null;
   comissao_percentual: number;
   comissao_valor: number;
   comissao_implantacao_percentual: number | null;
@@ -80,6 +89,7 @@ export default function Financeiro() {
   const [openReprovar, setOpenReprovar] = useState(false);
   const [motivoReprova, setMotivoReprova] = useState("");
   const [processando, setProcessando] = useState(false);
+  const [aprovadorDesconto, setAprovadorDesconto] = useState<string | null>(null);
 
   const canAccess = isAdmin || isFinanceiro;
 
@@ -260,7 +270,25 @@ export default function Financeiro() {
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="ghost" size="icon" className="h-7 w-7" title="Ver detalhes"
-                          onClick={() => { setSelected(pedido); setOpenDetail(true); }}>
+                          onClick={async () => {
+                            setSelected(pedido);
+                            setOpenDetail(true);
+                            setAprovadorDesconto(null);
+                            const { data: sol } = await supabase
+                              .from("solicitacoes_desconto")
+                              .select("aprovado_por")
+                              .eq("pedido_id", pedido.id)
+                              .eq("status", "Aprovado")
+                              .maybeSingle();
+                            if (sol?.aprovado_por) {
+                              const { data: prof } = await supabase
+                                .from("profiles")
+                                .select("full_name")
+                                .eq("user_id", sol.aprovado_por)
+                                .maybeSingle();
+                              setAprovadorDesconto(prof?.full_name || null);
+                            }
+                          }}>
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
                         <Button variant="ghost" size="icon"
@@ -299,9 +327,65 @@ export default function Financeiro() {
                 <div><p className="text-muted-foreground text-xs">Plano</p><p className="font-semibold">{selected.planos?.nome}</p></div>
                 <div><p className="text-muted-foreground text-xs">Filial</p><p className="font-semibold">{selected.filiais?.nome}</p></div>
                 <div><p className="text-muted-foreground text-xs">Data</p><p className="font-semibold">{format(new Date(selected.created_at), "dd/MM/yyyy", { locale: ptBR })}</p></div>
-                <div><p className="text-muted-foreground text-xs">Implantação</p><p className="font-mono">{selected.valor_implantacao.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p></div>
-                <div><p className="text-muted-foreground text-xs">Mensalidade</p><p className="font-mono">{selected.valor_mensalidade.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p></div>
-                <div className="col-span-2"><p className="text-muted-foreground text-xs">Valor Total</p><p className="font-mono font-bold text-base">{selected.valor_total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p></div>
+              </div>
+
+              {/* Valores com descontos */}
+              <div className="bg-muted rounded-lg p-3 space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Valores do Pedido</p>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Implantação (original)</span>
+                    <span className="font-mono">{selected.valor_implantacao_original.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                  </div>
+                  {selected.desconto_implantacao_valor > 0 && (
+                    <div className="flex justify-between text-xs text-destructive">
+                      <span>Desconto implantação ({selected.desconto_implantacao_tipo})</span>
+                      <span className="font-mono">- {selected.desconto_implantacao_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span>Implantação final</span>
+                    <span className="font-mono">{selected.valor_implantacao_final.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                  </div>
+
+                  <div className="border-t border-border pt-1 mt-1" />
+
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Mensalidade (original)</span>
+                    <span className="font-mono">{selected.valor_mensalidade_original.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                  </div>
+                  {selected.desconto_mensalidade_valor > 0 && (
+                    <div className="flex justify-between text-xs text-destructive">
+                      <span>Desconto mensalidade ({selected.desconto_mensalidade_tipo})</span>
+                      <span className="font-mono">- {selected.desconto_mensalidade_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span>Mensalidade final</span>
+                    <span className="font-mono">{selected.valor_mensalidade_final.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                  </div>
+
+                  <div className="border-t border-border pt-1 mt-1" />
+
+                  <div className="flex justify-between text-sm font-bold">
+                    <span>Valor Total</span>
+                    <span className="font-mono">{selected.valor_total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                  </div>
+                </div>
+
+                {selected.motivo_desconto && (
+                  <div className="mt-2 pt-2 border-t border-border">
+                    <p className="text-muted-foreground text-xs">Motivo do desconto</p>
+                    <p className="text-xs">{selected.motivo_desconto}</p>
+                  </div>
+                )}
+
+                {aprovadorDesconto && (
+                  <div className="mt-2 pt-2 border-t border-border">
+                    <p className="text-muted-foreground text-xs">Desconto aprovado por</p>
+                    <p className="text-xs font-semibold">{aprovadorDesconto}</p>
+                  </div>
+                )}
               </div>
               {/* Comissões separadas */}
               <div className="bg-muted rounded-lg p-3 space-y-2">
