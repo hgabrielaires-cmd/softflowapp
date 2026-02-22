@@ -130,8 +130,7 @@ export default function Financeiro() {
     // Criar contrato - determinar tipo com base no tipo_pedido
     const tipoPedido = (pedido as any).tipo_pedido || "Novo";
     let tipoContrato = "Base";
-    if (tipoPedido === "Upgrade") tipoContrato = "Upgrade";
-    else if (tipoPedido === "Aditivo") tipoContrato = "Aditivo";
+    if (tipoPedido === "Upgrade" || tipoPedido === "Aditivo") tipoContrato = "Aditivo";
     else if (tipoPedido === "OA") tipoContrato = "OA";
 
     const { error: contratoError } = await supabase.from("contratos").insert({
