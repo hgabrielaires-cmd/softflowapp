@@ -63,6 +63,7 @@ const VARIAVEIS_DISPONIVEIS = [
   { var: "{cliente.nome_fantasia}", desc: "Nome fantasia do cliente" },
   { var: "{cliente.razao_social}", desc: "Razão social" },
   { var: "{contrato.numero}", desc: "Nº do contrato" },
+  { var: "{contrato.numero_origem}", desc: "Nº do contrato de origem (base)" },
   { var: "{plano.nome}", desc: "Nome do plano" },
   { var: "{plano.nome_anterior}", desc: "Nome do plano anterior" },
   { var: "{plano.valor_base}", desc: "Valor base do plano" },
