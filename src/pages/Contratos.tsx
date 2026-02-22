@@ -238,6 +238,27 @@ export default function Contratos() {
   const [contatosCliente, setContatosCliente] = useState<{ nome: string; telefone: string | null; decisor: boolean; ativo: boolean }[]>([]);
   const [enviandoWhatsapp, setEnviandoWhatsapp] = useState(false);
 
+  async function syncZapsignStatuses(pendentes: any[], currentMap: Record<string, ZapSignRecord>) {
+    const updatedMap = { ...currentMap };
+    for (const zRec of pendentes) {
+      try {
+        const { data } = await supabase.functions.invoke("zapsign", {
+          body: { action: "status", contrato_id: zRec.contrato_id },
+        });
+        if (data?.success && data.status !== zRec.status) {
+          updatedMap[zRec.contrato_id] = {
+            ...updatedMap[zRec.contrato_id],
+            status: data.status,
+            signers: data.signers,
+          };
+        }
+      } catch {
+        // silently skip
+      }
+    }
+    setZapsignRecords(updatedMap);
+  }
+
   async function loadData() {
     setLoading(true);
     const [{ data: contratosData, error: contratosError }, { data: filiaisData }, { data: paramsData }] = await Promise.all([
@@ -281,6 +302,14 @@ export default function Contratos() {
     const zMap: Record<string, ZapSignRecord> = {};
     (zapsignData || []).forEach((z: any) => { zMap[z.contrato_id] = z as ZapSignRecord; });
     setZapsignRecords(zMap);
+
+    // Sincronizar status dos contratos pendentes com ZapSign
+    const pendentes = (zapsignData || []).filter(
+      (z: any) => z.status === "Enviado" || z.status === "Pendente"
+    );
+    if (pendentes.length > 0) {
+      syncZapsignStatuses(pendentes, zMap);
+    }
   }
 
   useEffect(() => {
