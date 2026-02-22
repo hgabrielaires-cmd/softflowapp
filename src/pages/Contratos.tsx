@@ -173,7 +173,7 @@ export default function Contratos() {
   const [zapsignDetailContrato, setZapsignDetailContrato] = useState<Contrato | null>(null);
   const [linkedMessageTemplate, setLinkedMessageTemplate] = useState<{ conteudo: string } | null>(null);
 
-  const GERAR_MSGS = [
+  const GERAR_MSGS_CONTRATO = [
     "Ajustando os detalhes finais…",
     "Quase lá… deixando tudo redondo pra você!",
     "Montando seu contrato sob medida…",
@@ -181,14 +181,23 @@ export default function Contratos() {
     "Preparando seu Termo de Aceite 💙",
   ];
 
+  const GERAR_MSGS_OA = [
+    "Montando sua Ordem de Atendimento…",
+    "Ajustando os serviços…",
+    "Quase lá… finalizando sua OA!",
+    "Organizando tudo pra você 💙",
+    "Preparando sua OA sob medida…",
+  ];
+
   useEffect(() => {
     if (gerarStatus !== "gerando") return;
     setGerarMsgIndex(0);
+    const msgs = gerarContratoAlvo?.tipo === "OA" ? GERAR_MSGS_OA : GERAR_MSGS_CONTRATO;
     const interval = setInterval(() => {
-      setGerarMsgIndex((prev) => (prev + 1) % GERAR_MSGS.length);
+      setGerarMsgIndex((prev) => (prev + 1) % msgs.length);
     }, 2000);
     return () => clearInterval(interval);
-  }, [gerarStatus]);
+  }, [gerarStatus, gerarContratoAlvo]);
 
   // Contatos do cliente selecionado (para Termo de Aceite)
   const [contatosCliente, setContatosCliente] = useState<{ nome: string; telefone: string | null; decisor: boolean; ativo: boolean }[]>([]);
@@ -257,12 +266,13 @@ export default function Contratos() {
     setOpenDetail(true);
     setLinkedMessageTemplate(null);
     if (contrato.cliente_id) loadContatosCliente(contrato.cliente_id);
-    // Load linked message template via document_template
+    // Load linked message template via document_template based on contract type
+    const tipoTemplate = contrato.tipo === "OA" ? "ORDEM_ATENDIMENTO" : "CONTRATO_BASE";
     try {
       const { data: docTemplate } = await supabase
         .from("document_templates")
         .select("message_template_id")
-        .eq("tipo", "CONTRATO_BASE")
+        .eq("tipo", tipoTemplate)
         .eq("ativo", true)
         .not("message_template_id", "is", null)
         .limit(1)
@@ -314,7 +324,7 @@ export default function Contratos() {
     try {
       // Gerar PDF server-side via Browserless
       const { data, error } = await supabase.functions.invoke("gerar-contrato-pdf", {
-        body: { contrato_id: contrato.id, action: "generate" },
+        body: { contrato_id: contrato.id, action: "generate", tipo_documento: contrato.tipo },
       });
 
       if (error || data?.error || !data?.success) {
@@ -836,7 +846,9 @@ Estou à disposição.`;
                             ) : (
                               <FileOutput className="h-4 w-4 mr-2" />
                             )}
-                            {contrato.status_geracao === "Gerado" ? "Regerar Contrato" : "Gerar Contrato"}
+                            {contrato.tipo === "OA"
+                              ? (contrato.status_geracao === "Gerado" ? "Regerar OA" : "Gerar OA")
+                              : (contrato.status_geracao === "Gerado" ? "Regerar Contrato" : "Gerar Contrato")}
                           </DropdownMenuItem>
                           {contrato.status_geracao === "Gerado" && contrato.pdf_url && (
                             <DropdownMenuItem
@@ -845,7 +857,7 @@ Estou à disposição.`;
                               disabled={gerando}
                             >
                               <Download className="h-4 w-4 mr-2" />
-                              Baixar Contrato
+                              {contrato.tipo === "OA" ? "Baixar OA" : "Baixar Contrato"}
                             </DropdownMenuItem>
                           )}
                           {canManage && contrato.status_geracao === "Gerado" && contrato.pdf_url && (
@@ -1054,15 +1066,17 @@ Estou à disposição.`;
                 );
               })()}
 
-              {/* Termo de Aceite — apenas admin/financeiro */}
+              {/* Mensagem — Termo de Aceite / OA — apenas admin/financeiro */}
               {canManage && selected.pedidos && (() => {
                 const zRec = zapsignRecords[selected.id];
                 const linkAssinatura = zRec?.signers?.[1]?.sign_url || zRec?.signers?.[0]?.sign_url || undefined;
                 const mensagem = gerarTermoAceite(selected, linkAssinatura);
+                const isOA = selected.tipo === "OA";
+                const msgLabel = isOA ? "Mensagem — Ordem de Atendimento" : "Mensagem — Termo de Aceite";
                 return (
                   <div className="border-t border-border pt-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Mensagem — Termo de Aceite</p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{msgLabel}</p>
                       <Button
                         type="button"
                         variant="ghost"
@@ -1107,7 +1121,7 @@ Estou à disposição.`;
               {/* Ações de Contrato */}
               <div className="border-t border-border pt-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Documento do Contrato</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{selected.tipo === "OA" ? "Documento da OA" : "Documento do Contrato"}</p>
                   {getStatusGeracaoBadge(selected.status_geracao)}
                 </div>
 
@@ -1123,7 +1137,9 @@ Estou à disposição.`;
                     ) : (
                       <FileOutput className="h-4 w-4 mr-2" />
                     )}
-                    {selected.status_geracao === "Gerado" ? "Regerar Contrato" : "Gerar Contrato"}
+                    {selected.tipo === "OA"
+                      ? (selected.status_geracao === "Gerado" ? "Regerar OA" : "Gerar OA")
+                      : (selected.status_geracao === "Gerado" ? "Regerar Contrato" : "Gerar Contrato")}
                   </Button>
 
                   {selected.status_geracao === "Gerado" && selected.pdf_url && (
@@ -1138,14 +1154,14 @@ Estou à disposição.`;
                       ) : (
                         <Download className="h-4 w-4 mr-2" />
                       )}
-                      Baixar Contrato
+                      {selected.tipo === "OA" ? "Baixar OA" : "Baixar Contrato"}
                     </Button>
                   )}
                 </div>
 
                 {selected.status_geracao === "Gerado" && (
                   <p className="text-xs text-muted-foreground">
-                    💡 Contrato gerado em PDF e pronto para download.
+                    💡 {selected.tipo === "OA" ? "OA gerada" : "Contrato gerado"} em PDF e pronto para download.
                   </p>
                 )}
               </div>
@@ -1207,7 +1223,7 @@ Estou à disposição.`;
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
               <FileOutput className="h-5 w-5 text-primary" />
-              Gerar Contrato
+              {gerarContratoAlvo?.tipo === "OA" ? "Gerar OA" : "Gerar Contrato"}
             </DialogTitle>
             <DialogDescription id="gerar-desc" className="sr-only">
               Status da geração do contrato
@@ -1226,9 +1242,11 @@ Estou à disposição.`;
                   </div>
                 </div>
                 <div className="text-center space-y-1">
-                  <p className="font-semibold text-foreground">Gerando contrato…</p>
+                  <p className="font-semibold text-foreground">
+                    {gerarContratoAlvo?.tipo === "OA" ? "Gerando OA…" : "Gerando contrato…"}
+                  </p>
                   <p className="text-xs text-muted-foreground transition-all duration-500">
-                    {GERAR_MSGS[gerarMsgIndex]}
+                    {(gerarContratoAlvo?.tipo === "OA" ? GERAR_MSGS_OA : GERAR_MSGS_CONTRATO)[gerarMsgIndex]}
                   </p>
                 </div>
               </div>
@@ -1244,7 +1262,9 @@ Estou à disposição.`;
                   </div>
                 </div>
                 <div className="text-center space-y-1">
-                  <p className="font-semibold text-foreground">Contrato gerado!</p>
+                  <p className="font-semibold text-foreground">
+                    {gerarContratoAlvo?.tipo === "OA" ? "OA gerada!" : "Contrato gerado!"}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {gerarContratoAlvo?.numero_exibicao || `#${gerarContratoAlvo?.numero_registro}`} · {gerarContratoAlvo?.clientes?.nome_fantasia}
                   </p>
@@ -1255,7 +1275,8 @@ Estou à disposição.`;
                     className="w-full gap-2"
                     onClick={async () => {
                       const url = gerarSignedUrl || null;
-                      const fileName = `contrato-${gerarContratoAlvo?.numero_exibicao || gerarContratoAlvo?.numero_registro}.pdf`;
+                      const prefix = gerarContratoAlvo?.tipo === "OA" ? "oa" : "contrato";
+                      const fileName = `${prefix}-${gerarContratoAlvo?.numero_exibicao || gerarContratoAlvo?.numero_registro}.pdf`;
                       if (url) {
                         const response = await fetch(url);
                         const blob = await response.blob();
@@ -1312,7 +1333,9 @@ Estou à disposição.`;
                 <div className="text-center space-y-1">
                   <p className="font-semibold text-foreground">Falha na geração</p>
                   <p className="text-xs text-muted-foreground">
-                    Verifique se há um modelo de contrato ativo configurado e tente novamente.
+                    {gerarContratoAlvo?.tipo === "OA"
+                      ? "Verifique se há um modelo de Ordem de Atendimento ativo configurado e tente novamente."
+                      : "Verifique se há um modelo de contrato ativo configurado e tente novamente."}
                   </p>
                 </div>
                 <div className="w-full space-y-2">
