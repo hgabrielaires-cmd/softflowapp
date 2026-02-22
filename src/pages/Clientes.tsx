@@ -1092,7 +1092,7 @@ export default function Clientes() {
               Histórico Contratual — {clienteHistorico?.nome_fantasia}
             </DialogTitle>
             {clienteHistorico && (
-              <ClientePlanViewer clienteId={clienteHistorico.id} clienteNome={clienteHistorico.nome_fantasia} variant="text" className="ml-auto" />
+              <ClientePlanViewer clienteId={clienteHistorico.id} clienteNome={clienteHistorico.nome_fantasia} variant="icon" className="ml-auto shrink-0" />
             )}
           </DialogHeader>
 
