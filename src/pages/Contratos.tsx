@@ -370,8 +370,14 @@ export default function Contratos() {
 
   // ── Gerar Contrato + Auto ZapSign + WhatsApp ─────────────────────────────────
   async function handleGerarContrato(contrato: Contrato) {
-    // Carregar contatos do cliente para WhatsApp (em paralelo)
-    loadContatosCliente(contrato.cliente_id);
+    // Carregar contatos do cliente para WhatsApp (buscar direto para usar localmente)
+    const { data: contatosFetched } = await supabase
+      .from("cliente_contatos")
+      .select("nome, telefone, decisor, ativo, email")
+      .eq("cliente_id", contrato.cliente_id)
+      .eq("ativo", true);
+    const contatosLocais = (contatosFetched || []) as { nome: string; telefone: string | null; decisor: boolean; ativo: boolean; email: string | null }[];
+    setContatosCliente(contatosLocais);
 
     // Abrir popup unificada com step "gerando"
     setZapsignPopupContrato(contrato);
@@ -480,7 +486,7 @@ export default function Contratos() {
           return;
         }
 
-        const decisorContato = contatosCliente.find(c => c.decisor) || contatosCliente[0];
+        const decisorContato = contatosLocais.find(c => c.decisor) || contatosLocais[0];
         if (!decisorContato?.telefone) {
           setZapsignPopupStep("done");
           setEnviandoZapsign(false);
