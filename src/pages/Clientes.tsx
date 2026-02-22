@@ -528,6 +528,10 @@ export default function Clientes() {
     return format(new Date(d), "dd/MM/yyyy", { locale: ptBR });
   }
 
+  function fmtDateTime(d: string) {
+    return format(new Date(d), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  }
+
   const TIPO_PEDIDO_COLORS: Record<string, string> = {
     Novo: "bg-blue-100 text-blue-700",
     Upgrade: "bg-green-100 text-green-700",
@@ -1134,7 +1138,7 @@ export default function Clientes() {
                       <div key={ct.id} className="px-4 py-3 flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium">{ct.numero_exibicao}</p>
-                          <p className="text-xs text-muted-foreground">{fmtDate(ct.created_at)}</p>
+                          <p className="text-xs text-muted-foreground">{fmtDateTime(ct.created_at)}</p>
                         </div>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ct.status === "Ativo" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
                           {ct.status}
@@ -1155,7 +1159,7 @@ export default function Clientes() {
                       <div key={ct.id} className="px-4 py-3 flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium">{ct.numero_exibicao}</p>
-                          <p className="text-xs text-muted-foreground">{fmtDate(ct.created_at)}</p>
+                          <p className="text-xs text-muted-foreground">{fmtDateTime(ct.created_at)}</p>
                         </div>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ct.status === "Ativo" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
                           {ct.status}
@@ -1177,7 +1181,7 @@ export default function Clientes() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium">{p.planos?.nome || "—"}</p>
-                            <p className="text-xs text-muted-foreground">{fmtDate(p.created_at)}</p>
+                            <p className="text-xs text-muted-foreground">{fmtDateTime(p.created_at)}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-xs font-mono">{fmtBRL(p.valor_total)}</p>
@@ -1203,7 +1207,7 @@ export default function Clientes() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium">{p.planos?.nome || "—"}</p>
-                            <p className="text-xs text-muted-foreground">{fmtDate(p.created_at)}</p>
+                            <p className="text-xs text-muted-foreground">{fmtDateTime(p.created_at)}</p>
                           </div>
                           <div className="text-right space-y-1">
                             <p className="text-xs font-mono">{fmtBRL(p.valor_total)}</p>
