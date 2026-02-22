@@ -68,6 +68,7 @@ export default function Usuarios() {
   const [inviteFilialId, setInviteFilialId] = useState("");
   const [inviteComissaoImp, setInviteComissaoImp] = useState("5");
   const [inviteComissaoMens, setInviteComissaoMens] = useState("5");
+  const [inviteComissaoServ, setInviteComissaoServ] = useState("5");
   const [inviteDescontoLimiteImp, setInviteDescontoLimiteImp] = useState("0");
   const [inviteDescontoLimiteMens, setInviteDescontoLimiteMens] = useState("0");
   const [inviteGestorDesconto, setInviteGestorDesconto] = useState(false);
@@ -84,6 +85,7 @@ export default function Usuarios() {
   const [editFilialId, setEditFilialId] = useState("");
   const [editComissaoImp, setEditComissaoImp] = useState("5");
   const [editComissaoMens, setEditComissaoMens] = useState("5");
+  const [editComissaoServ, setEditComissaoServ] = useState("5");
   const [editDescontoLimiteImp, setEditDescontoLimiteImp] = useState("0");
   const [editDescontoLimiteMens, setEditDescontoLimiteMens] = useState("0");
   const [editGestorDesconto, setEditGestorDesconto] = useState(false);
@@ -200,6 +202,7 @@ export default function Usuarios() {
         comissao_percentual: parseFloat(inviteComissaoImp) || 5,
         comissao_implantacao_percentual: parseFloat(inviteComissaoImp) || 5,
         comissao_mensalidade_percentual: parseFloat(inviteComissaoMens) || 5,
+        comissao_servico_percentual: parseFloat(inviteComissaoServ) || 5,
         desconto_limite_implantacao: parseFloat(inviteDescontoLimiteImp) || 0,
         desconto_limite_mensalidade: parseFloat(inviteDescontoLimiteMens) || 0,
         gestor_desconto: inviteGestorDesconto,
@@ -223,7 +226,7 @@ export default function Usuarios() {
 
       toast.success(`Usuário ${inviteName} criado com sucesso!`);
       setOpenInvite(false);
-      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone("");
+      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteComissaoServ("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone("");
       loadUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
@@ -239,6 +242,7 @@ export default function Usuarios() {
     setEditFilialId(user.filial_id || "todas");
     setEditComissaoImp(((user as any).comissao_implantacao_percentual ?? user.comissao_percentual ?? 5).toString());
     setEditComissaoMens(((user as any).comissao_mensalidade_percentual ?? user.comissao_percentual ?? 5).toString());
+    setEditComissaoServ(((user as any).comissao_servico_percentual ?? 5).toString());
     setEditDescontoLimiteImp(((user as any).desconto_limite_implantacao ?? 0).toString());
     setEditDescontoLimiteMens(((user as any).desconto_limite_mensalidade ?? 0).toString());
     setEditGestorDesconto((user as any).gestor_desconto ?? false);
@@ -260,6 +264,7 @@ export default function Usuarios() {
         comissao_percentual: parseFloat(editComissaoImp) || 0,
         comissao_implantacao_percentual: parseFloat(editComissaoImp) || 0,
         comissao_mensalidade_percentual: parseFloat(editComissaoMens) || 0,
+        comissao_servico_percentual: parseFloat(editComissaoServ) || 0,
         desconto_limite_implantacao: parseFloat(editDescontoLimiteImp) || 0,
         desconto_limite_mensalidade: parseFloat(editDescontoLimiteMens) || 0,
         gestor_desconto: editGestorDesconto,
@@ -450,7 +455,7 @@ export default function Usuarios() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {(user as any).comissao_implantacao_percentual != null
-                        ? `Imp: ${(user as any).comissao_implantacao_percentual}% / Mens: ${(user as any).comissao_mensalidade_percentual ?? user.comissao_percentual ?? 0}%`
+                        ? `Imp: ${(user as any).comissao_implantacao_percentual}% / Mens: ${(user as any).comissao_mensalidade_percentual ?? user.comissao_percentual ?? 0}% / Serv: ${(user as any).comissao_servico_percentual ?? 5}%`
                         : user.comissao_percentual != null ? `${user.comissao_percentual}%` : "—"
                       }
                     </TableCell>
@@ -601,7 +606,7 @@ export default function Usuarios() {
                 </div>
               </div>
               {inviteRecebeComissao && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1.5">
                     <Label>Comissão implantação (%)</Label>
                     <Input
@@ -616,6 +621,14 @@ export default function Usuarios() {
                       type="number" min="0" max="100" step="0.01" placeholder="5"
                       value={inviteComissaoMens}
                       onChange={(e) => setInviteComissaoMens(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Comissão serviço (%)</Label>
+                    <Input
+                      type="number" min="0" max="100" step="0.01" placeholder="5"
+                      value={inviteComissaoServ}
+                      onChange={(e) => setInviteComissaoServ(e.target.value)}
                     />
                   </div>
                 </div>
@@ -748,7 +761,7 @@ export default function Usuarios() {
                       </div>
                     </div>
                     {editRecebeComissao && (
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-3 gap-3">
                         <div className="space-y-1.5">
                           <Label>Comissão implantação (%)</Label>
                           <Input
@@ -763,6 +776,14 @@ export default function Usuarios() {
                             type="number" min="0" max="100" step="0.01"
                             value={editComissaoMens}
                             onChange={(e) => setEditComissaoMens(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>Comissão serviço (%)</Label>
+                          <Input
+                            type="number" min="0" max="100" step="0.01"
+                            value={editComissaoServ}
+                            onChange={(e) => setEditComissaoServ(e.target.value)}
                           />
                         </div>
                       </div>

@@ -251,6 +251,7 @@ export default function Financeiro() {
                       <div className="space-y-0.5">
                         <p className="text-xs font-mono">{(pedido.comissao_implantacao_percentual ?? pedido.comissao_percentual)}% imp → <span className="font-semibold">{(pedido.comissao_implantacao_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></p>
                         <p className="text-xs font-mono">{(pedido.comissao_mensalidade_percentual ?? pedido.comissao_percentual)}% mens → <span className="font-semibold">{(pedido.comissao_mensalidade_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></p>
+                        <p className="text-xs font-mono">{((pedido as any).comissao_servico_percentual ?? 0)}% serv → <span className="font-semibold">{((pedido as any).comissao_servico_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></p>
                         <p className="text-xs font-mono border-t border-border pt-0.5">Total: <span className="font-bold text-foreground">{pedido.comissao_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></p>
                       </div>
                     </TableCell>
@@ -314,6 +315,10 @@ export default function Financeiro() {
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Mensalidade</span>
                     <span className="font-mono">{(selected.comissao_mensalidade_percentual ?? selected.comissao_percentual)}% → {(selected.comissao_mensalidade_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Serviço</span>
+                    <span className="font-mono">{((selected as any).comissao_servico_percentual ?? 0)}% → {((selected as any).comissao_servico_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
                   </div>
                   <div className="flex justify-between text-xs font-semibold border-t border-border pt-1">
                     <span>Total comissão</span>
