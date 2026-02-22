@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
           observacoes, motivo_desconto, pagamento_mensalidade_observacao, pagamento_mensalidade_forma,
           pagamento_mensalidade_parcelas, pagamento_implantacao_forma,
           pagamento_implantacao_parcelas, pagamento_implantacao_observacao,
-          modulos_adicionais
+          modulos_adicionais, tipo_pedido
         )
       `)
       .eq("id", contrato_id)
