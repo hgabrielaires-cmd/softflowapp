@@ -342,10 +342,10 @@ _Softflow — Tecnologia que conecta._`;
 
       const { data: result, error } = await supabase.functions.invoke("evolution-api", {
         body: {
-          action: "sendText",
-          serverUrl: config.server_url,
-          apiKey: config.token,
-          instanceName: "Softflow_WhatsApp",
+          action: "send_text",
+          server_url: config.server_url,
+          api_key: config.token,
+          instance_name: "Softflow_WhatsApp",
           number: numFinal,
           text: mensagem,
         },
