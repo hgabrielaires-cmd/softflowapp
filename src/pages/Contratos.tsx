@@ -842,6 +842,12 @@ export default function Contratos() {
         ? `🔘 *ADICIONAIS*\n\n${adicionaisTexto}\n\nTotal adicionais: ${fmtBRL(totalAdicionais)}`
         : "";
 
+      // Variáveis específicas para aditivo de módulos adicionais
+      const adicionaisNovosTexto = adicionais.length > 0
+        ? adicionais.map(m => `• ${m.nome} (${m.quantidade}x) - ${fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}/mês`).join("\n")
+        : "";
+      const totalAdicionaisNovos = fmtBRL(totalAdicionais);
+
       return effectiveTemplate.conteudo
         .replace(/\{contato\.nome\}/g, nomeDecisor)
         .replace(/\{cliente\.nome_fantasia\}/g, nomeFantasia)
@@ -851,6 +857,8 @@ export default function Contratos() {
         .replace(/\{plano\.modulos\}/g, modulosTexto)
         .replace(/\{plano\.valor_base\}/g, valorMensBase)
         .replace(/\{modulos\.adicionais\}/g, adicionaisBlock)
+        .replace(/\{modulos\.adicionais_novos\}/g, adicionaisNovosTexto)
+        .replace(/\{valores\.total_adicionais_novos\}/g, totalAdicionaisNovos)
         .replace(/\{valores\.implantacao\}/g, fmtBRL(impFinal))
         .replace(/\{valores\.mensalidade\}/g, fmtBRL(mensFinal))
         .replace(/\{regras\.mensalidade\}/g, regrasMens)
