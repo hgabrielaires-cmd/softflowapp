@@ -42,9 +42,10 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-const TIPOS: { value: DocumentTemplate["tipo"]; label: string }[] = [
+const TIPOS: { value: string; label: string }[] = [
   { value: "CONTRATO_BASE", label: "Contrato Base" },
-  { value: "ADITIVO", label: "Termo Aditivo" },
+  { value: "ADITIVO_UPGRADE", label: "Aditivo - Upgrade" },
+  { value: "ADITIVO_MODULO", label: "Aditivo - Módulo Adicional" },
   { value: "CANCELAMENTO", label: "Cancelamento" },
 ];
 
@@ -103,7 +104,7 @@ export default function ModelosContrato() {
       supabase
         .from("document_templates")
         .select("*, filiais(nome)")
-        .in("tipo", ["CONTRATO_BASE", "ADITIVO", "CANCELAMENTO"])
+        .in("tipo", ["CONTRATO_BASE", "ADITIVO_UPGRADE", "ADITIVO_MODULO", "CANCELAMENTO"])
         .order("created_at", { ascending: false }),
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
       supabase.from("message_templates").select("id, nome, tipo").eq("tipo", "whatsapp").eq("ativo", true).order("nome"),

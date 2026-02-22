@@ -138,8 +138,14 @@ Deno.serve(async (req) => {
     let tipoTemplate = "CONTRATO_BASE";
     if (tipo_documento === "OA" || contrato.tipo === "OA") {
       tipoTemplate = "ORDEM_ATENDIMENTO";
-    } else if (contrato.tipo === "Termo Aditivo") {
-      tipoTemplate = "ADITIVO";
+    } else if (contrato.tipo === "Aditivo") {
+      // Diferencia pelo tipo_pedido do pedido vinculado
+      const tipoPedido = pedido?.tipo_pedido || "";
+      if (tipoPedido === "Módulo Adicional") {
+        tipoTemplate = "ADITIVO_MODULO";
+      } else {
+        tipoTemplate = "ADITIVO_UPGRADE";
+      }
     } else if (contrato.tipo === "Cancelamento") {
       tipoTemplate = "CANCELAMENTO";
     }
