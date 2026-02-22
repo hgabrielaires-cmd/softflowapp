@@ -160,6 +160,8 @@ interface FormState {
   modulos_adicionais: ModuloAdicionadoItem[];
   // Tipo do pedido
   tipo_pedido: "Novo" | "Upgrade" | "Aditivo" | "OA";
+  // Tipo de atendimento OA
+  tipo_atendimento: "Interno" | "Externo" | "";
   // Serviços para OA
   servicos_pedido: ServicoAdicionadoItem[];
   contrato_id: string | null;
@@ -192,6 +194,7 @@ const emptyForm: FormState = {
   desconto_mensalidade_valor: "0",
   modulos_adicionais: [],
   tipo_pedido: "Novo",
+  tipo_atendimento: "",
   servicos_pedido: [],
   contrato_id: null,
   // Mensalidade (simplificado)
@@ -597,6 +600,7 @@ export default function Pedidos() {
       tipo_pedido: "OA",
       contrato_id: contratoAtivo.id,
       servicos_pedido: [],
+      tipo_atendimento: "",
     }));
     if (contratoAtivo.plano_id) loadPlano(contratoAtivo.plano_id, []);
   }
@@ -714,6 +718,7 @@ export default function Pedidos() {
       desconto_mensalidade_valor: (pedido.desconto_mensalidade_valor ?? 0).toString(),
       modulos_adicionais: adicionais,
       tipo_pedido: (pedido.tipo_pedido as "Novo" | "Upgrade" | "Aditivo" | "OA") || "Novo",
+      tipo_atendimento: ((pedido as any).tipo_atendimento as "Interno" | "Externo" | "") || "",
       servicos_pedido: ((pedido as any).servicos_pedido || []) as ServicoAdicionadoItem[],
       contrato_id: pedido.contrato_id || null,
       pagamento_mensalidade_tipo: ((pedido as any).pagamento_mensalidade_forma === "Pós-pago" ? "Pós-pago" : "Pré-pago") as "Pré-pago" | "Pós-pago",
@@ -747,6 +752,7 @@ export default function Pedidos() {
     if (!form.cliente_id) { toast.error("Selecione um cliente"); return; }
     if (form.tipo_pedido === "OA") {
       if (form.servicos_pedido.length === 0) { toast.error("Adicione pelo menos um serviço"); return; }
+      if (!form.tipo_atendimento) { toast.error("Selecione o tipo de atendimento (Interno/Externo)"); return; }
     } else {
       if (!form.plano_id) { toast.error("Selecione um plano"); return; }
     }
@@ -804,6 +810,7 @@ export default function Pedidos() {
         modulos_adicionais: form.modulos_adicionais,
         servicos_pedido: form.servicos_pedido,
         tipo_pedido: form.tipo_pedido,
+        tipo_atendimento: form.tipo_pedido === "OA" ? form.tipo_atendimento : null,
         contrato_id: form.contrato_id || null,
         comissao_implantacao_percentual: comissaoImpPerc,
         comissao_implantacao_valor: comissaoImpValor,
@@ -1589,6 +1596,22 @@ export default function Pedidos() {
               </div>
             )}
 
+            {/* ── Tipo de Atendimento (OA) ── */}
+            {form.tipo_pedido === "OA" && (
+              <div className="space-y-1.5">
+                <Label>Tipo de Atendimento *</Label>
+                <Select value={form.tipo_atendimento} onValueChange={(v) => setForm((f) => ({ ...f, tipo_atendimento: v as "Interno" | "Externo" }))}>
+                  <SelectTrigger className={!form.tipo_atendimento ? "border-destructive" : ""}>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Interno">Interno</SelectItem>
+                    <SelectItem value="Externo">Externo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Filial *</Label>
@@ -2328,6 +2351,12 @@ export default function Pedidos() {
                     <p className="text-xs text-muted-foreground">Tipo</p>
                     <p>{vp.tipo_pedido || "Novo"}</p>
                   </div>
+                  {(vp as any).tipo_pedido === "OA" && (
+                    <div className="space-y-0.5">
+                      <p className="text-xs text-muted-foreground">Tipo Atendimento</p>
+                      <p>{(vp as any).tipo_atendimento || "—"}</p>
+                    </div>
+                  )}
                   <div className="space-y-0.5">
                     <p className="text-xs text-muted-foreground">Data</p>
                     <p>{format(new Date(vp.created_at), "dd/MM/yyyy", { locale: ptBR })}</p>
