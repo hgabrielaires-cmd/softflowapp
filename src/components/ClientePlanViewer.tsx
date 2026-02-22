@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Eye, Loader2, Package, FileText, CheckCircle, DollarSign } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+
 
 interface PlanoInfo {
   nome: string;
@@ -155,22 +155,15 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
 
   return (
     <>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            {variant === "icon" ? (
-              <Button type="button" variant="ghost" size="icon" className={`h-7 w-7 ${className || ""}`} onClick={handleOpen}>
-                <Eye className="h-3.5 w-3.5" />
-              </Button>
-            ) : (
-              <Button type="button" variant="outline" size="sm" className={`h-7 text-xs gap-1.5 ${className || ""}`} onClick={handleOpen}>
-                <Eye className="h-3.5 w-3.5" /> Espelho
-              </Button>
-            )}
-          </TooltipTrigger>
-          <TooltipContent>Ver plano e módulos do cliente</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      {variant === "icon" ? (
+        <Button type="button" variant="ghost" size="icon" className={`h-7 w-7 ${className || ""}`} onClick={handleOpen}>
+          <Eye className="h-3.5 w-3.5" />
+        </Button>
+      ) : (
+        <Button type="button" variant="outline" size="sm" className={`h-7 text-xs gap-1.5 ${className || ""}`} onClick={handleOpen}>
+          <Eye className="h-3.5 w-3.5" /> Espelho
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
