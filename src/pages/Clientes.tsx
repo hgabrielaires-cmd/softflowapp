@@ -218,16 +218,19 @@ export default function Clientes() {
   useEffect(() => { fetchData(); }, []);
 
   const searchTerm = search.toLowerCase().trim();
+  const searchDigits = searchTerm.replace(/\D/g, "");
   const filtered = searchTerm
     ? clientes.filter((c) =>
         c.nome_fantasia.toLowerCase().includes(searchTerm) ||
         (c.razao_social || "").toLowerCase().includes(searchTerm) ||
-        (c.cnpj_cpf || "").replace(/\D/g, "").includes(searchTerm.replace(/\D/g, "")) ||
-        (c.cnpj_cpf || "").includes(searchTerm) ||
+        (searchDigits.length > 0 && (c.cnpj_cpf || "").replace(/\D/g, "").includes(searchDigits)) ||
+        (c.cnpj_cpf || "").toLowerCase().includes(searchTerm) ||
         (c.contato_nome || "").toLowerCase().includes(searchTerm) ||
         (c.telefone || "").includes(searchTerm)
       )
     : clientes;
+  
+  console.log("[SEARCH DEBUG]", { search, searchTerm, totalClientes: clientes.length, filteredCount: filtered.length });
 
   function openCreate() {
     setEditing(null);
@@ -554,7 +557,7 @@ export default function Clientes() {
 
         {/* Search */}
         <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             id="search-clientes"
             placeholder="Buscar por nome fantasia, razão social, CNPJ ou contato..."
