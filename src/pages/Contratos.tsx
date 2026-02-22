@@ -168,6 +168,7 @@ export default function Contratos() {
   const [enviandoZapsign, setEnviandoZapsign] = useState(false);
   const [openZapsignDetail, setOpenZapsignDetail] = useState(false);
   const [zapsignDetailContrato, setZapsignDetailContrato] = useState<Contrato | null>(null);
+  const [reenviandoWhatsapp, setReenviandoWhatsapp] = useState(false);
   const [linkedMessageTemplate, setLinkedMessageTemplate] = useState<{ conteudo: string } | null>(null);
 
   // ── ZapSign + WhatsApp animated popup state ──
@@ -724,6 +725,62 @@ export default function Contratos() {
       toast.error("Erro ao enviar WhatsApp: " + (err.message || "Erro desconhecido"));
     } finally {
       setEnviandoWhatsapp(false);
+    }
+  }
+
+  // ── Reenviar WhatsApp (para casos de falha no envio automático) ──
+  async function handleReenviarWhatsapp(contrato: Contrato) {
+    setReenviandoWhatsapp(true);
+    try {
+      // Carregar contatos do cliente
+      const { data: contatos } = await supabase
+        .from("cliente_contatos")
+        .select("nome, email, telefone, decisor, ativo")
+        .eq("cliente_id", contrato.cliente_id)
+        .eq("ativo", true);
+
+      const decisor = (contatos || []).find(c => c.decisor) || (contatos || [])[0];
+      if (!decisor?.telefone) {
+        toast.error("Decisor não possui telefone cadastrado");
+        setReenviandoWhatsapp(false);
+        return;
+      }
+
+      // Buscar sign_url do ZapSign
+      const zRec = zapsignRecords[contrato.id];
+      const signUrl = zRec?.signers?.[0]?.sign_url || "";
+
+      const mensagem = gerarTermoAceite(contrato, signUrl);
+
+      // Buscar config WhatsApp
+      const { data: config } = await supabase
+        .from("integracoes_config")
+        .select("server_url, token, ativo")
+        .eq("nome", "whatsapp")
+        .single();
+
+      if (!config?.ativo || !config?.server_url || !config?.token) {
+        toast.error("Integração WhatsApp não está configurada ou ativa");
+        setReenviandoWhatsapp(false);
+        return;
+      }
+
+      const { error } = await supabase.functions.invoke("evolution-api", {
+        body: {
+          action: "send_text",
+          server_url: config.server_url,
+          api_key: config.token,
+          number: decisor.telefone,
+          text: mensagem,
+        },
+      });
+
+      if (error) throw error;
+      toast.success(`WhatsApp reenviado para ${decisor.nome} (${decisor.telefone})`);
+    } catch (err: any) {
+      toast.error("Erro ao reenviar WhatsApp: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setReenviandoWhatsapp(false);
     }
   }
 
@@ -1403,6 +1460,15 @@ Estou à disposição.`;
                 >
                   <RefreshCw className="h-4 w-4" />
                   Atualizar Status
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-1"
+                  disabled={reenviandoWhatsapp}
+                  onClick={() => handleReenviarWhatsapp(zapsignDetailContrato)}
+                >
+                  {reenviandoWhatsapp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Reenviar WhatsApp
                 </Button>
               </div>
             </div>
