@@ -272,13 +272,13 @@ export default function Financeiro() {
                     <TableCell className="text-sm text-muted-foreground">{pedido.planos?.nome || "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{pedido.filiais?.nome || "—"}</TableCell>
                     <TableCell className="text-right font-mono text-sm">
-                      {pedido.valor_implantacao_final.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      {pedido.tipo_pedido === "OA" ? "—" : pedido.valor_implantacao_final.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm">
-                      {pedido.valor_mensalidade_final.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      {pedido.tipo_pedido === "OA" ? "—" : pedido.valor_mensalidade_final.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm">
-                      {(() => {
+                      {pedido.tipo_pedido === "OA" ? pedido.valor_total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : (() => {
                         const servicos = pedido.servicos_pedido as any[] | null;
                         if (!servicos || servicos.length === 0) return "—";
                         const total = servicos.reduce((acc: number, s: any) => acc + ((s.valor || 0) * (s.quantidade || 1)), 0);
