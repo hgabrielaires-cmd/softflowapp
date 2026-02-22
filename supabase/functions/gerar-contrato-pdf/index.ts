@@ -113,6 +113,17 @@ Deno.serve(async (req) => {
 
     const decisor = (contatos || []).find((c: any) => c.decisor) || (contatos || [])[0];
 
+    // 2b. Buscar número do contrato de origem (para aditivos e OAs)
+    let numeroContratoOrigem = "";
+    if (contrato.contrato_origem_id) {
+      const { data: contratoOrigem } = await supabase
+        .from("contratos")
+        .select("numero_exibicao")
+        .eq("id", contrato.contrato_origem_id)
+        .maybeSingle();
+      numeroContratoOrigem = contratoOrigem?.numero_exibicao || "";
+    }
+
     // 3. Buscar filial
     const filialId = pedido?.filial_id || cliente?.filial_id;
     let filial: any = null;
@@ -342,6 +353,7 @@ Deno.serve(async (req) => {
       "contato.telefone_decisor": decisor?.telefone || "",
       "contato.email_decisor": decisor?.email || "",
       "contrato.numero": contrato.numero_exibicao || "",
+      "contrato.numero_origem": numeroContratoOrigem,
       "contrato.status": contrato.status || "",
       "contrato.data_geracao": (() => {
         const now = new Date();

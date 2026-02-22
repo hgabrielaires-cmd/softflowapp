@@ -41,6 +41,7 @@ export const CONTRACT_VARIABLE_CATEGORIES: VariableCategory[] = [
     icon: "📄",
     variables: [
       { key: "contrato.numero", label: "Número do Contrato", example: "2025-0001" },
+      { key: "contrato.numero_origem", label: "Nº Contrato de Origem", example: "2025-0001" },
       { key: "contrato.status", label: "Status", example: "Ativo" },
     ],
   },
