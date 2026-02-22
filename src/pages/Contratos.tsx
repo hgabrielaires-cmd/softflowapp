@@ -449,7 +449,11 @@ export default function Contratos() {
 
       try {
         // Carregar linked message template
-        const docTemplateType = contrato.tipo === "OA" ? "OA" : contrato.tipo === "Termo Aditivo" ? "ADITIVO" : "CONTRATO_BASE";
+        const docTemplateType = contrato.tipo === "OA" ? "OA"
+          : contrato.tipo === "Aditivo"
+            ? (contrato.pedidos?.tipo_pedido === "Módulo Adicional" ? "ADITIVO_MODULO" : "ADITIVO_UPGRADE")
+            : contrato.tipo === "Cancelamento" ? "CANCELAMENTO"
+            : "CONTRATO_BASE";
         const { data: docTemplate } = await supabase
           .from("document_templates")
           .select("message_template_id")
