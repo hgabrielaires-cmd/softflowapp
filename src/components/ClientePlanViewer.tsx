@@ -7,6 +7,8 @@ import { Eye, Loader2, Package, FileText, CheckCircle, DollarSign } from "lucide
 
 interface PlanoInfo {
   nome: string;
+  valor_implantacao_padrao: number;
+  valor_mensalidade_padrao: number;
 }
 
 interface PedidoValores {
@@ -87,7 +89,7 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
     }
 
     const [{ data: planoData }, { data: planoModulos }, pedidoResult] = await Promise.all([
-      supabase.from("planos").select("nome").eq("id", contrato.plano_id).single(),
+      supabase.from("planos").select("nome, valor_implantacao_padrao, valor_mensalidade_padrao").eq("id", contrato.plano_id).single(),
       supabase.from("plano_modulos")
         .select("incluso_no_plano, inclui_treinamento, modulos(nome, valor_implantacao_modulo, valor_mensalidade_modulo)")
         .eq("plano_id", contrato.plano_id)
@@ -168,14 +170,27 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
     fetchEspelho();
   }
 
+  // Valores do plano base (sem adicionais)
+  const planoImplantacao = data?.plano?.valor_implantacao_padrao ?? 0;
+  const planoMensalidade = data?.plano?.valor_mensalidade_padrao ?? 0;
+
+  // Módulos adicionais do pedido base
+  const adicionaisBaseMensalidade = (data?.pedidoValores ? (data.modulosAdicionais.filter((_, i) => {
+    // Apenas os do pedido base (não dos aditivos) — calculamos separadamente
+    return true;
+  }).reduce((s, m) => s + (m.valor_mensalidade_modulo || 0) * (m.quantidade || 1), 0)) : 0);
+
+  // Total de adicionais (base + aditivos)
+  const totalAdicionaisMensalidade = (data?.modulosAdicionais || []).reduce((s, m) => s + (m.valor_mensalidade_modulo || 0) * (m.quantidade || 1), 0);
+  const totalAdicionaisImplantacao = (data?.modulosAdicionais || []).reduce((s, m) => s + (m.valor_implantacao_modulo || 0) * (m.quantidade || 1), 0);
+
+  // Total consolidado
+  const mensalidadeTotal = planoMensalidade + totalAdicionaisMensalidade;
+  const implantacaoTotal = planoImplantacao + totalAdicionaisImplantacao;
+
+  // Descontos do pedido base
   const hasDescontoImpl = (data?.pedidoValores?.desconto_implantacao_valor ?? 0) > 0;
   const hasDescontoMens = (data?.pedidoValores?.desconto_mensalidade_valor ?? 0) > 0;
-
-  // Valores consolidados (base + aditivos)
-  const totalMensalidadeAditivos = (data?.aditivos || []).reduce((s, a) => s + a.valor_mensalidade_final, 0);
-  const totalImplantacaoAditivos = (data?.aditivos || []).reduce((s, a) => s + a.valor_implantacao_final, 0);
-  const mensalidadeConsolidada = (data?.pedidoValores?.valor_mensalidade_final ?? 0) + totalMensalidadeAditivos;
-  const implantacaoConsolidada = (data?.pedidoValores?.valor_implantacao_final ?? 0) + totalImplantacaoAditivos;
 
   return (
     <>
@@ -218,100 +233,41 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
                 </div>
               </div>
 
-              {/* Valores do Pedido Base */}
-              {data.pedidoValores && (
-                <div className="rounded-lg border border-border p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold">Valores do Pedido Base</span>
+              {/* Valores do Plano Base */}
+              <div className="rounded-lg border border-border p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-semibold">Valores do Plano</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">Implantação</p>
+                    <p className="text-sm font-mono font-semibold">{fmtBRL(planoImplantacao)}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-4 mt-2">
-                    {/* Implantação */}
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">Implantação</p>
-                      {hasDescontoImpl ? (
-                        <>
-                          <p className="text-sm font-mono line-through text-muted-foreground">
-                            {fmtBRL(data.pedidoValores.valor_implantacao_original)}
-                          </p>
-                          <p className="text-sm font-mono font-semibold text-foreground">
-                            {fmtBRL(data.pedidoValores.valor_implantacao_final)}
-                          </p>
-                          <p className="text-[11px] text-emerald-600">
-                            Desconto: {fmtBRL(data.pedidoValores.desconto_implantacao_valor)}
-                          </p>
-                        </>
-                      ) : (
-                        <p className="text-sm font-mono font-semibold">
-                          {fmtBRL(data.pedidoValores.valor_implantacao_final)}
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">Mensalidade</p>
+                    <p className="text-sm font-mono font-semibold">{fmtBRL(planoMensalidade)}/mês</p>
+                  </div>
+                </div>
+                {/* Descontos se houver */}
+                {(hasDescontoImpl || hasDescontoMens) && data.pedidoValores && (
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-[11px] font-medium text-muted-foreground mb-1">Descontos aplicados no pedido</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      {hasDescontoImpl && (
+                        <p className="text-[11px] text-emerald-600">
+                          Impl: -{fmtBRL(data.pedidoValores.desconto_implantacao_valor)}
                         </p>
                       )}
-                    </div>
-                    {/* Mensalidade */}
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">Mensalidade</p>
-                      {hasDescontoMens ? (
-                        <>
-                          <p className="text-sm font-mono line-through text-muted-foreground">
-                            {fmtBRL(data.pedidoValores.valor_mensalidade_original)}
-                          </p>
-                          <p className="text-sm font-mono font-semibold text-foreground">
-                            {fmtBRL(data.pedidoValores.valor_mensalidade_final)}
-                          </p>
-                          <p className="text-[11px] text-emerald-600">
-                            Desconto: {fmtBRL(data.pedidoValores.desconto_mensalidade_valor)}
-                          </p>
-                        </>
-                      ) : (
-                        <p className="text-sm font-mono font-semibold">
-                          {fmtBRL(data.pedidoValores.valor_mensalidade_final)}
+                      {hasDescontoMens && (
+                        <p className="text-[11px] text-emerald-600">
+                          Mens: -{fmtBRL(data.pedidoValores.desconto_mensalidade_valor)}/mês
                         </p>
                       )}
                     </div>
                   </div>
-                </div>
-              )}
-
-              {/* Valores dos Aditivos */}
-              {data.aditivos.length > 0 && (
-                <div className="rounded-lg border border-border p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold">Aditivos</span>
-                  </div>
-                  <div className="divide-y divide-border">
-                    {data.aditivos.map((ad, i) => (
-                      <div key={i} className="py-2 first:pt-0 last:pb-0">
-                        <p className="text-xs font-medium text-muted-foreground">{ad.numero_exibicao}</p>
-                        <div className="flex gap-4 mt-1">
-                          <span className="text-xs font-mono">Impl: {fmtBRL(ad.valor_implantacao_final)}</span>
-                          <span className="text-xs font-mono">Mens: {fmtBRL(ad.valor_mensalidade_final)}/mês</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Valores Consolidados */}
-              {data.pedidoValores && data.aditivos.length > 0 && (
-                <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold">Valores Consolidados (Base + Aditivos)</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 mt-2">
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">Implantação Total</p>
-                      <p className="text-sm font-mono font-bold">{fmtBRL(implantacaoConsolidada)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">Mensalidade Total</p>
-                      <p className="text-sm font-mono font-bold">{fmtBRL(mensalidadeConsolidada)}/mês</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Módulos do Plano */}
               {data.modulosPlano.length > 0 && (
@@ -339,7 +295,7 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
                 </div>
               )}
 
-              {/* Módulos Adicionais */}
+              {/* Módulos Adicionais (base + aditivos) */}
               {data.modulosAdicionais.length > 0 && (
                 <div className="rounded-lg border border-border p-4 space-y-2">
                   <div className="flex items-center gap-2">
@@ -362,8 +318,62 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
                       </div>
                     ))}
                   </div>
+                  {/* Subtotal adicionais */}
+                  <div className="pt-2 border-t border-border flex justify-between">
+                    <span className="text-xs font-medium text-muted-foreground">Subtotal Adicionais</span>
+                    <span className="text-xs font-mono font-semibold">{fmtBRL(totalAdicionaisMensalidade)}/mês</span>
+                  </div>
                 </div>
               )}
+
+              {/* Aditivos (contratos) */}
+              {data.aditivos.length > 0 && (
+                <div className="rounded-lg border border-border p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold">Termos Aditivos</span>
+                  </div>
+                  <div className="divide-y divide-border">
+                    {data.aditivos.map((ad, i) => (
+                      <div key={i} className="py-2 first:pt-0 last:pb-0">
+                        <p className="text-xs font-medium">{ad.numero_exibicao}</p>
+                        {ad.modulosAdicionais.length > 0 && (
+                          <div className="mt-1 space-y-0.5">
+                            {ad.modulosAdicionais.map((m, j) => (
+                              <p key={j} className="text-xs text-muted-foreground pl-2">
+                                • {m.nome} {m.quantidade > 1 ? `x${m.quantidade}` : ""} — {fmtBRL(m.valor_mensalidade_modulo * (m.quantidade || 1))}/mês
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Valor Total Consolidado */}
+              <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-semibold">Valor Total</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Implantação Total</p>
+                    <p className="text-sm font-mono font-bold">{fmtBRL(implantacaoTotal)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Mensalidade Total</p>
+                    <p className="text-sm font-mono font-bold">{fmtBRL(mensalidadeTotal)}/mês</p>
+                  </div>
+                </div>
+                {data.modulosAdicionais.length > 0 && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Plano {fmtBRL(planoMensalidade)} + Adicionais {fmtBRL(totalAdicionaisMensalidade)} = {fmtBRL(mensalidadeTotal)}/mês
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
