@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Eye, Loader2, Package, FileText, CheckCircle, DollarSign, XCircle, ArrowUpCircle } from "lucide-react";
+import { Eye, Loader2, Package, FileText, CheckCircle, DollarSign, XCircle, ArrowUpCircle, MessageCircle, Send } from "lucide-react";
+import { toast } from "sonner";
 
 interface PlanoInfo {
   nome: string;
@@ -66,9 +68,32 @@ interface Props {
 }
 
 export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", className }: Props) {
+  const { roles, profile } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<EspelhoData | null>(null);
+  const [canSendWhatsapp, setCanSendWhatsapp] = useState(false);
+  const [showWhatsappChoice, setShowWhatsappChoice] = useState(false);
+  const [contatosCliente, setContatosCliente] = useState<{ nome: string; telefone: string | null; decisor: boolean }[]>([]);
+  const [sendingWhatsapp, setSendingWhatsapp] = useState(false);
+
+  // Check permission for sending espelho via WhatsApp
+  useEffect(() => {
+    async function checkPerm() {
+      if (!roles.length) return;
+      // Admin always can
+      if (roles.includes("admin")) { setCanSendWhatsapp(true); return; }
+      const { data: perms } = await supabase
+        .from("role_permissions")
+        .select("ativo")
+        .in("role", roles)
+        .eq("permissao", "acao.enviar_espelho_whatsapp")
+        .eq("ativo", true)
+        .limit(1);
+      setCanSendWhatsapp((perms || []).length > 0);
+    }
+    checkPerm();
+  }, [roles]);
 
   async function fetchEspelho() {
     setLoading(true);
@@ -243,6 +268,98 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
   function handleOpen() {
     setOpen(true);
     fetchEspelho();
+    // Load client contacts for WhatsApp
+    supabase
+      .from("cliente_contatos")
+      .select("nome, telefone, decisor")
+      .eq("cliente_id", clienteId)
+      .eq("ativo", true)
+      .then(({ data: contatos }) => setContatosCliente(contatos || []));
+  }
+
+  function buildEspelhoMessage(destinatarioNome: string): string {
+    if (!data || !planoEfetivo) return "";
+    const planoNome = planoEfetivo.nome;
+    const modulosAdTexto = (data.modulosAdicionais || [])
+      .map(m => `• ${m.nome}${m.quantidade > 1 ? ` (${m.quantidade}x)` : ""} — ${fmtBRL(m.valor_mensalidade_modulo * (m.quantidade || 1))}/mês`)
+      .join("\n");
+    const canceladosTexto = (data.cancelamentos || [])
+      .flatMap(c => c.modulosCancelados.map(m => `• ~${m.nome}${m.quantidade > 1 ? ` (${m.quantidade}x)` : ""}~ — -${fmtBRL(m.valor_mensalidade_modulo * (m.quantidade || 1))}/mês`))
+      .join("\n");
+
+    return `Olá ${destinatarioNome}! 👋
+
+Segue o *resumo do seu plano* na Softflow:
+
+📋 *Contrato:* ${data.contratoNumero}
+📦 *Plano:* ${planoNome}
+
+💰 *Valores:*
+• Implantação: ${fmtBRL(implantacaoTotal)}
+• Mensalidade: ${fmtBRL(planoMensalidade)}/mês
+${modulosAdTexto ? `\n📦 *Módulos Adicionais:*\n${modulosAdTexto}` : ""}${canceladosTexto ? `\n❌ *Módulos Cancelados:*\n${canceladosTexto}` : ""}
+
+💵 *Valor Total Mensal:* ${fmtBRL(mensalidadeTotal)}/mês
+
+Em caso de dúvidas, estamos à disposição! 😊
+_Softflow — Tecnologia que conecta._`;
+  }
+
+  async function handleSendWhatsapp(tipo: "decisor" | "usuario") {
+    setSendingWhatsapp(true);
+    setShowWhatsappChoice(false);
+    try {
+      let telefone = "";
+      let nome = "";
+      if (tipo === "decisor") {
+        const decisor = contatosCliente.find(c => c.decisor) || contatosCliente[0];
+        if (!decisor?.telefone) { toast.error("Nenhum contato decisor com telefone cadastrado."); setSendingWhatsapp(false); return; }
+        telefone = decisor.telefone;
+        nome = decisor.nome;
+      } else {
+        if (!profile?.telefone) { toast.error("Seu perfil não possui telefone cadastrado."); setSendingWhatsapp(false); return; }
+        telefone = profile.telefone;
+        nome = profile.full_name || "Usuário";
+      }
+
+      const mensagem = buildEspelhoMessage(nome);
+
+      // Load WhatsApp config
+      const { data: config } = await supabase
+        .from("integracoes_config")
+        .select("server_url, token, ativo")
+        .eq("nome", "whatsapp")
+        .single();
+
+      if (!config?.ativo || !config?.server_url || !config?.token) {
+        toast.error("WhatsApp não configurado ou desativado.");
+        setSendingWhatsapp(false);
+        return;
+      }
+
+      const numLimpo = telefone.replace(/\D/g, "");
+      const numFinal = numLimpo.startsWith("55") ? numLimpo : `55${numLimpo}`;
+
+      const { data: result, error } = await supabase.functions.invoke("evolution-api", {
+        body: {
+          action: "sendText",
+          serverUrl: config.server_url,
+          apiKey: config.token,
+          instanceName: "Softflow_WhatsApp",
+          number: numFinal,
+          text: mensagem,
+        },
+      });
+
+      if (error || result?.error) {
+        toast.error("Erro ao enviar WhatsApp: " + (result?.error || error?.message));
+      } else {
+        toast.success(`Resumo enviado para ${nome} via WhatsApp!`);
+      }
+    } catch (e: any) {
+      toast.error("Erro ao enviar: " + e.message);
+    }
+    setSendingWhatsapp(false);
   }
 
   // Plano efetivo (após upgrade/downgrade, se houver)
@@ -502,9 +619,61 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {canSendWhatsapp && data?.plano && (
+              <Button
+                variant="default"
+                size="sm"
+                className="gap-1.5"
+                disabled={sendingWhatsapp}
+                onClick={() => setShowWhatsappChoice(true)}
+              >
+                {sendingWhatsapp ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />}
+                Enviar Resumo no WhatsApp
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setOpen(false)}>Fechar</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de escolha: Decisor ou Usuário */}
+      <Dialog open={showWhatsappChoice} onOpenChange={setShowWhatsappChoice}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm">
+              <MessageCircle className="h-4 w-4" />
+              Enviar resumo para quem?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => handleSendWhatsapp("decisor")}
+              disabled={sendingWhatsapp}
+            >
+              <Send className="h-3.5 w-3.5" />
+              Decisor do cliente
+              {contatosCliente.find(c => c.decisor) && (
+                <span className="text-xs text-muted-foreground ml-auto">
+                  {contatosCliente.find(c => c.decisor)?.nome}
+                </span>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => handleSendWhatsapp("usuario")}
+              disabled={sendingWhatsapp}
+            >
+              <Send className="h-3.5 w-3.5" />
+              Meu WhatsApp
+              <span className="text-xs text-muted-foreground ml-auto">
+                {profile?.full_name || "Você"}
+              </span>
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>
