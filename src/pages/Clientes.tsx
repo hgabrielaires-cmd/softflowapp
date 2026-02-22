@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -216,16 +216,22 @@ export default function Clientes() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const filtered = clientes.filter((c) => {
-    const q = search.toLowerCase();
-    return (
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return clientes;
+    return clientes.filter((c) =>
       c.nome_fantasia.toLowerCase().includes(q) ||
       (c.razao_social || "").toLowerCase().includes(q) ||
       (c.cnpj_cpf || "").replace(/\D/g, "").includes(q.replace(/\D/g, "")) ||
       (c.cnpj_cpf || "").includes(q) ||
+      (c.contato_nome || "").toLowerCase().includes(q) ||
       (c.telefone || "").includes(q)
     );
-  });
+  }, [search, clientes]);
 
   function openCreate() {
     setEditing(null);
@@ -554,10 +560,12 @@ export default function Clientes() {
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome fantasia, razão social ou CNPJ..."
+            id="search-clientes"
+            placeholder="Buscar por nome fantasia, razão social, CNPJ ou contato..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={handleSearchChange}
             className="pl-9"
+            autoComplete="off"
           />
         </div>
 
