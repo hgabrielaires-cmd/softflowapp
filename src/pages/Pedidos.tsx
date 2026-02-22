@@ -44,6 +44,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus, Tag, ArrowUpCircle, FileText, AlertCircle, Eye, Users, Star, Trash2, MapPin, Send } from "lucide-react";
+import { ClientePlanViewer } from "@/components/ClientePlanViewer";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -1516,7 +1517,7 @@ export default function Pedidos() {
                       Contrato ativo: Nº {contratoAtivo.numero_registro} ({contratoAtivo.numero_exibicao})
                     </p>
                     <p className="text-xs text-amber-700 mt-0.5">Este cliente já possui contrato ativo. Selecione a ação desejada:</p>
-                    <div className="flex flex-wrap gap-2 mt-2">
+                    <div className="flex flex-wrap gap-2 mt-2 items-center">
                       <Button type="button" size="sm" variant="outline" className="h-7 text-xs gap-1.5 border-amber-300 text-amber-800 hover:bg-amber-100"
                         onClick={handleIniciarUpgrade}>
                         <ArrowUpCircle className="h-3.5 w-3.5" /> Upgrade de Plano
@@ -1529,6 +1530,12 @@ export default function Pedidos() {
                         onClick={handleIniciarOA}>
                         <Tag className="h-3.5 w-3.5" /> Ordem de Atendimento
                       </Button>
+                      <ClientePlanViewer
+                        clienteId={form.cliente_id}
+                        clienteNome={clientes.find(c => c.id === form.cliente_id)?.nome_fantasia}
+                        variant="text"
+                        className="border-primary/30 text-primary hover:bg-primary/10"
+                      />
                     </div>
                   </div>
                 </div>
