@@ -1144,9 +1144,10 @@ export default function Pedidos() {
                   <TableHead>Cliente</TableHead>
                   {canSeeAllBranches && <TableHead>Filial</TableHead>}
                   {canSeeAllBranches && <TableHead>Vendedor</TableHead>}
-                  <TableHead className="text-right">Implantação</TableHead>
-                  <TableHead className="text-right">Mensalidade</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
+                   <TableHead className="text-right">Implantação</TableHead>
+                   <TableHead className="text-right">Mensalidade</TableHead>
+                   <TableHead className="text-right">Valor Serviço</TableHead>
+                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Financeiro</TableHead>
                   <TableHead>Data</TableHead>
@@ -1156,13 +1157,13 @@ export default function Pedidos() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-12">
+                    <TableCell colSpan={12} className="text-center py-12">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-12 text-muted-foreground">Nenhum pedido encontrado</TableCell>
+                    <TableCell colSpan={12} className="text-center py-12 text-muted-foreground">Nenhum pedido encontrado</TableCell>
                   </TableRow>
                 ) : filtered.map((pedido) => {
                   const finStatus = pedido.financeiro_status as string || "Aguardando";
@@ -1199,8 +1200,9 @@ export default function Pedidos() {
                       <TableCell className="font-medium">{(pedido as any).clientes?.nome_fantasia || "—"}</TableCell>
                       {canSeeAllBranches && <TableCell className="text-sm text-muted-foreground">{filialNome}</TableCell>}
                       {canSeeAllBranches && <TableCell className="text-sm text-muted-foreground">{vendedorNome}</TableCell>}
-                      <TableCell className="text-right font-mono text-sm">{fmtBRL(impFinal)}</TableCell>
-                      <TableCell className="text-right font-mono text-sm">{fmtBRL(mensFinal)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">{(pedido as any).tipo_pedido === "OA" ? "—" : fmtBRL(impFinal)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">{(pedido as any).tipo_pedido === "OA" ? "—" : fmtBRL(mensFinal)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">{(pedido as any).tipo_pedido === "OA" ? fmtBRL(pedido.valor_total) : "—"}</TableCell>
                       <TableCell className="text-right font-mono text-sm font-semibold">{fmtBRL(pedido.valor_total)}</TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[pedido.status_pedido] || "bg-muted text-muted-foreground"}`}>

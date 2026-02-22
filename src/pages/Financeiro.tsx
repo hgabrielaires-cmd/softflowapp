@@ -214,8 +214,9 @@ export default function Financeiro() {
                 <TableHead>Cliente</TableHead>
                 <TableHead>Plano</TableHead>
                 <TableHead>Filial</TableHead>
-                <TableHead className="text-right">Valor Total</TableHead>
-                <TableHead className="text-right">Comissão</TableHead>
+                 <TableHead className="text-right">Valor Total</TableHead>
+                 <TableHead className="text-right">Valor Serviço</TableHead>
+                 <TableHead className="text-right">Comissão</TableHead>
                 <TableHead>Recebido em</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -223,13 +224,13 @@ export default function Financeiro() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                  </TableCell>
-                </TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-16 text-muted-foreground">
+                   <TableCell colSpan={8} className="text-center py-12">
+                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                   </TableCell>
+                 </TableRow>
+               ) : filtered.length === 0 ? (
+                 <TableRow>
+                   <TableCell colSpan={8} className="text-center py-16 text-muted-foreground">
                     <CheckCircle className="h-8 w-8 mx-auto mb-2 text-emerald-400" />
                     Nenhum pedido aguardando análise
                   </TableCell>
@@ -240,10 +241,13 @@ export default function Financeiro() {
                     <TableCell className="font-medium">{pedido.clientes?.nome_fantasia || "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{pedido.planos?.nome || "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{pedido.filiais?.nome || "—"}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">
-                      {pedido.valor_total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                    </TableCell>
-                    <TableCell className="text-right text-sm text-muted-foreground">
+                     <TableCell className="text-right font-mono text-sm">
+                       {pedido.valor_total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                     </TableCell>
+                     <TableCell className="text-right font-mono text-sm">
+                       {(pedido as any).tipo_pedido === "OA" ? pedido.valor_total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}
+                     </TableCell>
+                     <TableCell className="text-right text-sm text-muted-foreground">
                       <div className="space-y-0.5">
                         <p className="text-xs font-mono">{(pedido.comissao_implantacao_percentual ?? pedido.comissao_percentual)}% imp → <span className="font-semibold">{(pedido.comissao_implantacao_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></p>
                         <p className="text-xs font-mono">{(pedido.comissao_mensalidade_percentual ?? pedido.comissao_percentual)}% mens → <span className="font-semibold">{(pedido.comissao_mensalidade_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></p>
