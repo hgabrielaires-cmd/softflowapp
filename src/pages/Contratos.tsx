@@ -174,6 +174,29 @@ export default function Contratos() {
   const [zapsignDetailContrato, setZapsignDetailContrato] = useState<Contrato | null>(null);
   const [linkedMessageTemplate, setLinkedMessageTemplate] = useState<{ conteudo: string } | null>(null);
 
+  // ── ZapSign + WhatsApp animated popup state ──
+  const [openZapsignPopup, setOpenZapsignPopup] = useState(false);
+  const [zapsignPopupStep, setZapsignPopupStep] = useState<"zapsign" | "whatsapp" | "done" | "erro">("zapsign");
+  const [zapsignPopupMsgIndex, setZapsignPopupMsgIndex] = useState(0);
+  const [zapsignPopupContrato, setZapsignPopupContrato] = useState<Contrato | null>(null);
+  const [zapsignPopupError, setZapsignPopupError] = useState<string | null>(null);
+
+  const ZAPSIGN_MSGS = [
+    "🚀 Rumo à ativação",
+    "⚡ O Softflow não para",
+    "🏁 Pé no acelerador",
+    "📂 Burocracia zero",
+    "✨ Quase lá",
+  ];
+
+  const WHATSAPP_MSGS = [
+    "📲 Conectando ao WhatsApp...",
+    "⚡ Softflow em ação!",
+    "✅ Quase pronto!",
+    "💬 Disparando notificação automática...",
+    "🤖 O Flowy robô do Softflow está enviando a mensagem de confirmação para o WhatsApp agora.",
+  ];
+
   const GERAR_MSGS_CONTRATO = [
     "Ajustando os detalhes finais…",
     "Quase lá… deixando tudo redondo pra você!",
@@ -199,6 +222,17 @@ export default function Contratos() {
     }, 2000);
     return () => clearInterval(interval);
   }, [gerarStatus, gerarContratoAlvo]);
+
+  // ZapSign popup message cycling
+  useEffect(() => {
+    if (!openZapsignPopup || zapsignPopupStep === "done" || zapsignPopupStep === "erro") return;
+    setZapsignPopupMsgIndex(0);
+    const msgs = zapsignPopupStep === "zapsign" ? ZAPSIGN_MSGS : WHATSAPP_MSGS;
+    const interval = setInterval(() => {
+      setZapsignPopupMsgIndex((prev) => (prev + 1) % msgs.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [openZapsignPopup, zapsignPopupStep]);
 
   // Contatos do cliente selecionado (para Termo de Aceite)
   const [contatosCliente, setContatosCliente] = useState<{ nome: string; telefone: string | null; decisor: boolean; ativo: boolean }[]>([]);
@@ -386,22 +420,36 @@ export default function Contratos() {
     }
   }
 
-  // ── Enviar para ZapSign ────────────────────────────────────────────────────
+  // ── Enviar para ZapSign (com popup animada + WhatsApp automático) ────────
   async function handleEnviarZapSign(contrato: Contrato) {
     if (!contrato.pdf_url || contrato.status_geracao !== "Gerado") {
       toast.error("Gere o PDF do contrato antes de enviar para assinatura.");
       return;
     }
+
+    // Carregar contatos do cliente para WhatsApp
+    await loadContatosCliente(contrato.cliente_id);
+
+    // Abrir popup
+    setZapsignPopupContrato(contrato);
+    setZapsignPopupStep("zapsign");
+    setZapsignPopupMsgIndex(0);
+    setZapsignPopupError(null);
+    setOpenZapsignPopup(true);
     setEnviandoZapsign(true);
+
     try {
+      // PASSO 1: Enviar para ZapSign
       const { data, error } = await supabase.functions.invoke("zapsign", {
         body: { action: "send", contrato_id: contrato.id },
       });
       if (error || data?.error) {
-        toast.error(data?.error || "Erro ao enviar para ZapSign");
+        setZapsignPopupStep("erro");
+        setZapsignPopupError(data?.error || "Erro ao enviar para ZapSign");
+        setEnviandoZapsign(false);
         return;
       }
-      toast.success("Contrato enviado para assinatura no ZapSign!");
+
       // Atualizar registros locais
       setZapsignRecords((prev) => ({
         ...prev,
@@ -413,9 +461,87 @@ export default function Contratos() {
           sign_url: data.signers?.[0]?.sign_url || null,
         },
       }));
+
+      // PASSO 2: Enviar WhatsApp automaticamente
+      setZapsignPopupStep("whatsapp");
+      setZapsignPopupMsgIndex(0);
+
+      try {
+        // Carregar linked message template para o contrato
+        const docTemplateType = contrato.tipo === "OA" ? "OA" : contrato.tipo === "Termo Aditivo" ? "ADITIVO" : "CONTRATO_BASE";
+        const { data: docTemplate } = await supabase
+          .from("document_templates")
+          .select("message_template_id")
+          .eq("tipo", docTemplateType)
+          .eq("ativo", true)
+          .limit(1)
+          .maybeSingle();
+
+        let msgTemplate: { conteudo: string } | null = null;
+        if (docTemplate?.message_template_id) {
+          const { data: mt } = await supabase
+            .from("message_templates")
+            .select("conteudo")
+            .eq("id", docTemplate.message_template_id)
+            .maybeSingle();
+          msgTemplate = mt;
+        }
+        if (msgTemplate) setLinkedMessageTemplate(msgTemplate);
+
+        // Gerar mensagem do termo de aceite com link de assinatura
+        const signUrl = data.signers?.[0]?.sign_url || "";
+        const updatedContrato = { ...contrato };
+        const mensagem = gerarTermoAceite(updatedContrato, signUrl);
+
+        // Buscar config WhatsApp
+        const { data: config } = await supabase
+          .from("integracoes_config")
+          .select("server_url, token, ativo")
+          .eq("nome", "whatsapp")
+          .single();
+
+        if (!config?.ativo || !config?.server_url || !config?.token) {
+          // WhatsApp não configurado, finalizar sem enviar
+          setZapsignPopupStep("done");
+          setEnviandoZapsign(false);
+          toast.info("ZapSign enviado! WhatsApp não está configurado.");
+          return;
+        }
+
+        // Pegar decisor
+        const decisorContato = contatosCliente.find(c => c.decisor) || contatosCliente[0];
+        if (!decisorContato?.telefone) {
+          setZapsignPopupStep("done");
+          setEnviandoZapsign(false);
+          toast.info("ZapSign enviado! Decisor sem telefone para WhatsApp.");
+          return;
+        }
+
+        // Enviar WhatsApp
+        const { error: whatsError } = await supabase.functions.invoke("evolution-api", {
+          body: {
+            action: "send_text",
+            server_url: config.server_url,
+            api_key: config.token,
+            number: decisorContato.telefone,
+            text: mensagem,
+          },
+        });
+
+        if (whatsError) throw whatsError;
+
+        // Tudo pronto!
+        setZapsignPopupStep("done");
+      } catch (whatsErr: any) {
+        // ZapSign foi OK, mas WhatsApp falhou
+        console.error("Erro WhatsApp:", whatsErr);
+        setZapsignPopupStep("done");
+        toast.warning("ZapSign enviado! Falha ao enviar WhatsApp: " + (whatsErr.message || ""));
+      }
     } catch (err) {
       console.error("Erro ZapSign:", err);
-      toast.error("Erro ao enviar para ZapSign");
+      setZapsignPopupStep("erro");
+      setZapsignPopupError("Erro ao enviar para ZapSign");
     } finally {
       setEnviandoZapsign(false);
     }
@@ -1451,6 +1577,120 @@ Estou à disposição.`;
           </DialogContent>
         </Dialog>
       )}
+
+      {/* ── Popup ZapSign + WhatsApp Animada ──────────────────────────── */}
+      <Dialog
+        open={openZapsignPopup}
+        onOpenChange={(open) => {
+          if (zapsignPopupStep === "done" || zapsignPopupStep === "erro") setOpenZapsignPopup(open);
+        }}
+      >
+        <DialogContent className="max-w-sm" aria-describedby="zapsign-popup-desc" onPointerDownOutside={(e) => {
+          if (zapsignPopupStep !== "done" && zapsignPopupStep !== "erro") e.preventDefault();
+        }} onEscapeKeyDown={(e) => {
+          if (zapsignPopupStep !== "done" && zapsignPopupStep !== "erro") e.preventDefault();
+        }}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Send className="h-5 w-5 text-primary" />
+              {zapsignPopupStep === "whatsapp" ? "Enviando WhatsApp" : zapsignPopupStep === "done" ? "Tudo pronto!" : zapsignPopupStep === "erro" ? "Erro" : "Enviando para ZapSign"}
+            </DialogTitle>
+            <DialogDescription id="zapsign-popup-desc" className="sr-only">
+              Progresso do envio para assinatura e notificação
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-6 flex flex-col items-center gap-5">
+            {/* Passo 1: ZapSign */}
+            {zapsignPopupStep === "zapsign" && (
+              <div className="flex flex-col items-center gap-4 animate-fade-in">
+                <div className="relative flex items-center justify-center">
+                  <span className="absolute inline-flex h-20 w-20 rounded-full bg-primary/10 animate-ping" />
+                  <span className="absolute inline-flex h-14 w-14 rounded-full bg-primary/20 animate-ping [animation-delay:0.3s]" />
+                  <div className="relative flex items-center justify-center h-16 w-16 rounded-full bg-primary/15 border-2 border-primary/30">
+                    <Loader2 className="h-7 w-7 text-primary animate-spin" />
+                  </div>
+                </div>
+                <div className="text-center space-y-1">
+                  <p className="font-semibold text-foreground">Enviando para ZapSign…</p>
+                  <p className="text-sm text-muted-foreground transition-all duration-500 min-h-[1.5rem]">
+                    {ZAPSIGN_MSGS[zapsignPopupMsgIndex]}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Passo 2: WhatsApp */}
+            {zapsignPopupStep === "whatsapp" && (
+              <div className="flex flex-col items-center gap-4 animate-fade-in">
+                <div className="relative flex items-center justify-center">
+                  <span className="absolute inline-flex h-20 w-20 rounded-full bg-emerald-500/10 animate-ping" />
+                  <span className="absolute inline-flex h-14 w-14 rounded-full bg-emerald-500/20 animate-ping [animation-delay:0.3s]" />
+                  <div className="relative flex items-center justify-center h-16 w-16 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-300 dark:border-emerald-700">
+                    <Loader2 className="h-7 w-7 text-emerald-600 dark:text-emerald-400 animate-spin" />
+                  </div>
+                </div>
+                <div className="text-center space-y-1">
+                  <p className="font-semibold text-foreground">Disparando WhatsApp…</p>
+                  <p className="text-sm text-muted-foreground transition-all duration-500 min-h-[2.5rem]">
+                    {WHATSAPP_MSGS[zapsignPopupMsgIndex]}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Concluído */}
+            {zapsignPopupStep === "done" && (
+              <div className="flex flex-col items-center gap-4 animate-fade-in">
+                <div className="relative flex items-center justify-center">
+                  <span className="absolute inline-flex h-20 w-20 rounded-full bg-emerald-500/10" />
+                  <div className="relative flex items-center justify-center h-16 w-16 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-300 dark:border-emerald-700">
+                    <CheckCircle2 className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                </div>
+                <div className="text-center space-y-2">
+                  <p className="font-semibold text-foreground text-base">
+                    ✅ Tudo pronto!
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    O Flowy 🤖 Disparando o alerta para o WhatsApp do cliente.
+                  </p>
+                </div>
+
+                <Button
+                  className="w-full gap-2 mt-2"
+                  onClick={() => setOpenZapsignPopup(false)}
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  Fechar
+                </Button>
+              </div>
+            )}
+
+            {/* Erro */}
+            {zapsignPopupStep === "erro" && (
+              <div className="flex flex-col items-center gap-4 animate-fade-in">
+                <div className="flex items-center justify-center h-16 w-16 rounded-full bg-destructive/10 border-2 border-destructive/30">
+                  <XCircle className="h-8 w-8 text-destructive" />
+                </div>
+                <div className="text-center space-y-1">
+                  <p className="font-semibold text-foreground">Falha no envio</p>
+                  <p className="text-xs text-muted-foreground">
+                    {zapsignPopupError || "Erro inesperado. Tente novamente."}
+                  </p>
+                </div>
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => setOpenZapsignPopup(false)}
+                >
+                  Fechar
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
