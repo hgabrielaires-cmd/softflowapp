@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     );
 
     const body = await req.json();
-    const { contrato_id, action, pdf_base64 } = body;
+    const { contrato_id, action, pdf_base64, tipo_documento } = body;
     const BROWSERLESS_API_KEY = Deno.env.get("BROWSERLESS_API_KEY");
 
     if (!contrato_id) {
@@ -134,6 +134,9 @@ Deno.serve(async (req) => {
     }
 
     // 5. Buscar template HTML ativo (filial > global)
+    // Determinar tipo de template baseado no tipo do contrato
+    const tipoTemplate = (tipo_documento === "OA" || contrato.tipo === "OA") ? "ORDEM_ATENDIMENTO" : "CONTRATO_BASE";
+    
     let template: any = null;
     if (filialId) {
       const { data } = await supabase
@@ -141,7 +144,7 @@ Deno.serve(async (req) => {
         .select("*")
         .eq("filial_id", filialId)
         .eq("ativo", true)
-        .eq("tipo", "CONTRATO_BASE")
+        .eq("tipo", tipoTemplate)
         .maybeSingle();
       template = data;
     }
@@ -151,14 +154,15 @@ Deno.serve(async (req) => {
         .select("*")
         .is("filial_id", null)
         .eq("ativo", true)
-        .eq("tipo", "CONTRATO_BASE")
+        .eq("tipo", tipoTemplate)
         .maybeSingle();
       template = data;
     }
 
     if (!template) {
+      const tipoLabel = tipoTemplate === "ORDEM_ATENDIMENTO" ? "Ordem de Atendimento" : "Contrato";
       return new Response(
-        JSON.stringify({ error: "Nenhum modelo de contrato ativo encontrado para esta filial." }),
+        JSON.stringify({ error: `Nenhum modelo de ${tipoLabel} ativo encontrado para esta filial.` }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
