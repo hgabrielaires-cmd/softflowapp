@@ -109,7 +109,7 @@ export interface Contrato {
   plano_id: string | null;
   numero_registro: number;
   numero_exibicao: string;
-  tipo: 'Base' | 'Termo Aditivo';
+  tipo: 'Base' | 'Aditivo' | 'OA' | 'Cancelamento';
   status: 'Ativo' | 'Encerrado';
   pedido_id: string | null;
   contrato_origem_id: string | null;
