@@ -266,7 +266,7 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
       .then(({ data: contatos }) => setContatosCliente(contatos || []));
   }
 
-  function buildEspelhoMessage(destinatarioNome: string): string {
+  function buildEspelhoMessage(destinatarioNome: string, templateConteudo?: string): string {
     if (!data || !planoEfetivo) return "";
     const planoNome = planoEfetivo.nome;
     const modulosAdTexto = (data.modulosAdicionais || [])
@@ -276,22 +276,20 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
       .flatMap(c => c.modulosCancelados.map(m => `• ~${m.nome}${m.quantidade > 1 ? ` (${m.quantidade}x)` : ""}~ — -${fmtBRL(m.valor_mensalidade_modulo * (m.quantidade || 1))}/mês`))
       .join("\n");
 
-    return `Olá ${destinatarioNome}! 👋
+    if (templateConteudo) {
+      return templateConteudo
+        .replace(/\{contato\.nome\}/g, destinatarioNome)
+        .replace(/\{contrato\.numero\}/g, data.contratoNumero)
+        .replace(/\{plano\.nome\}/g, planoNome)
+        .replace(/\{valor\.implantacao\}/g, fmtBRL(implantacaoTotal))
+        .replace(/\{valor\.mensalidade\}/g, `${fmtBRL(planoMensalidade)}/mês`)
+        .replace(/\{modulos\.adicionais\}/g, modulosAdTexto ? `📦 *Módulos Adicionais:*\n${modulosAdTexto}` : "")
+        .replace(/\{modulos\.cancelados\}/g, canceladosTexto ? `❌ *Módulos Cancelados:*\n${canceladosTexto}` : "")
+        .replace(/\{valor\.total_mensal\}/g, `${fmtBRL(mensalidadeTotal)}/mês`);
+    }
 
-Segue o *resumo do seu plano* na Softflow:
-
-📋 *Contrato:* ${data.contratoNumero}
-📦 *Plano:* ${planoNome}
-
-💰 *Valores:*
-• Implantação: ${fmtBRL(implantacaoTotal)}
-• Mensalidade: ${fmtBRL(planoMensalidade)}/mês
-${modulosAdTexto ? `\n📦 *Módulos Adicionais:*\n${modulosAdTexto}` : ""}${canceladosTexto ? `\n❌ *Módulos Cancelados:*\n${canceladosTexto}` : ""}
-
-💵 *Valor Total Mensal:* ${fmtBRL(mensalidadeTotal)}/mês
-
-Em caso de dúvidas, estamos à disposição! 😊
-_Softflow — Tecnologia que conecta._`;
+    // Fallback hardcoded
+    return `Olá ${destinatarioNome}! 👋\n\nSegue o *resumo do seu plano* na Softflow:\n\n📋 *Contrato:* ${data.contratoNumero}\n📦 *Plano:* ${planoNome}\n\n💰 *Valores:*\n• Implantação: ${fmtBRL(implantacaoTotal)}\n• Mensalidade: ${fmtBRL(planoMensalidade)}/mês\n${modulosAdTexto ? `\n📦 *Módulos Adicionais:*\n${modulosAdTexto}` : ""}${canceladosTexto ? `\n❌ *Módulos Cancelados:*\n${canceladosTexto}` : ""}\n\n💵 *Valor Total Mensal:* ${fmtBRL(mensalidadeTotal)}/mês\n\nEm caso de dúvidas, estamos à disposição! 😊\n_Softflow — Tecnologia que conecta._`;
   }
 
   async function handleSendWhatsapp(tipo: "decisor" | "usuario") {
@@ -311,7 +309,16 @@ _Softflow — Tecnologia que conecta._`;
         nome = profile.full_name || "Usuário";
       }
 
-      const mensagem = buildEspelhoMessage(nome);
+      // Fetch template from database
+      const { data: template } = await supabase
+        .from("message_templates")
+        .select("conteudo")
+        .eq("categoria", "espelho_cliente")
+        .eq("ativo", true)
+        .limit(1)
+        .single();
+
+      const mensagem = buildEspelhoMessage(nome, template?.conteudo || undefined);
 
       // Load WhatsApp config
       const { data: config } = await supabase
