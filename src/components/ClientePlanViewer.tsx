@@ -313,7 +313,8 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
       const { data: template } = await supabase
         .from("message_templates")
         .select("conteudo")
-        .eq("categoria", "espelho_cliente")
+        .ilike("nome", "%espelho%")
+        .eq("tipo", "whatsapp")
         .eq("ativo", true)
         .limit(1)
         .single();
