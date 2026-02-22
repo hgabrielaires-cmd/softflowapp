@@ -79,6 +79,19 @@ export const CONTRACT_VARIABLE_CATEGORIES: VariableCategory[] = [
     ],
   },
   {
+    label: "Serviços (OA)",
+    icon: "🔧",
+    variables: [
+      { key: "servicos.lista_html", label: "Lista de Serviços (HTML)", example: "<ul><li>Consultoria - 2 horas - R$ 300,00</li></ul>" },
+      { key: "servicos.tabela_html", label: "Tabela de Serviços (HTML)", example: "<table>...</table>" },
+      { key: "servicos.valor_total", label: "Valor Total Serviços", example: "R$ 1.500,00" },
+      { key: "servicos.valor_total_extenso", label: "Valor Total por Extenso", example: "mil e quinhentos reais" },
+      { key: "servicos.quantidade_total", label: "Quantidade Total", example: "5" },
+      { key: "servicos.comissao_percentual", label: "Comissão Serviço (%)", example: "5%" },
+      { key: "servicos.comissao_valor", label: "Comissão Serviço (R$)", example: "R$ 75,00" },
+    ],
+  },
+  {
     label: "Pagamento",
     icon: "💳",
     variables: [
