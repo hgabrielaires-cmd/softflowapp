@@ -42,6 +42,7 @@ interface PedidoFila {
   vendedor_id: string;
   filial_id: string;
   plano_id: string;
+  tipo_pedido: string;
   valor_implantacao: number;
   valor_mensalidade: number;
   valor_total: number;
@@ -60,6 +61,9 @@ interface PedidoFila {
   comissao_implantacao_valor: number | null;
   comissao_mensalidade_percentual: number | null;
   comissao_mensalidade_valor: number | null;
+  comissao_servico_percentual: number | null;
+  comissao_servico_valor: number | null;
+  servicos_pedido: any[] | null;
   status_pedido: string;
   financeiro_status: string;
   financeiro_motivo: string | null;
@@ -224,25 +228,28 @@ export default function Financeiro() {
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead>Cliente</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Plano</TableHead>
                 <TableHead>Filial</TableHead>
-                 <TableHead className="text-right">Valor Total</TableHead>
-                 <TableHead className="text-right">Valor Serviço</TableHead>
-                 <TableHead className="text-right">Comissão</TableHead>
+                <TableHead className="text-right">Implantação</TableHead>
+                <TableHead className="text-right">Mensalidade</TableHead>
+                <TableHead className="text-right">Serviço</TableHead>
+                <TableHead className="text-right">Valor Total</TableHead>
+                <TableHead className="text-right">Comissão</TableHead>
                 <TableHead>Recebido em</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
-                   <TableCell colSpan={8} className="text-center py-12">
-                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                   </TableCell>
+               <TableRow>
+                    <TableCell colSpan={11} className="text-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                    </TableCell>
                  </TableRow>
                ) : filtered.length === 0 ? (
                  <TableRow>
-                   <TableCell colSpan={8} className="text-center py-16 text-muted-foreground">
+                    <TableCell colSpan={11} className="text-center py-16 text-muted-foreground">
                     <CheckCircle className="h-8 w-8 mx-auto mb-2 text-emerald-400" />
                     Nenhum pedido aguardando análise
                   </TableCell>
@@ -251,19 +258,41 @@ export default function Financeiro() {
                 filtered.map((pedido) => (
                   <TableRow key={pedido.id}>
                     <TableCell className="font-medium">{pedido.clientes?.nome_fantasia || "—"}</TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                        pedido.tipo_pedido === 'Novo' ? 'bg-emerald-100 text-emerald-700' :
+                        pedido.tipo_pedido === 'OA' ? 'bg-purple-100 text-purple-700' :
+                        pedido.tipo_pedido === 'Upgrade' ? 'bg-blue-100 text-blue-700' :
+                        pedido.tipo_pedido === 'Adicional' ? 'bg-amber-100 text-amber-700' :
+                        'bg-muted text-muted-foreground'
+                      }`}>
+                        {pedido.tipo_pedido === 'Novo' ? 'Base' : pedido.tipo_pedido}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{pedido.planos?.nome || "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{pedido.filiais?.nome || "—"}</TableCell>
-                     <TableCell className="text-right font-mono text-sm">
-                       {pedido.valor_total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                     </TableCell>
-                     <TableCell className="text-right font-mono text-sm">
-                       {(pedido as any).tipo_pedido === "OA" ? pedido.valor_total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}
-                     </TableCell>
-                     <TableCell className="text-right text-sm text-muted-foreground">
+                    <TableCell className="text-right font-mono text-sm">
+                      {pedido.valor_implantacao_final.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-sm">
+                      {pedido.valor_mensalidade_final.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-sm">
+                      {(() => {
+                        const servicos = pedido.servicos_pedido as any[] | null;
+                        if (!servicos || servicos.length === 0) return "—";
+                        const total = servicos.reduce((acc: number, s: any) => acc + ((s.valor || 0) * (s.quantidade || 1)), 0);
+                        return total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+                      })()}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-sm font-semibold">
+                      {pedido.valor_total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </TableCell>
+                    <TableCell className="text-right text-sm text-muted-foreground">
                       <div className="space-y-0.5">
                         <p className="text-xs font-mono">{(pedido.comissao_implantacao_percentual ?? pedido.comissao_percentual)}% imp → <span className="font-semibold">{(pedido.comissao_implantacao_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></p>
                         <p className="text-xs font-mono">{(pedido.comissao_mensalidade_percentual ?? pedido.comissao_percentual)}% mens → <span className="font-semibold">{(pedido.comissao_mensalidade_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></p>
-                        <p className="text-xs font-mono">{((pedido as any).comissao_servico_percentual ?? 0)}% serv → <span className="font-semibold">{((pedido as any).comissao_servico_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></p>
+                        <p className="text-xs font-mono">{(pedido.comissao_servico_percentual ?? 0)}% serv → <span className="font-semibold">{(pedido.comissao_servico_valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></p>
                         <p className="text-xs font-mono border-t border-border pt-0.5">Total: <span className="font-bold text-foreground">{pedido.comissao_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></p>
                       </div>
                     </TableCell>
