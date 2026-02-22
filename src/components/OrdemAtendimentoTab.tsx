@@ -54,9 +54,10 @@ function buildHtmlFromClauses(clauses: TemplateClause[]): string {
 
 interface OrdemAtendimentoTabProps {
   filiais: Filial[];
+  messageTemplates?: { id: string; nome: string; tipo: string }[];
 }
 
-export function OrdemAtendimentoTab({ filiais }: OrdemAtendimentoTabProps) {
+export function OrdemAtendimentoTab({ filiais, messageTemplates = [] }: OrdemAtendimentoTabProps) {
   const editorRef = useRef<HTMLTextAreaElement>(null);
 
   const [modelos, setModelos] = useState<DocumentTemplate[]>([]);
@@ -80,6 +81,7 @@ export function OrdemAtendimentoTab({ filiais }: OrdemAtendimentoTabProps) {
     conteudo_html: "",
     logo_url: "" as string | null,
     usa_clausulas: true,
+    message_template_id: "nenhum",
   });
 
   async function loadData() {
@@ -110,7 +112,7 @@ export function OrdemAtendimentoTab({ filiais }: OrdemAtendimentoTabProps) {
 
   function openNew() {
     setEditingModelo(null);
-    setForm({ nome: "", filial_id: "todas", ativo: true, conteudo_html: "", logo_url: "", usa_clausulas: true });
+    setForm({ nome: "", filial_id: "todas", ativo: true, conteudo_html: "", logo_url: "", usa_clausulas: true, message_template_id: "nenhum" });
     setClauses([]);
     setOpenEditor(true);
   }
@@ -124,6 +126,7 @@ export function OrdemAtendimentoTab({ filiais }: OrdemAtendimentoTabProps) {
       conteudo_html: modelo.conteudo_html,
       logo_url: modelo.logo_url ?? "",
       usa_clausulas: modelo.usa_clausulas,
+      message_template_id: (modelo as any).message_template_id ?? "nenhum",
     });
     if (modelo.usa_clausulas) {
       loadTemplateClauses(modelo.id);
@@ -142,6 +145,7 @@ export function OrdemAtendimentoTab({ filiais }: OrdemAtendimentoTabProps) {
       conteudo_html: modelo.conteudo_html,
       logo_url: modelo.logo_url ?? "",
       usa_clausulas: modelo.usa_clausulas,
+      message_template_id: (modelo as any).message_template_id ?? "nenhum",
     });
     if (modelo.usa_clausulas) {
       loadTemplateClauses(modelo.id);
@@ -257,6 +261,7 @@ export function OrdemAtendimentoTab({ filiais }: OrdemAtendimentoTabProps) {
       conteudo_html: conteudoHtml,
       logo_url: form.logo_url || null,
       usa_clausulas: form.usa_clausulas,
+      message_template_id: form.message_template_id === "nenhum" ? null : form.message_template_id,
     };
     let templateId = editingModelo?.id;
     if (editingModelo) {
@@ -483,6 +488,18 @@ export function OrdemAtendimentoTab({ filiais }: OrdemAtendimentoTabProps) {
               <div className="flex items-center gap-2 pb-1">
                 <Switch checked={form.ativo} onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))} id="ordem-ativo-switch" />
                 <Label htmlFor="ordem-ativo-switch" className="text-xs cursor-pointer">Ativo</Label>
+              </div>
+              <div className="space-y-1 w-[250px]">
+                <Label className="text-xs">Template WhatsApp</Label>
+                <Select value={form.message_template_id} onValueChange={(v) => setForm((f) => ({ ...f, message_template_id: v }))}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nenhum">Nenhum</SelectItem>
+                    {messageTemplates.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

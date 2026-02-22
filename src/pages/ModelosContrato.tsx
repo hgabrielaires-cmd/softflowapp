@@ -541,7 +541,7 @@ export default function ModelosContrato() {
           </TabsContent>
 
           <TabsContent value="ordem">
-            <OrdemAtendimentoTab filiais={filiais} />
+            <OrdemAtendimentoTab filiais={filiais} messageTemplates={messageTemplates} />
           </TabsContent>
         </Tabs>
       </div>
