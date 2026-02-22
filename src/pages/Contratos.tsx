@@ -163,11 +163,7 @@ export default function Contratos() {
   const [openEncerrar, setOpenEncerrar] = useState(false);
   const [processando, setProcessando] = useState(false);
   const [gerando, setGerando] = useState(false);
-  const [openGerarPopup, setOpenGerarPopup] = useState(false);
-  const [gerarStatus, setGerarStatus] = useState<"gerando" | "concluido" | "erro">("gerando");
   const [gerarSignedUrl, setGerarSignedUrl] = useState<string | null>(null);
-  const [gerarContratoAlvo, setGerarContratoAlvo] = useState<Contrato | null>(null);
-  const [gerarMsgIndex, setGerarMsgIndex] = useState(0);
   const [zapsignRecords, setZapsignRecords] = useState<Record<string, ZapSignRecord>>({});
   const [enviandoZapsign, setEnviandoZapsign] = useState(false);
   const [openZapsignDetail, setOpenZapsignDetail] = useState(false);
@@ -176,7 +172,7 @@ export default function Contratos() {
 
   // ── ZapSign + WhatsApp animated popup state ──
   const [openZapsignPopup, setOpenZapsignPopup] = useState(false);
-  const [zapsignPopupStep, setZapsignPopupStep] = useState<"zapsign" | "whatsapp" | "done" | "erro">("zapsign");
+  const [zapsignPopupStep, setZapsignPopupStep] = useState<"gerando" | "zapsign" | "whatsapp" | "done" | "erro">("zapsign");
   const [zapsignPopupMsgIndex, setZapsignPopupMsgIndex] = useState(0);
   const [zapsignPopupContrato, setZapsignPopupContrato] = useState<Contrato | null>(null);
   const [zapsignPopupError, setZapsignPopupError] = useState<string | null>(null);
@@ -213,21 +209,15 @@ export default function Contratos() {
     "Preparando sua OA sob medida…",
   ];
 
-  useEffect(() => {
-    if (gerarStatus !== "gerando") return;
-    setGerarMsgIndex(0);
-    const msgs = gerarContratoAlvo?.tipo === "OA" ? GERAR_MSGS_OA : GERAR_MSGS_CONTRATO;
-    const interval = setInterval(() => {
-      setGerarMsgIndex((prev) => (prev + 1) % msgs.length);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [gerarStatus, gerarContratoAlvo]);
+  // (old gerarStatus effect removed - now unified in zapsignPopup)
 
   // ZapSign popup message cycling
   useEffect(() => {
     if (!openZapsignPopup || zapsignPopupStep === "done" || zapsignPopupStep === "erro") return;
     setZapsignPopupMsgIndex(0);
-    const msgs = zapsignPopupStep === "zapsign" ? ZAPSIGN_MSGS : WHATSAPP_MSGS;
+    const msgs = zapsignPopupStep === "gerando"
+      ? (zapsignPopupContrato?.tipo === "OA" ? GERAR_MSGS_OA : GERAR_MSGS_CONTRATO)
+      : zapsignPopupStep === "zapsign" ? ZAPSIGN_MSGS : WHATSAPP_MSGS;
     const interval = setInterval(() => {
       setZapsignPopupMsgIndex((prev) => (prev + 1) % msgs.length);
     }, 2000);
@@ -377,23 +367,29 @@ export default function Contratos() {
     loadData();
   }
 
-  // ── Gerar Contrato ─────────────────────────────────────────────────────────
+  // ── Gerar Contrato + Auto ZapSign + WhatsApp ─────────────────────────────────
   async function handleGerarContrato(contrato: Contrato) {
-    setGerarContratoAlvo(contrato);
-    setGerarStatus("gerando");
-    setGerarSignedUrl(null);
-    setOpenGerarPopup(true);
+    // Carregar contatos do cliente para WhatsApp (em paralelo)
+    loadContatosCliente(contrato.cliente_id);
+
+    // Abrir popup unificada com step "gerando"
+    setZapsignPopupContrato(contrato);
+    setZapsignPopupStep("gerando");
+    setZapsignPopupMsgIndex(0);
+    setZapsignPopupError(null);
+    setOpenZapsignPopup(true);
     setGerando(true);
 
     try {
-      // Gerar PDF server-side via Browserless
+      // PASSO 1: Gerar PDF
       const { data, error } = await supabase.functions.invoke("gerar-contrato-pdf", {
         body: { contrato_id: contrato.id, action: "generate", tipo_documento: contrato.tipo },
       });
 
       if (error || data?.error || !data?.success) {
-        toast.error(data?.error || "Erro ao gerar contrato");
-        setGerarStatus("erro");
+        setZapsignPopupStep("erro");
+        setZapsignPopupError(data?.error || "Erro ao gerar contrato");
+        setGerando(false);
         return;
       }
 
@@ -409,15 +405,113 @@ export default function Contratos() {
       if (selected?.id === contrato.id) {
         setSelected(updatedContrato);
       }
-
       setGerarSignedUrl(data.signed_url || null);
-      setGerarContratoAlvo(updatedContrato);
-      setGerarStatus("concluido");
+      setZapsignPopupContrato(updatedContrato);
+      setGerando(false);
+
+      // PASSO 2: Auto enviar para ZapSign
+      setZapsignPopupStep("zapsign");
+      setZapsignPopupMsgIndex(0);
+      setEnviandoZapsign(true);
+
+      const { data: zData, error: zError } = await supabase.functions.invoke("zapsign", {
+        body: { action: "send", contrato_id: contrato.id },
+      });
+      if (zError || zData?.error) {
+        setZapsignPopupStep("erro");
+        setZapsignPopupError(zData?.error || "Erro ao enviar para ZapSign");
+        setEnviandoZapsign(false);
+        return;
+      }
+
+      // Atualizar registros locais
+      setZapsignRecords((prev) => ({
+        ...prev,
+        [contrato.id]: {
+          contrato_id: contrato.id,
+          zapsign_doc_token: zData.doc_token,
+          status: "Enviado",
+          signers: zData.signers || [],
+          sign_url: zData.signers?.[0]?.sign_url || null,
+        },
+      }));
+
+      // PASSO 3: Auto enviar WhatsApp
+      setZapsignPopupStep("whatsapp");
+      setZapsignPopupMsgIndex(0);
+
+      try {
+        // Carregar linked message template
+        const docTemplateType = contrato.tipo === "OA" ? "OA" : contrato.tipo === "Termo Aditivo" ? "ADITIVO" : "CONTRATO_BASE";
+        const { data: docTemplate } = await supabase
+          .from("document_templates")
+          .select("message_template_id")
+          .eq("tipo", docTemplateType)
+          .eq("ativo", true)
+          .limit(1)
+          .maybeSingle();
+
+        let msgTemplate: { conteudo: string } | null = null;
+        if (docTemplate?.message_template_id) {
+          const { data: mt } = await supabase
+            .from("message_templates")
+            .select("conteudo")
+            .eq("id", docTemplate.message_template_id)
+            .maybeSingle();
+          msgTemplate = mt;
+        }
+        if (msgTemplate) setLinkedMessageTemplate(msgTemplate);
+
+        const signUrl = zData.signers?.[0]?.sign_url || "";
+        const mensagem = gerarTermoAceite(updatedContrato, signUrl);
+
+        // Buscar config WhatsApp
+        const { data: config } = await supabase
+          .from("integracoes_config")
+          .select("server_url, token, ativo")
+          .eq("nome", "whatsapp")
+          .single();
+
+        if (!config?.ativo || !config?.server_url || !config?.token) {
+          setZapsignPopupStep("done");
+          setEnviandoZapsign(false);
+          toast.info("ZapSign enviado! WhatsApp não está configurado.");
+          return;
+        }
+
+        const decisorContato = contatosCliente.find(c => c.decisor) || contatosCliente[0];
+        if (!decisorContato?.telefone) {
+          setZapsignPopupStep("done");
+          setEnviandoZapsign(false);
+          toast.info("ZapSign enviado! Decisor sem telefone para WhatsApp.");
+          return;
+        }
+
+        const { error: whatsError } = await supabase.functions.invoke("evolution-api", {
+          body: {
+            action: "send_text",
+            server_url: config.server_url,
+            api_key: config.token,
+            number: decisorContato.telefone,
+            text: mensagem,
+          },
+        });
+
+        if (whatsError) throw whatsError;
+
+        setZapsignPopupStep("done");
+      } catch (whatsErr: any) {
+        console.error("Erro WhatsApp:", whatsErr);
+        setZapsignPopupStep("done");
+        toast.warning("ZapSign enviado! Falha ao enviar WhatsApp: " + (whatsErr.message || ""));
+      }
     } catch (err) {
-      console.error("Erro ao gerar contrato:", err);
-      setGerarStatus("erro");
+      console.error("Erro no fluxo:", err);
+      setZapsignPopupStep("erro");
+      setZapsignPopupError("Erro inesperado no processo. Tente novamente.");
     } finally {
       setGerando(false);
+      setEnviandoZapsign(false);
     }
   }
 
@@ -449,132 +543,7 @@ export default function Contratos() {
     }
   }
 
-  // ── Enviar para ZapSign (com popup animada + WhatsApp automático) ────────
-  async function handleEnviarZapSign(contrato: Contrato) {
-    if (!contrato.pdf_url || contrato.status_geracao !== "Gerado") {
-      toast.error("Gere o PDF do contrato antes de enviar para assinatura.");
-      return;
-    }
-
-    // Carregar contatos do cliente para WhatsApp
-    await loadContatosCliente(contrato.cliente_id);
-
-    // Abrir popup
-    setZapsignPopupContrato(contrato);
-    setZapsignPopupStep("zapsign");
-    setZapsignPopupMsgIndex(0);
-    setZapsignPopupError(null);
-    setOpenZapsignPopup(true);
-    setEnviandoZapsign(true);
-
-    try {
-      // PASSO 1: Enviar para ZapSign
-      const { data, error } = await supabase.functions.invoke("zapsign", {
-        body: { action: "send", contrato_id: contrato.id },
-      });
-      if (error || data?.error) {
-        setZapsignPopupStep("erro");
-        setZapsignPopupError(data?.error || "Erro ao enviar para ZapSign");
-        setEnviandoZapsign(false);
-        return;
-      }
-
-      // Atualizar registros locais
-      setZapsignRecords((prev) => ({
-        ...prev,
-        [contrato.id]: {
-          contrato_id: contrato.id,
-          zapsign_doc_token: data.doc_token,
-          status: "Enviado",
-          signers: data.signers || [],
-          sign_url: data.signers?.[0]?.sign_url || null,
-        },
-      }));
-
-      // PASSO 2: Enviar WhatsApp automaticamente
-      setZapsignPopupStep("whatsapp");
-      setZapsignPopupMsgIndex(0);
-
-      try {
-        // Carregar linked message template para o contrato
-        const docTemplateType = contrato.tipo === "OA" ? "OA" : contrato.tipo === "Termo Aditivo" ? "ADITIVO" : "CONTRATO_BASE";
-        const { data: docTemplate } = await supabase
-          .from("document_templates")
-          .select("message_template_id")
-          .eq("tipo", docTemplateType)
-          .eq("ativo", true)
-          .limit(1)
-          .maybeSingle();
-
-        let msgTemplate: { conteudo: string } | null = null;
-        if (docTemplate?.message_template_id) {
-          const { data: mt } = await supabase
-            .from("message_templates")
-            .select("conteudo")
-            .eq("id", docTemplate.message_template_id)
-            .maybeSingle();
-          msgTemplate = mt;
-        }
-        if (msgTemplate) setLinkedMessageTemplate(msgTemplate);
-
-        // Gerar mensagem do termo de aceite com link de assinatura
-        const signUrl = data.signers?.[0]?.sign_url || "";
-        const updatedContrato = { ...contrato };
-        const mensagem = gerarTermoAceite(updatedContrato, signUrl);
-
-        // Buscar config WhatsApp
-        const { data: config } = await supabase
-          .from("integracoes_config")
-          .select("server_url, token, ativo")
-          .eq("nome", "whatsapp")
-          .single();
-
-        if (!config?.ativo || !config?.server_url || !config?.token) {
-          // WhatsApp não configurado, finalizar sem enviar
-          setZapsignPopupStep("done");
-          setEnviandoZapsign(false);
-          toast.info("ZapSign enviado! WhatsApp não está configurado.");
-          return;
-        }
-
-        // Pegar decisor
-        const decisorContato = contatosCliente.find(c => c.decisor) || contatosCliente[0];
-        if (!decisorContato?.telefone) {
-          setZapsignPopupStep("done");
-          setEnviandoZapsign(false);
-          toast.info("ZapSign enviado! Decisor sem telefone para WhatsApp.");
-          return;
-        }
-
-        // Enviar WhatsApp
-        const { error: whatsError } = await supabase.functions.invoke("evolution-api", {
-          body: {
-            action: "send_text",
-            server_url: config.server_url,
-            api_key: config.token,
-            number: decisorContato.telefone,
-            text: mensagem,
-          },
-        });
-
-        if (whatsError) throw whatsError;
-
-        // Tudo pronto!
-        setZapsignPopupStep("done");
-      } catch (whatsErr: any) {
-        // ZapSign foi OK, mas WhatsApp falhou
-        console.error("Erro WhatsApp:", whatsErr);
-        setZapsignPopupStep("done");
-        toast.warning("ZapSign enviado! Falha ao enviar WhatsApp: " + (whatsErr.message || ""));
-      }
-    } catch (err) {
-      console.error("Erro ZapSign:", err);
-      setZapsignPopupStep("erro");
-      setZapsignPopupError("Erro ao enviar para ZapSign");
-    } finally {
-      setEnviandoZapsign(false);
-    }
-  }
+  // (handleEnviarZapSign removed - now integrated into handleGerarContrato)
 
   async function handleAtualizarStatusZapSign(contratoId: string) {
     try {
@@ -1025,43 +994,26 @@ Estou à disposição.`;
                               {contrato.tipo === "OA" ? "Baixar OA" : "Baixar Contrato"}
                             </DropdownMenuItem>
                           )}
-                          {canManage && contrato.status_geracao === "Gerado" && contrato.pdf_url && (
+                          {canManage && zapsignRecords[contrato.id] && (
                             <>
                               <DropdownMenuSeparator />
-                              {!zapsignRecords[contrato.id] ? (
-                                <DropdownMenuItem
-                                  className="cursor-pointer"
-                                  onClick={() => handleEnviarZapSign(contrato)}
-                                  disabled={enviandoZapsign}
-                                >
-                                  {enviandoZapsign ? (
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  ) : (
-                                    <Send className="h-4 w-4 mr-2" />
-                                  )}
-                                  Enviar para ZapSign
-                                </DropdownMenuItem>
-                              ) : (
-                                <>
-                                  <DropdownMenuItem
-                                    className="cursor-pointer"
-                                    onClick={() => {
-                                      setZapsignDetailContrato(contrato);
-                                      setOpenZapsignDetail(true);
-                                    }}
-                                  >
-                                    <ExternalLink className="h-4 w-4 mr-2" />
-                                    Ver ZapSign
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="cursor-pointer"
-                                    onClick={() => handleAtualizarStatusZapSign(contrato.id)}
-                                  >
-                                    <RefreshCw className="h-4 w-4 mr-2" />
-                                    Atualizar Status
-                                  </DropdownMenuItem>
-                                </>
-                              )}
+                              <DropdownMenuItem
+                                className="cursor-pointer"
+                                onClick={() => {
+                                  setZapsignDetailContrato(contrato);
+                                  setOpenZapsignDetail(true);
+                                }}
+                              >
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                Ver ZapSign
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="cursor-pointer"
+                                onClick={() => handleAtualizarStatusZapSign(contrato.id)}
+                              >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Atualizar Status
+                              </DropdownMenuItem>
                             </>
                           )}
                           {canManage && (
@@ -1377,156 +1329,7 @@ Estou à disposição.`;
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── Popup de Geração de Contrato ─────────────────────────────────── */}
-      <Dialog
-        open={openGerarPopup}
-        onOpenChange={(open) => {
-          if (!gerando) setOpenGerarPopup(open);
-        }}
-      >
-        <DialogContent className="max-w-sm" aria-describedby="gerar-desc">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <FileOutput className="h-5 w-5 text-primary" />
-              {gerarContratoAlvo?.tipo === "OA" ? "Gerar OA" : "Gerar Contrato"}
-            </DialogTitle>
-            <DialogDescription id="gerar-desc" className="sr-only">
-              Status da geração do contrato
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-6 flex flex-col items-center gap-5">
-            {/* Estado: Gerando */}
-            {gerarStatus === "gerando" && (
-              <div className="flex flex-col items-center gap-4 animate-fade-in">
-                <div className="relative flex items-center justify-center">
-                  <span className="absolute inline-flex h-20 w-20 rounded-full bg-primary/10 animate-ping" />
-                  <span className="absolute inline-flex h-14 w-14 rounded-full bg-primary/20 animate-ping [animation-delay:0.3s]" />
-                  <div className="relative flex items-center justify-center h-16 w-16 rounded-full bg-primary/15 border-2 border-primary/30">
-                    <Loader2 className="h-7 w-7 text-primary animate-spin" />
-                  </div>
-                </div>
-                <div className="text-center space-y-1">
-                  <p className="font-semibold text-foreground">
-                    {gerarContratoAlvo?.tipo === "OA" ? "Gerando OA…" : "Gerando contrato…"}
-                  </p>
-                  <p className="text-xs text-muted-foreground transition-all duration-500">
-                    {(gerarContratoAlvo?.tipo === "OA" ? GERAR_MSGS_OA : GERAR_MSGS_CONTRATO)[gerarMsgIndex]}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Estado: Concluído */}
-            {gerarStatus === "concluido" && (
-              <div className="flex flex-col items-center gap-4 animate-fade-in">
-                <div className="relative flex items-center justify-center">
-                  <span className="absolute inline-flex h-20 w-20 rounded-full bg-emerald-500/10" />
-                  <div className="relative flex items-center justify-center h-16 w-16 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-300 dark:border-emerald-700">
-                    <CheckCircle2 className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                </div>
-                <div className="text-center space-y-1">
-                  <p className="font-semibold text-foreground">
-                    {gerarContratoAlvo?.tipo === "OA" ? "OA gerada!" : "Contrato gerado!"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {gerarContratoAlvo?.numero_exibicao || `#${gerarContratoAlvo?.numero_registro}`} · {gerarContratoAlvo?.clientes?.nome_fantasia}
-                  </p>
-                </div>
-
-                <div className="w-full space-y-2 pt-1">
-                  <Button
-                    className="w-full gap-2"
-                    onClick={async () => {
-                      const url = gerarSignedUrl || null;
-                      const prefix = gerarContratoAlvo?.tipo === "OA" ? "oa" : "contrato";
-                      const fileName = `${prefix}-${gerarContratoAlvo?.numero_exibicao || gerarContratoAlvo?.numero_registro}.pdf`;
-                      if (url) {
-                        const response = await fetch(url);
-                        const blob = await response.blob();
-                        const objectUrl = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = objectUrl;
-                        a.download = fileName;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(objectUrl);
-                      } else if (gerarContratoAlvo?.pdf_url) {
-                        await handleBaixarContrato(gerarContratoAlvo);
-                      }
-                    }}
-                  >
-                    <FileDown className="h-4 w-4" />
-                    Baixar PDF
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2"
-                    onClick={() => {
-                      setOpenGerarPopup(false);
-                      if (gerarContratoAlvo) handleEnviarZapSign(gerarContratoAlvo);
-                    }}
-                    disabled={enviandoZapsign || !gerarContratoAlvo}
-                  >
-                    {enviandoZapsign ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                    Enviar para ZapSign
-                  </Button>
-                </div>
-
-                <button
-                  className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors mt-1"
-                  onClick={() => setOpenGerarPopup(false)}
-                >
-                  Fechar
-                </button>
-              </div>
-            )}
-
-            {/* Estado: Erro */}
-            {gerarStatus === "erro" && (
-              <div className="flex flex-col items-center gap-4 animate-fade-in">
-                <div className="flex items-center justify-center h-16 w-16 rounded-full bg-destructive/10 border-2 border-destructive/30">
-                  <XCircle className="h-8 w-8 text-destructive" />
-                </div>
-                <div className="text-center space-y-1">
-                  <p className="font-semibold text-foreground">Falha na geração</p>
-                  <p className="text-xs text-muted-foreground">
-                    {gerarContratoAlvo?.tipo === "OA"
-                      ? "Verifique se há um modelo de Ordem de Atendimento ativo configurado e tente novamente."
-                      : "Verifique se há um modelo de contrato ativo configurado e tente novamente."}
-                  </p>
-                </div>
-                <div className="w-full space-y-2">
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    onClick={() => {
-                      setOpenGerarPopup(false);
-                      if (gerarContratoAlvo) handleGerarContrato(gerarContratoAlvo);
-                    }}
-                  >
-                    Tentar novamente
-                  </Button>
-                  <Button
-                    className="w-full"
-                    variant="ghost"
-                    onClick={() => setOpenGerarPopup(false)}
-                  >
-                    Fechar
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* (Old generation popup removed - now unified in ZapSign popup below) */}
 
       {/* ZapSign Detail Dialog */}
       {zapsignDetailContrato && zapsignRecords[zapsignDetailContrato.id] && (
@@ -1621,15 +1424,45 @@ Estou à disposição.`;
         }}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
-              <Send className="h-5 w-5 text-primary" />
-              {zapsignPopupStep === "whatsapp" ? "Enviando WhatsApp" : zapsignPopupStep === "done" ? "Tudo pronto!" : zapsignPopupStep === "erro" ? "Erro" : "Enviando para ZapSign"}
+              {zapsignPopupStep === "gerando" ? (
+                <FileOutput className="h-5 w-5 text-primary" />
+              ) : (
+                <Send className="h-5 w-5 text-primary" />
+              )}
+              {zapsignPopupStep === "gerando"
+                ? (zapsignPopupContrato?.tipo === "OA" ? "Gerando OA" : "Gerando Contrato")
+                : zapsignPopupStep === "whatsapp" ? "Enviando WhatsApp"
+                : zapsignPopupStep === "done" ? "Tudo pronto!"
+                : zapsignPopupStep === "erro" ? "Erro"
+                : "Enviando para ZapSign"}
             </DialogTitle>
             <DialogDescription id="zapsign-popup-desc" className="sr-only">
-              Progresso do envio para assinatura e notificação
+              Progresso da geração, envio para assinatura e notificação
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-6 flex flex-col items-center gap-5">
+            {/* Passo 0: Gerando PDF */}
+            {zapsignPopupStep === "gerando" && (
+              <div className="flex flex-col items-center gap-4 animate-fade-in">
+                <div className="relative flex items-center justify-center">
+                  <span className="absolute inline-flex h-20 w-20 rounded-full bg-primary/10 animate-ping" />
+                  <span className="absolute inline-flex h-14 w-14 rounded-full bg-primary/20 animate-ping [animation-delay:0.3s]" />
+                  <div className="relative flex items-center justify-center h-16 w-16 rounded-full bg-primary/15 border-2 border-primary/30">
+                    <Loader2 className="h-7 w-7 text-primary animate-spin" />
+                  </div>
+                </div>
+                <div className="text-center space-y-1">
+                  <p className="font-semibold text-foreground">
+                    {zapsignPopupContrato?.tipo === "OA" ? "Gerando OA…" : "Gerando contrato…"}
+                  </p>
+                  <p className="text-sm text-muted-foreground transition-all duration-500 min-h-[1.5rem]">
+                    {(zapsignPopupContrato?.tipo === "OA" ? GERAR_MSGS_OA : GERAR_MSGS_CONTRATO)[zapsignPopupMsgIndex]}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Passo 1: ZapSign */}
             {zapsignPopupStep === "zapsign" && (
               <div className="flex flex-col items-center gap-4 animate-fade-in">
