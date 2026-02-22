@@ -7,6 +7,7 @@ import { Eye, Loader2, Package, FileText, CheckCircle, DollarSign } from "lucide
 
 interface PlanoInfo {
   nome: string;
+  descricao: string | null;
   valor_implantacao_padrao: number;
   valor_mensalidade_padrao: number;
 }
@@ -89,7 +90,7 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
     }
 
     const [{ data: planoData }, { data: planoModulos }, pedidoResult] = await Promise.all([
-      supabase.from("planos").select("nome, valor_implantacao_padrao, valor_mensalidade_padrao").eq("id", contrato.plano_id).single(),
+      supabase.from("planos").select("nome, descricao, valor_implantacao_padrao, valor_mensalidade_padrao").eq("id", contrato.plano_id).single(),
       supabase.from("plano_modulos")
         .select("incluso_no_plano, inclui_treinamento, modulos(nome, valor_implantacao_modulo, valor_mensalidade_modulo)")
         .eq("plano_id", contrato.plano_id)
@@ -184,9 +185,11 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
   const totalAdicionaisMensalidade = (data?.modulosAdicionais || []).reduce((s, m) => s + (m.valor_mensalidade_modulo || 0) * (m.quantidade || 1), 0);
   const totalAdicionaisImplantacao = (data?.modulosAdicionais || []).reduce((s, m) => s + (m.valor_implantacao_modulo || 0) * (m.quantidade || 1), 0);
 
-  // Total consolidado
-  const mensalidadeTotal = planoMensalidade + totalAdicionaisMensalidade;
-  const implantacaoTotal = planoImplantacao + totalAdicionaisImplantacao;
+  // Total consolidado (com descontos)
+  const descontoImpl = data?.pedidoValores?.desconto_implantacao_valor ?? 0;
+  const descontoMens = data?.pedidoValores?.desconto_mensalidade_valor ?? 0;
+  const mensalidadeTotal = planoMensalidade + totalAdicionaisMensalidade - descontoMens;
+  const implantacaoTotal = planoImplantacao + totalAdicionaisImplantacao - descontoImpl;
 
   // Descontos do pedido base
   const hasDescontoImpl = (data?.pedidoValores?.desconto_implantacao_valor ?? 0) > 0;
@@ -230,6 +233,9 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
                 <div className="mt-2">
                   <p className="text-xs text-muted-foreground">Plano</p>
                   <p className="text-sm font-medium">{data.plano.nome}</p>
+                  {data.plano.descricao && (
+                    <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">{data.plano.descricao}</p>
+                  )}
                 </div>
               </div>
 
@@ -249,24 +255,6 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
                     <p className="text-sm font-mono font-semibold">{fmtBRL(planoMensalidade)}/mês</p>
                   </div>
                 </div>
-                {/* Descontos se houver */}
-                {(hasDescontoImpl || hasDescontoMens) && data.pedidoValores && (
-                  <div className="pt-2 border-t border-border">
-                    <p className="text-[11px] font-medium text-muted-foreground mb-1">Descontos aplicados no pedido</p>
-                    <div className="grid grid-cols-2 gap-4">
-                      {hasDescontoImpl && (
-                        <p className="text-[11px] text-emerald-600">
-                          Impl: -{fmtBRL(data.pedidoValores.desconto_implantacao_valor)}
-                        </p>
-                      )}
-                      {hasDescontoMens && (
-                        <p className="text-[11px] text-emerald-600">
-                          Mens: -{fmtBRL(data.pedidoValores.desconto_mensalidade_valor)}/mês
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Módulos do Plano */}
@@ -359,18 +347,41 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
                   <span className="text-sm font-semibold">Valor Total</span>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mt-2">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Implantação Total</p>
-                    <p className="text-sm font-mono font-bold">{fmtBRL(implantacaoTotal)}</p>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">Implantação</p>
+                    {hasDescontoImpl ? (
+                      <>
+                        <p className="text-xs font-mono line-through text-muted-foreground">
+                          {fmtBRL(planoImplantacao + totalAdicionaisImplantacao)}
+                        </p>
+                        <p className="text-sm font-mono font-bold">{fmtBRL(implantacaoTotal)}</p>
+                        <p className="text-[11px] text-emerald-600">Desc: -{fmtBRL(descontoImpl)}</p>
+                      </>
+                    ) : (
+                      <p className="text-sm font-mono font-bold">{fmtBRL(implantacaoTotal)}</p>
+                    )}
                   </div>
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Mensalidade Total</p>
-                    <p className="text-sm font-mono font-bold">{fmtBRL(mensalidadeTotal)}/mês</p>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">Mensalidade</p>
+                    {hasDescontoMens ? (
+                      <>
+                        <p className="text-xs font-mono line-through text-muted-foreground">
+                          {fmtBRL(planoMensalidade + totalAdicionaisMensalidade)}/mês
+                        </p>
+                        <p className="text-sm font-mono font-bold">{fmtBRL(mensalidadeTotal)}/mês</p>
+                        <p className="text-[11px] text-emerald-600">Desc: -{fmtBRL(descontoMens)}/mês</p>
+                      </>
+                    ) : (
+                      <p className="text-sm font-mono font-bold">{fmtBRL(mensalidadeTotal)}/mês</p>
+                    )}
                   </div>
                 </div>
-                {data.modulosAdicionais.length > 0 && (
+                {(data.modulosAdicionais.length > 0 || hasDescontoImpl || hasDescontoMens) && (
                   <p className="text-[10px] text-muted-foreground mt-1">
-                    Plano {fmtBRL(planoMensalidade)} + Adicionais {fmtBRL(totalAdicionaisMensalidade)} = {fmtBRL(mensalidadeTotal)}/mês
+                    Plano {fmtBRL(planoMensalidade)}
+                    {totalAdicionaisMensalidade > 0 ? ` + Adicionais ${fmtBRL(totalAdicionaisMensalidade)}` : ""}
+                    {descontoMens > 0 ? ` - Desconto ${fmtBRL(descontoMens)}` : ""}
+                    {" "}= {fmtBRL(mensalidadeTotal)}/mês
                   </p>
                 )}
               </div>
