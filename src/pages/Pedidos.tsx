@@ -516,8 +516,9 @@ export default function Pedidos() {
       .eq("cliente_id", clienteId)
       .eq("status", "Ativo")
       .eq("tipo", "Base")
-      .maybeSingle();
-    setContratoAtivo(data as unknown as Contrato | null);
+      .order("created_at", { ascending: false })
+      .limit(1);
+    setContratoAtivo(data && data.length > 0 ? (data[0] as unknown as Contrato) : null);
     setLoadingContrato(false);
   }
 
