@@ -536,7 +536,7 @@ export default function Clientes() {
 
   // Dados do historico separados
   const contratosBase = contratosList.filter((c) => c.tipo === "Base");
-  const contratosAditivos = contratosList.filter((c) => c.tipo === "Termo Aditivo");
+  const contratosAditivos = contratosList.filter((c) => c.tipo === "Aditivo");
   const pedidosUpgrade = pedidosHistorico.filter((p) => p.tipo_pedido === "Upgrade");
   const pedidosDowngrade = pedidosHistorico.filter((p) => p.tipo_pedido === "Downgrade");
 
