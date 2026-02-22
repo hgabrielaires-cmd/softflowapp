@@ -2,13 +2,20 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Eye, Loader2, Package, FileText, CheckCircle } from "lucide-react";
+import { Eye, Loader2, Package, FileText, CheckCircle, DollarSign } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 interface PlanoInfo {
   nome: string;
-  valor_implantacao_padrao: number;
-  valor_mensalidade_padrao: number;
+}
+
+interface PedidoValores {
+  valor_implantacao_original: number;
+  valor_implantacao_final: number;
+  desconto_implantacao_valor: number;
+  valor_mensalidade_original: number;
+  valor_mensalidade_final: number;
+  desconto_mensalidade_valor: number;
 }
 
 interface ModuloInfo {
@@ -29,6 +36,7 @@ interface ModuloAdicional {
 
 interface EspelhoData {
   plano: PlanoInfo | null;
+  pedidoValores: PedidoValores | null;
   modulosPlano: ModuloInfo[];
   modulosAdicionais: ModuloAdicional[];
   contratoNumero: string;
@@ -41,7 +49,6 @@ function fmtBRL(v: number) {
 interface Props {
   clienteId: string;
   clienteNome?: string;
-  /** Render as icon button (default) or pass children for custom trigger */
   variant?: "icon" | "text";
   className?: string;
 }
@@ -55,7 +62,6 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
     setLoading(true);
     setData(null);
 
-    // 1. Buscar contrato ativo base
     const { data: contratos } = await supabase
       .from("contratos")
       .select("id, numero_exibicao, plano_id, pedido_id")
@@ -67,20 +73,22 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
 
     const contrato = contratos?.[0];
     if (!contrato || !contrato.plano_id) {
-      setData({ plano: null, modulosPlano: [], modulosAdicionais: [], contratoNumero: "" });
+      setData({ plano: null, pedidoValores: null, modulosPlano: [], modulosAdicionais: [], contratoNumero: "" });
       setLoading(false);
       return;
     }
 
-    // 2. Buscar plano, módulos do plano e módulos adicionais do pedido
     const [{ data: planoData }, { data: planoModulos }, pedidoResult] = await Promise.all([
-      supabase.from("planos").select("nome, valor_implantacao_padrao, valor_mensalidade_padrao").eq("id", contrato.plano_id).single(),
+      supabase.from("planos").select("nome").eq("id", contrato.plano_id).single(),
       supabase.from("plano_modulos")
         .select("incluso_no_plano, inclui_treinamento, modulos(nome, valor_implantacao_modulo, valor_mensalidade_modulo)")
         .eq("plano_id", contrato.plano_id)
         .order("ordem"),
       contrato.pedido_id
-        ? supabase.from("pedidos").select("modulos_adicionais").eq("id", contrato.pedido_id).maybeSingle()
+        ? supabase.from("pedidos")
+            .select("modulos_adicionais, valor_implantacao_original, valor_implantacao_final, desconto_implantacao_valor, valor_mensalidade_original, valor_mensalidade_final, desconto_mensalidade_valor")
+            .eq("id", contrato.pedido_id)
+            .maybeSingle()
         : Promise.resolve({ data: null }),
     ]);
 
@@ -94,7 +102,16 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
 
     const modulosAdicionais: ModuloAdicional[] = (pedidoResult?.data?.modulos_adicionais as any[]) || [];
 
-    // 3. Also check aditivo contracts for additional modules
+    const pedidoValores: PedidoValores | null = pedidoResult?.data ? {
+      valor_implantacao_original: pedidoResult.data.valor_implantacao_original ?? 0,
+      valor_implantacao_final: pedidoResult.data.valor_implantacao_final ?? 0,
+      desconto_implantacao_valor: pedidoResult.data.desconto_implantacao_valor ?? 0,
+      valor_mensalidade_original: pedidoResult.data.valor_mensalidade_original ?? 0,
+      valor_mensalidade_final: pedidoResult.data.valor_mensalidade_final ?? 0,
+      desconto_mensalidade_valor: pedidoResult.data.desconto_mensalidade_valor ?? 0,
+    } : null;
+
+    // Aditivos
     const { data: aditivos } = await supabase
       .from("contratos")
       .select("pedido_id")
@@ -120,6 +137,7 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
 
     setData({
       plano: planoData as PlanoInfo | null,
+      pedidoValores,
       modulosPlano,
       modulosAdicionais: todosAdicionais,
       contratoNumero: contrato.numero_exibicao || "",
@@ -131,6 +149,9 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
     setOpen(true);
     fetchEspelho();
   }
+
+  const hasDescontoImpl = (data?.pedidoValores?.desconto_implantacao_valor ?? 0) > 0;
+  const hasDescontoMens = (data?.pedidoValores?.desconto_mensalidade_valor ?? 0) > 0;
 
   return (
     <>
@@ -174,21 +195,65 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
                   <FileText className="h-4 w-4 text-primary" />
                   <span className="text-sm font-semibold">Contrato {data.contratoNumero}</span>
                 </div>
-                <div className="grid grid-cols-3 gap-3 mt-2">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Plano</p>
-                    <p className="text-sm font-medium">{data.plano.nome}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Implantação</p>
-                    <p className="text-sm font-mono">{fmtBRL(data.plano.valor_implantacao_padrao)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Mensalidade</p>
-                    <p className="text-sm font-mono">{fmtBRL(data.plano.valor_mensalidade_padrao)}</p>
-                  </div>
+                <div className="mt-2">
+                  <p className="text-xs text-muted-foreground">Plano</p>
+                  <p className="text-sm font-medium">{data.plano.nome}</p>
                 </div>
               </div>
+
+              {/* Valores do Pedido */}
+              {data.pedidoValores && (
+                <div className="rounded-lg border border-border p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold">Valores do Pedido</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mt-2">
+                    {/* Implantação */}
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Implantação</p>
+                      {hasDescontoImpl ? (
+                        <>
+                          <p className="text-sm font-mono line-through text-muted-foreground">
+                            {fmtBRL(data.pedidoValores.valor_implantacao_original)}
+                          </p>
+                          <p className="text-sm font-mono font-semibold text-foreground">
+                            {fmtBRL(data.pedidoValores.valor_implantacao_final)}
+                          </p>
+                          <p className="text-[11px] text-emerald-600">
+                            Desconto: {fmtBRL(data.pedidoValores.desconto_implantacao_valor)}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-sm font-mono font-semibold">
+                          {fmtBRL(data.pedidoValores.valor_implantacao_final)}
+                        </p>
+                      )}
+                    </div>
+                    {/* Mensalidade */}
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Mensalidade</p>
+                      {hasDescontoMens ? (
+                        <>
+                          <p className="text-sm font-mono line-through text-muted-foreground">
+                            {fmtBRL(data.pedidoValores.valor_mensalidade_original)}
+                          </p>
+                          <p className="text-sm font-mono font-semibold text-foreground">
+                            {fmtBRL(data.pedidoValores.valor_mensalidade_final)}
+                          </p>
+                          <p className="text-[11px] text-emerald-600">
+                            Desconto: {fmtBRL(data.pedidoValores.desconto_mensalidade_valor)}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-sm font-mono font-semibold">
+                          {fmtBRL(data.pedidoValores.valor_mensalidade_final)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Módulos do Plano */}
               {data.modulosPlano.length > 0 && (
