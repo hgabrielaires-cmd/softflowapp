@@ -279,6 +279,56 @@ export type Database = {
           },
         ]
       }
+      custos: {
+        Row: {
+          created_at: string
+          despesas_adicionais: number
+          despesas_adicionais_descricao: string | null
+          id: string
+          imposto_base: string
+          imposto_tipo: string
+          imposto_valor: number
+          plano_id: string
+          preco_fornecedor: number
+          taxa_boleto: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          despesas_adicionais?: number
+          despesas_adicionais_descricao?: string | null
+          id?: string
+          imposto_base?: string
+          imposto_tipo?: string
+          imposto_valor?: number
+          plano_id: string
+          preco_fornecedor?: number
+          taxa_boleto?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          despesas_adicionais?: number
+          despesas_adicionais_descricao?: string | null
+          id?: string
+          imposto_base?: string
+          imposto_tipo?: string
+          imposto_valor?: number
+          plano_id?: string
+          preco_fornecedor?: number
+          taxa_boleto?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custos_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_templates: {
         Row: {
           ativo: boolean
@@ -1099,6 +1149,7 @@ export type Database = {
           ativo: boolean
           created_at: string
           descricao: string | null
+          fornecedor_id: string | null
           id: string
           nome: string
           valor_implantacao_padrao: number
@@ -1108,6 +1159,7 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           descricao?: string | null
+          fornecedor_id?: string | null
           id?: string
           nome: string
           valor_implantacao_padrao?: number
@@ -1117,12 +1169,21 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           descricao?: string | null
+          fornecedor_id?: string | null
           id?: string
           nome?: string
           valor_implantacao_padrao?: number
           valor_mensalidade_padrao?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "planos_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
