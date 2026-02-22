@@ -103,6 +103,7 @@ export default function ModelosContrato() {
       supabase
         .from("document_templates")
         .select("*, filiais(nome)")
+        .in("tipo", ["CONTRATO_BASE", "ADITIVO", "CANCELAMENTO"])
         .order("created_at", { ascending: false }),
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
       supabase.from("message_templates").select("id, nome, tipo").eq("tipo", "whatsapp").eq("ativo", true).order("nome"),
