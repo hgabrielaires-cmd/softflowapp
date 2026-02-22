@@ -515,7 +515,7 @@ export default function Pedidos() {
     ] = await Promise.all([
       supabase.from("pedidos").select("*, clientes(nome_fantasia), planos(nome), filiais(nome)").order("created_at", { ascending: false }),
       supabase.from("clientes").select("*").eq("ativo", true).order("nome_fantasia"),
-      supabase.from("planos").select("*").eq("ativo", true).order("nome"),
+      supabase.from("planos").select("*").eq("ativo", true).order("ordem").order("nome"),
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
       supabase.from("profiles").select("*").order("full_name"),
       supabase.from("servicos").select("id, nome, valor, unidade_medida").eq("ativo", true).order("nome"),
@@ -2393,12 +2393,17 @@ export default function Pedidos() {
               <Select value={upgradePlanoId} onValueChange={setUpgradePlanoId}>
                 <SelectTrigger><SelectValue placeholder="Selecione o novo plano..." /></SelectTrigger>
                 <SelectContent>
-                  {planos
-                    .filter((p) => p.id !== contratoAtivo?.plano_id)
-                    .map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+                  {(() => {
+                    const planoAtual = planos.find((p) => p.id === contratoAtivo?.plano_id);
+                    const ordemAtual = planoAtual?.ordem ?? 0;
+                    const planosUpgrade = planos.filter((p) => p.id !== contratoAtivo?.plano_id && p.ordem > ordemAtual);
+                    return planosUpgrade.length === 0
+                      ? <SelectItem value="__none__" disabled>Nenhum plano disponível para upgrade</SelectItem>
+                      : planosUpgrade.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>);
+                  })()}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">O plano atual do contrato não é exibido.</p>
+              <p className="text-xs text-muted-foreground">Apenas planos com ordem superior ao atual são exibidos.</p>
             </div>
           </div>
           <DialogFooter>
