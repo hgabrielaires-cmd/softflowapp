@@ -1515,7 +1515,7 @@ Estou à disposição.`;
                     ✅ Tudo pronto!
                   </p>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    O Flowy 🤖 Disparando o alerta para o WhatsApp do cliente.
+                    🤖 O Flowy acabou de disparar a mensagem no WhatsApp do cliente!
                   </p>
                 </div>
 
