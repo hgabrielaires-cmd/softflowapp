@@ -1173,6 +1173,7 @@ export type Database = {
           fornecedor_id: string | null
           id: string
           nome: string
+          ordem: number
           valor_implantacao_padrao: number
           valor_mensalidade_padrao: number
         }
@@ -1183,6 +1184,7 @@ export type Database = {
           fornecedor_id?: string | null
           id?: string
           nome: string
+          ordem?: number
           valor_implantacao_padrao?: number
           valor_mensalidade_padrao?: number
         }
@@ -1193,6 +1195,7 @@ export type Database = {
           fornecedor_id?: string | null
           id?: string
           nome?: string
+          ordem?: number
           valor_implantacao_padrao?: number
           valor_mensalidade_padrao?: number
         }

@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/table";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Link, CopyPlus, DollarSign } from "lucide-react";
+import { Plus, Pencil, Trash2, Link, CopyPlus, DollarSign, Search } from "lucide-react";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -134,6 +134,7 @@ interface PlanoForm {
   valor_implantacao_padrao: string;
   valor_mensalidade_padrao: string;
   fornecedor_id: string;
+  ordem: string;
 }
 
 function PlanosTab() {
@@ -142,10 +143,11 @@ function PlanosTab() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
+  const [searchPlano, setSearchPlano] = useState("");
   const [form, setForm] = useState<PlanoForm>({
     nome: "", descricao: "", ativo: true,
     valor_implantacao_padrao: "0", valor_mensalidade_padrao: "0",
-    fornecedor_id: "",
+    fornecedor_id: "", ordem: "0",
   });
   const [custoForm, setCustoForm] = useState<CustoForm>({ ...CUSTO_EMPTY });
   const [saving, setSaving] = useState(false);
@@ -153,7 +155,7 @@ function PlanosTab() {
   async function fetch() {
     setLoading(true);
     const [{ data: p }, { data: f }] = await Promise.all([
-      supabase.from("planos").select("*, fornecedores(id, nome_fantasia)").order("nome"),
+      supabase.from("planos").select("*, fornecedores(id, nome_fantasia)").order("ordem").order("nome"),
       supabase.from("fornecedores").select("id, nome_fantasia").eq("ativo", true).order("nome_fantasia"),
     ]);
     setPlanos(p || []);
@@ -165,7 +167,7 @@ function PlanosTab() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ nome: "", descricao: "", ativo: true, valor_implantacao_padrao: "0", valor_mensalidade_padrao: "0", fornecedor_id: "" });
+    setForm({ nome: "", descricao: "", ativo: true, valor_implantacao_padrao: "0", valor_mensalidade_padrao: "0", fornecedor_id: "", ordem: "0" });
     setCustoForm({ ...CUSTO_EMPTY });
     setDialogOpen(true);
   }
@@ -179,6 +181,7 @@ function PlanosTab() {
       valor_implantacao_padrao: (p.valor_implantacao_padrao ?? 0).toString(),
       valor_mensalidade_padrao: (p.valor_mensalidade_padrao ?? 0).toString(),
       fornecedor_id: p.fornecedor_id || "",
+      ordem: (p.ordem ?? 0).toString(),
     });
     // Load existing custos
     const { data: custo } = await supabase.from("custos").select("*").eq("plano_id", p.id).maybeSingle();
@@ -213,6 +216,7 @@ function PlanosTab() {
       valor_implantacao_padrao: parseFloat(form.valor_implantacao_padrao) || 0,
       valor_mensalidade_padrao: parseFloat(form.valor_mensalidade_padrao) || 0,
       fornecedor_id: form.fornecedor_id || null,
+      ordem: parseInt(form.ordem) || 0,
     };
     let planoId: string;
     if (editing) {
@@ -260,17 +264,23 @@ function PlanosTab() {
     setPlanos((prev) => prev.map((x) => x.id === p.id ? { ...x, ativo: !x.ativo } : x));
   }
 
+  const filteredPlanos = planos.filter((p) => p.nome.toLowerCase().includes(searchPlano.toLowerCase()));
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar plano..." value={searchPlano} onChange={(e) => setSearchPlano(e.target.value)} className="pl-9" />
+        </div>
         <Button onClick={openCreate} className="gap-2"><Plus className="h-4 w-4" /> Novo plano</Button>
       </div>
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-16">Ordem</TableHead>
               <TableHead>Nome</TableHead>
-              <TableHead>Fornecedor</TableHead>
               <TableHead>Descrição</TableHead>
               <TableHead className="text-right">Implantação</TableHead>
               <TableHead className="text-right">Mensalidade</TableHead>
@@ -281,12 +291,12 @@ function PlanosTab() {
           <TableBody>
             {loading ? (
               <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
-            ) : planos.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Nenhum plano cadastrado</TableCell></TableRow>
-            ) : planos.map((p) => (
+            ) : filteredPlanos.length === 0 ? (
+              <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">{searchPlano ? "Nenhum plano encontrado" : "Nenhum plano cadastrado"}</TableCell></TableRow>
+            ) : filteredPlanos.map((p) => (
               <TableRow key={p.id}>
+                <TableCell className="text-center text-muted-foreground">{p.ordem}</TableCell>
                 <TableCell className="font-medium">{p.nome}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{p.fornecedores?.nome_fantasia || "—"}</TableCell>
                 <TableCell className="text-muted-foreground text-sm">{p.descricao || "—"}</TableCell>
                 <TableCell className="text-right font-mono text-sm">{fmtBRL(p.valor_implantacao_padrao ?? 0)}</TableCell>
                 <TableCell className="text-right font-mono text-sm">{fmtBRL(p.valor_mensalidade_padrao ?? 0)}</TableCell>
@@ -311,17 +321,23 @@ function PlanosTab() {
               <Label>Nome *</Label>
               <Input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Ex: Essencial, Pro, Premium" />
             </div>
-            <div className="space-y-1.5">
-              <Label>Fornecedor</Label>
-              <Select value={form.fornecedor_id} onValueChange={(v) => setForm((f) => ({ ...f, fornecedor_id: v === "__none__" ? "" : v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecionar fornecedor (opcional)" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Nenhum</SelectItem>
-                  {fornecedores.map((f) => (
-                    <SelectItem key={f.id} value={f.id}>{f.nome_fantasia}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Fornecedor</Label>
+                <Select value={form.fornecedor_id} onValueChange={(v) => setForm((f) => ({ ...f, fornecedor_id: v === "__none__" ? "" : v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar (opcional)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Nenhum</SelectItem>
+                    {fornecedores.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.nome_fantasia}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Ordem *</Label>
+                <Input type="number" min="0" value={form.ordem} onChange={(e) => setForm((f) => ({ ...f, ordem: e.target.value }))} placeholder="Ex: 1, 2, 3..." />
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>Descrição</Label>
@@ -377,6 +393,7 @@ function ModulosTab() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
+  const [searchModulo, setSearchModulo] = useState("");
   const [form, setForm] = useState<ModuloForm>({ nome: "", ativo: true, valor_implantacao_modulo: "", valor_mensalidade_modulo: "", fornecedor_id: "" });
   const [saving, setSaving] = useState(false);
 
@@ -446,21 +463,26 @@ function ModulosTab() {
     setModulos((prev) => prev.map((x) => x.id === m.id ? { ...x, ativo: !x.ativo } : x));
   }
 
+  const filteredModulos = modulos.filter((m) => m.nome.toLowerCase().includes(searchModulo.toLowerCase()));
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar módulo..." value={searchModulo} onChange={(e) => setSearchModulo(e.target.value)} className="pl-9" />
+        </div>
         <Button onClick={openCreate} className="gap-2"><Plus className="h-4 w-4" /> Novo módulo</Button>
       </div>
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <Table>
-          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Fornecedor</TableHead><TableHead className="text-right">Implantação</TableHead><TableHead className="text-right">Mensalidade</TableHead><TableHead>Status</TableHead><TableHead className="w-28">Ações</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead className="text-right">Implantação</TableHead><TableHead className="text-right">Mensalidade</TableHead><TableHead>Status</TableHead><TableHead className="w-28">Ações</TableHead></TableRow></TableHeader>
           <TableBody>
-            {loading ? (<TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
-            ) : modulos.length === 0 ? (<TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">Nenhum módulo cadastrado</TableCell></TableRow>
-            ) : modulos.map((m) => (
+            {loading ? (<TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
+            ) : filteredModulos.length === 0 ? (<TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">{searchModulo ? "Nenhum módulo encontrado" : "Nenhum módulo cadastrado"}</TableCell></TableRow>
+            ) : filteredModulos.map((m) => (
               <TableRow key={m.id}>
                 <TableCell className="font-medium">{m.nome}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{m.fornecedores?.nome_fantasia || "—"}</TableCell>
                 <TableCell className="text-right font-mono text-sm text-muted-foreground">{m.valor_implantacao_modulo != null ? fmtBRL(m.valor_implantacao_modulo) : "—"}</TableCell>
                 <TableCell className="text-right font-mono text-sm text-muted-foreground">{m.valor_mensalidade_modulo != null ? fmtBRL(m.valor_mensalidade_modulo) : "—"}</TableCell>
                 <TableCell><Switch checked={m.ativo} onCheckedChange={() => toggleAtivo(m)} /></TableCell>

@@ -1,0 +1,1 @@
+ALTER TABLE public.planos ADD COLUMN ordem integer NOT NULL DEFAULT 0;
