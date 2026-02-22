@@ -79,21 +79,10 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
 
   // Check permission for sending espelho via WhatsApp
   useEffect(() => {
-    async function checkPerm() {
-      if (!roles.length) return;
-      // Admin always can
-      if (roles.includes("admin")) { setCanSendWhatsapp(true); return; }
-      const { data: perms } = await supabase
-        .from("role_permissions")
-        .select("ativo")
-        .in("role", roles)
-        .eq("permissao", "acao.enviar_espelho_whatsapp")
-        .eq("ativo", true)
-        .limit(1);
-      setCanSendWhatsapp((perms || []).length > 0);
-    }
-    checkPerm();
-  }, [roles]);
+    if (!profile) return;
+    if (roles.includes("admin")) { setCanSendWhatsapp(true); return; }
+    setCanSendWhatsapp(!!(profile as any).permite_enviar_espelho_whatsapp);
+  }, [roles, profile]);
 
   async function fetchEspelho() {
     setLoading(true);

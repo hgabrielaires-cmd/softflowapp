@@ -40,7 +40,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send } from "lucide-react";
+import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 
@@ -92,6 +92,7 @@ export default function Usuarios() {
   const [editPermitirCnpjDuplicado, setEditPermitirCnpjDuplicado] = useState(false);
   const [editRecebeComissao, setEditRecebeComissao] = useState(true);
   const [editTelefone, setEditTelefone] = useState("");
+  const [editPermiteEnviarEspelho, setEditPermiteEnviarEspelho] = useState(false);
   const [editActive, setEditActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -249,6 +250,7 @@ export default function Usuarios() {
     setEditPermitirCnpjDuplicado((user as any).permitir_cnpj_duplicado ?? false);
     setEditRecebeComissao((user as any).recebe_comissao ?? true);
     setEditTelefone((user as any).telefone || "");
+    setEditPermiteEnviarEspelho((user as any).permite_enviar_espelho_whatsapp ?? false);
     setEditActive(user.active);
     setOpenEdit(true);
   }
@@ -271,6 +273,7 @@ export default function Usuarios() {
         permitir_cnpj_duplicado: editPermitirCnpjDuplicado,
         recebe_comissao: editRecebeComissao,
         telefone: editTelefone || null,
+        permite_enviar_espelho_whatsapp: editPermiteEnviarEspelho,
         active: editActive,
       } as any).eq("user_id", editingUser.user_id);
 
@@ -849,6 +852,19 @@ export default function Usuarios() {
                         </p>
                       </div>
                       <Switch checked={editPermitirCnpjDuplicado} onCheckedChange={setEditPermitirCnpjDuplicado} />
+                    </div>
+                    <div className="border-t border-border" />
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+                          <MessageCircle className="h-4 w-4 text-green-600" />
+                          Enviar Espelho via WhatsApp
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Permite enviar o resumo do espelho do cliente via WhatsApp diretamente pelo sistema.
+                        </p>
+                      </div>
+                      <Switch checked={editPermiteEnviarEspelho} onCheckedChange={setEditPermiteEnviarEspelho} />
                     </div>
                   </div>
                 </TabsContent>

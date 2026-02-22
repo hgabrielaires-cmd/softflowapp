@@ -1369,6 +1369,7 @@ export type Database = {
           full_name: string
           gestor_desconto: boolean | null
           id: string
+          permite_enviar_espelho_whatsapp: boolean
           permitir_cnpj_duplicado: boolean | null
           recebe_comissao: boolean
           telefone: string | null
@@ -1393,6 +1394,7 @@ export type Database = {
           full_name: string
           gestor_desconto?: boolean | null
           id?: string
+          permite_enviar_espelho_whatsapp?: boolean
           permitir_cnpj_duplicado?: boolean | null
           recebe_comissao?: boolean
           telefone?: string | null
@@ -1417,6 +1419,7 @@ export type Database = {
           full_name?: string
           gestor_desconto?: boolean | null
           id?: string
+          permite_enviar_espelho_whatsapp?: boolean
           permitir_cnpj_duplicado?: boolean | null
           recebe_comissao?: boolean
           telefone?: string | null

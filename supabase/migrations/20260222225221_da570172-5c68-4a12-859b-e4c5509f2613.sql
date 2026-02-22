@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS permite_enviar_espelho_whatsapp boolean NOT NULL DEFAULT false;
