@@ -145,6 +145,7 @@ interface FormState {
   comissao_percentual: string;
   comissao_implantacao_percentual: string;
   comissao_mensalidade_percentual: string;
+  comissao_servico_percentual: string;
   observacoes: string;
   motivo_desconto: string;
   // Valores originais (auto-preenchidos, readonly)
@@ -180,6 +181,7 @@ const emptyForm: FormState = {
   comissao_percentual: "5",
   comissao_implantacao_percentual: "5",
   comissao_mensalidade_percentual: "5",
+  comissao_servico_percentual: "5",
   observacoes: "",
   motivo_desconto: "",
   valor_implantacao_original: 0,
@@ -333,9 +335,11 @@ export default function Pedidos() {
   // Comissões separadas por tipo
   const comissaoImpPerc = parseFloat(form.comissao_implantacao_percentual) || 0;
   const comissaoMensPerc = parseFloat(form.comissao_mensalidade_percentual) || 0;
+  const comissaoServPerc = parseFloat(form.comissao_servico_percentual) || 0;
   const comissaoImpValor = valorImplantacaoFinal * comissaoImpPerc / 100;
   const comissaoMensValor = valorMensalidadeFinal * comissaoMensPerc / 100;
-  const comissaoValorTotal = comissaoImpValor + comissaoMensValor;
+  const comissaoServValor = form.tipo_pedido === "OA" ? valorTotal * comissaoServPerc / 100 : 0;
+  const comissaoValorTotal = form.tipo_pedido === "OA" ? comissaoServValor : comissaoImpValor + comissaoMensValor;
   // Campo legado mantido para compatibilidade
   const comissaoValor = comissaoValorTotal;
   const comissaoPercentualLegado = parseFloat(form.comissao_percentual) || 0;
@@ -654,6 +658,7 @@ export default function Pedidos() {
   async function openCreate() {
     const defaultImp = (profile as any)?.comissao_implantacao_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
     const defaultMens = (profile as any)?.comissao_mensalidade_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
+    const defaultServ = (profile as any)?.comissao_servico_percentual?.toString() ?? "5";
 
     // Buscar filial favorita atualizada do banco (não depender do estado async)
     let resolvedFilialId = filialFavoritaId || (profile as any)?.filial_favorita_id || profile?.filial_id || "";
@@ -669,6 +674,7 @@ export default function Pedidos() {
       comissao_percentual: defaultImp,
       comissao_implantacao_percentual: defaultImp,
       comissao_mensalidade_percentual: defaultMens,
+      comissao_servico_percentual: defaultServ,
       filial_id: resolvedFilialId,
       vendedor_id: defaultVendedor,
     });
@@ -697,6 +703,7 @@ export default function Pedidos() {
       comissao_percentual: pedido.comissao_percentual.toString(),
       comissao_implantacao_percentual: ((pedido as any).comissao_implantacao_percentual ?? pedido.comissao_percentual ?? 5).toString(),
       comissao_mensalidade_percentual: ((pedido as any).comissao_mensalidade_percentual ?? pedido.comissao_percentual ?? 5).toString(),
+      comissao_servico_percentual: ((pedido as any).comissao_servico_percentual ?? 5).toString(),
       observacoes: pedido.observacoes || "",
       motivo_desconto: (pedido as any).motivo_desconto || "",
       valor_implantacao_original: pedido.valor_implantacao_original ?? pedido.valor_implantacao,
@@ -802,6 +809,8 @@ export default function Pedidos() {
         comissao_implantacao_valor: comissaoImpValor,
         comissao_mensalidade_percentual: comissaoMensPerc,
         comissao_mensalidade_valor: comissaoMensValor,
+        comissao_servico_percentual: comissaoServPerc,
+        comissao_servico_valor: comissaoServValor,
         pagamento_mensalidade_forma: form.pagamento_mensalidade_tipo || null,
         pagamento_mensalidade_parcelas: null,
         pagamento_mensalidade_desconto_percentual: 0,
@@ -1605,6 +1614,7 @@ export default function Pedidos() {
                       comissao_percentual: (vend as any)?.comissao_implantacao_percentual?.toString() ?? vend?.comissao_percentual?.toString() ?? f.comissao_percentual,
                       comissao_implantacao_percentual: (vend as any)?.comissao_implantacao_percentual?.toString() ?? vend?.comissao_percentual?.toString() ?? f.comissao_implantacao_percentual,
                       comissao_mensalidade_percentual: (vend as any)?.comissao_mensalidade_percentual?.toString() ?? vend?.comissao_percentual?.toString() ?? f.comissao_mensalidade_percentual,
+                      comissao_servico_percentual: (vend as any)?.comissao_servico_percentual?.toString() ?? f.comissao_servico_percentual,
                     }));
                   }}>
                     <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
@@ -2342,7 +2352,7 @@ export default function Pedidos() {
                 {(isAdmin || isFinanceiro || isVendedor) && (
                   <div className="border-t border-border pt-3 space-y-2">
                     <p className="text-xs font-medium text-muted-foreground">Comissões</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-0.5">
                         <p className="text-xs text-muted-foreground">Implantação / Treinamento</p>
                         <p className="text-xs">{(vp as any).comissao_implantacao_percentual ?? vp.comissao_percentual}% → <span className="font-mono">{fmtBRL((vp as any).comissao_implantacao_valor ?? 0)}</span></p>
@@ -2350,6 +2360,10 @@ export default function Pedidos() {
                       <div className="space-y-0.5">
                         <p className="text-xs text-muted-foreground">Mensalidade</p>
                         <p className="text-xs">{(vp as any).comissao_mensalidade_percentual ?? vp.comissao_percentual}% → <span className="font-mono">{fmtBRL((vp as any).comissao_mensalidade_valor ?? 0)}</span></p>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-xs text-muted-foreground">Serviço</p>
+                        <p className="text-xs">{(vp as any).comissao_servico_percentual ?? 0}% → <span className="font-mono">{fmtBRL((vp as any).comissao_servico_valor ?? 0)}</span></p>
                       </div>
                     </div>
                     <div className="flex justify-between items-center pt-1 border-t border-border">

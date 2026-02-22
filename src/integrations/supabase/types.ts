@@ -882,6 +882,8 @@ export type Database = {
           comissao_mensalidade_percentual: number | null
           comissao_mensalidade_valor: number | null
           comissao_percentual: number
+          comissao_servico_percentual: number | null
+          comissao_servico_valor: number | null
           comissao_valor: number
           contrato_id: string | null
           contrato_liberado: boolean
@@ -928,6 +930,8 @@ export type Database = {
           comissao_mensalidade_percentual?: number | null
           comissao_mensalidade_valor?: number | null
           comissao_percentual?: number
+          comissao_servico_percentual?: number | null
+          comissao_servico_valor?: number | null
           comissao_valor?: number
           contrato_id?: string | null
           contrato_liberado?: boolean
@@ -974,6 +978,8 @@ export type Database = {
           comissao_mensalidade_percentual?: number | null
           comissao_mensalidade_valor?: number | null
           comissao_percentual?: number
+          comissao_servico_percentual?: number | null
+          comissao_servico_valor?: number | null
           comissao_valor?: number
           contrato_id?: string | null
           contrato_liberado?: boolean
@@ -1122,6 +1128,7 @@ export type Database = {
           comissao_implantacao_percentual: number | null
           comissao_mensalidade_percentual: number | null
           comissao_percentual: number | null
+          comissao_servico_percentual: number | null
           created_at: string
           desconto_limite_implantacao: number | null
           desconto_limite_mensalidade: number | null
@@ -1145,6 +1152,7 @@ export type Database = {
           comissao_implantacao_percentual?: number | null
           comissao_mensalidade_percentual?: number | null
           comissao_percentual?: number | null
+          comissao_servico_percentual?: number | null
           created_at?: string
           desconto_limite_implantacao?: number | null
           desconto_limite_mensalidade?: number | null
@@ -1168,6 +1176,7 @@ export type Database = {
           comissao_implantacao_percentual?: number | null
           comissao_mensalidade_percentual?: number | null
           comissao_percentual?: number | null
+          comissao_servico_percentual?: number | null
           created_at?: string
           desconto_limite_implantacao?: number | null
           desconto_limite_mensalidade?: number | null
