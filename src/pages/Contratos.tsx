@@ -507,6 +507,18 @@ export default function Contratos() {
           Upgrade
         </Badge>
       );
+    if (tipo === "Aditivo")
+      return (
+        <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 text-xs flex items-center gap-1 w-fit">
+          <FilePen className="h-3 w-3" /> Aditivo
+        </Badge>
+      );
+    if (tipo === "OA")
+      return (
+        <Badge className="bg-teal-100 text-teal-700 border-teal-200 hover:bg-teal-100 dark:bg-teal-900/30 dark:text-teal-400 text-xs flex items-center gap-1 w-fit">
+          <FileOutput className="h-3 w-3" /> OA
+        </Badge>
+      );
     if (tipo === "Downgrade")
       return (
         <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 text-xs flex items-center gap-1 w-fit">

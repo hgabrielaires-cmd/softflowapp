@@ -908,6 +908,7 @@ export type Database = {
           pagamento_mensalidade_observacao: string | null
           pagamento_mensalidade_parcelas: number | null
           plano_id: string
+          servicos_pedido: Json | null
           status_pedido: string
           tipo_pedido: string
           updated_at: string
@@ -953,6 +954,7 @@ export type Database = {
           pagamento_mensalidade_observacao?: string | null
           pagamento_mensalidade_parcelas?: number | null
           plano_id: string
+          servicos_pedido?: Json | null
           status_pedido?: string
           tipo_pedido?: string
           updated_at?: string
@@ -998,6 +1000,7 @@ export type Database = {
           pagamento_mensalidade_observacao?: string | null
           pagamento_mensalidade_parcelas?: number | null
           plano_id?: string
+          servicos_pedido?: Json | null
           status_pedido?: string
           tipo_pedido?: string
           updated_at?: string

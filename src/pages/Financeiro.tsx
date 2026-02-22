@@ -127,13 +127,20 @@ export default function Financeiro() {
       toast.error("Erro ao aprovar pedido: " + error.message);
       return;
     }
-    // Criar contrato
+    // Criar contrato - determinar tipo com base no tipo_pedido
+    const tipoPedido = (pedido as any).tipo_pedido || "Novo";
+    let tipoContrato = "Base";
+    if (tipoPedido === "Upgrade") tipoContrato = "Upgrade";
+    else if (tipoPedido === "Aditivo") tipoContrato = "Aditivo";
+    else if (tipoPedido === "OA") tipoContrato = "OA";
+
     const { error: contratoError } = await supabase.from("contratos").insert({
       cliente_id: pedido.cliente_id,
       plano_id: pedido.plano_id,
       pedido_id: pedido.id,
-      tipo: "Base",
+      tipo: tipoContrato,
       status: "Ativo",
+      contrato_origem_id: (pedido as any).contrato_id || null,
     });
     setProcessando(false);
     if (contratoError) {
