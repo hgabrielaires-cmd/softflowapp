@@ -135,7 +135,14 @@ Deno.serve(async (req) => {
 
     // 5. Buscar template HTML ativo (filial > global)
     // Determinar tipo de template baseado no tipo do contrato
-    const tipoTemplate = (tipo_documento === "OA" || contrato.tipo === "OA") ? "ORDEM_ATENDIMENTO" : "CONTRATO_BASE";
+    let tipoTemplate = "CONTRATO_BASE";
+    if (tipo_documento === "OA" || contrato.tipo === "OA") {
+      tipoTemplate = "ORDEM_ATENDIMENTO";
+    } else if (contrato.tipo === "Termo Aditivo") {
+      tipoTemplate = "ADITIVO";
+    } else if (contrato.tipo === "Cancelamento") {
+      tipoTemplate = "CANCELAMENTO";
+    }
     
     let template: any = null;
     if (filialId) {
