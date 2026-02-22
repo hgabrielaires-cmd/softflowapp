@@ -288,7 +288,8 @@ export type Database = {
           imposto_base: string
           imposto_tipo: string
           imposto_valor: number
-          plano_id: string
+          modulo_id: string | null
+          plano_id: string | null
           preco_fornecedor: number
           taxa_boleto: number
           updated_at: string
@@ -301,7 +302,8 @@ export type Database = {
           imposto_base?: string
           imposto_tipo?: string
           imposto_valor?: number
-          plano_id: string
+          modulo_id?: string | null
+          plano_id?: string | null
           preco_fornecedor?: number
           taxa_boleto?: number
           updated_at?: string
@@ -314,12 +316,20 @@ export type Database = {
           imposto_base?: string
           imposto_tipo?: string
           imposto_valor?: number
-          plano_id?: string
+          modulo_id?: string | null
+          plano_id?: string | null
           preco_fornecedor?: number
           taxa_boleto?: number
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "custos_modulo_id_fkey"
+            columns: ["modulo_id"]
+            isOneToOne: false
+            referencedRelation: "modulos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "custos_plano_id_fkey"
             columns: ["plano_id"]
@@ -836,6 +846,7 @@ export type Database = {
         Row: {
           ativo: boolean
           created_at: string
+          fornecedor_id: string | null
           id: string
           nome: string
           valor_implantacao_modulo: number | null
@@ -844,6 +855,7 @@ export type Database = {
         Insert: {
           ativo?: boolean
           created_at?: string
+          fornecedor_id?: string | null
           id?: string
           nome: string
           valor_implantacao_modulo?: number | null
@@ -852,12 +864,21 @@ export type Database = {
         Update: {
           ativo?: boolean
           created_at?: string
+          fornecedor_id?: string | null
           id?: string
           nome?: string
           valor_implantacao_modulo?: number | null
           valor_mensalidade_modulo?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "modulos_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notificacoes: {
         Row: {
