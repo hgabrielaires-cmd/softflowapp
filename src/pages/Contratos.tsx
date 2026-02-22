@@ -848,17 +848,48 @@ export default function Contratos() {
         : "";
       const totalAdicionaisNovos = fmtBRL(totalAdicionais);
 
+      // Variáveis específicas para upgrade de plano (buscar dados do contrato de origem)
+      let planoNomeAnterior = "";
+      let planoValorAnterior = "";
+      let adicionaisAnterioresTexto = "";
+      let valorAdicionaisAnteriores = "";
+      let totalAnterior = "";
+
+      if (contrato.contrato_origem_id) {
+        const contratoOrigem = contratos.find(c => c.id === contrato.contrato_origem_id);
+        if (contratoOrigem) {
+          const planoAnterior = contratoOrigem.planos;
+          planoNomeAnterior = planoAnterior?.nome || "";
+          const valorMensPlanoAnt = planoAnterior?.valor_mensalidade_padrao ?? 0;
+          planoValorAnterior = fmtBRL(valorMensPlanoAnt);
+
+          // Adicionais do contrato de origem (do pedido de origem)
+          const adicionaisOrigem = (contratoOrigem.pedidos?.modulos_adicionais || []) as ModuloAdicionadoItem[];
+          const totalAdAnt = adicionaisOrigem.reduce((s, m) => s + m.valor_mensalidade_modulo * m.quantidade, 0);
+          adicionaisAnterioresTexto = adicionaisOrigem.length > 0
+            ? adicionaisOrigem.map(m => `• ${m.nome} (${m.quantidade}x) - ${fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}/mês`).join("\n")
+            : "Nenhum";
+          valorAdicionaisAnteriores = adicionaisOrigem.length > 0 ? fmtBRL(totalAdAnt) : fmtBRL(0);
+          totalAnterior = fmtBRL(valorMensPlanoAnt + totalAdAnt);
+        }
+      }
+
       return effectiveTemplate.conteudo
         .replace(/\{contato\.nome\}/g, nomeDecisor)
         .replace(/\{cliente\.nome_fantasia\}/g, nomeFantasia)
         .replace(/\{cliente\.razao_social\}/g, razaoSocial)
         .replace(/\{contrato\.numero\}/g, contrato.numero_exibicao)
         .replace(/\{plano\.nome\}/g, nomePlano)
+        .replace(/\{plano\.nome_anterior\}/g, planoNomeAnterior)
         .replace(/\{plano\.modulos\}/g, modulosTexto)
         .replace(/\{plano\.valor_base\}/g, valorMensBase)
+        .replace(/\{valores\.plano_anterior\}/g, planoValorAnterior)
         .replace(/\{modulos\.adicionais\}/g, adicionaisBlock)
         .replace(/\{modulos\.adicionais_novos\}/g, adicionaisNovosTexto)
+        .replace(/\{modulos\.adicionais_anteriores\}/g, adicionaisAnterioresTexto)
         .replace(/\{valores\.total_adicionais_novos\}/g, totalAdicionaisNovos)
+        .replace(/\{valores\.adicionais_anteriores\}/g, valorAdicionaisAnteriores)
+        .replace(/\{valores\.total_anterior\}/g, totalAnterior)
         .replace(/\{valores\.implantacao\}/g, fmtBRL(impFinal))
         .replace(/\{valores\.mensalidade\}/g, fmtBRL(mensFinal))
         .replace(/\{regras\.mensalidade\}/g, regrasMens)
