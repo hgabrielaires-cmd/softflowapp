@@ -369,6 +369,8 @@ Deno.serve(async (req) => {
       "modulos.inclusos_lista": modulosInclusosLista,
       "modulos.adicionais_lista": modulosAdicionaisLista,
       "modulos.tabela_detalhada": modulosTabelaDetalhada,
+      "modulos.quantidade_total": modulos.reduce((s: number, m: any) => s + (m.quantidade || 1), 0).toString(),
+      "valores.total_adicionais_novos": fmtBRL(modulos.reduce((s: number, m: any) => s + (m.valor_mensalidade_modulo || 0) * (m.quantidade || 1), 0)),
       "valores.implantacao.original": fmtBRL(implOriginal),
       "valores.implantacao.desconto": fmtBRL(implDesconto),
       "valores.implantacao.final": fmtBRL(implFinal),
