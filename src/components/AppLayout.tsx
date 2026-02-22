@@ -50,7 +50,7 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    groupLabel: "Helpdesk",
+    groupLabel: "Onboarding",
     groupIcon: <Headphones className="h-4 w-4" />,
     items: [
       { icon: <Calendar className="h-4 w-4" />, label: "Fila de Agendamento", to: "/fila-agendamento" },
@@ -97,7 +97,7 @@ const navGroups: NavGroup[] = [
       { icon: <Users className="h-4 w-4" />, label: "Usuários", to: "/usuarios" },
       { icon: <Globe className="h-4 w-4" />, label: "Perfis de Usuário", to: "/perfis-usuario" },
       { icon: <FileText className="h-4 w-4" />, label: "Modelos de Documentos", to: "/modelos-contrato" },
-      { icon: <Headphones className="h-4 w-4" />, label: "Helpdesk", to: "#helpdesk", children: [
+      { icon: <Headphones className="h-4 w-4" />, label: "Onboarding", to: "#helpdesk", children: [
         { icon: <ListOrdered className="h-4 w-4" />, label: "Jornadas de Implantação", to: "/jornadas" },
         { icon: <Headphones className="h-4 w-4" />, label: "Mesas de Atendimento", to: "/mesas-atendimento" },
       ] },
