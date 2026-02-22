@@ -2,8 +2,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Eye, Loader2, Package, FileText, CheckCircle, DollarSign } from "lucide-react";
-
+import { Eye, Loader2, Package, FileText, CheckCircle, DollarSign, XCircle, ArrowUpCircle } from "lucide-react";
 
 interface PlanoInfo {
   nome: string;
@@ -21,14 +20,6 @@ interface PedidoValores {
   desconto_mensalidade_valor: number;
 }
 
-interface ModuloInfo {
-  nome: string;
-  incluso_no_plano: boolean;
-  inclui_treinamento: boolean;
-  valor_implantacao_modulo: number | null;
-  valor_mensalidade_modulo: number | null;
-}
-
 interface ModuloAdicional {
   modulo_id: string;
   nome: string;
@@ -44,13 +35,23 @@ interface AditivoValores {
   modulosAdicionais: ModuloAdicional[];
 }
 
+interface CancelamentoInfo {
+  numero_exibicao: string;
+  modulosCancelados: ModuloAdicional[];
+  valor_mensalidade_cancelada: number;
+  valor_implantacao_cancelada: number;
+}
+
 interface EspelhoData {
   plano: PlanoInfo | null;
+  planoAtual: PlanoInfo | null; // plano após upgrade/downgrade
   pedidoValores: PedidoValores | null;
-  modulosPlano: ModuloInfo[];
+  modulosDescricao: string[]; // módulos do plano via descrição
   modulosAdicionais: ModuloAdicional[];
   contratoNumero: string;
   aditivos: AditivoValores[];
+  cancelamentos: CancelamentoInfo[];
+  upgradeNumero: string | null;
 }
 
 function fmtBRL(v: number) {
@@ -73,6 +74,7 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
     setLoading(true);
     setData(null);
 
+    // Busca contrato base ativo
     const { data: contratos } = await supabase
       .from("contratos")
       .select("id, numero_exibicao, plano_id, pedido_id")
@@ -84,17 +86,19 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
 
     const contrato = contratos?.[0];
     if (!contrato || !contrato.plano_id) {
-      setData({ plano: null, pedidoValores: null, modulosPlano: [], modulosAdicionais: [], contratoNumero: "", aditivos: [] });
+      setData({
+        plano: null, planoAtual: null, pedidoValores: null,
+        modulosDescricao: [], modulosAdicionais: [],
+        contratoNumero: "", aditivos: [], cancelamentos: [],
+        upgradeNumero: null,
+      });
       setLoading(false);
       return;
     }
 
-    const [{ data: planoData }, { data: planoModulos }, pedidoResult] = await Promise.all([
+    // Busca plano base e pedido base
+    const [{ data: planoData }, pedidoResult] = await Promise.all([
       supabase.from("planos").select("nome, descricao, valor_implantacao_padrao, valor_mensalidade_padrao").eq("id", contrato.plano_id).single(),
-      supabase.from("plano_modulos")
-        .select("incluso_no_plano, inclui_treinamento, modulos(nome, valor_implantacao_modulo, valor_mensalidade_modulo)")
-        .eq("plano_id", contrato.plano_id)
-        .order("ordem"),
       contrato.pedido_id
         ? supabase.from("pedidos")
             .select("modulos_adicionais, valor_implantacao_original, valor_implantacao_final, desconto_implantacao_valor, valor_mensalidade_original, valor_mensalidade_final, desconto_mensalidade_valor")
@@ -103,15 +107,7 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
         : Promise.resolve({ data: null }),
     ]);
 
-    const modulosPlano: ModuloInfo[] = (planoModulos || []).map((pm: any) => ({
-      nome: pm.modulos?.nome || "—",
-      incluso_no_plano: pm.incluso_no_plano,
-      inclui_treinamento: pm.inclui_treinamento,
-      valor_implantacao_modulo: pm.modulos?.valor_implantacao_modulo ?? null,
-      valor_mensalidade_modulo: pm.modulos?.valor_mensalidade_modulo ?? null,
-    }));
-
-    const modulosAdicionais: ModuloAdicional[] = (pedidoResult?.data?.modulos_adicionais as any[]) || [];
+    const modulosAdicionaisBase: ModuloAdicional[] = (pedidoResult?.data?.modulos_adicionais as any[]) || [];
 
     const pedidoValores: PedidoValores | null = pedidoResult?.data ? {
       valor_implantacao_original: pedidoResult.data.valor_implantacao_original ?? 0,
@@ -122,16 +118,35 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
       desconto_mensalidade_valor: pedidoResult.data.desconto_mensalidade_valor ?? 0,
     } : null;
 
-    // Aditivos
-    const { data: aditivosContratos } = await supabase
-      .from("contratos")
-      .select("pedido_id, numero_exibicao")
-      .eq("cliente_id", clienteId)
-      .eq("status", "Ativo")
-      .eq("tipo", "Aditivo")
-      .order("created_at");
+    // Módulos do plano via descrição (separados por vírgula)
+    const modulosDescricao = planoData?.descricao
+      ? planoData.descricao.split(",").map((s: string) => s.trim()).filter(Boolean)
+      : [];
 
-    let todosAdicionais = [...modulosAdicionais];
+    // Busca todos os contratos ativos (Aditivo, Cancelamento) e upgrade/downgrade
+    const [{ data: aditivosContratos }, { data: cancelamentoContratos }, { data: upgradeContratos }] = await Promise.all([
+      supabase.from("contratos")
+        .select("pedido_id, numero_exibicao")
+        .eq("cliente_id", clienteId)
+        .eq("status", "Ativo")
+        .eq("tipo", "Aditivo")
+        .order("created_at"),
+      supabase.from("contratos")
+        .select("pedido_id, numero_exibicao")
+        .eq("cliente_id", clienteId)
+        .eq("status", "Ativo")
+        .eq("tipo", "Cancelamento")
+        .order("created_at"),
+      supabase.from("contratos")
+        .select("pedido_id, numero_exibicao, plano_id")
+        .eq("cliente_id", clienteId)
+        .eq("status", "Ativo")
+        .in("tipo", ["Aditivo"])
+        .order("created_at", { ascending: false }),
+    ]);
+
+    // Processa aditivos
+    let todosAdicionais = [...modulosAdicionaisBase];
     const aditivosInfo: AditivoValores[] = [];
 
     if (aditivosContratos && aditivosContratos.length > 0) {
@@ -155,13 +170,72 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
       }
     }
 
+    // Processa cancelamentos
+    const cancelamentosInfo: CancelamentoInfo[] = [];
+    if (cancelamentoContratos && cancelamentoContratos.length > 0) {
+      const cancelPedidoIds = cancelamentoContratos.map(c => c.pedido_id).filter(Boolean) as string[];
+      if (cancelPedidoIds.length > 0) {
+        const { data: pedidosCancelamento } = await supabase
+          .from("pedidos")
+          .select("id, modulos_adicionais, valor_implantacao_final, valor_mensalidade_final")
+          .in("id", cancelPedidoIds);
+        (pedidosCancelamento || []).forEach((p: any) => {
+          const mods = (p.modulos_adicionais as ModuloAdicional[]) || [];
+          const cancelContr = cancelamentoContratos.find(c => c.pedido_id === p.id);
+          cancelamentosInfo.push({
+            numero_exibicao: cancelContr?.numero_exibicao || "",
+            modulosCancelados: mods,
+            valor_mensalidade_cancelada: mods.reduce((s: number, m: ModuloAdicional) => s + (m.valor_mensalidade_modulo || 0) * (m.quantidade || 1), 0),
+            valor_implantacao_cancelada: 0,
+          });
+        });
+      }
+    }
+
+    // Verifica se houve upgrade/downgrade — busca pedido de tipo Upgrade/Downgrade com contrato ativo
+    let planoAtual: PlanoInfo | null = null;
+    let upgradeNumero: string | null = null;
+
+    // Busca pedidos de upgrade vinculados a contratos ativos do tipo Aditivo
+    if (upgradeContratos && upgradeContratos.length > 0) {
+      const upgPedidoIds = upgradeContratos.map(u => u.pedido_id).filter(Boolean) as string[];
+      if (upgPedidoIds.length > 0) {
+        const { data: pedidosUpgrade } = await supabase
+          .from("pedidos")
+          .select("id, tipo_pedido, plano_id")
+          .in("id", upgPedidoIds)
+          .in("tipo_pedido", ["Upgrade", "Downgrade"]);
+
+        if (pedidosUpgrade && pedidosUpgrade.length > 0) {
+          // Pega o mais recente (último upgrade/downgrade)
+          const lastUpgrade = pedidosUpgrade[pedidosUpgrade.length - 1];
+          const upgContr = upgradeContratos.find(u => u.pedido_id === lastUpgrade.id);
+          upgradeNumero = upgContr?.numero_exibicao || null;
+
+          if (lastUpgrade.plano_id) {
+            const { data: novoPlano } = await supabase
+              .from("planos")
+              .select("nome, descricao, valor_implantacao_padrao, valor_mensalidade_padrao")
+              .eq("id", lastUpgrade.plano_id)
+              .single();
+            if (novoPlano) {
+              planoAtual = novoPlano as PlanoInfo;
+            }
+          }
+        }
+      }
+    }
+
     setData({
       plano: planoData as PlanoInfo | null,
+      planoAtual,
       pedidoValores,
-      modulosPlano,
+      modulosDescricao,
       modulosAdicionais: todosAdicionais,
       contratoNumero: contrato.numero_exibicao || "",
       aditivos: aditivosInfo,
+      cancelamentos: cancelamentosInfo,
+      upgradeNumero,
     });
     setLoading(false);
   }
@@ -171,29 +245,31 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
     fetchEspelho();
   }
 
-  // Valores do plano base (sem adicionais)
-  const planoImplantacao = data?.plano?.valor_implantacao_padrao ?? 0;
-  const planoMensalidade = data?.plano?.valor_mensalidade_padrao ?? 0;
+  // Plano efetivo (após upgrade/downgrade, se houver)
+  const planoEfetivo = data?.planoAtual || data?.plano;
+  const planoImplantacao = planoEfetivo?.valor_implantacao_padrao ?? 0;
+  const planoMensalidade = planoEfetivo?.valor_mensalidade_padrao ?? 0;
+  const modulosDescricaoEfetivo = data?.planoAtual
+    ? (data.planoAtual.descricao?.split(",").map(s => s.trim()).filter(Boolean) || [])
+    : (data?.modulosDescricao || []);
 
-  // Módulos adicionais do pedido base
-  const adicionaisBaseMensalidade = (data?.pedidoValores ? (data.modulosAdicionais.filter((_, i) => {
-    // Apenas os do pedido base (não dos aditivos) — calculamos separadamente
-    return true;
-  }).reduce((s, m) => s + (m.valor_mensalidade_modulo || 0) * (m.quantidade || 1), 0)) : 0);
-
-  // Total de adicionais (base + aditivos)
+  // Total de adicionais
   const totalAdicionaisMensalidade = (data?.modulosAdicionais || []).reduce((s, m) => s + (m.valor_mensalidade_modulo || 0) * (m.quantidade || 1), 0);
   const totalAdicionaisImplantacao = (data?.modulosAdicionais || []).reduce((s, m) => s + (m.valor_implantacao_modulo || 0) * (m.quantidade || 1), 0);
 
-  // Total consolidado (com descontos)
+  // Cancelamentos
+  const totalCanceladoMensalidade = (data?.cancelamentos || []).reduce((s, c) => s + c.valor_mensalidade_cancelada, 0);
+
+  // Descontos
   const descontoImpl = data?.pedidoValores?.desconto_implantacao_valor ?? 0;
   const descontoMens = data?.pedidoValores?.desconto_mensalidade_valor ?? 0;
-  const mensalidadeTotal = planoMensalidade + totalAdicionaisMensalidade - descontoMens;
+
+  // Total consolidado
+  const mensalidadeTotal = planoMensalidade + totalAdicionaisMensalidade - totalCanceladoMensalidade - descontoMens;
   const implantacaoTotal = planoImplantacao + totalAdicionaisImplantacao - descontoImpl;
 
-  // Descontos do pedido base
-  const hasDescontoImpl = (data?.pedidoValores?.desconto_implantacao_valor ?? 0) > 0;
-  const hasDescontoMens = (data?.pedidoValores?.desconto_mensalidade_valor ?? 0) > 0;
+  const hasDescontoImpl = descontoImpl > 0;
+  const hasDescontoMens = descontoMens > 0;
 
   return (
     <>
@@ -232,14 +308,24 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
                 </div>
                 <div className="mt-2">
                   <p className="text-xs text-muted-foreground">Plano</p>
-                  <p className="text-sm font-medium">{data.plano.nome}</p>
-                  {data.plano.descricao && (
-                    <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">{data.plano.descricao}</p>
+                  {data.planoAtual ? (
+                    <>
+                      <p className="text-sm text-muted-foreground line-through">{data.plano.nome}</p>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <ArrowUpCircle className="h-3.5 w-3.5 text-primary" />
+                        <p className="text-sm font-medium">{data.planoAtual.nome}</p>
+                        {data.upgradeNumero && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">{data.upgradeNumero}</span>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm font-medium">{data.plano.nome}</p>
                   )}
                 </div>
               </div>
 
-              {/* Valores do Plano Base */}
+              {/* Valores do Plano */}
               <div className="rounded-lg border border-border p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4 text-primary" />
@@ -257,33 +343,25 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
                 </div>
               </div>
 
-              {/* Módulos do Plano */}
-              {data.modulosPlano.length > 0 && (
+              {/* Módulos do Plano (via descrição) */}
+              {modulosDescricaoEfetivo.length > 0 && (
                 <div className="rounded-lg border border-border p-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4 text-primary" />
                     <span className="text-sm font-semibold">Módulos do Plano</span>
                   </div>
                   <div className="divide-y divide-border">
-                    {data.modulosPlano.map((m, i) => (
-                      <div key={i} className="flex items-center justify-between py-2 first:pt-0 last:pb-0">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
-                          <span className="text-sm">{m.nome}</span>
-                          {!m.incluso_no_plano && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">Opcional</span>
-                          )}
-                          {m.inclui_treinamento && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">c/ Treinamento</span>
-                          )}
-                        </div>
+                    {modulosDescricaoEfetivo.map((nome, i) => (
+                      <div key={i} className="flex items-center gap-2 py-2 first:pt-0 last:pb-0">
+                        <CheckCircle className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                        <span className="text-sm">{nome}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Módulos Adicionais (base + aditivos) */}
+              {/* Módulos Adicionais */}
               {data.modulosAdicionais.length > 0 && (
                 <div className="rounded-lg border border-border p-4 space-y-2">
                   <div className="flex items-center gap-2">
@@ -306,10 +384,44 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
                       </div>
                     ))}
                   </div>
-                  {/* Subtotal adicionais */}
                   <div className="pt-2 border-t border-border flex justify-between">
                     <span className="text-xs font-medium text-muted-foreground">Subtotal Adicionais</span>
                     <span className="text-xs font-mono font-semibold">{fmtBRL(totalAdicionaisMensalidade)}/mês</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Cancelamentos Parciais */}
+              {data.cancelamentos.length > 0 && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="h-4 w-4 text-destructive" />
+                    <span className="text-sm font-semibold text-destructive">Módulos Cancelados</span>
+                  </div>
+                  <div className="divide-y divide-destructive/20">
+                    {data.cancelamentos.map((cancel, ci) => (
+                      <div key={ci} className="py-2 first:pt-0 last:pb-0">
+                        <p className="text-[10px] font-medium text-destructive/70 mb-1">{cancel.numero_exibicao}</p>
+                        {cancel.modulosCancelados.map((m, j) => (
+                          <div key={j} className="flex items-center justify-between py-1">
+                            <div className="flex items-center gap-2">
+                              <XCircle className="h-3.5 w-3.5 text-destructive/60" />
+                              <span className="text-sm line-through text-destructive/70">{m.nome}</span>
+                              {m.quantidade > 1 && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive/60">x{m.quantidade}</span>
+                              )}
+                            </div>
+                            <span className="text-xs font-mono line-through text-destructive/60">
+                              -{fmtBRL(m.valor_mensalidade_modulo * (m.quantidade || 1))}/mês
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="pt-2 border-t border-destructive/20 flex justify-between">
+                    <span className="text-xs font-medium text-destructive/70">Total Cancelado</span>
+                    <span className="text-xs font-mono font-semibold text-destructive">-{fmtBRL(totalCanceladoMensalidade)}/mês</span>
                   </div>
                 </div>
               )}
@@ -363,23 +475,25 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground">Mensalidade</p>
-                    {hasDescontoMens ? (
+                    {(hasDescontoMens || totalCanceladoMensalidade > 0) ? (
                       <>
                         <p className="text-xs font-mono line-through text-muted-foreground">
                           {fmtBRL(planoMensalidade + totalAdicionaisMensalidade)}/mês
                         </p>
                         <p className="text-sm font-mono font-bold">{fmtBRL(mensalidadeTotal)}/mês</p>
-                        <p className="text-[11px] text-emerald-600">Desc: -{fmtBRL(descontoMens)}/mês</p>
+                        {hasDescontoMens && <p className="text-[11px] text-emerald-600">Desc: -{fmtBRL(descontoMens)}/mês</p>}
+                        {totalCanceladoMensalidade > 0 && <p className="text-[11px] text-destructive">Cancel: -{fmtBRL(totalCanceladoMensalidade)}/mês</p>}
                       </>
                     ) : (
                       <p className="text-sm font-mono font-bold">{fmtBRL(mensalidadeTotal)}/mês</p>
                     )}
                   </div>
                 </div>
-                {(data.modulosAdicionais.length > 0 || hasDescontoImpl || hasDescontoMens) && (
+                {(data.modulosAdicionais.length > 0 || hasDescontoImpl || hasDescontoMens || totalCanceladoMensalidade > 0) && (
                   <p className="text-[10px] text-muted-foreground mt-1">
                     Plano {fmtBRL(planoMensalidade)}
                     {totalAdicionaisMensalidade > 0 ? ` + Adicionais ${fmtBRL(totalAdicionaisMensalidade)}` : ""}
+                    {totalCanceladoMensalidade > 0 ? ` - Cancelados ${fmtBRL(totalCanceladoMensalidade)}` : ""}
                     {descontoMens > 0 ? ` - Desconto ${fmtBRL(descontoMens)}` : ""}
                     {" "}= {fmtBRL(mensalidadeTotal)}/mês
                   </p>
