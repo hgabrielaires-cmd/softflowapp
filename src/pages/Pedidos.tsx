@@ -278,6 +278,10 @@ export default function Pedidos() {
   const [loadingContrato, setLoadingContrato] = useState(false);
   // Modal de upgrade
   const [openUpgradeDialog, setOpenUpgradeDialog] = useState(false);
+  // Módulos já contratados (para Aditivo — excluir do seletor)
+  const [modulosJaContratados, setModulosJaContratados] = useState<ModuloAdicionadoItem[]>([]);
+  // Valores do plano anterior (para calcular diferença no Upgrade)
+  const [planoAnteriorValores, setPlanoAnteriorValores] = useState<{ implantacao: number; mensalidade: number } | null>(null);
   const [upgradePlanoId, setUpgradePlanoId] = useState("");
 
   // Dialog novo cliente rápido
@@ -317,10 +321,18 @@ export default function Pedidos() {
 
   const valorImplantacaoOriginal = form.tipo_pedido === "OA"
     ? totalServicosOA
-    : (planoSelecionado?.valor_implantacao_padrao ?? form.valor_implantacao_original) + totalAdicionaisImp;
+    : form.tipo_pedido === "Aditivo"
+      ? totalAdicionaisImp // Aditivo: só cobra os módulos novos
+      : form.tipo_pedido === "Upgrade" && planoAnteriorValores
+        ? Math.max(0, (planoSelecionado?.valor_implantacao_padrao ?? 0) - planoAnteriorValores.implantacao) + totalAdicionaisImp
+        : (planoSelecionado?.valor_implantacao_padrao ?? form.valor_implantacao_original) + totalAdicionaisImp;
   const valorMensalidadeOriginal = form.tipo_pedido === "OA"
     ? 0
-    : (planoSelecionado?.valor_mensalidade_padrao ?? form.valor_mensalidade_original) + totalAdicionaisMens;
+    : form.tipo_pedido === "Aditivo"
+      ? totalAdicionaisMens // Aditivo: só cobra os módulos novos
+      : form.tipo_pedido === "Upgrade" && planoAnteriorValores
+        ? Math.max(0, (planoSelecionado?.valor_mensalidade_padrao ?? 0) - planoAnteriorValores.mensalidade) + totalAdicionaisMens
+        : (planoSelecionado?.valor_mensalidade_padrao ?? form.valor_mensalidade_original) + totalAdicionaisMens;
 
   const valorImplantacaoFinal = applyDesconto(
     valorImplantacaoOriginal,
@@ -559,6 +571,8 @@ export default function Pedidos() {
     setForm((f) => ({ ...f, cliente_id: clienteId, plano_id: "", tipo_pedido: "Novo", contrato_id: null }));
     setPlanoSelecionado(null);
     setModulosDisponiveis([]);
+    setModulosJaContratados([]);
+    setPlanoAnteriorValores(null);
     await buscarContratoAtivo(clienteId);
   }
 
@@ -567,27 +581,70 @@ export default function Pedidos() {
     setOpenUpgradeDialog(true);
   }
 
-  function handleConfirmarUpgrade() {
+  async function handleConfirmarUpgrade() {
     if (!upgradePlanoId) { toast.error("Selecione o novo plano"); return; }
     if (!contratoAtivo) return;
+    // Buscar valores do plano anterior para calcular diferença
+    if (contratoAtivo.plano_id) {
+      const { data: planoAntigo } = await supabase
+        .from("planos")
+        .select("valor_implantacao_padrao, valor_mensalidade_padrao")
+        .eq("id", contratoAtivo.plano_id)
+        .single();
+      if (planoAntigo) {
+        setPlanoAnteriorValores({
+          implantacao: planoAntigo.valor_implantacao_padrao ?? 0,
+          mensalidade: planoAntigo.valor_mensalidade_padrao ?? 0,
+        });
+      }
+    }
+    // Buscar módulos adicionais já contratados para manter
+    let modulosExistentes: ModuloAdicionadoItem[] = [];
+    if (contratoAtivo.pedido_id) {
+      const { data: pedidoOriginal } = await supabase
+        .from("pedidos")
+        .select("modulos_adicionais")
+        .eq("id", contratoAtivo.pedido_id)
+        .maybeSingle();
+      if (pedidoOriginal?.modulos_adicionais) {
+        modulosExistentes = (pedidoOriginal.modulos_adicionais as unknown as ModuloAdicionadoItem[]) || [];
+      }
+    }
+    setModulosJaContratados([]);
     setForm((f) => ({
       ...f,
       plano_id: upgradePlanoId,
       tipo_pedido: "Upgrade",
       contrato_id: contratoAtivo.id,
+      modulos_adicionais: modulosExistentes, // Mantém módulos já contratados
     }));
-    loadPlano(upgradePlanoId, []);
+    loadPlano(upgradePlanoId, modulosExistentes);
     setOpenUpgradeDialog(false);
   }
 
-  function handleIniciarAditivo() {
+  async function handleIniciarAditivo() {
     if (!contratoAtivo) return;
+    // Buscar módulos já contratados no pedido vinculado ao contrato
+    let modulosExistentes: ModuloAdicionadoItem[] = [];
+    if (contratoAtivo.pedido_id) {
+      const { data: pedidoOriginal } = await supabase
+        .from("pedidos")
+        .select("modulos_adicionais")
+        .eq("id", contratoAtivo.pedido_id)
+        .maybeSingle();
+      if (pedidoOriginal?.modulos_adicionais) {
+        modulosExistentes = (pedidoOriginal.modulos_adicionais as unknown as ModuloAdicionadoItem[]) || [];
+      }
+    }
+    setModulosJaContratados(modulosExistentes);
+    setPlanoAnteriorValores(null);
     // Mantém o plano atual do contrato para buscar módulos
     setForm((f) => ({
       ...f,
       plano_id: contratoAtivo.plano_id || "",
       tipo_pedido: "Aditivo",
       contrato_id: contratoAtivo.id,
+      modulos_adicionais: [], // Começa vazio — só módulos NOVOS
     }));
     if (contratoAtivo.plano_id) loadPlano(contratoAtivo.plano_id, []);
   }
@@ -691,6 +748,8 @@ export default function Pedidos() {
     setEditingPedido(null);
     setLimiteDesconto(null);
     setContratoAtivo(null);
+    setModulosJaContratados([]);
+    setPlanoAnteriorValores(null);
     setOpenDialog(true);
     // Carregar limites do vendedor atual
     if (profile?.user_id) carregarLimitesDesconto(profile.user_id);
@@ -1481,9 +1540,18 @@ export default function Pedidos() {
                 </div>
               )}
               {!loadingContrato && contratoAtivo && form.tipo_pedido === "Upgrade" && (
-                <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800">
-                  <ArrowUpCircle className="h-3 w-3 inline mr-1" />
-                  Upgrade do contrato Nº {contratoAtivo.numero_registro} ({contratoAtivo.numero_exibicao})
+                <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 space-y-1">
+                  <p className="text-xs text-green-800">
+                    <ArrowUpCircle className="h-3 w-3 inline mr-1" />
+                    Upgrade do contrato Nº {contratoAtivo.numero_registro} ({contratoAtivo.numero_exibicao})
+                  </p>
+                  {planoAnteriorValores && planoSelecionado && (
+                    <p className="text-xs text-green-700 font-mono">
+                      Diferença Impl: {fmtBRL(Math.max(0, (planoSelecionado.valor_implantacao_padrao ?? 0) - planoAnteriorValores.implantacao))}
+                      {" · "}
+                      Diferença Mens: {fmtBRL(Math.max(0, (planoSelecionado.valor_mensalidade_padrao ?? 0) - planoAnteriorValores.mensalidade))}
+                    </p>
+                  )}
                 </div>
               )}
               {!loadingContrato && contratoAtivo && form.tipo_pedido === "OA" && (
@@ -1656,6 +1724,19 @@ export default function Pedidos() {
               <div className="space-y-3">
                 <Label>Módulos Adicionais</Label>
 
+                {/* Info: módulos já contratados (Aditivo) */}
+                {form.tipo_pedido === "Aditivo" && modulosJaContratados.length > 0 && (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 space-y-1">
+                    <p className="text-xs font-medium text-blue-800">Módulos já contratados (não serão cobrados novamente):</p>
+                    {modulosJaContratados.map((m) => (
+                      <p key={m.modulo_id} className="text-xs text-blue-700">
+                        • {m.nome} (Qtd: {m.quantidade})
+                        {m.valor_mensalidade_modulo > 0 && ` — Mens: ${fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}`}
+                      </p>
+                    ))}
+                  </div>
+                )}
+
                 {/* Seletor + quantidade + botão adicionar */}
                 <div className="flex gap-2 items-end">
                   <div className="flex-1 space-y-1">
@@ -1668,21 +1749,31 @@ export default function Pedidos() {
                           <SelectValue placeholder="Selecione o módulo..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {modulosDisponiveis.length === 0
-                            ? <SelectItem value="_none" disabled>Nenhum módulo vinculado</SelectItem>
-                            : modulosDisponiveis.map((m) => (
-                              <SelectItem key={m.id} value={m.id}>
-                                {m.nome}
-                                {(m.valor_implantacao_modulo || m.valor_mensalidade_modulo) && (
-                                  <span className="ml-2 text-xs text-muted-foreground">
-                                    {m.valor_implantacao_modulo ? `Impl: ${fmtBRL(m.valor_implantacao_modulo)}` : ""}
-                                    {m.valor_implantacao_modulo && m.valor_mensalidade_modulo ? " · " : ""}
-                                    {m.valor_mensalidade_modulo ? `Mens: ${fmtBRL(m.valor_mensalidade_modulo)}` : ""}
-                                  </span>
-                                )}
-                              </SelectItem>
-                            ))
-                          }
+                          {(() => {
+                            // Para Aditivo, filtrar módulos já contratados
+                            const idsJaContratados = form.tipo_pedido === "Aditivo"
+                              ? modulosJaContratados.map(m => m.modulo_id)
+                              : [];
+                            const modulosFiltrados = modulosDisponiveis.filter(
+                              m => !idsJaContratados.includes(m.id) && !m.incluso_no_plano
+                            );
+                            return modulosFiltrados.length === 0
+                              ? <SelectItem value="_none" disabled>
+                                  {form.tipo_pedido === "Aditivo" ? "Todos os módulos já estão contratados" : "Nenhum módulo disponível"}
+                                </SelectItem>
+                              : modulosFiltrados.map((m) => (
+                                <SelectItem key={m.id} value={m.id}>
+                                  {m.nome}
+                                  {(m.valor_implantacao_modulo || m.valor_mensalidade_modulo) && (
+                                    <span className="ml-2 text-xs text-muted-foreground">
+                                      {m.valor_implantacao_modulo ? `Impl: ${fmtBRL(m.valor_implantacao_modulo)}` : ""}
+                                      {m.valor_implantacao_modulo && m.valor_mensalidade_modulo ? " · " : ""}
+                                      {m.valor_mensalidade_modulo ? `Mens: ${fmtBRL(m.valor_mensalidade_modulo)}` : ""}
+                                    </span>
+                                  )}
+                                </SelectItem>
+                              ));
+                          })()}
                         </SelectContent>
                       </Select>
                     )}
