@@ -134,6 +134,8 @@ interface PedidoWithJoins {
   modulos_adicionais?: ModuloAdicionadoItem[];
   tipo_pedido?: string;
   contrato_id?: string | null;
+  servicos_pedido?: ServicoAdicionadoItem[] | null;
+  tipo_atendimento?: string | null;
   clientes?: { nome_fantasia: string } | null;
   planos?: { nome: string } | null;
   filiais?: { nome: string } | null;
@@ -2469,6 +2471,69 @@ export default function Pedidos() {
                   </div>
                 </div>
 
+                {/* ── Detalhes do que foi lançado ── */}
+                <div className="border-t border-border pt-3 space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">📋 Itens do Pedido</p>
+                  
+                  {/* Plano (Novo ou Upgrade) */}
+                  {(vp.tipo_pedido === "Novo" || vp.tipo_pedido === "Upgrade") && (vp as any).planos?.nome && (
+                    <div className="bg-muted/50 rounded-md p-2.5 space-y-1">
+                      <p className="text-xs font-medium flex items-center gap-1.5">
+                        {vp.tipo_pedido === "Upgrade" ? "⬆️ Upgrade de Plano" : "📦 Plano Contratado"}
+                      </p>
+                      <p className="text-sm font-semibold">{(vp as any).planos?.nome}</p>
+                      <div className="flex gap-4 text-xs text-muted-foreground">
+                        <span>Impl: <span className="font-mono">{fmtBRL(vp.valor_implantacao_original ?? vp.valor_implantacao)}</span></span>
+                        <span>Mens: <span className="font-mono">{fmtBRL(vp.valor_mensalidade_original ?? vp.valor_mensalidade)}</span></span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Módulos Adicionais (Aditivo ou junto com outros tipos) */}
+                  {adicionais.length > 0 && (
+                    <div className="bg-muted/50 rounded-md p-2.5 space-y-1.5">
+                      <p className="text-xs font-medium flex items-center gap-1.5">
+                        {vp.tipo_pedido === "Aditivo" ? "➕ Módulos Adicionais (Aditivo)" : "➕ Módulos Adicionais"}
+                      </p>
+                      {adicionais.map((m) => (
+                        <div key={m.modulo_id} className="flex justify-between text-xs">
+                          <span>{m.nome} {m.quantidade > 1 ? `(x${m.quantidade})` : ""}</span>
+                          <div className="flex gap-3 font-mono text-muted-foreground">
+                            <span>Impl: {fmtBRL(m.valor_implantacao_modulo * m.quantidade)}</span>
+                            <span>Mens: {fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Serviços OA */}
+                  {vp.tipo_pedido === "OA" && (() => {
+                    const servicos = (vp.servicos_pedido || []) as ServicoAdicionadoItem[];
+                    if (servicos.length === 0) return null;
+                    return (
+                      <div className="bg-muted/50 rounded-md p-2.5 space-y-1.5">
+                        <p className="text-xs font-medium flex items-center gap-1.5">🔧 Serviços (Ordem de Atendimento)</p>
+                        {servicos.map((s, idx) => (
+                          <div key={idx} className="flex justify-between text-xs">
+                            <span>{s.nome} — {s.quantidade}x {s.unidade_medida || "un."}</span>
+                            <span className="font-mono text-muted-foreground">{fmtBRL(s.valor_unitario * s.quantidade)}</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between text-xs font-semibold border-t border-border pt-1 mt-1">
+                          <span>Total serviços</span>
+                          <span className="font-mono">{fmtBRL(servicos.reduce((sum, s) => sum + s.valor_unitario * s.quantidade, 0))}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Se nenhum item foi encontrado */}
+                  {!((vp.tipo_pedido === "Novo" || vp.tipo_pedido === "Upgrade") && (vp as any).planos?.nome) && adicionais.length === 0 && !(vp.tipo_pedido === "OA" && ((vp.servicos_pedido || []) as any[]).length > 0) && (
+                    <p className="text-xs text-muted-foreground italic">Nenhum detalhe de itens disponível.</p>
+                  )}
+                </div>
+
                 <div className="border-t border-border pt-3 grid grid-cols-3 gap-3">
                   <div className="space-y-0.5">
                     <p className="text-xs text-muted-foreground">Implantação</p>
@@ -2546,17 +2611,6 @@ export default function Pedidos() {
                   )}
                 </div>
 
-                {adicionais.length > 0 && (
-                  <div className="border-t border-border pt-3 space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">Módulos adicionais</p>
-                    {adicionais.map((m) => (
-                      <div key={m.modulo_id} className="flex justify-between text-xs">
-                        <span>{m.nome} {m.quantidade > 1 ? `(x${m.quantidade})` : ""}</span>
-                        <span className="font-mono text-muted-foreground">{fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}/mês</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
 
                 {(vp as any).motivo_desconto && (
                   <div className="border-t border-border pt-3 space-y-0.5">
