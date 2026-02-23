@@ -113,15 +113,19 @@ Deno.serve(async (req) => {
 
     const decisor = (contatos || []).find((c: any) => c.decisor) || (contatos || [])[0];
 
-    // 2b. Buscar número do contrato de origem (para aditivos e OAs)
+    // 2b. Buscar contrato de origem (para aditivos e OAs) + plano anterior para upgrades
     let numeroContratoOrigem = "";
+    let planoAnterior: any = null;
     if (contrato.contrato_origem_id) {
       const { data: contratoOrigem } = await supabase
         .from("contratos")
-        .select("numero_exibicao")
+        .select("numero_exibicao, plano_id, planos(id, nome, descricao, valor_mensalidade_padrao, valor_implantacao_padrao)")
         .eq("id", contrato.contrato_origem_id)
         .maybeSingle();
       numeroContratoOrigem = contratoOrigem?.numero_exibicao || "";
+      if (contratoOrigem && pedido?.tipo_pedido === "Upgrade") {
+        planoAnterior = (contratoOrigem as any).planos;
+      }
     }
 
     // 3. Buscar filial
@@ -408,6 +412,31 @@ Deno.serve(async (req) => {
       "filial.telefone": filial?.telefone || "",
       "filial.email": filial?.email || "",
     };
+
+    // ── Variáveis de Upgrade de Plano ──
+    if (pedido?.tipo_pedido === "Upgrade" && planoAnterior) {
+      // Para upgrade: plano.nome = plano ANTERIOR (o que o cliente tinha)
+      // plano.novo.nome = plano NOVO (o que ele migrou para)
+      dados["plano.nome_anterior"] = planoAnterior.nome || "";
+      dados["plano.valor_mensalidade_anterior"] = fmtBRL(planoAnterior.valor_mensalidade_padrao ?? 0);
+      dados["plano.valor_implantacao_anterior"] = fmtBRL(planoAnterior.valor_implantacao_padrao ?? 0);
+      dados["plano.novo.nome"] = plano?.nome || "";
+      dados["plano.novo_nome"] = plano?.nome || "";
+      dados["plano.novo.valor_mensalidade"] = fmtBRL(plano?.valor_mensalidade_padrao ?? 0);
+      dados["plano.novo_valor_mensalidade"] = fmtBRL(plano?.valor_mensalidade_padrao ?? 0);
+      dados["plano.novo.valor_implantacao"] = fmtBRL(plano?.valor_implantacao_padrao ?? 0);
+      dados["plano.novo_valor_implantacao"] = fmtBRL(plano?.valor_implantacao_padrao ?? 0);
+      // Sobrescrever plano.nome para mostrar o plano ANTERIOR no template
+      dados["plano.nome"] = planoAnterior.nome || "";
+      dados["plano.valor_mensalidade"] = fmtBRL(planoAnterior.valor_mensalidade_padrao ?? 0);
+
+      // Módulos inclusos do plano anterior
+      const planoAnteriorDescricao = planoAnterior.descricao || "";
+      dados["modulos.adicionais_anteriores"] = planoAnteriorDescricao
+        ? planoAnteriorDescricao.split(",").map((item: string) => item.trim()).filter((item: string) => item.length > 0).join(", ")
+        : "";
+      dados["valores.plano_anterior"] = fmtBRL(planoAnterior.valor_mensalidade_padrao ?? 0);
+    }
 
     // ── Variáveis de Serviços (OA) ──
     const servicosPedido = (pedido?.servicos_pedido || []) as any[];
