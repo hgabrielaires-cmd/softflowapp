@@ -412,13 +412,20 @@ Deno.serve(async (req) => {
     // ── Variáveis de Serviços (OA) ──
     const servicosPedido = (pedido?.servicos_pedido || []) as any[];
     if (servicosPedido.length > 0) {
-      const servicosListaHtml = "<ul style=\"margin:4px 0;padding-left:18px;\">" +
-        servicosPedido.map((s: any) => {
+      const servicosListaHtml = servicosPedido.map((s: any) => {
           const qty = s.quantidade || 1;
           const valor = s.valor_unitario || s.valor || 0;
           const subtotal = valor * qty;
-          return `<li>${s.nome} - ${qty}x ${s.unidade_medida || "un."} - ${fmtBRL(subtotal)}</li>`;
-        }).join("") + "</ul>";
+          return `<tr>
+            <td style="border:1px solid #dee2e6;padding:8px;">${s.nome}</td>
+            <td style="border:1px solid #dee2e6;padding:8px;">${s.descricao || "—"}</td>
+            <td style="border:1px solid #dee2e6;padding:8px;text-align:center;">${s.unidade_medida || "un."}</td>
+            <td style="border:1px solid #dee2e6;padding:8px;text-align:center;">${qty}</td>
+            <td style="border:1px solid #dee2e6;padding:8px;text-align:right;">${fmtBRL(valor)}</td>
+            <td style="border:1px solid #dee2e6;padding:8px;text-align:right;">—</td>
+            <td style="border:1px solid #dee2e6;padding:8px;text-align:right;">${fmtBRL(subtotal)}</td>
+          </tr>`;
+        }).join("");
 
       const servicosTabelaHtml = `<table style="width:100%;border-collapse:collapse;margin:10px 0;">
         <thead><tr style="background:#f0f0f0;">
