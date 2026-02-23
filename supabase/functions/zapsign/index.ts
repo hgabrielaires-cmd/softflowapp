@@ -189,13 +189,48 @@ Deno.serve(async (req) => {
       }
 
       // Extrair dados dos signatários retornados
-      const returnedSigners = (zapsignData.signers || []).map((s: any) => ({
+      let returnedSigners = (zapsignData.signers || []).map((s: any) => ({
         name: s.name,
         email: s.email,
         token: s.token,
         status: s.status,
         sign_url: `https://app.zapsign.co/verificar/${s.token}`,
       }));
+
+      // Auto-assinar o primeiro signatário (representante da empresa)
+      if (returnedSigners.length > 0) {
+        const companySignerToken = returnedSigners[0].token;
+        const userToken = Deno.env.get("ZAPSIGN_USER_TOKEN")?.trim();
+
+        if (userToken) {
+          console.log("Auto-assinando representante da empresa...");
+          try {
+            const autoSignResponse = await zapsignFetch(`${ZAPSIGN_API}/sign/`, {
+              method: "POST",
+              body: JSON.stringify({
+                user_token: userToken,
+                signer_tokens: [companySignerToken],
+              }),
+            });
+
+            const autoSignText = await autoSignResponse.text();
+            console.log("Auto-sign response:", autoSignResponse.status, autoSignText);
+
+            if (autoSignResponse.ok) {
+              // Atualizar status do signatário da empresa
+              returnedSigners = returnedSigners.map((s: any, i: number) =>
+                i === 0 ? { ...s, status: "signed" } : s
+              );
+            } else {
+              console.warn("Falha ao auto-assinar:", autoSignText);
+            }
+          } catch (autoSignErr) {
+            console.error("Erro ao auto-assinar:", autoSignErr);
+          }
+        } else {
+          console.warn("ZAPSIGN_USER_TOKEN não configurado - assinatura automática da empresa não será realizada");
+        }
+      }
 
       // Salvar no banco
       const { error: insertError } = await supabase
