@@ -122,8 +122,11 @@ interface Contrato {
     desconto_mensalidade_valor: number;
     modulos_adicionais: ModuloAdicionadoItem[] | null;
     observacoes: string | null;
+    motivo_desconto: string | null;
     pagamento_mensalidade_observacao: string | null;
     pagamento_implantacao_observacao: string | null;
+    pagamento_implantacao_forma: string | null;
+    pagamento_implantacao_parcelas: number | null;
     pagamento_mensalidade_forma: string | null;
     pagamento_mensalidade_parcelas: number | null;
     filial_id: string;
@@ -273,9 +276,10 @@ export default function Contratos() {
             valor_implantacao_original, valor_mensalidade_original,
             valor_total, desconto_implantacao_tipo, desconto_implantacao_valor,
             desconto_mensalidade_tipo, desconto_mensalidade_valor,
-            modulos_adicionais, observacoes,
+            modulos_adicionais, observacoes, motivo_desconto,
             pagamento_mensalidade_observacao, pagamento_mensalidade_forma,
             pagamento_mensalidade_parcelas, pagamento_implantacao_observacao,
+            pagamento_implantacao_forma, pagamento_implantacao_parcelas,
             filial_id, vendedor_id, tipo_pedido, servicos_pedido, tipo_atendimento
           )
         `)
@@ -930,6 +934,20 @@ export default function Contratos() {
         .replace(/\{servicos\.quantidade_total\}/g, servicosQtdTotal)
         .replace(/\{servicos\.tipo_atendimento\}/g, pedido?.tipo_atendimento || "")
         .replace(/\{pagamento\.observacoes\}/g, pedido?.pagamento_mensalidade_observacao || pedido?.pagamento_implantacao_observacao || "")
+        .replace(/\{pagamento\.implantacao\.forma\}/g, pedido?.pagamento_implantacao_forma || "")
+        .replace(/\{pagamento\.implantacao\.parcelas\}/g, pedido?.pagamento_implantacao_parcelas ? `${pedido.pagamento_implantacao_parcelas}x` : "")
+        .replace(/\{pagamento\.mensalidade\.forma\}/g, pedido?.pagamento_mensalidade_forma || "")
+        .replace(/\{pagamento\.mensalidade\.parcelas\}/g, pedido?.pagamento_mensalidade_parcelas ? `${pedido.pagamento_mensalidade_parcelas}x` : "")
+        .replace(/\{desconto\.oa_html\}/g, (() => {
+          const implOrig = pedido?.valor_implantacao_original ?? 0;
+          const implFin = pedido?.valor_implantacao_final ?? 0;
+          const descImpl = implOrig - implFin;
+          if (descImpl <= 0) return "";
+          let txt = `⚡ *Desconto:* ~${fmtBRL(implOrig)}~ → *${fmtBRL(implFin)}* (economia de ${fmtBRL(descImpl)})`;
+          if (pedido?.motivo_desconto) txt += `\n📋 *Motivo:* ${pedido.motivo_desconto}`;
+          return txt;
+        })())
+        .replace(/\{pedido\.observacoes_geral\}/g, pedido?.observacoes || "")
         .replace(/\{empresa\.nome\}/g, "Softplus Tecnologia")
         .replace(/\{vendedor\.nome\}/g, nomeUsuario)
         .replace(/\{usuario\.nome\}/g, nomeUsuario);
