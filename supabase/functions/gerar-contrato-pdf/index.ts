@@ -284,7 +284,7 @@ Deno.serve(async (req) => {
 
     const descontoImplHtml = temDescontoImpl
       ? `<div ${descontoStyle}>
-          <strong style="color:#856404;">⚡ Desconto Implantação:</strong><br>
+          <strong style="color:#856404;">⚡ Desconto nos Serviços:</strong><br>
           <span style="text-decoration:line-through;color:#999;">${fmtBRL(implOriginal)}</span> → <strong style="color:#28a745;">${fmtBRL(implFinal)}</strong>
           <span style="color:#856404;font-size:10px;"> (economia de ${fmtBRL(implDesconto)})</span>
         </div>`
