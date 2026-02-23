@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
           observacoes, motivo_desconto, pagamento_mensalidade_observacao, pagamento_mensalidade_forma,
           pagamento_mensalidade_parcelas, pagamento_implantacao_forma,
           pagamento_implantacao_parcelas, pagamento_implantacao_observacao,
-          modulos_adicionais, tipo_pedido
+          modulos_adicionais, tipo_pedido, servicos_pedido, tipo_atendimento
         )
       `)
       .eq("id", contrato_id)
@@ -408,6 +408,63 @@ Deno.serve(async (req) => {
       "filial.telefone": filial?.telefone || "",
       "filial.email": filial?.email || "",
     };
+
+    // ── Variáveis de Serviços (OA) ──
+    const servicosPedido = (pedido?.servicos_pedido || []) as any[];
+    if (servicosPedido.length > 0) {
+      const servicosListaHtml = "<ul style=\"margin:4px 0;padding-left:18px;\">" +
+        servicosPedido.map((s: any) => {
+          const qty = s.quantidade || 1;
+          const valor = s.valor_unitario || s.valor || 0;
+          const subtotal = valor * qty;
+          return `<li>${s.nome} - ${qty}x ${s.unidade_medida || "un."} - ${fmtBRL(subtotal)}</li>`;
+        }).join("") + "</ul>";
+
+      const servicosTabelaHtml = `<table style="width:100%;border-collapse:collapse;margin:10px 0;">
+        <thead><tr style="background:#f0f0f0;">
+          <th style="border:1px solid #ccc;padding:6px;text-align:left;">Serviço</th>
+          <th style="border:1px solid #ccc;padding:6px;text-align:left;">Descrição</th>
+          <th style="border:1px solid #ccc;padding:6px;text-align:center;">Unid.</th>
+          <th style="border:1px solid #ccc;padding:6px;text-align:center;">Qtd.</th>
+          <th style="border:1px solid #ccc;padding:6px;text-align:right;">Valor Unit.</th>
+          <th style="border:1px solid #ccc;padding:6px;text-align:right;">Subtotal</th>
+        </tr></thead>
+        <tbody>${servicosPedido.map((s: any) => {
+          const qty = s.quantidade || 1;
+          const valor = s.valor_unitario || s.valor || 0;
+          const subtotal = valor * qty;
+          return `<tr>
+            <td style="border:1px solid #ccc;padding:6px;">${s.nome}</td>
+            <td style="border:1px solid #ccc;padding:6px;">${s.descricao || ""}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:center;">${s.unidade_medida || "un."}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:center;">${qty}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmtBRL(valor)}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmtBRL(subtotal)}</td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table>`;
+
+      const quantidadeTotal = servicosPedido.reduce((s: number, sv: any) => s + (sv.quantidade || 1), 0);
+      const valorTotalServicos = servicosPedido.reduce((s: number, sv: any) => s + ((sv.valor_unitario || sv.valor || 0) * (sv.quantidade || 1)), 0);
+
+      dados["servicos.lista_html"] = servicosListaHtml;
+      dados["servicos.tabela_html"] = servicosTabelaHtml;
+      dados["servicos.valor_total"] = fmtBRL(valorTotalServicos);
+      dados["servicos.valor_total_extenso"] = valorPorExtenso(valorTotalServicos);
+      dados["servicos.quantidade_total"] = String(quantidadeTotal);
+      dados["servicos.tipo_atendimento"] = pedido?.tipo_atendimento || "";
+      dados["servicos.comissao_percentual"] = "";
+      dados["servicos.comissao_valor"] = "";
+    } else {
+      dados["servicos.lista_html"] = "";
+      dados["servicos.tabela_html"] = "";
+      dados["servicos.valor_total"] = fmtBRL(0);
+      dados["servicos.valor_total_extenso"] = "";
+      dados["servicos.quantidade_total"] = "0";
+      dados["servicos.tipo_atendimento"] = pedido?.tipo_atendimento || "";
+      dados["servicos.comissao_percentual"] = "";
+      dados["servicos.comissao_valor"] = "";
+    }
 
     // 7. Substituir variáveis no HTML
     let htmlFinal = templateHtml;
