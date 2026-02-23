@@ -329,14 +329,14 @@ export default function Pedidos() {
     : form.tipo_pedido === "Aditivo"
       ? totalAdicionaisImp // Aditivo: só cobra os módulos novos
       : form.tipo_pedido === "Upgrade" && planoAnteriorValores
-        ? Math.max(0, (planoSelecionado?.valor_implantacao_padrao ?? 0) - planoAnteriorValores.implantacao) + totalAdicionaisImp
+        ? Math.max(0, (planoSelecionado?.valor_implantacao_padrao ?? 0) - planoAnteriorValores.implantacao)
         : (planoSelecionado?.valor_implantacao_padrao ?? form.valor_implantacao_original) + totalAdicionaisImp;
   const valorMensalidadeOriginal = form.tipo_pedido === "OA"
     ? 0
     : form.tipo_pedido === "Aditivo"
       ? totalAdicionaisMens // Aditivo: só cobra os módulos novos
       : form.tipo_pedido === "Upgrade" && planoAnteriorValores
-        ? Math.max(0, (planoSelecionado?.valor_mensalidade_padrao ?? 0) - planoAnteriorValores.mensalidade) + totalAdicionaisMens
+        ? Math.max(0, (planoSelecionado?.valor_mensalidade_padrao ?? 0) - planoAnteriorValores.mensalidade)
         : (planoSelecionado?.valor_mensalidade_padrao ?? form.valor_mensalidade_original) + totalAdicionaisMens;
 
   const valorImplantacaoFinal = applyDesconto(
@@ -604,27 +604,15 @@ export default function Pedidos() {
         });
       }
     }
-    // Buscar módulos adicionais já contratados para manter
-    let modulosExistentes: ModuloAdicionadoItem[] = [];
-    if (contratoAtivo.pedido_id) {
-      const { data: pedidoOriginal } = await supabase
-        .from("pedidos")
-        .select("modulos_adicionais")
-        .eq("id", contratoAtivo.pedido_id)
-        .maybeSingle();
-      if (pedidoOriginal?.modulos_adicionais) {
-        modulosExistentes = (pedidoOriginal.modulos_adicionais as unknown as ModuloAdicionadoItem[]) || [];
-      }
-    }
     setModulosJaContratados([]);
     setForm((f) => ({
       ...f,
       plano_id: upgradePlanoId,
       tipo_pedido: "Upgrade",
       contrato_id: contratoAtivo.id,
-      modulos_adicionais: modulosExistentes, // Mantém módulos já contratados
+      modulos_adicionais: [], // Upgrade não permite módulos adicionais
     }));
-    loadPlano(upgradePlanoId, modulosExistentes);
+    loadPlano(upgradePlanoId, []);
     setOpenUpgradeDialog(false);
   }
 
@@ -1735,7 +1723,7 @@ export default function Pedidos() {
             </div>
 
             {/* ── Módulos Adicionais ── */}
-            {form.plano_id && form.tipo_pedido !== "OA" && (
+            {form.plano_id && form.tipo_pedido !== "OA" && form.tipo_pedido !== "Upgrade" && (
               <div className="space-y-3">
                 <Label>Módulos Adicionais</Label>
 
