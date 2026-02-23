@@ -1326,7 +1326,8 @@ export default function Pedidos() {
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(pedido.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                        <div>{format(new Date(pedido.created_at), "dd/MM/yyyy", { locale: ptBR })}</div>
+                        <div className="text-xs">{format(new Date(pedido.created_at), "HH:mm", { locale: ptBR })}</div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
