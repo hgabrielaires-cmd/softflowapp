@@ -129,6 +129,8 @@ interface Contrato {
     filial_id: string;
     vendedor_id: string;
     tipo_pedido?: string;
+    servicos_pedido?: any[] | null;
+    tipo_atendimento?: string | null;
   } | null;
 }
 
@@ -274,7 +276,7 @@ export default function Contratos() {
             modulos_adicionais, observacoes,
             pagamento_mensalidade_observacao, pagamento_mensalidade_forma,
             pagamento_mensalidade_parcelas, pagamento_implantacao_observacao,
-            filial_id, vendedor_id, tipo_pedido
+            filial_id, vendedor_id, tipo_pedido, servicos_pedido, tipo_atendimento
           )
         `)
         .order("numero_registro", { ascending: false }),
@@ -880,11 +882,32 @@ export default function Contratos() {
         }
       }
 
+      // Variáveis de serviços (OA)
+      const servicosPedido = (pedido?.servicos_pedido || []) as any[];
+      const servicosListaTexto = servicosPedido.length > 0
+        ? servicosPedido.map((s: any) => {
+            const qty = s.quantidade || 1;
+            const valor = s.valor_unitario || s.valor || 0;
+            return `• ${s.nome} - ${qty}x ${s.unidade_medida || "un."} - ${fmtBRL(valor * qty)}`;
+          }).join("\n")
+        : "";
+      const servicosValorTotal = fmtBRL(servicosPedido.reduce((sum: number, s: any) => sum + ((s.valor_unitario || s.valor || 0) * (s.quantidade || 1)), 0));
+      const servicosQtdTotal = String(servicosPedido.reduce((sum: number, s: any) => sum + (s.quantidade || 1), 0));
+
+      // Número do contrato de origem
+      let numeroContratoOrigem = "";
+      if (contrato.contrato_origem_id) {
+        const cOrigem = contratos.find(c => c.id === contrato.contrato_origem_id);
+        if (cOrigem) numeroContratoOrigem = cOrigem.numero_exibicao;
+      }
+
       return effectiveTemplate.conteudo
         .replace(/\{contato\.nome\}/g, nomeDecisor)
+        .replace(/\{nome_decisor\}/g, nomeDecisor)
         .replace(/\{cliente\.nome_fantasia\}/g, nomeFantasia)
         .replace(/\{cliente\.razao_social\}/g, razaoSocial)
         .replace(/\{contrato\.numero\}/g, contrato.numero_exibicao)
+        .replace(/\{contrato\.numero_origem\}/g, numeroContratoOrigem)
         .replace(/\{plano\.nome\}/g, nomePlano)
         .replace(/\{plano\.nome_anterior\}/g, planoNomeAnterior)
         .replace(/\{plano\.modulos\}/g, modulosTexto)
@@ -902,6 +925,11 @@ export default function Contratos() {
         .replace(/\{regras\.implantacao\}/g, regrasImpl)
         .replace(/\{formas\.pagamento\}/g, formasPagamento)
         .replace(/\{link_assinatura\}/g, linkAssinatura || "{link_assinatura}")
+        .replace(/\{servicos\.lista_html\}/g, servicosListaTexto)
+        .replace(/\{servicos\.valor_total\}/g, servicosValorTotal)
+        .replace(/\{servicos\.quantidade_total\}/g, servicosQtdTotal)
+        .replace(/\{servicos\.tipo_atendimento\}/g, pedido?.tipo_atendimento || "")
+        .replace(/\{pagamento\.observacoes\}/g, pedido?.pagamento_mensalidade_observacao || pedido?.pagamento_implantacao_observacao || "")
         .replace(/\{empresa\.nome\}/g, "Softplus Tecnologia")
         .replace(/\{vendedor\.nome\}/g, nomeUsuario)
         .replace(/\{usuario\.nome\}/g, nomeUsuario);
