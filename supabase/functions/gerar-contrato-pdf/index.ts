@@ -116,15 +116,31 @@ Deno.serve(async (req) => {
     // 2b. Buscar contrato de origem (para aditivos e OAs) + plano anterior para upgrades
     let numeroContratoOrigem = "";
     let planoAnterior: any = null;
+    let modulosAdicionaisExistentes: any[] = [];
     if (contrato.contrato_origem_id) {
       const { data: contratoOrigem } = await supabase
         .from("contratos")
-        .select("numero_exibicao, plano_id, planos(id, nome, descricao, valor_mensalidade_padrao, valor_implantacao_padrao)")
+        .select("numero_exibicao, plano_id, pedido_id, planos(id, nome, descricao, valor_mensalidade_padrao, valor_implantacao_padrao)")
         .eq("id", contrato.contrato_origem_id)
         .maybeSingle();
       numeroContratoOrigem = contratoOrigem?.numero_exibicao || "";
       if (contratoOrigem && pedido?.tipo_pedido === "Upgrade") {
         planoAnterior = (contratoOrigem as any).planos;
+
+        // Buscar módulos adicionais que o cliente já tinha (do contrato base e aditivos anteriores)
+        const { data: pedidosAnteriores } = await supabase
+          .from("pedidos")
+          .select("modulos_adicionais, tipo_pedido")
+          .eq("cliente_id", contrato.cliente_id)
+          .in("tipo_pedido", ["Novo", "Módulo Adicional"])
+          .neq("id", pedido?.id || "");
+        
+        if (pedidosAnteriores) {
+          for (const p of pedidosAnteriores) {
+            const mods = (p.modulos_adicionais || []) as any[];
+            modulosAdicionaisExistentes.push(...mods);
+          }
+        }
       }
     }
 
@@ -415,8 +431,6 @@ Deno.serve(async (req) => {
 
     // ── Variáveis de Upgrade de Plano ──
     if (pedido?.tipo_pedido === "Upgrade" && planoAnterior) {
-      // Para upgrade: plano.nome = plano ANTERIOR (o que o cliente tinha)
-      // plano.novo.nome = plano NOVO (o que ele migrou para)
       dados["plano.nome_anterior"] = planoAnterior.nome || "";
       dados["plano.valor_mensalidade_anterior"] = fmtBRL(planoAnterior.valor_mensalidade_padrao ?? 0);
       dados["plano.valor_implantacao_anterior"] = fmtBRL(planoAnterior.valor_implantacao_padrao ?? 0);
@@ -429,13 +443,43 @@ Deno.serve(async (req) => {
       // Sobrescrever plano.nome para mostrar o plano ANTERIOR no template
       dados["plano.nome"] = planoAnterior.nome || "";
       dados["plano.valor_mensalidade"] = fmtBRL(planoAnterior.valor_mensalidade_padrao ?? 0);
-
-      // Módulos inclusos do plano anterior
-      const planoAnteriorDescricao = planoAnterior.descricao || "";
-      dados["modulos.adicionais_anteriores"] = planoAnteriorDescricao
-        ? planoAnteriorDescricao.split(",").map((item: string) => item.trim()).filter((item: string) => item.length > 0).join(", ")
-        : "";
       dados["valores.plano_anterior"] = fmtBRL(planoAnterior.valor_mensalidade_padrao ?? 0);
+
+      // Módulos adicionais que o cliente já possui (de pedidos anteriores)
+      if (modulosAdicionaisExistentes.length > 0) {
+        const adicionaisHtml = "<ul style=\"margin:4px 0;padding-left:18px;\">" + 
+          modulosAdicionaisExistentes.map((m: any) => `<li>${m.nome} (${m.quantidade}x)</li>`).join("") + "</ul>";
+        dados["modulos.adicionais_lista"] = adicionaisHtml;
+
+        // Calcular valor mensal dos adicionais existentes
+        const totalAdicionaisMens = modulosAdicionaisExistentes.reduce((acc: number, m: any) => 
+          acc + ((m.valor_mensalidade_modulo || 0) * (m.quantidade || 1)), 0);
+        const totalAdicionaisImpl = modulosAdicionaisExistentes.reduce((acc: number, m: any) => 
+          acc + ((m.valor_implantacao_modulo || 0) * (m.quantidade || 1)), 0);
+
+        // Tabela detalhada dos adicionais existentes
+        dados["modulos.tabela_detalhada"] = `<table style="width:100%;border-collapse:collapse;margin:10px 0;">
+          <thead><tr style="background:#f0f0f0;">
+            <th style="border:1px solid #ccc;padding:6px;text-align:left;">Módulo</th>
+            <th style="border:1px solid #ccc;padding:6px;text-align:center;">Qtd</th>
+            <th style="border:1px solid #ccc;padding:6px;text-align:right;">Mensalidade</th>
+          </tr></thead>
+          <tbody>${modulosAdicionaisExistentes.map((m: any) => `<tr>
+            <td style="border:1px solid #ccc;padding:6px;">${m.nome}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:center;">${m.quantidade}x</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmtBRL((m.valor_mensalidade_modulo || 0) * (m.quantidade || 1))}</td>
+          </tr>`).join("")}</tbody>
+        </table>`;
+
+        // Recalcular resumo financeiro para incluir adicionais existentes
+        const novoPlanoMens = plano?.valor_mensalidade_padrao ?? 0;
+        const mensalidadeTotal = novoPlanoMens + totalAdicionaisMens;
+        dados["valores.mensalidade.original"] = fmtBRL(mensalidadeTotal);
+        dados["valores.mensalidade.final"] = fmtBRL(mensalidadeTotal);
+        dados["valores.total_geral"] = fmtBRL((pedido?.valor_implantacao_final ?? 0) + mensalidadeTotal);
+        dados["valores.total_extenso"] = valorPorExtenso((pedido?.valor_implantacao_final ?? 0) + mensalidadeTotal);
+        dados["valores.adicionais_mensalidade"] = fmtBRL(totalAdicionaisMens);
+      }
     }
 
     // ── Variáveis de Serviços (OA) ──
