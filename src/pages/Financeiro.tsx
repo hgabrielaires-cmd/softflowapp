@@ -36,6 +36,22 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+interface ModuloAdicionadoItem {
+  modulo_id: string;
+  nome: string;
+  quantidade: number;
+  valor_implantacao_modulo: number;
+  valor_mensalidade_modulo: number;
+}
+
+interface ServicoAdicionadoItem {
+  servico_id: string;
+  nome: string;
+  quantidade: number;
+  valor_unitario: number;
+  unidade_medida: string;
+}
+
 interface PedidoFila {
   id: string;
   cliente_id: string;
@@ -43,6 +59,7 @@ interface PedidoFila {
   filial_id: string;
   plano_id: string;
   tipo_pedido: string;
+  tipo_atendimento: string | null;
   valor_implantacao: number;
   valor_mensalidade: number;
   valor_total: number;
@@ -64,6 +81,7 @@ interface PedidoFila {
   comissao_servico_percentual: number | null;
   comissao_servico_valor: number | null;
   servicos_pedido: any[] | null;
+  modulos_adicionais: any[] | null;
   status_pedido: string;
   financeiro_status: string;
   financeiro_motivo: string | null;
@@ -349,7 +367,7 @@ export default function Financeiro() {
       {selected && (
         <>
         <Dialog open={openDetail} onOpenChange={setOpenDetail}>
-          <DialogContent className="max-w-sm" aria-describedby="detail-desc">
+          <DialogContent className="max-w-md max-h-[90vh]" aria-describedby="detail-desc">
             <DialogHeader>
               <DialogTitle>Detalhe do Pedido</DialogTitle>
               <DialogDescription id="detail-desc">Analise os dados antes de aprovar ou reprovar.</DialogDescription>
@@ -362,13 +380,81 @@ export default function Financeiro() {
                 <div><p className="text-muted-foreground text-xs">Data</p><p className="font-semibold text-sm">{format(new Date(selected.created_at), "dd/MM/yyyy", { locale: ptBR })}</p></div>
               </div>
 
+              {/* ── Itens do Pedido ── */}
+              <div className="bg-muted rounded-lg p-3 space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">📋 Itens do Pedido</p>
+
+                {/* Plano (Novo ou Upgrade) */}
+                {(selected.tipo_pedido === "Novo" || selected.tipo_pedido === "Upgrade") && selected.planos?.nome && (
+                  <div className="bg-background rounded-md p-2.5 space-y-1">
+                    <p className="text-xs font-medium">
+                      {selected.tipo_pedido === "Upgrade" ? "⬆️ Upgrade de Plano" : "📦 Plano Contratado"}
+                    </p>
+                    <p className="text-sm font-semibold">{selected.planos.nome}</p>
+                    <div className="flex gap-4 text-xs text-muted-foreground">
+                      <span>Impl: <span className="font-mono">{selected.valor_implantacao_original.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></span>
+                      <span>Mens: <span className="font-mono">{selected.valor_mensalidade_original.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span></span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Módulos Adicionais */}
+                {(() => {
+                  const adicionais = Array.isArray(selected.modulos_adicionais) ? selected.modulos_adicionais : [];
+                  if (adicionais.length === 0) return null;
+                  return (
+                    <div className="bg-background rounded-md p-2.5 space-y-1.5">
+                      <p className="text-xs font-medium">
+                        {selected.tipo_pedido === "Aditivo" ? "➕ Módulos Adicionais (Aditivo)" : "➕ Módulos Adicionais"}
+                      </p>
+                      {adicionais.map((m: any, i: number) => (
+                        <div key={i} className="flex justify-between text-xs">
+                          <span>{m.nome} {m.quantidade > 1 ? `(x${m.quantidade})` : ""}</span>
+                          <div className="flex gap-3 font-mono text-muted-foreground">
+                            <span>Impl: {((m.valor_implantacao_modulo || 0) * (m.quantidade || 1)).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                            <span>Mens: {((m.valor_mensalidade_modulo || 0) * (m.quantidade || 1)).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}/mês</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                {/* Serviços OA */}
+                {(() => {
+                  const servicos = Array.isArray(selected.servicos_pedido) ? selected.servicos_pedido : [];
+                  if (selected.tipo_pedido !== "OA" || servicos.length === 0) return null;
+                  return (
+                    <div className="bg-background rounded-md p-2.5 space-y-1.5">
+                      <p className="text-xs font-medium">🔧 Serviços (Ordem de Atendimento)</p>
+                      {servicos.map((s: any, idx: number) => (
+                        <div key={idx} className="flex justify-between text-xs">
+                          <span>{s.nome} — {s.quantidade || 1}x {s.unidade_medida || "un."}</span>
+                          <span className="font-mono text-muted-foreground">{((s.valor_unitario || s.valor || 0) * (s.quantidade || 1)).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between text-xs font-semibold border-t border-border pt-1 mt-1">
+                        <span>Total serviços</span>
+                        <span className="font-mono">{servicos.reduce((sum: number, s: any) => sum + ((s.valor_unitario || s.valor || 0) * (s.quantidade || 1)), 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Nenhum item */}
+                {!((selected.tipo_pedido === "Novo" || selected.tipo_pedido === "Upgrade") && selected.planos?.nome) &&
+                  !(Array.isArray(selected.modulos_adicionais) && selected.modulos_adicionais.length > 0) &&
+                  !(selected.tipo_pedido === "OA" && Array.isArray(selected.servicos_pedido) && selected.servicos_pedido.length > 0) && (
+                    <p className="text-xs text-muted-foreground italic">Nenhum detalhe de itens disponível.</p>
+                  )}
+              </div>
+
               {/* Valores resumidos */}
               <div className="bg-muted rounded-lg p-3 space-y-1">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Valores do Pedido</p>
                   <Button variant="outline" size="sm" className="h-6 text-xs px-2" onClick={async () => {
                     setOpenValores(true);
-                    // Load plano and modulos for the detail popup
                     const [{ data: planoData }, { data: modulosData }] = await Promise.all([
                       supabase.from("planos").select("*").eq("id", selected.plano_id).maybeSingle(),
                       supabase.from("plano_modulos").select("*, modulos(*)").eq("plano_id", selected.plano_id),
