@@ -141,15 +141,18 @@ Deno.serve(async (req) => {
       // Enviar para ZapSign
       const docName = `Contrato ${contrato.numero_exibicao} - ${(contrato as any).clientes?.nome_fantasia || ""}`;
 
+      const zapsignEmail = Deno.env.get("ZAPSIGN_EMAIL")?.trim() || "";
+
       const zapsignPayload = {
         name: docName,
         url_pdf: signedData.signedUrl,
         external_id: contrato.id,
+        created_by: zapsignEmail,
         signers,
         lang: "pt-br",
         send_automatic_email: false,
         disable_signer_emails: false,
-        sandbox: true,
+        sandbox: false,
       };
 
       console.log("=== ZAPSIGN REQUEST ===");
