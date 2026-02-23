@@ -105,6 +105,9 @@ Deno.serve(async (req) => {
         filialNome = filial?.responsavel || filial?.nome || "";
       }
 
+      // Email associado ao plano ZapSign
+      const zapsignEmail = Deno.env.get("ZAPSIGN_EMAIL")?.trim() || "";
+
       // Montar signatários
       const signers: any[] = [];
 
@@ -112,7 +115,7 @@ Deno.serve(async (req) => {
       if (filialNome) {
         signers.push({
           name: filialNome,
-          email: "",
+          email: zapsignEmail,
           send_automatic_email: false,
           lock_name: true,
           lock_email: false,
@@ -141,7 +144,6 @@ Deno.serve(async (req) => {
       // Enviar para ZapSign
       const docName = `Contrato ${contrato.numero_exibicao} - ${(contrato as any).clientes?.nome_fantasia || ""}`;
 
-      const zapsignEmail = Deno.env.get("ZAPSIGN_EMAIL")?.trim() || "";
 
       const zapsignPayload = {
         name: docName,
