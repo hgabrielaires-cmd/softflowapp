@@ -417,13 +417,12 @@ Deno.serve(async (req) => {
           const valor = s.valor_unitario || s.valor || 0;
           const subtotal = valor * qty;
           return `<tr>
-            <td style="border:1px solid #dee2e6;padding:8px;">${s.nome}</td>
-            <td style="border:1px solid #dee2e6;padding:8px;">${s.descricao || "—"}</td>
-            <td style="border:1px solid #dee2e6;padding:8px;text-align:center;">${s.unidade_medida || "un."}</td>
-            <td style="border:1px solid #dee2e6;padding:8px;text-align:center;">${qty}</td>
-            <td style="border:1px solid #dee2e6;padding:8px;text-align:right;">${fmtBRL(valor)}</td>
-            <td style="border:1px solid #dee2e6;padding:8px;text-align:right;">—</td>
-            <td style="border:1px solid #dee2e6;padding:8px;text-align:right;">${fmtBRL(subtotal)}</td>
+            <td style="border:1px solid #dee2e6;padding:4px 6px;">${s.nome}</td>
+            <td style="border:1px solid #dee2e6;padding:4px 6px;">${s.descricao || "—"}</td>
+            <td style="border:1px solid #dee2e6;padding:4px 6px;text-align:center;">${s.unidade_medida || "un."}</td>
+            <td style="border:1px solid #dee2e6;padding:4px 6px;text-align:center;">${qty}</td>
+            <td style="border:1px solid #dee2e6;padding:4px 6px;text-align:right;">${fmtBRL(valor)}</td>
+            <td style="border:1px solid #dee2e6;padding:4px 6px;text-align:right;">${fmtBRL(subtotal)}</td>
           </tr>`;
         }).join("");
 
@@ -462,6 +461,20 @@ Deno.serve(async (req) => {
       dados["servicos.tipo_atendimento"] = pedido?.tipo_atendimento || "";
       dados["servicos.comissao_percentual"] = "";
       dados["servicos.comissao_valor"] = "";
+
+      // Variável de desconto OA para WhatsApp
+      if (temDesconto) {
+        const partes: string[] = [];
+        if (temDescontoImpl) {
+          partes.push(`⚡ *Desconto:* ~~${fmtBRL(implOriginal)}~~ → *${fmtBRL(implFinal)}* (economia de ${fmtBRL(implDesconto)})`);
+        }
+        if (motivoDesconto) {
+          partes.push(`📋 *Motivo:* ${motivoDesconto}`);
+        }
+        dados["desconto.oa_html"] = partes.join("\n");
+      } else {
+        dados["desconto.oa_html"] = "";
+      }
     } else {
       dados["servicos.lista_html"] = "";
       dados["servicos.tabela_html"] = "";
@@ -471,6 +484,7 @@ Deno.serve(async (req) => {
       dados["servicos.tipo_atendimento"] = pedido?.tipo_atendimento || "";
       dados["servicos.comissao_percentual"] = "";
       dados["servicos.comissao_valor"] = "";
+      dados["desconto.oa_html"] = "";
     }
 
     // 7. Substituir variáveis no HTML

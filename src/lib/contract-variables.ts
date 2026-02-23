@@ -91,6 +91,7 @@ export const CONTRACT_VARIABLE_CATEGORIES: VariableCategory[] = [
       { key: "servicos.tipo_atendimento", label: "Tipo de Atendimento", example: "Interno" },
       { key: "servicos.comissao_percentual", label: "Comissão Serviço (%)", example: "5%" },
       { key: "servicos.comissao_valor", label: "Comissão Serviço (R$)", example: "R$ 75,00" },
+      { key: "desconto.oa_html", label: "Desconto OA (WhatsApp)", example: "⚡ Desconto: R$ 20,00" },
     ],
   },
   {
