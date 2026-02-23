@@ -152,12 +152,21 @@ Deno.serve(async (req) => {
         sandbox: true,
       };
 
-      console.log("Enviando para ZapSign:", JSON.stringify({ name: docName, signers_count: signers.length }));
+      console.log("=== ZAPSIGN REQUEST ===");
+      console.log("URL:", `${ZAPSIGN_API}/docs/`);
+      console.log("Method: POST");
+      console.log("Headers: Authorization: Bearer [REDACTED], Content-Type: application/json");
+      console.log("Body:", JSON.stringify(zapsignPayload, null, 2));
 
       const zapsignResponse = await zapsignFetch(`${ZAPSIGN_API}/docs/`, {
         method: "POST",
         body: JSON.stringify(zapsignPayload),
       });
+
+      console.log("=== ZAPSIGN RESPONSE ===");
+      console.log("Status:", zapsignResponse.status);
+      console.log("Status Text:", zapsignResponse.statusText);
+      console.log("Headers:", JSON.stringify(Object.fromEntries(zapsignResponse.headers.entries())));
 
       const zapsignResponseText = await zapsignResponse.text();
       let zapsignData: any;
