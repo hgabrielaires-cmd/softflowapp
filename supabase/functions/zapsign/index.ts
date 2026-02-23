@@ -16,6 +16,7 @@ async function zapsignFetch(url: string, options: RequestInit = {}): Promise<Res
   if (!token) {
     throw new Error("ZAPSIGN_API_TOKEN não configurado");
   }
+  console.log(`[DEBUG] Token length: ${token.length}, starts: ${token.substring(0, 8)}..., ends: ...${token.substring(token.length - 4)}`);
 
   const headers = {
     ...options.headers as Record<string, string>,
