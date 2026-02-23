@@ -90,6 +90,7 @@ interface PedidoFila {
   contrato_liberado: boolean;
   observacoes: string | null;
   created_at: string;
+  numero_exibicao?: string;
   clientes?: { nome_fantasia: string } | null;
   planos?: { nome: string } | null;
   filiais?: { nome: string } | null;
@@ -245,6 +246,7 @@ export default function Financeiro() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
+                <TableHead>Nº Pedido</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Plano</TableHead>
@@ -275,6 +277,7 @@ export default function Financeiro() {
               ) : (
                 filtered.map((pedido) => (
                   <TableRow key={pedido.id}>
+                    <TableCell className="font-mono text-xs font-semibold text-primary">{pedido.numero_exibicao || "—"}</TableCell>
                     <TableCell className="font-medium">{pedido.clientes?.nome_fantasia || "—"}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -369,7 +372,7 @@ export default function Financeiro() {
         <Dialog open={openDetail} onOpenChange={setOpenDetail}>
           <DialogContent className="max-w-md max-h-[90vh]" aria-describedby="detail-desc">
             <DialogHeader>
-              <DialogTitle>Detalhe do Pedido</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">Detalhe do Pedido {selected.numero_exibicao && <span className="ml-auto font-mono text-sm text-primary">{selected.numero_exibicao}</span>}</DialogTitle>
               <DialogDescription id="detail-desc">Analise os dados antes de aprovar ou reprovar.</DialogDescription>
             </DialogHeader>
             <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto pr-1">

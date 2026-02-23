@@ -136,6 +136,7 @@ interface PedidoWithJoins {
   contrato_id?: string | null;
   servicos_pedido?: ServicoAdicionadoItem[] | null;
   tipo_atendimento?: string | null;
+  numero_exibicao?: string;
   clientes?: { nome_fantasia: string } | null;
   planos?: { nome: string } | null;
   filiais?: { nome: string } | null;
@@ -1221,7 +1222,8 @@ export default function Pedidos() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead>Cliente</TableHead>
+                   <TableHead>Nº Pedido</TableHead>
+                   <TableHead>Cliente</TableHead>
                   {canSeeAllBranches && <TableHead>Filial</TableHead>}
                   {canSeeAllBranches && <TableHead>Vendedor</TableHead>}
                    <TableHead className="text-right">Implantação</TableHead>
@@ -1277,6 +1279,7 @@ export default function Pedidos() {
                   const mensFinal = pedido.valor_mensalidade_final ?? pedido.valor_mensalidade;
                   return (
                     <TableRow key={pedido.id} className={isReprovado ? "bg-destructive/5" : undefined}>
+                      <TableCell className="font-mono text-xs font-semibold text-primary">{(pedido as any).numero_exibicao || "—"}</TableCell>
                       <TableCell className="font-medium">{(pedido as any).clientes?.nome_fantasia || "—"}</TableCell>
                       {canSeeAllBranches && <TableCell className="text-sm text-muted-foreground">{filialNome}</TableCell>}
                       {canSeeAllBranches && <TableCell className="text-sm text-muted-foreground">{vendedorNome}</TableCell>}
@@ -2426,6 +2429,7 @@ export default function Pedidos() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-4 w-4" /> Visualizar Pedido
+              {viewingPedido?.numero_exibicao && <span className="ml-auto font-mono text-sm text-primary">{viewingPedido.numero_exibicao}</span>}
             </DialogTitle>
           </DialogHeader>
           {viewingPedido && (() => {

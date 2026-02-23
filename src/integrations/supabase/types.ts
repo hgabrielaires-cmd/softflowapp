@@ -1112,6 +1112,8 @@ export type Database = {
           id: string
           modulos_adicionais: Json | null
           motivo_desconto: string | null
+          numero_exibicao: string
+          numero_registro: number
           observacoes: string | null
           pagamento_implantacao_desconto_percentual: number | null
           pagamento_implantacao_forma: string | null
@@ -1161,6 +1163,8 @@ export type Database = {
           id?: string
           modulos_adicionais?: Json | null
           motivo_desconto?: string | null
+          numero_exibicao?: string
+          numero_registro?: number
           observacoes?: string | null
           pagamento_implantacao_desconto_percentual?: number | null
           pagamento_implantacao_forma?: string | null
@@ -1210,6 +1214,8 @@ export type Database = {
           id?: string
           modulos_adicionais?: Json | null
           motivo_desconto?: string | null
+          numero_exibicao?: string
+          numero_registro?: number
           observacoes?: string | null
           pagamento_implantacao_desconto_percentual?: number | null
           pagamento_implantacao_forma?: string | null
