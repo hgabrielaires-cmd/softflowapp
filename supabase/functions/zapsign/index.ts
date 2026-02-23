@@ -290,9 +290,18 @@ Deno.serve(async (req) => {
       const zapsignStatusText = await zapsignResponse.text();
       if (!zapsignResponse.ok) {
         console.error("ZapSign status error:", zapsignResponse.status, zapsignStatusText);
+        
+        // Se 403, o documento pode ter sido criado com outro token - marcar como inválido
+        if (zapsignResponse.status === 403 && contrato_id) {
+          await supabase
+            .from("contratos_zapsign")
+            .update({ status: "Token Inválido" })
+            .eq("contrato_id", contrato_id);
+        }
+        
         return new Response(
-          JSON.stringify({ error: `Erro ao consultar ZapSign: ${zapsignResponse.status}` }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: `Erro ao consultar ZapSign: ${zapsignResponse.status}`, skippable: zapsignResponse.status === 403 }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 

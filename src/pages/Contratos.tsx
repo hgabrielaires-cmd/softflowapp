@@ -236,7 +236,13 @@ export default function Contratos() {
         const { data } = await supabase.functions.invoke("zapsign", {
           body: { action: "status", contrato_id: zRec.contrato_id },
         });
-        if (data?.success && data.status !== zRec.status) {
+        if (data?.skippable) {
+          // Token inválido / documento de outro token - atualizar localmente
+          updatedMap[zRec.contrato_id] = {
+            ...updatedMap[zRec.contrato_id],
+            status: "Token Inválido",
+          };
+        } else if (data?.success && data.status !== zRec.status) {
           updatedMap[zRec.contrato_id] = {
             ...updatedMap[zRec.contrato_id],
             status: data.status,
