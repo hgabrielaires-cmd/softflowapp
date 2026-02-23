@@ -1098,7 +1098,8 @@ Estou à disposição.`;
                     <TableCell>{getStatusGeracaoBadge(contrato.status_geracao)}</TableCell>
                     <TableCell>{getZapSignStatusBadge(zapsignRecords[contrato.id]?.status)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {format(new Date(contrato.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                      <div>{format(new Date(contrato.created_at), "dd/MM/yyyy", { locale: ptBR })}</div>
+                      <div className="text-xs">{format(new Date(contrato.created_at), "HH:mm", { locale: ptBR })}</div>
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
