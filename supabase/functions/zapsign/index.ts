@@ -8,150 +8,22 @@ const corsHeaders = {
 
 const ZAPSIGN_API = "https://api.zapsign.com.br/api/v1";
 
-// ── Cache de token JWT em memória ──
-let cachedAccessToken: string | null = null;
-let cachedRefreshToken: string | null = null;
-let tokenExpiresAt: number = 0; // timestamp em ms
-
 /**
- * Obtém um access token JWT válido.
- * 1. Se o token em cache ainda é válido (com margem de 5 min), reutiliza.
- * 2. Se tem refresh token, tenta renovar.
- * 3. Senão, faz login com username/password.
- */
-async function getAccessToken(): Promise<string> {
-  const now = Date.now();
-
-  // Token ainda válido (com 5 min de margem)
-  if (cachedAccessToken && tokenExpiresAt > now + 5 * 60 * 1000) {
-    console.log("JWT: usando token em cache");
-    return cachedAccessToken;
-  }
-
-  // Tentar refresh se temos refresh token
-  if (cachedRefreshToken) {
-    try {
-      const refreshed = await refreshAccessToken(cachedRefreshToken);
-      if (refreshed) {
-        console.log("JWT: token renovado via refresh");
-        return refreshed;
-      }
-    } catch (err) {
-      console.warn("JWT: falha ao renovar token, fazendo login novamente:", err);
-    }
-  }
-
-  // Login com credenciais
-  return await loginAndGetToken();
-}
-
-/**
- * Faz login com username/password para obter access + refresh tokens.
- */
-async function loginAndGetToken(): Promise<string> {
-  const username = Deno.env.get("ZAPSIGN_USERNAME")?.trim();
-  const password = Deno.env.get("ZAPSIGN_PASSWORD")?.trim();
-  const orgId = Deno.env.get("ZAPSIGN_ORG_ID")?.trim();
-
-  if (!username || !password || !orgId) {
-    throw new Error("Credenciais ZapSign JWT não configuradas (ZAPSIGN_USERNAME, ZAPSIGN_PASSWORD, ZAPSIGN_ORG_ID)");
-  }
-
-  console.log(`JWT: fazendo login para org ${orgId}...`);
-
-  const response = await fetch(`${ZAPSIGN_API}/auth/token/${orgId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
-  });
-
-  const responseText = await response.text();
-
-  if (!response.ok) {
-    console.error("JWT: erro no login:", response.status, responseText);
-    throw new Error(`Erro ao autenticar na ZapSign (${response.status}): ${responseText.substring(0, 200)}`);
-  }
-
-  let data: any;
-  try {
-    data = JSON.parse(responseText);
-  } catch {
-    throw new Error(`ZapSign retornou resposta inválida no login: ${responseText.substring(0, 200)}`);
-  }
-
-  if (!data.access) {
-    throw new Error("ZapSign não retornou access token");
-  }
-
-  cachedAccessToken = data.access;
-  cachedRefreshToken = data.refresh || null;
-  // Access token dura 1 hora, definimos expiração em 55 min para margem
-  tokenExpiresAt = Date.now() + 55 * 60 * 1000;
-
-  console.log("JWT: login bem-sucedido, token obtido");
-  return cachedAccessToken!;
-}
-
-/**
- * Renova o access token usando o refresh token.
- */
-async function refreshAccessToken(refreshToken: string): Promise<string | null> {
-  const response = await fetch(`${ZAPSIGN_API}/auth/token/refresh/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh: refreshToken }),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    console.warn("JWT: refresh falhou:", response.status, text);
-    cachedRefreshToken = null;
-    return null;
-  }
-
-  const data = await response.json();
-  if (!data.access) {
-    cachedRefreshToken = null;
-    return null;
-  }
-
-  cachedAccessToken = data.access;
-  if (data.refresh) {
-    cachedRefreshToken = data.refresh;
-  }
-  tokenExpiresAt = Date.now() + 55 * 60 * 1000;
-
-  return cachedAccessToken!;
-}
-
-/**
- * Faz uma requisição autenticada à API da ZapSign com retry automático
- * caso o token tenha expirado.
+ * Faz uma requisição autenticada à API da ZapSign usando token direto.
  */
 async function zapsignFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const token = await getAccessToken();
+  const token = Deno.env.get("ZAPSIGN_API_TOKEN")?.trim();
+  if (!token) {
+    throw new Error("ZAPSIGN_API_TOKEN não configurado");
+  }
+
   const headers = {
     ...options.headers as Record<string, string>,
     "Authorization": `Bearer ${token}`,
     "Content-Type": "application/json",
   };
 
-  let response = await fetch(url, { ...options, headers });
-
-  // Se 401, token pode ter expirado - forçar novo login e tentar novamente
-  if (response.status === 401) {
-    console.log("JWT: recebeu 401, forçando novo login...");
-    await response.text(); // consumir body
-    cachedAccessToken = null;
-    cachedRefreshToken = null;
-    tokenExpiresAt = 0;
-
-    const newToken = await getAccessToken();
-    headers["Authorization"] = `Bearer ${newToken}`;
-    response = await fetch(url, { ...options, headers });
-  }
-
-  return response;
+  return await fetch(url, { ...options, headers });
 }
 
 // ── Edge Function principal ──
