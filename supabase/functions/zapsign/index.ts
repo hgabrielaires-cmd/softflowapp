@@ -116,43 +116,32 @@ Deno.serve(async (req) => {
         signers.push({
           name: filialNome,
           email: zapsignEmail,
+          auth_mode: "assinaturaTela",
           send_automatic_email: false,
-          lock_name: true,
-          lock_email: false,
+          lock_email: true,
         });
       }
 
       // Signatário 2: Decisor/cliente
-      if (decisor) {
-        signers.push({
-          name: decisor.nome || (contrato as any).clientes?.nome_fantasia || "Cliente",
-          email: decisor.email || (contrato as any).clientes?.email || "",
-          send_automatic_email: !!decisor.email,
-          lock_name: true,
-          lock_email: false,
-        });
-      } else {
-        signers.push({
-          name: (contrato as any).clientes?.nome_fantasia || "Cliente",
-          email: (contrato as any).clientes?.email || "",
-          send_automatic_email: !!(contrato as any).clientes?.email,
-          lock_name: true,
-          lock_email: false,
-        });
-      }
+      const clienteEmail = decisor?.email || (contrato as any).clientes?.email || "";
+      const clienteNome = decisor?.nome || (contrato as any).clientes?.nome_fantasia || "Cliente";
+      signers.push({
+        name: clienteNome,
+        email: clienteEmail,
+        auth_mode: "assinaturaTela",
+        send_automatic_email: !!clienteEmail,
+        lock_email: true,
+      });
 
       // Enviar para ZapSign
       const docName = `Contrato ${contrato.numero_exibicao} - ${(contrato as any).clientes?.nome_fantasia || ""}`;
-
 
       const zapsignPayload = {
         name: docName,
         url_pdf: signedData.signedUrl,
         external_id: contrato.id,
-        created_by: zapsignEmail,
         signers,
         lang: "pt-br",
-        send_automatic_email: false,
         disable_signer_emails: false,
         sandbox: false,
       };
