@@ -57,8 +57,10 @@ export const CONTRACT_VARIABLE_CATEGORIES: VariableCategory[] = [
     label: "Módulos",
     icon: "🧩",
     variables: [
+      { key: "modulos.titulo_inclusos", label: "Título Módulos (Upgrade: 'MÓDULOS DO SEU NOVO PLANO')", example: "MÓDULOS" },
       { key: "modulos.inclusos_lista", label: "Lista de Módulos Inclusos", example: "<ul><li>Módulo A</li><li>Módulo B</li></ul>" },
       { key: "modulos.adicionais_lista", label: "Lista de Adicionais", example: "<ul><li>Módulo Extra (2x)</li></ul>" },
+      { key: "modulos.adicionais_existentes_html", label: "Adicionais Já Existentes (condicional)", example: "<p><strong>Adicionais já existentes:</strong></p><ul>...</ul>" },
       { key: "modulos.tabela_detalhada", label: "Tabela Detalhada (só se houver adicionais)", example: "<table>...</table>" },
     ],
   },

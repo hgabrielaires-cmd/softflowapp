@@ -386,8 +386,10 @@ Deno.serve(async (req) => {
       })(),
       "plano.nome": plano?.nome || "",
       "plano.valor_mensalidade": fmtBRL(plano?.valor_mensalidade_padrao ?? 0),
+      "modulos.titulo_inclusos": "MÓDULOS",
       "modulos.inclusos_lista": modulosInclusosLista,
       "modulos.adicionais_lista": modulosAdicionaisLista,
+      "modulos.adicionais_existentes_html": "",
       "modulos.tabela_detalhada": modulosTabelaDetalhada,
       "modulos.quantidade_total": modulos.reduce((s: number, m: any) => s + (m.quantidade || 1), 0).toString(),
       "valores.total_adicionais_novos": fmtBRL(modulos.reduce((s: number, m: any) => s + (m.valor_mensalidade_modulo || 0) * (m.quantidade || 1), 0)),
@@ -445,11 +447,24 @@ Deno.serve(async (req) => {
       dados["plano.valor_mensalidade"] = fmtBRL(planoAnterior.valor_mensalidade_padrao ?? 0);
       dados["valores.plano_anterior"] = fmtBRL(planoAnterior.valor_mensalidade_padrao ?? 0);
 
+      // Sobrescrever título de módulos inclusos para upgrade
+      dados["modulos.titulo_inclusos"] = "MÓDULOS DO SEU NOVO PLANO";
+
+      // Módulos inclusos do NOVO plano (usar descrição do plano novo)
+      const novoPlanoDesc = plano?.descricao || "";
+      if (novoPlanoDesc) {
+        dados["modulos.inclusos_lista"] = "<ul style=\"margin:4px 0;padding-left:18px;\">" + 
+          novoPlanoDesc.split(",").map((item: string) => item.trim()).filter((item: string) => item.length > 0).map((item: string) => `<li>${item}</li>`).join("") + "</ul>";
+      }
+
       // Módulos adicionais que o cliente já possui (de pedidos anteriores)
       if (modulosAdicionaisExistentes.length > 0) {
         const adicionaisHtml = "<ul style=\"margin:4px 0;padding-left:18px;\">" + 
           modulosAdicionaisExistentes.map((m: any) => `<li>${m.nome} (${m.quantidade}x)</li>`).join("") + "</ul>";
         dados["modulos.adicionais_lista"] = adicionaisHtml;
+
+        // Bloco HTML completo com título + lista (condicional - só aparece se houver)
+        dados["modulos.adicionais_existentes_html"] = `<p style="margin-top:16px;"><strong>Adicionais já existentes:</strong></p>${adicionaisHtml}`;
 
         // Calcular valor mensal dos adicionais existentes
         const totalAdicionaisMens = modulosAdicionaisExistentes.reduce((acc: number, m: any) => 
@@ -479,6 +494,9 @@ Deno.serve(async (req) => {
         dados["valores.total_geral"] = fmtBRL((pedido?.valor_implantacao_final ?? 0) + mensalidadeTotal);
         dados["valores.total_extenso"] = valorPorExtenso((pedido?.valor_implantacao_final ?? 0) + mensalidadeTotal);
         dados["valores.adicionais_mensalidade"] = fmtBRL(totalAdicionaisMens);
+      } else {
+        // Sem adicionais existentes - variável vazia para não aparecer no documento
+        dados["modulos.adicionais_existentes_html"] = "";
       }
     }
 
