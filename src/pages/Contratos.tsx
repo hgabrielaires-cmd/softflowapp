@@ -776,7 +776,7 @@ export default function Contratos() {
       const zRec = zapsignRecords[contrato.id];
       const signUrl = zRec?.signers?.[0]?.sign_url || "";
 
-      const mensagem = gerarTermoAceite(contrato, signUrl);
+      const mensagem = gerarTermoAceite(contrato, signUrl, undefined, (contatos || []) as any);
 
       // Buscar config WhatsApp
       const { data: config } = await supabase
