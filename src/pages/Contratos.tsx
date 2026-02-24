@@ -490,7 +490,7 @@ export default function Contratos() {
         if (msgTemplate) setLinkedMessageTemplate(msgTemplate);
 
         const signUrl = zData.signers?.[0]?.sign_url || "";
-        const mensagem = gerarTermoAceite(updatedContrato, signUrl, msgTemplate || undefined);
+        const mensagem = gerarTermoAceite(updatedContrato, signUrl, msgTemplate || undefined, contatosLocais);
 
         // Buscar config WhatsApp
         const { data: config } = await supabase
@@ -811,7 +811,7 @@ export default function Contratos() {
   }
 
   // ── Gerador de Termo de Aceite ──────────────────────────────────────────────
-  function gerarTermoAceite(contrato: Contrato, linkAssinatura?: string, templateOverride?: { conteudo: string }): string {
+  function gerarTermoAceite(contrato: Contrato, linkAssinatura?: string, templateOverride?: { conteudo: string }, contatosOverride?: { nome: string; telefone: string | null; decisor: boolean; ativo: boolean }[]): string {
     const pedido = contrato.pedidos;
     const plano = contrato.planos;
     const nomeUsuario = profile?.full_name || "{nome_usuario}";
@@ -841,7 +841,8 @@ export default function Contratos() {
     const pixDesconto = params.pix_desconto_percentual;
 
     // Nome do decisor
-    const decisor = contatosCliente.find(c => c.decisor) || contatosCliente[0];
+    const contatosEfetivos = contatosOverride || contatosCliente;
+    const decisor = contatosEfetivos.find(c => c.decisor) || contatosEfetivos[0];
     const nomeDecisor = decisor?.nome || "{nome_decisor}";
 
     // Se há template vinculado, usa ele com substituição de variáveis
