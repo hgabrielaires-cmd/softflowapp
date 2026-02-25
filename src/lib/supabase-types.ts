@@ -73,6 +73,7 @@ export interface Filial {
   cep: string | null;
   telefone: string | null;
   email: string | null;
+  etapa_inicial_id: string | null;
   created_at: string;
 }
 

@@ -10,6 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -51,6 +58,8 @@ export default function Filiais() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [removeLogo, setRemoveLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [etapaInicialId, setEtapaInicialId] = useState<string | null>(null);
+  const [etapas, setEtapas] = useState<{ id: string; nome: string; ordem: number }[]>([]);
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
@@ -62,13 +71,19 @@ export default function Filiais() {
     setLoading(false);
   }
 
-  useEffect(() => { loadFiliais(); }, []);
+  async function loadEtapas() {
+    const { data } = await supabase.from("painel_etapas").select("id, nome, ordem").eq("ativo", true).order("ordem");
+    if (data) setEtapas(data);
+  }
+
+  useEffect(() => { loadFiliais(); loadEtapas(); }, []);
 
   function resetForm() {
     setNome(""); setRazaoSocial(""); setResponsavel(""); setAtiva(true); setCnpj(""); setInscricaoEstadual(""); setIeIsento(false);
     setEndereco({ logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "", cep: "", telefone: "", email: "" });
     setCnpjError(""); setCepError("");
     setLogoFile(null); setLogoPreview(null); setRemoveLogo(false);
+    setEtapaInicialId(null);
   }
 
   function openCreate() {
@@ -92,6 +107,7 @@ export default function Filiais() {
     });
     setCnpjError(""); setCepError("");
     setLogoFile(null); setLogoPreview(filial.logo_url || null); setRemoveLogo(false);
+    setEtapaInicialId(filial.etapa_inicial_id || null);
     setOpenDialog(true);
   }
 
@@ -172,13 +188,13 @@ export default function Filiais() {
         if (logoFile) logo_url = await uploadLogo(editing.id);
         else if (removeLogo) logo_url = null;
         const { error } = await supabase.from("filiais")
-          .update({ nome: nome.trim(), razao_social: razaoSocial.trim() || null, responsavel: responsavel.trim() || null, ativa, logo_url, cnpj: cnpj.trim() || null, inscricao_estadual: ie, ...endereco })
+          .update({ nome: nome.trim(), razao_social: razaoSocial.trim() || null, responsavel: responsavel.trim() || null, ativa, logo_url, cnpj: cnpj.trim() || null, inscricao_estadual: ie, etapa_inicial_id: etapaInicialId, ...endereco })
           .eq("id", editing.id);
         if (error) throw error;
         toast.success("Filial atualizada com sucesso");
       } else {
         const { data: inserted, error } = await supabase.from("filiais")
-          .insert({ nome: nome.trim(), razao_social: razaoSocial.trim() || null, responsavel: responsavel.trim() || null, ativa, cnpj: cnpj.trim() || null, inscricao_estadual: ie, ...endereco })
+          .insert({ nome: nome.trim(), razao_social: razaoSocial.trim() || null, responsavel: responsavel.trim() || null, ativa, cnpj: cnpj.trim() || null, inscricao_estadual: ie, etapa_inicial_id: etapaInicialId, ...endereco })
           .select("id").single();
         if (error) throw error;
         if (logoFile && inserted) {
@@ -407,6 +423,22 @@ export default function Filiais() {
                 </Button>
               )}
               <p className="text-xs text-muted-foreground">PNG, JPG ou SVG. Máx 2MB.</p>
+            </div>
+
+            {/* Etapa inicial após assinatura */}
+            <div className="space-y-1.5">
+              <Label>Etapa inicial após contrato assinado</Label>
+              <Select value={etapaInicialId || ""} onValueChange={(v) => setEtapaInicialId(v || null)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a etapa inicial" />
+                </SelectTrigger>
+                <SelectContent>
+                  {etapas.map((et) => (
+                    <SelectItem key={et.id} value={et.id}>{et.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Define em qual etapa do painel o contrato será inserido ao ser assinado.</p>
             </div>
 
             <div className="flex items-center gap-3">
