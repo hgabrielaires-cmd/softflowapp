@@ -1072,30 +1072,42 @@ export type Database = {
       }
       painel_etapas: {
         Row: {
+          alerta_notificacoes: boolean
+          alerta_whatsapp: boolean
           ativo: boolean
+          controla_sla: boolean
           cor: string | null
           created_at: string
           id: string
           nome: string
           ordem: number
+          prazo_maximo_horas: number | null
           updated_at: string
         }
         Insert: {
+          alerta_notificacoes?: boolean
+          alerta_whatsapp?: boolean
           ativo?: boolean
+          controla_sla?: boolean
           cor?: string | null
           created_at?: string
           id?: string
           nome: string
           ordem?: number
+          prazo_maximo_horas?: number | null
           updated_at?: string
         }
         Update: {
+          alerta_notificacoes?: boolean
+          alerta_whatsapp?: boolean
           ativo?: boolean
+          controla_sla?: boolean
           cor?: string | null
           created_at?: string
           id?: string
           nome?: string
           ordem?: number
+          prazo_maximo_horas?: number | null
           updated_at?: string
         }
         Relationships: []
