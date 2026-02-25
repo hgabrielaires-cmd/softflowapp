@@ -53,7 +53,7 @@ export function useUserFiliais(): UseUserFiliaisReturn {
 
   // Filial padrão: favorita > filial_id > primeira vinculada
   const filialPadraoId =
-    (profile as any)?.filial_favorita_id ||
+    profile?.filial_favorita_id ||
     profile?.filial_id ||
     (filiaisDoUsuario.length > 0 ? filiaisDoUsuario[0].id : null);
 
