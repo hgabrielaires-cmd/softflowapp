@@ -154,7 +154,7 @@ export default function Contratos() {
   const { isAdmin, roles, profile } = useAuth();
   const isFinanceiro = roles.includes("financeiro");
   const canManage = isAdmin || isFinanceiro;
-  const { filiaisDoUsuario, filialPadraoId } = useUserFiliais();
+  const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais } = useUserFiliais();
 
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
@@ -1056,8 +1056,8 @@ Estou à disposição.`;
                 <SelectValue placeholder="Todas as filiais" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas as filiais</SelectItem>
-                {filiaisDoUsuario.map((f) => (
+                {isGlobal && <SelectItem value="all">Todas as filiais</SelectItem>}
+                {(filiaisDoUsuario.length > 0 ? filiaisDoUsuario : todasFiliais).map((f) => (
                   <SelectItem key={f.id} value={f.id}>
                     {f.nome}
                   </SelectItem>
