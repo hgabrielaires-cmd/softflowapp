@@ -271,10 +271,7 @@ export default function PainelAtendimento() {
 
   // ─── Unique operation types ──────────────────────────────────────────────
 
-  const tiposUnicos = useMemo(() => {
-    const tipos = new Set(cards.map((c) => c.tipo_operacao));
-    return Array.from(tipos).sort();
-  }, [cards]);
+  const tiposUnicos = ["Implantação", "Upgrade", "Módulo Adicional", "Ordem de Atendimento", "Serviço"];
 
   // ─── Card component ─────────────────────────────────────────────────────
 
