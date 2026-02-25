@@ -1082,6 +1082,7 @@ export type Database = {
           canal: string
           created_at: string
           etapa_id: string
+          filial_id: string | null
           horas_apos_sla: number
           id: string
           nivel: number
@@ -1094,6 +1095,7 @@ export type Database = {
           canal?: string
           created_at?: string
           etapa_id: string
+          filial_id?: string | null
           horas_apos_sla?: number
           id?: string
           nivel?: number
@@ -1106,6 +1108,7 @@ export type Database = {
           canal?: string
           created_at?: string
           etapa_id?: string
+          filial_id?: string | null
           horas_apos_sla?: number
           id?: string
           nivel?: number
@@ -1119,6 +1122,13 @@ export type Database = {
             columns: ["etapa_id"]
             isOneToOne: false
             referencedRelation: "painel_etapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_etapa_alertas_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
             referencedColumns: ["id"]
           },
           {
