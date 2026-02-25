@@ -538,7 +538,7 @@ export default function PainelAtendimento() {
 
       {/* Detail Dialog */}
       <Dialog open={!!detailCard} onOpenChange={() => setDetailCard(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {detailCard && TIPO_ICONS[detailCard.tipo_operacao]}
@@ -546,7 +546,7 @@ export default function PainelAtendimento() {
             </DialogTitle>
           </DialogHeader>
           {detailCard && (
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto flex-1 pr-1">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-muted-foreground text-xs">Contrato</p>
