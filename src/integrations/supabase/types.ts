@@ -1076,6 +1076,67 @@ export type Database = {
           },
         ]
       }
+      painel_etapa_alertas: {
+        Row: {
+          ativo: boolean
+          canal: string
+          created_at: string
+          etapa_id: string
+          horas_apos_sla: number
+          id: string
+          nivel: number
+          template_id: string | null
+          updated_at: string
+          usuario_id: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          canal?: string
+          created_at?: string
+          etapa_id: string
+          horas_apos_sla?: number
+          id?: string
+          nivel?: number
+          template_id?: string | null
+          updated_at?: string
+          usuario_id?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          canal?: string
+          created_at?: string
+          etapa_id?: string
+          horas_apos_sla?: number
+          id?: string
+          nivel?: number
+          template_id?: string | null
+          updated_at?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "painel_etapa_alertas_etapa_id_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "painel_etapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_etapa_alertas_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "message_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_etapa_alertas_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       painel_etapas: {
         Row: {
           alerta_notificacoes: boolean

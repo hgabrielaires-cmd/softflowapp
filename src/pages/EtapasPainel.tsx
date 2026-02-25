@@ -8,8 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Pencil, Trash2, Search, GripVertical } from "lucide-react";
+import { EtapaAlertasConfig } from "@/components/EtapaAlertasConfig";
 
 interface PainelEtapa {
   id: string;
@@ -25,7 +25,31 @@ interface PainelEtapa {
   updated_at: string;
 }
 
-const defaultForm = { nome: "", cor: "#3b82f6", controla_sla: false, prazo_horas: "", prazo_minutos: "", alerta_whatsapp: false, alerta_notificacoes: false, alerta_whatsapp_template_id: "", alerta_whatsapp_usuario_id: "", alerta_notificacoes_template_id: "", alerta_notificacoes_usuario_id: "" };
+interface AlertLevel {
+  nivel: number;
+  template_id: string;
+  usuario_id: string;
+  horas_apos_sla: string;
+  ativo: boolean;
+}
+
+const defaultForm = {
+  nome: "",
+  cor: "#3b82f6",
+  controla_sla: false,
+  prazo_horas: "",
+  prazo_minutos: "",
+  alerta_whatsapp: false,
+  alerta_notificacoes: false,
+};
+
+const defaultAlertLevel = (nivel: number): AlertLevel => ({
+  nivel,
+  template_id: "",
+  usuario_id: "",
+  horas_apos_sla: "0",
+  ativo: nivel === 1,
+});
 
 export default function EtapasPainel() {
   const queryClient = useQueryClient();
@@ -33,6 +57,8 @@ export default function EtapasPainel() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<PainelEtapa | null>(null);
   const [form, setForm] = useState({ ...defaultForm });
+  const [whatsappLevels, setWhatsappLevels] = useState<AlertLevel[]>([1, 2, 3].map(defaultAlertLevel));
+  const [notifLevels, setNotifLevels] = useState<AlertLevel[]>([1, 2, 3].map(defaultAlertLevel));
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
@@ -46,7 +72,7 @@ export default function EtapasPainel() {
   });
 
   const { data: templates = [] } = useQuery({
-    queryKey: ["message_templates_whatsapp"],
+    queryKey: ["message_templates_all_active"],
     queryFn: async () => {
       const { data, error } = await supabase.from("message_templates").select("id, nome").eq("ativo", true).order("nome");
       if (error) throw error;
@@ -71,19 +97,63 @@ export default function EtapasPainel() {
         controla_sla: form.controla_sla,
         prazo_maximo_horas: form.controla_sla && (form.prazo_horas || form.prazo_minutos) ? Number(form.prazo_horas || 0) + Number(form.prazo_minutos || 0) / 60 : null,
         alerta_whatsapp: form.alerta_whatsapp,
-        alerta_whatsapp_template_id: form.alerta_whatsapp && form.alerta_whatsapp_template_id ? form.alerta_whatsapp_template_id : null,
-        alerta_whatsapp_usuario_id: form.alerta_whatsapp && form.alerta_whatsapp_usuario_id ? form.alerta_whatsapp_usuario_id : null,
         alerta_notificacoes: form.alerta_notificacoes,
-        alerta_notificacoes_template_id: form.alerta_notificacoes && form.alerta_notificacoes_template_id ? form.alerta_notificacoes_template_id : null,
-        alerta_notificacoes_usuario_id: form.alerta_notificacoes && form.alerta_notificacoes_usuario_id ? form.alerta_notificacoes_usuario_id : null,
       };
+
+      let etapaId: string;
+
       if (editing) {
         const { error } = await supabase.from("painel_etapas").update(payload).eq("id", editing.id);
         if (error) throw error;
+        etapaId = editing.id;
       } else {
         const maxOrdem = etapas.length > 0 ? Math.max(...etapas.map(e => e.ordem)) + 1 : 1;
-        const { error } = await supabase.from("painel_etapas").insert({ ...payload, ordem: maxOrdem });
+        const { data, error } = await supabase.from("painel_etapas").insert({ ...payload, ordem: maxOrdem }).select("id").single();
         if (error) throw error;
+        etapaId = data.id;
+      }
+
+      // Save alert levels
+      // Delete existing alerts for this etapa
+      await supabase.from("painel_etapa_alertas").delete().eq("etapa_id", etapaId);
+
+      const alertsToInsert: any[] = [];
+
+      if (form.alerta_whatsapp) {
+        whatsappLevels.forEach((lvl) => {
+          if (lvl.ativo) {
+            alertsToInsert.push({
+              etapa_id: etapaId,
+              canal: "whatsapp",
+              nivel: lvl.nivel,
+              template_id: lvl.template_id || null,
+              usuario_id: lvl.usuario_id || null,
+              horas_apos_sla: Number(lvl.horas_apos_sla) || 0,
+              ativo: true,
+            });
+          }
+        });
+      }
+
+      if (form.alerta_notificacoes) {
+        notifLevels.forEach((lvl) => {
+          if (lvl.ativo) {
+            alertsToInsert.push({
+              etapa_id: etapaId,
+              canal: "notificacao",
+              nivel: lvl.nivel,
+              template_id: lvl.template_id || null,
+              usuario_id: lvl.usuario_id || null,
+              horas_apos_sla: Number(lvl.horas_apos_sla) || 0,
+              ativo: true,
+            });
+          }
+        });
+      }
+
+      if (alertsToInsert.length > 0) {
+        const { error: alertError } = await supabase.from("painel_etapa_alertas").insert(alertsToInsert);
+        if (alertError) throw alertError;
       }
     },
     onSuccess: () => {
@@ -120,19 +190,14 @@ export default function EtapasPainel() {
       dragOverItem.current = null;
       return;
     }
-
     const reordered = [...etapas];
     const [removed] = reordered.splice(dragItem.current, 1);
     reordered.splice(dragOverItem.current, 0, removed);
-
-    // Update all orders in DB
-    const updates = reordered.map((etapa, idx) => 
+    const updates = reordered.map((etapa, idx) =>
       supabase.from("painel_etapas").update({ ordem: idx + 1 }).eq("id", etapa.id)
     );
-
     dragItem.current = null;
     dragOverItem.current = null;
-
     try {
       await Promise.all(updates);
       queryClient.invalidateQueries({ queryKey: ["painel_etapas"] });
@@ -144,10 +209,12 @@ export default function EtapasPainel() {
   function openNew() {
     setEditing(null);
     setForm({ ...defaultForm });
+    setWhatsappLevels([1, 2, 3].map(defaultAlertLevel));
+    setNotifLevels([1, 2, 3].map(defaultAlertLevel));
     setDialogOpen(true);
   }
 
-  function openEdit(etapa: PainelEtapa) {
+  async function openEdit(etapa: PainelEtapa) {
     setEditing(etapa);
     setForm({
       nome: etapa.nome,
@@ -156,12 +223,32 @@ export default function EtapasPainel() {
       prazo_horas: etapa.prazo_maximo_horas != null ? String(Math.floor(etapa.prazo_maximo_horas)) : "",
       prazo_minutos: etapa.prazo_maximo_horas != null ? String(Math.round((etapa.prazo_maximo_horas % 1) * 60)) : "",
       alerta_whatsapp: etapa.alerta_whatsapp,
-      alerta_whatsapp_template_id: (etapa as any).alerta_whatsapp_template_id || "",
-      alerta_whatsapp_usuario_id: (etapa as any).alerta_whatsapp_usuario_id || "",
       alerta_notificacoes: etapa.alerta_notificacoes,
-      alerta_notificacoes_template_id: (etapa as any).alerta_notificacoes_template_id || "",
-      alerta_notificacoes_usuario_id: (etapa as any).alerta_notificacoes_usuario_id || "",
     });
+
+    // Load existing alerts
+    const { data: alertas } = await supabase
+      .from("painel_etapa_alertas")
+      .select("*")
+      .eq("etapa_id", etapa.id)
+      .order("nivel");
+
+    const wLevels: AlertLevel[] = [1, 2, 3].map((n) => {
+      const found = alertas?.find((a: any) => a.canal === "whatsapp" && a.nivel === n);
+      return found
+        ? { nivel: n, template_id: found.template_id || "", usuario_id: found.usuario_id || "", horas_apos_sla: String(found.horas_apos_sla || 0), ativo: found.ativo }
+        : defaultAlertLevel(n);
+    });
+
+    const nLevels: AlertLevel[] = [1, 2, 3].map((n) => {
+      const found = alertas?.find((a: any) => a.canal === "notificacao" && a.nivel === n);
+      return found
+        ? { nivel: n, template_id: found.template_id || "", usuario_id: found.usuario_id || "", horas_apos_sla: String(found.horas_apos_sla || 0), ativo: found.ativo }
+        : defaultAlertLevel(n);
+    });
+
+    setWhatsappLevels(wLevels);
+    setNotifLevels(nLevels);
     setDialogOpen(true);
   }
 
@@ -169,13 +256,18 @@ export default function EtapasPainel() {
     setDialogOpen(false);
     setEditing(null);
     setForm({ ...defaultForm });
+    setWhatsappLevels([1, 2, 3].map(defaultAlertLevel));
+    setNotifLevels([1, 2, 3].map(defaultAlertLevel));
   }
 
-  const filtered = search
-    ? etapas.filter((e) => e.nome.toLowerCase().includes(search.toLowerCase()))
-    : etapas;
+  function handleLevelChange(setter: React.Dispatch<React.SetStateAction<AlertLevel[]>>) {
+    return (nivel: number, field: keyof AlertLevel, value: any) => {
+      setter((prev) => prev.map((l) => (l.nivel === nivel ? { ...l, [field]: value } : l)));
+    };
+  }
 
-  const isDraggable = !search; // Disable drag when searching
+  const filtered = search ? etapas.filter((e) => e.nome.toLowerCase().includes(search.toLowerCase())) : etapas;
+  const isDraggable = !search;
 
   return (
     <AppLayout>
@@ -250,7 +342,7 @@ export default function EtapasPainel() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-h-[90vh] flex flex-col" onInteractOutside={(e) => e.preventDefault()}>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>{editing ? "Editar Etapa" : "Nova Etapa"}</DialogTitle>
           </DialogHeader>
@@ -287,66 +379,28 @@ export default function EtapasPainel() {
                 <p className="text-xs text-muted-foreground mt-1">Se ultrapassado, o card aparecerá como "Tarefa Atrasada" no painel.</p>
               </div>
             )}
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Alerta WhatsApp</label>
-              <Switch checked={form.alerta_whatsapp} onCheckedChange={(v) => setForm((p) => ({ ...p, alerta_whatsapp: v, alerta_whatsapp_template_id: v ? p.alerta_whatsapp_template_id : "", alerta_whatsapp_usuario_id: v ? p.alerta_whatsapp_usuario_id : "" }))} />
-            </div>
-            {form.alerta_whatsapp && (
-              <div className="space-y-3 pl-4 border-l-2 border-primary/20">
-                <div>
-                  <label className="text-sm font-medium">Template da Mensagem</label>
-                  <Select value={form.alerta_whatsapp_template_id} onValueChange={(v) => setForm((p) => ({ ...p, alerta_whatsapp_template_id: v }))}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione um template..." /></SelectTrigger>
-                    <SelectContent>
-                      {templates.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Usuário Responsável</label>
-                  <Select value={form.alerta_whatsapp_usuario_id} onValueChange={(v) => setForm((p) => ({ ...p, alerta_whatsapp_usuario_id: v }))}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione um usuário..." /></SelectTrigger>
-                    <SelectContent>
-                      {usuarios.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Alerta Notificações</label>
-              <Switch checked={form.alerta_notificacoes} onCheckedChange={(v) => setForm((p) => ({ ...p, alerta_notificacoes: v, alerta_notificacoes_template_id: v ? p.alerta_notificacoes_template_id : "", alerta_notificacoes_usuario_id: v ? p.alerta_notificacoes_usuario_id : "" }))} />
-            </div>
-            {form.alerta_notificacoes && (
-              <div className="space-y-3 pl-4 border-l-2 border-primary/20">
-                <div>
-                  <label className="text-sm font-medium">Template da Notificação</label>
-                  <Select value={form.alerta_notificacoes_template_id} onValueChange={(v) => setForm((p) => ({ ...p, alerta_notificacoes_template_id: v }))}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione um template..." /></SelectTrigger>
-                    <SelectContent>
-                      {templates.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Usuário Responsável</label>
-                  <Select value={form.alerta_notificacoes_usuario_id} onValueChange={(v) => setForm((p) => ({ ...p, alerta_notificacoes_usuario_id: v }))}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione um usuário..." /></SelectTrigger>
-                    <SelectContent>
-                      {usuarios.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
+
+            <EtapaAlertasConfig
+              canal="whatsapp"
+              canalLabel="WhatsApp"
+              enabled={form.alerta_whatsapp}
+              onEnabledChange={(v) => setForm((p) => ({ ...p, alerta_whatsapp: v }))}
+              levels={whatsappLevels}
+              onLevelChange={handleLevelChange(setWhatsappLevels)}
+              templates={templates}
+              usuarios={usuarios}
+            />
+
+            <EtapaAlertasConfig
+              canal="notificacao"
+              canalLabel="Notificações"
+              enabled={form.alerta_notificacoes}
+              onEnabledChange={(v) => setForm((p) => ({ ...p, alerta_notificacoes: v }))}
+              levels={notifLevels}
+              onLevelChange={handleLevelChange(setNotifLevels)}
+              templates={templates}
+              usuarios={usuarios}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
