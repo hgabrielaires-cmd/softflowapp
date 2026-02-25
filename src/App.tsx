@@ -28,6 +28,7 @@ import TrocarSenha from "./pages/TrocarSenha";
 import MesasAtendimento from "./pages/MesasAtendimento";
 import JornadaImplantacao from "./pages/JornadaImplantacao";
 import PainelAtendimento from "./pages/PainelAtendimento";
+import EtapasPainel from "./pages/EtapasPainel";
 
 const queryClient = new QueryClient();
 
@@ -228,6 +229,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="admin">
                   <MesasAtendimento />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/etapas-painel"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <EtapasPainel />
                 </ProtectedRoute>
               }
             />
