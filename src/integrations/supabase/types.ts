@@ -666,6 +666,7 @@ export type Database = {
           mesa_atendimento_id: string | null
           nome: string
           ordem: number
+          permite_clonar: boolean
           updated_at: string
         }
         Insert: {
@@ -676,6 +677,7 @@ export type Database = {
           mesa_atendimento_id?: string | null
           nome: string
           ordem?: number
+          permite_clonar?: boolean
           updated_at?: string
         }
         Update: {
@@ -686,6 +688,7 @@ export type Database = {
           mesa_atendimento_id?: string | null
           nome?: string
           ordem?: number
+          permite_clonar?: boolean
           updated_at?: string
         }
         Relationships: [
