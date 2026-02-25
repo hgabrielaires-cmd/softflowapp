@@ -75,14 +75,17 @@ export default function EtapasPainel() {
     },
   });
 
-  const { data: templates = [] } = useQuery({
+  const { data: allTemplates = [] } = useQuery({
     queryKey: ["message_templates_all_active"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("message_templates").select("id, nome").eq("ativo", true).order("nome");
+      const { data, error } = await supabase.from("message_templates").select("id, nome, tipo").eq("ativo", true).order("nome");
       if (error) throw error;
       return data;
     },
   });
+
+  const whatsappTemplates = allTemplates.filter((t) => t.tipo === "whatsapp");
+  const notifTemplates = allTemplates.filter((t) => t.tipo === "notificacao");
 
   const { data: usuarios = [] } = useQuery({
     queryKey: ["profiles_ativos"],
@@ -421,7 +424,7 @@ export default function EtapasPainel() {
               filiais={filiais}
               filialConfigs={whatsappByFilial}
               onFilialLevelChange={handleFilialLevelChange(setWhatsappByFilial)}
-              templates={templates}
+              templates={whatsappTemplates}
               usuarios={usuarios}
               usuariosPorFilial={usuariosPorFilial}
             />
@@ -434,7 +437,7 @@ export default function EtapasPainel() {
               filiais={filiais}
               filialConfigs={notifByFilial}
               onFilialLevelChange={handleFilialLevelChange(setNotifByFilial)}
-              templates={templates}
+              templates={notifTemplates}
               usuarios={usuarios}
               usuariosPorFilial={usuariosPorFilial}
             />
