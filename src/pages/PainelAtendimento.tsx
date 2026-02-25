@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import {
   LayoutGrid, List, Search, Clock, Building2, User, Filter,
   GripVertical, ChevronRight, FileText, Package, ArrowUpCircle,
-  Wrench, GraduationCap, Layers
+  Wrench, GraduationCap, Layers, Play, AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +27,8 @@ interface PainelEtapa {
   ordem: number;
   cor: string | null;
   ativo: boolean;
+  controla_sla: boolean;
+  prazo_maximo_horas: number | null;
 }
 
 interface PainelCard {
@@ -42,6 +44,8 @@ interface PainelCard {
   etapa_id: string;
   sla_horas: number;
   observacoes: string | null;
+  iniciado_em: string | null;
+  iniciado_por: string | null;
   created_at: string;
   updated_at: string;
   // Joins
@@ -159,6 +163,35 @@ export default function PainelAtendimento() {
     onError: () => toast.error("Erro ao atribuir responsável."),
   });
 
+  const iniciarAtendimento = useMutation({
+    mutationFn: async (cardId: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+      const { error } = await supabase
+        .from("painel_atendimento")
+        .update({ iniciado_em: new Date().toISOString(), iniciado_por: user.id })
+        .eq("id", cardId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+      toast.success("Atendimento iniciado!");
+    },
+    onError: () => toast.error("Erro ao iniciar atendimento."),
+  });
+
+  // ─── SLA inicio check ──────────────────────────────────────────────────
+
+  function isInicioAtrasado(card: PainelCard): boolean {
+    if (card.iniciado_em) return false; // já iniciou
+    const etapa = etapas.find((e) => e.id === card.etapa_id);
+    if (!etapa?.controla_sla || !etapa.prazo_maximo_horas) return false;
+    const criado = new Date(card.created_at).getTime();
+    const agora = Date.now();
+    const diffHoras = (agora - criado) / (1000 * 60 * 60);
+    return diffHoras > etapa.prazo_maximo_horas;
+  }
+
   // ─── Filtered cards ──────────────────────────────────────────────────────
 
   const filtered = useMemo(() => {
@@ -255,8 +288,20 @@ export default function PainelAtendimento() {
             </span>
           </div>
 
-          {/* Tipo badge */}
-          <div className="flex items-center gap-1.5">
+          {/* Status tags */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {isInicioAtrasado(card) && (
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0 gap-1">
+                <AlertTriangle className="h-2.5 w-2.5" />
+                Tarefa Atrasada
+              </Badge>
+            )}
+            {card.iniciado_em && (
+              <Badge className="text-[10px] px-1.5 py-0 gap-1 bg-emerald-100 text-emerald-700 border-emerald-200" variant="outline">
+                <Play className="h-2.5 w-2.5" />
+                Em andamento
+              </Badge>
+            )}
             <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 gap-1", TIPO_COLORS[card.tipo_operacao] || "")}>
               {TIPO_ICONS[card.tipo_operacao]}
               {card.tipo_operacao}
@@ -535,6 +580,47 @@ export default function PainelAtendimento() {
                     {formatSLA(detailCard.sla_horas)}
                   </p>
                 </div>
+              </div>
+
+              {/* Status de Início */}
+              <div className="p-3 rounded-lg border bg-muted/30">
+                {detailCard.iniciado_em ? (
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200" variant="outline">
+                      <Play className="h-3 w-3 mr-1" />
+                      Em andamento
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      Iniciado em {new Date(detailCard.iniciado_em).toLocaleDateString("pt-BR")} às{" "}
+                      {new Date(detailCard.iniciado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {isInicioAtrasado(detailCard) ? (
+                        <Badge variant="destructive" className="gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          Tarefa Atrasada
+                        </Badge>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Aguardando início</span>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        iniciarAtendimento.mutate(detailCard.id);
+                        setDetailCard({ ...detailCard, iniciado_em: new Date().toISOString() });
+                      }}
+                      disabled={iniciarAtendimento.isPending}
+                    >
+                      <Play className="h-4 w-4 mr-1" />
+                      {iniciarAtendimento.isPending ? "Iniciando..." : "Iniciar"}
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Progress */}

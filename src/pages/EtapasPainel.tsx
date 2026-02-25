@@ -244,8 +244,9 @@ export default function EtapasPainel() {
             </div>
             {form.controla_sla && (
               <div>
-                <label className="text-sm font-medium">Prazo Máximo (horas) *</label>
+                <label className="text-sm font-medium">Prazo Máximo para Início (horas) *</label>
                 <Input type="number" min="1" value={form.prazo_maximo_horas} onChange={(e) => setForm((p) => ({ ...p, prazo_maximo_horas: e.target.value }))} placeholder="Ex: 48" />
+                <p className="text-xs text-muted-foreground mt-1">Se ultrapassado, o card aparecerá como "Tarefa Atrasada" no painel.</p>
               </div>
             )}
             <div className="flex items-center justify-between">
