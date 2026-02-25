@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Cliente, Filial, Profile, Contrato } from "@/lib/supabase-types";
+import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -230,10 +231,11 @@ function applyDesconto(original: number, tipo: "R$" | "%", valor: number): numbe
 
 export default function Pedidos() {
   const { profile, roles, isAdmin } = useAuth();
+  const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
   const isFinanceiro = roles.includes("financeiro");
   const isVendedor = roles.includes("vendedor");
   const isTecnico = roles.includes("tecnico") && !isAdmin && !isFinanceiro && !isVendedor;
-  const canSeeAllBranches = isAdmin || isFinanceiro;
+  const canSeeAllBranches = isGlobal;
 
   const [pedidos, setPedidos] = useState<PedidoWithJoins[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -261,7 +263,7 @@ export default function Pedidos() {
 
   // Filters
   const [search, setSearch] = useState("");
-  const [filterFilial, setFilterFilial] = useState("all");
+  const [filterFilial, setFilterFilial] = useState("_init_");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterVendedor, setFilterVendedor] = useState("all");
   const [filterDe, setFilterDe] = useState("");
@@ -481,13 +483,10 @@ export default function Pedidos() {
 
   // ─── Filial favorita ──────────────────────────────────────────────────────
 
+  // Use filialPadraoId from hook as filialFavoritaId
   useEffect(() => {
-    if (profile?.user_id) {
-      supabase.from("profiles").select("filial_favorita_id").eq("user_id", profile.user_id).maybeSingle().then(({ data }) => {
-        setFilialFavoritaId((data as any)?.filial_favorita_id || (profile as any)?.filial_favorita_id || null);
-      });
-    }
-  }, [profile?.user_id]);
+    if (filialPadraoId) setFilialFavoritaId(filialPadraoId);
+  }, [filialPadraoId]);
 
   // ─── Buscar parâmetros da filial ──────────────────────────────────────────
 
@@ -555,6 +554,15 @@ export default function Pedidos() {
   }
 
   useEffect(() => { loadData(); }, []);
+
+  // Default filial filter from user access
+  useEffect(() => {
+    if (filterFilial === "_init_" && filialPadraoId) {
+      setFilterFilial(filialPadraoId);
+    } else if (filterFilial === "_init_") {
+      setFilterFilial("all");
+    }
+  }, [filialPadraoId]);
 
   // ─── Buscar contrato ativo do cliente ─────────────────────────────────────
 
@@ -1130,7 +1138,7 @@ export default function Pedidos() {
   const filtered = pedidos.filter((p) => {
     const clienteNome = (p as any).clientes?.nome_fantasia?.toLowerCase() || "";
     if (search && !clienteNome.includes(search.toLowerCase())) return false;
-    if (filterFilial !== "all" && p.filial_id !== filterFilial) return false;
+    if (filterFilial !== "all" && filterFilial !== "_init_" && p.filial_id !== filterFilial) return false;
     if (filterStatus !== "all" && p.status_pedido !== filterStatus) return false;
     if (filterVendedor !== "all" && p.vendedor_id !== filterVendedor) return false;
     if (filterDe && p.created_at < filterDe) return false;
@@ -1172,15 +1180,22 @@ export default function Pedidos() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar por cliente..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
-            {canSeeAllBranches && (
+            {canSeeAllBranches ? (
               <Select value={filterFilial} onValueChange={setFilterFilial}>
                 <SelectTrigger><SelectValue placeholder="Todas as filiais" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as filiais</SelectItem>
-                  {filiais.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                  {filiaisDoUsuario.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
                 </SelectContent>
               </Select>
-            )}
+            ) : filiaisDoUsuario.length > 1 ? (
+              <Select value={filterFilial} onValueChange={setFilterFilial}>
+                <SelectTrigger><SelectValue placeholder="Filial" /></SelectTrigger>
+                <SelectContent>
+                  {filiaisDoUsuario.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ) : null}
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger><SelectValue placeholder="Todos os status" /></SelectTrigger>
               <SelectContent>
@@ -1690,7 +1705,7 @@ export default function Pedidos() {
                   <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))}>
                     <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
-                      {filiais.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                      {filiaisDoUsuario.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 ) : (

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Filial } from "@/lib/supabase-types";
+import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -153,12 +154,13 @@ export default function Contratos() {
   const { isAdmin, roles, profile } = useAuth();
   const isFinanceiro = roles.includes("financeiro");
   const canManage = isAdmin || isFinanceiro;
+  const { filiaisDoUsuario, filialPadraoId } = useUserFiliais();
 
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [filialParametros, setFilialParametros] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
-  const [filterFilial, setFilterFilial] = useState("all");
+  const [filterFilial, setFilterFilial] = useState("_init_");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDe, setFilterDe] = useState("");
   const [filterAte, setFilterAte] = useState("");
@@ -319,6 +321,15 @@ export default function Contratos() {
     loadData();
   }, []);
 
+  // Default filial filter
+  useEffect(() => {
+    if (filterFilial === "_init_" && filialPadraoId) {
+      setFilterFilial(filialPadraoId);
+    } else if (filterFilial === "_init_") {
+      setFilterFilial("all");
+    }
+  }, [filialPadraoId]);
+
   async function loadContatosCliente(clienteId: string) {
     const { data } = await supabase
       .from("cliente_contatos")
@@ -360,7 +371,7 @@ export default function Contratos() {
   }
 
   const filtered = contratos.filter((c) => {
-    if (filterFilial !== "all" && c.clientes?.filial_id !== filterFilial) return false;
+    if (filterFilial !== "all" && filterFilial !== "_init_" && c.clientes?.filial_id !== filterFilial) return false;
     if (filterStatus !== "all" && c.status !== filterStatus) return false;
     if (filterDe && c.created_at < filterDe) return false;
     if (filterAte && c.created_at > filterAte + "T23:59:59") return false;
@@ -1046,7 +1057,7 @@ Estou à disposição.`;
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as filiais</SelectItem>
-                {filiais.map((f) => (
+                {filiaisDoUsuario.map((f) => (
                   <SelectItem key={f.id} value={f.id}>
                     {f.nome}
                   </SelectItem>

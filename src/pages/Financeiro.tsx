@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Filial } from "@/lib/supabase-types";
+import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,11 +101,12 @@ export default function Financeiro() {
   const { profile, roles, isAdmin } = useAuth();
   const navigate = useNavigate();
   const isFinanceiro = roles.includes("financeiro");
+  const { filiaisDoUsuario, filialPadraoId } = useUserFiliais();
 
   const [pedidos, setPedidos] = useState<PedidoFila[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterFilial, setFilterFilial] = useState("all");
+  const [filterFilial, setFilterFilial] = useState("_init_");
   const [filterDe, setFilterDe] = useState("");
   const [filterAte, setFilterAte] = useState("");
   const [selected, setSelected] = useState<PedidoFila | null>(null);
@@ -139,10 +141,19 @@ export default function Financeiro() {
     if (canAccess) loadData();
   }, [canAccess]);
 
+  // Default filial filter from user access
+  useEffect(() => {
+    if (filterFilial === "_init_" && filialPadraoId) {
+      setFilterFilial(filialPadraoId);
+    } else if (filterFilial === "_init_") {
+      setFilterFilial("all");
+    }
+  }, [filialPadraoId]);
+
   if (!canAccess) return <Navigate to="/dashboard" replace />;
 
   const filtered = pedidos.filter((p) => {
-    if (filterFilial !== "all" && p.filial_id !== filterFilial) return false;
+    if (filterFilial !== "all" && filterFilial !== "_init_" && p.filial_id !== filterFilial) return false;
     if (filterDe && p.created_at < filterDe) return false;
     if (filterAte && p.created_at > filterAte + "T23:59:59") return false;
     return true;
@@ -233,7 +244,7 @@ export default function Financeiro() {
               <SelectTrigger><SelectValue placeholder="Todas as filiais" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as filiais</SelectItem>
-                {filiais.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                {filiaisDoUsuario.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
               </SelectContent>
             </Select>
             <Input type="date" value={filterDe} onChange={(e) => setFilterDe(e.target.value)} title="Data inicial" />

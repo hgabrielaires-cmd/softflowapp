@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
+import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -79,15 +80,25 @@ const TIPO_COLORS: Record<string, string> = {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function PainelAtendimento() {
+  const { filiaisDoUsuario, filialPadraoId } = useUserFiliais();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"kanban" | "lista">("kanban");
   const [search, setSearch] = useState("");
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
-  const [filtroFilial, setFiltroFilial] = useState<string>("todos");
+  const [filtroFilial, setFiltroFilial] = useState<string>("_init_");
   const [filtroResponsavel, setFiltroResponsavel] = useState<string>("todos");
   const [filtroEtapa, setFiltroEtapa] = useState<string>("todos");
   const [detailCard, setDetailCard] = useState<PainelCard | null>(null);
   const [dragCardId, setDragCardId] = useState<string | null>(null);
+
+  // Set default filial filter when hook resolves
+  useEffect(() => {
+    if (filtroFilial === "_init_" && filialPadraoId) {
+      setFiltroFilial(filialPadraoId);
+    } else if (filtroFilial === "_init_" && !filialPadraoId) {
+      setFiltroFilial("todos");
+    }
+  }, [filialPadraoId]);
 
   // ─── Queries ─────────────────────────────────────────────────────────────
 
@@ -116,13 +127,7 @@ export default function PainelAtendimento() {
     },
   });
 
-  const { data: filiais = [] } = useQuery({
-    queryKey: ["filiais_painel"],
-    queryFn: async () => {
-      const { data } = await supabase.from("filiais").select("id, nome").eq("ativa", true).order("nome");
-      return data || [];
-    },
-  });
+  const filiais = filiaisDoUsuario;
 
   const { data: responsaveis = [] } = useQuery({
     queryKey: ["profiles_painel"],
@@ -199,7 +204,7 @@ export default function PainelAtendimento() {
       if (search && !c.clientes?.nome_fantasia?.toLowerCase().includes(search.toLowerCase()) &&
           !c.contratos?.numero_exibicao?.toLowerCase().includes(search.toLowerCase())) return false;
       if (filtroTipo !== "todos" && c.tipo_operacao !== filtroTipo) return false;
-      if (filtroFilial !== "todos" && c.filial_id !== filtroFilial) return false;
+      if (filtroFilial !== "todos" && filtroFilial !== "_init_" && c.filial_id !== filtroFilial) return false;
       if (filtroResponsavel !== "todos" && c.responsavel_id !== filtroResponsavel) return false;
       if (filtroEtapa !== "todos" && c.etapa_id !== filtroEtapa) return false;
       return true;
