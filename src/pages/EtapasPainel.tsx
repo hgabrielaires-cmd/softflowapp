@@ -24,14 +24,14 @@ interface PainelEtapa {
   updated_at: string;
 }
 
-const defaultForm = { nome: "", cor: "#3b82f6", controla_sla: false, prazo_maximo_horas: "", alerta_whatsapp: false, alerta_notificacoes: false };
+const defaultForm = { nome: "", cor: "#3b82f6", controla_sla: false, prazo_horas: "", prazo_minutos: "", alerta_whatsapp: false, alerta_notificacoes: false };
 
 export default function EtapasPainel() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<PainelEtapa | null>(null);
-  const [form, setForm] = useState({ nome: "", cor: "#3b82f6", controla_sla: false, prazo_maximo_horas: "", alerta_whatsapp: false, alerta_notificacoes: false });
+  const [form, setForm] = useState({ ...defaultForm });
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
@@ -50,7 +50,7 @@ export default function EtapasPainel() {
         nome: form.nome,
         cor: form.cor || null,
         controla_sla: form.controla_sla,
-        prazo_maximo_horas: form.controla_sla && form.prazo_maximo_horas ? Number(form.prazo_maximo_horas) : null,
+        prazo_maximo_horas: form.controla_sla && (form.prazo_horas || form.prazo_minutos) ? Number(form.prazo_horas || 0) + Number(form.prazo_minutos || 0) / 60 : null,
         alerta_whatsapp: form.alerta_whatsapp,
         alerta_notificacoes: form.alerta_notificacoes,
       };
@@ -130,7 +130,8 @@ export default function EtapasPainel() {
       nome: etapa.nome,
       cor: etapa.cor || "#3b82f6",
       controla_sla: etapa.controla_sla,
-      prazo_maximo_horas: etapa.prazo_maximo_horas != null ? String(etapa.prazo_maximo_horas) : "",
+      prazo_horas: etapa.prazo_maximo_horas != null ? String(Math.floor(etapa.prazo_maximo_horas)) : "",
+      prazo_minutos: etapa.prazo_maximo_horas != null ? String(Math.round((etapa.prazo_maximo_horas % 1) * 60)) : "",
       alerta_whatsapp: etapa.alerta_whatsapp,
       alerta_notificacoes: etapa.alerta_notificacoes,
     });
@@ -240,12 +241,22 @@ export default function EtapasPainel() {
             </div>
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Controla SLA</label>
-              <Switch checked={form.controla_sla} onCheckedChange={(v) => setForm((p) => ({ ...p, controla_sla: v, prazo_maximo_horas: v ? p.prazo_maximo_horas : "" }))} />
+              <Switch checked={form.controla_sla} onCheckedChange={(v) => setForm((p) => ({ ...p, controla_sla: v, prazo_horas: v ? p.prazo_horas : "", prazo_minutos: v ? p.prazo_minutos : "" }))} />
             </div>
             {form.controla_sla && (
               <div>
-                <label className="text-sm font-medium">Prazo Máximo para Início (horas) *</label>
-                <Input type="number" min="1" value={form.prazo_maximo_horas} onChange={(e) => setForm((p) => ({ ...p, prazo_maximo_horas: e.target.value }))} placeholder="Ex: 48" />
+                <label className="text-sm font-medium">Prazo Máximo para Início *</label>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex-1">
+                    <Input type="number" min="0" value={form.prazo_horas} onChange={(e) => setForm((p) => ({ ...p, prazo_horas: e.target.value }))} placeholder="0" />
+                    <span className="text-xs text-muted-foreground mt-0.5 block">Horas</span>
+                  </div>
+                  <span className="text-lg font-bold text-muted-foreground mt-[-16px]">:</span>
+                  <div className="flex-1">
+                    <Input type="number" min="0" max="59" value={form.prazo_minutos} onChange={(e) => setForm((p) => ({ ...p, prazo_minutos: e.target.value }))} placeholder="0" />
+                    <span className="text-xs text-muted-foreground mt-0.5 block">Minutos</span>
+                  </div>
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">Se ultrapassado, o card aparecerá como "Tarefa Atrasada" no painel.</p>
               </div>
             )}
@@ -260,7 +271,7 @@ export default function EtapasPainel() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
-            <Button onClick={() => saveMutation.mutate()} disabled={!form.nome.trim() || (form.controla_sla && !form.prazo_maximo_horas) || saveMutation.isPending}>
+            <Button onClick={() => saveMutation.mutate()} disabled={!form.nome.trim() || (form.controla_sla && !form.prazo_horas && !form.prazo_minutos) || saveMutation.isPending}>
               {saveMutation.isPending ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
