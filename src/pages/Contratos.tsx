@@ -867,6 +867,7 @@ export default function Contratos() {
       let adicionaisAnterioresTexto = "";
       let valorAdicionaisAnteriores = "";
       let totalAnterior = "";
+      let mensalidadeTotalUpgrade = mensFinal; // fallback: valor do pedido
 
       if (contrato.contrato_origem_id) {
         const contratoOrigem = contratos.find(c => c.id === contrato.contrato_origem_id);
@@ -876,14 +877,32 @@ export default function Contratos() {
           const valorMensPlanoAnt = planoAnterior?.valor_mensalidade_padrao ?? 0;
           planoValorAnterior = fmtBRL(valorMensPlanoAnt);
 
-          // Adicionais do contrato de origem (do pedido de origem)
-          const adicionaisOrigem = (contratoOrigem.pedidos?.modulos_adicionais || []) as ModuloAdicionadoItem[];
-          const totalAdAnt = adicionaisOrigem.reduce((s, m) => s + m.valor_mensalidade_modulo * m.quantidade, 0);
-          adicionaisAnterioresTexto = adicionaisOrigem.length > 0
-            ? adicionaisOrigem.map(m => `• ${m.nome} (${m.quantidade}x) - ${fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}/mês`).join("\n")
+          // Buscar TODOS os adicionais existentes do cliente (de pedidos Novo e Módulo Adicional)
+          const todosContratos = contratos.filter(c => 
+            c.cliente_id === contrato.cliente_id && c.id !== contrato.id
+          );
+          const todosAdicionaisExistentes: ModuloAdicionadoItem[] = [];
+          for (const c of todosContratos) {
+            const tipoPed = c.pedidos?.tipo_pedido;
+            if (tipoPed === "Novo" || tipoPed === "Módulo Adicional") {
+              const mods = (c.pedidos?.modulos_adicionais || []) as ModuloAdicionadoItem[];
+              todosAdicionaisExistentes.push(...mods);
+            }
+          }
+          const totalAdAnt = todosAdicionaisExistentes.reduce((s, m) => s + m.valor_mensalidade_modulo * m.quantidade, 0);
+          adicionaisAnterioresTexto = todosAdicionaisExistentes.length > 0
+            ? todosAdicionaisExistentes.map(m => `• ${m.nome} (${m.quantidade}x) - ${fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}/mês`).join("\n")
             : "Nenhum";
-          valorAdicionaisAnteriores = adicionaisOrigem.length > 0 ? fmtBRL(totalAdAnt) : fmtBRL(0);
+          valorAdicionaisAnteriores = todosAdicionaisExistentes.length > 0 ? fmtBRL(totalAdAnt) : fmtBRL(0);
           totalAnterior = fmtBRL(valorMensPlanoAnt + totalAdAnt);
+
+          // Para upgrade: mensalidade total = novo plano + adicionais existentes - desconto
+          if (pedido?.tipo_pedido === "Upgrade") {
+            const novoPlanoMens = plano?.valor_mensalidade_padrao ?? 0;
+            const novaMensTotal = novoPlanoMens + totalAdAnt;
+            const descontoMens = (pedido?.valor_mensalidade_original ?? 0) - (pedido?.valor_mensalidade_final ?? 0);
+            mensalidadeTotalUpgrade = descontoMens > 0 ? novaMensTotal - descontoMens : novaMensTotal;
+          }
         }
       }
 
@@ -925,7 +944,7 @@ export default function Contratos() {
         .replace(/\{valores\.adicionais_anteriores\}/g, valorAdicionaisAnteriores)
         .replace(/\{valores\.total_anterior\}/g, totalAnterior)
         .replace(/\{valores\.implantacao\}/g, fmtBRL(impFinal))
-        .replace(/\{valores\.mensalidade\}/g, fmtBRL(mensFinal))
+        .replace(/\{valores\.mensalidade\}/g, fmtBRL(pedido?.tipo_pedido === "Upgrade" ? mensalidadeTotalUpgrade : mensFinal))
         .replace(/\{regras\.mensalidade\}/g, regrasMens)
         .replace(/\{regras\.implantacao\}/g, regrasImpl)
         .replace(/\{formas\.pagamento\}/g, formasPagamento)
