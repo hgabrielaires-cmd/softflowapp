@@ -16,16 +16,22 @@ interface PainelEtapa {
   ordem: number;
   cor: string | null;
   ativo: boolean;
+  controla_sla: boolean;
+  prazo_maximo_horas: number | null;
+  alerta_whatsapp: boolean;
+  alerta_notificacoes: boolean;
   created_at: string;
   updated_at: string;
 }
+
+const defaultForm = { nome: "", cor: "#3b82f6", controla_sla: false, prazo_maximo_horas: "", alerta_whatsapp: false, alerta_notificacoes: false };
 
 export default function EtapasPainel() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<PainelEtapa | null>(null);
-  const [form, setForm] = useState({ nome: "", cor: "#3b82f6" });
+  const [form, setForm] = useState({ nome: "", cor: "#3b82f6", controla_sla: false, prazo_maximo_horas: "", alerta_whatsapp: false, alerta_notificacoes: false });
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
@@ -40,12 +46,20 @@ export default function EtapasPainel() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const payload = {
+        nome: form.nome,
+        cor: form.cor || null,
+        controla_sla: form.controla_sla,
+        prazo_maximo_horas: form.controla_sla && form.prazo_maximo_horas ? Number(form.prazo_maximo_horas) : null,
+        alerta_whatsapp: form.alerta_whatsapp,
+        alerta_notificacoes: form.alerta_notificacoes,
+      };
       if (editing) {
-        const { error } = await supabase.from("painel_etapas").update({ nome: form.nome, cor: form.cor || null }).eq("id", editing.id);
+        const { error } = await supabase.from("painel_etapas").update(payload).eq("id", editing.id);
         if (error) throw error;
       } else {
         const maxOrdem = etapas.length > 0 ? Math.max(...etapas.map(e => e.ordem)) + 1 : 1;
-        const { error } = await supabase.from("painel_etapas").insert({ nome: form.nome, cor: form.cor || null, ordem: maxOrdem });
+        const { error } = await supabase.from("painel_etapas").insert({ ...payload, ordem: maxOrdem });
         if (error) throw error;
       }
     },
@@ -106,20 +120,27 @@ export default function EtapasPainel() {
 
   function openNew() {
     setEditing(null);
-    setForm({ nome: "", cor: "#3b82f6" });
+    setForm({ ...defaultForm });
     setDialogOpen(true);
   }
 
   function openEdit(etapa: PainelEtapa) {
     setEditing(etapa);
-    setForm({ nome: etapa.nome, cor: etapa.cor || "#3b82f6" });
+    setForm({
+      nome: etapa.nome,
+      cor: etapa.cor || "#3b82f6",
+      controla_sla: etapa.controla_sla,
+      prazo_maximo_horas: etapa.prazo_maximo_horas != null ? String(etapa.prazo_maximo_horas) : "",
+      alerta_whatsapp: etapa.alerta_whatsapp,
+      alerta_notificacoes: etapa.alerta_notificacoes,
+    });
     setDialogOpen(true);
   }
 
   function closeDialog() {
     setDialogOpen(false);
     setEditing(null);
-    setForm({ nome: "", cor: "#3b82f6" });
+    setForm({ ...defaultForm });
   }
 
   const filtered = search
@@ -217,10 +238,28 @@ export default function EtapasPainel() {
                 <Input value={form.cor} onChange={(e) => setForm((p) => ({ ...p, cor: e.target.value }))} className="max-w-32" />
               </div>
             </div>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Controla SLA</label>
+              <Switch checked={form.controla_sla} onCheckedChange={(v) => setForm((p) => ({ ...p, controla_sla: v, prazo_maximo_horas: v ? p.prazo_maximo_horas : "" }))} />
+            </div>
+            {form.controla_sla && (
+              <div>
+                <label className="text-sm font-medium">Prazo Máximo (horas) *</label>
+                <Input type="number" min="1" value={form.prazo_maximo_horas} onChange={(e) => setForm((p) => ({ ...p, prazo_maximo_horas: e.target.value }))} placeholder="Ex: 48" />
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Alerta WhatsApp</label>
+              <Switch checked={form.alerta_whatsapp} onCheckedChange={(v) => setForm((p) => ({ ...p, alerta_whatsapp: v }))} />
+            </div>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Alerta Notificações</label>
+              <Switch checked={form.alerta_notificacoes} onCheckedChange={(v) => setForm((p) => ({ ...p, alerta_notificacoes: v }))} />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
-            <Button onClick={() => saveMutation.mutate()} disabled={!form.nome.trim() || saveMutation.isPending}>
+            <Button onClick={() => saveMutation.mutate()} disabled={!form.nome.trim() || (form.controla_sla && !form.prazo_maximo_horas) || saveMutation.isPending}>
               {saveMutation.isPending ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
