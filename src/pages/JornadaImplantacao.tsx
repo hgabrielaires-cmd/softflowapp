@@ -198,7 +198,7 @@ export default function JornadaImplantacao() {
             nome: a.nome,
             descricao: a.descricao || null,
             horas_estimadas: a.horas_estimadas,
-            checklist: JSON.stringify(a.checklist),
+            checklist: a.checklist as any,
             tipo_responsabilidade: a.tipo_responsabilidade,
             ordem: a.ordem,
           }));
