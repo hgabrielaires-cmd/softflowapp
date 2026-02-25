@@ -970,6 +970,8 @@ export type Database = {
           etapa_id: string
           filial_id: string
           id: string
+          iniciado_em: string | null
+          iniciado_por: string | null
           jornada_id: string | null
           observacoes: string | null
           pedido_id: string | null
@@ -986,6 +988,8 @@ export type Database = {
           etapa_id: string
           filial_id: string
           id?: string
+          iniciado_em?: string | null
+          iniciado_por?: string | null
           jornada_id?: string | null
           observacoes?: string | null
           pedido_id?: string | null
@@ -1002,6 +1006,8 @@ export type Database = {
           etapa_id?: string
           filial_id?: string
           id?: string
+          iniciado_em?: string | null
+          iniciado_por?: string | null
           jornada_id?: string | null
           observacoes?: string | null
           pedido_id?: string | null
