@@ -723,9 +723,9 @@ export default function Pedidos() {
     const defaultMens = (profile as any)?.comissao_mensalidade_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
     const defaultServ = (profile as any)?.comissao_servico_percentual?.toString() ?? "5";
 
-    // Buscar filial favorita atualizada do banco (não depender do estado async)
-    let resolvedFilialId = filialFavoritaId || (profile as any)?.filial_favorita_id || profile?.filial_id || "";
-    if (profile?.user_id && !resolvedFilialId) {
+    // Usar filialPadraoId do hook (favorita > filial_id > primeira vinculada)
+    let resolvedFilialId = filialPadraoId || filialFavoritaId || profile?.filial_favorita_id || profile?.filial_id || "";
+    if (!resolvedFilialId && profile?.user_id) {
       const { data: pData } = await supabase.from("profiles").select("filial_favorita_id, filial_id").eq("user_id", profile.user_id).maybeSingle();
       resolvedFilialId = (pData as any)?.filial_favorita_id || (pData as any)?.filial_id || "";
       if ((pData as any)?.filial_favorita_id) setFilialFavoritaId((pData as any).filial_favorita_id);
@@ -1694,15 +1694,15 @@ export default function Pedidos() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Filial *</Label>
-                {isAdmin ? (
+                {isAdmin || filiaisDoUsuario.length > 1 ? (
                   <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))}>
                     <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
-                      {filiaisDoUsuario.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                      {(filiaisDoUsuario.length > 0 ? filiaisDoUsuario : todasFiliais).map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Input readOnly value={filiais.find((f) => f.id === form.filial_id)?.nome || "—"} className="bg-muted cursor-not-allowed" />
+                  <Input readOnly value={filiaisDoUsuario.find((f) => f.id === form.filial_id)?.nome || filiais.find((f) => f.id === form.filial_id)?.nome || "—"} className="bg-muted cursor-not-allowed" />
                 )}
               </div>
               <div className="space-y-1.5">
