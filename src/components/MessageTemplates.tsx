@@ -107,6 +107,7 @@ export function MessageTemplates() {
     const { data, error } = await supabase
       .from("message_templates")
       .select("*")
+      .neq("tipo", "notificacao")
       .order("created_at", { ascending: false });
     if (error) toast.error("Erro ao carregar templates: " + error.message);
     setTemplates((data || []) as MessageTemplate[]);
