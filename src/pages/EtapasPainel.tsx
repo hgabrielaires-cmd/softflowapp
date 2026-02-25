@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Pencil, Trash2, Search, GripVertical } from "lucide-react";
 
 interface PainelEtapa {
@@ -24,7 +25,7 @@ interface PainelEtapa {
   updated_at: string;
 }
 
-const defaultForm = { nome: "", cor: "#3b82f6", controla_sla: false, prazo_horas: "", prazo_minutos: "", alerta_whatsapp: false, alerta_notificacoes: false };
+const defaultForm = { nome: "", cor: "#3b82f6", controla_sla: false, prazo_horas: "", prazo_minutos: "", alerta_whatsapp: false, alerta_notificacoes: false, alerta_whatsapp_template_id: "", alerta_whatsapp_usuario_id: "", alerta_notificacoes_template_id: "", alerta_notificacoes_usuario_id: "" };
 
 export default function EtapasPainel() {
   const queryClient = useQueryClient();
@@ -44,6 +45,24 @@ export default function EtapasPainel() {
     },
   });
 
+  const { data: templates = [] } = useQuery({
+    queryKey: ["message_templates_whatsapp"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("message_templates").select("id, nome").eq("ativo", true).order("nome");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: usuarios = [] } = useQuery({
+    queryKey: ["profiles_ativos"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("id, full_name").eq("active", true).order("full_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const payload = {
@@ -52,7 +71,11 @@ export default function EtapasPainel() {
         controla_sla: form.controla_sla,
         prazo_maximo_horas: form.controla_sla && (form.prazo_horas || form.prazo_minutos) ? Number(form.prazo_horas || 0) + Number(form.prazo_minutos || 0) / 60 : null,
         alerta_whatsapp: form.alerta_whatsapp,
+        alerta_whatsapp_template_id: form.alerta_whatsapp && form.alerta_whatsapp_template_id ? form.alerta_whatsapp_template_id : null,
+        alerta_whatsapp_usuario_id: form.alerta_whatsapp && form.alerta_whatsapp_usuario_id ? form.alerta_whatsapp_usuario_id : null,
         alerta_notificacoes: form.alerta_notificacoes,
+        alerta_notificacoes_template_id: form.alerta_notificacoes && form.alerta_notificacoes_template_id ? form.alerta_notificacoes_template_id : null,
+        alerta_notificacoes_usuario_id: form.alerta_notificacoes && form.alerta_notificacoes_usuario_id ? form.alerta_notificacoes_usuario_id : null,
       };
       if (editing) {
         const { error } = await supabase.from("painel_etapas").update(payload).eq("id", editing.id);
@@ -133,7 +156,11 @@ export default function EtapasPainel() {
       prazo_horas: etapa.prazo_maximo_horas != null ? String(Math.floor(etapa.prazo_maximo_horas)) : "",
       prazo_minutos: etapa.prazo_maximo_horas != null ? String(Math.round((etapa.prazo_maximo_horas % 1) * 60)) : "",
       alerta_whatsapp: etapa.alerta_whatsapp,
+      alerta_whatsapp_template_id: (etapa as any).alerta_whatsapp_template_id || "",
+      alerta_whatsapp_usuario_id: (etapa as any).alerta_whatsapp_usuario_id || "",
       alerta_notificacoes: etapa.alerta_notificacoes,
+      alerta_notificacoes_template_id: (etapa as any).alerta_notificacoes_template_id || "",
+      alerta_notificacoes_usuario_id: (etapa as any).alerta_notificacoes_usuario_id || "",
     });
     setDialogOpen(true);
   }
@@ -262,12 +289,64 @@ export default function EtapasPainel() {
             )}
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Alerta WhatsApp</label>
-              <Switch checked={form.alerta_whatsapp} onCheckedChange={(v) => setForm((p) => ({ ...p, alerta_whatsapp: v }))} />
+              <Switch checked={form.alerta_whatsapp} onCheckedChange={(v) => setForm((p) => ({ ...p, alerta_whatsapp: v, alerta_whatsapp_template_id: v ? p.alerta_whatsapp_template_id : "", alerta_whatsapp_usuario_id: v ? p.alerta_whatsapp_usuario_id : "" }))} />
             </div>
+            {form.alerta_whatsapp && (
+              <div className="space-y-3 pl-4 border-l-2 border-primary/20">
+                <div>
+                  <label className="text-sm font-medium">Template da Mensagem</label>
+                  <Select value={form.alerta_whatsapp_template_id} onValueChange={(v) => setForm((p) => ({ ...p, alerta_whatsapp_template_id: v }))}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione um template..." /></SelectTrigger>
+                    <SelectContent>
+                      {templates.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Usuário Responsável</label>
+                  <Select value={form.alerta_whatsapp_usuario_id} onValueChange={(v) => setForm((p) => ({ ...p, alerta_whatsapp_usuario_id: v }))}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione um usuário..." /></SelectTrigger>
+                    <SelectContent>
+                      {usuarios.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Alerta Notificações</label>
-              <Switch checked={form.alerta_notificacoes} onCheckedChange={(v) => setForm((p) => ({ ...p, alerta_notificacoes: v }))} />
+              <Switch checked={form.alerta_notificacoes} onCheckedChange={(v) => setForm((p) => ({ ...p, alerta_notificacoes: v, alerta_notificacoes_template_id: v ? p.alerta_notificacoes_template_id : "", alerta_notificacoes_usuario_id: v ? p.alerta_notificacoes_usuario_id : "" }))} />
             </div>
+            {form.alerta_notificacoes && (
+              <div className="space-y-3 pl-4 border-l-2 border-primary/20">
+                <div>
+                  <label className="text-sm font-medium">Template da Notificação</label>
+                  <Select value={form.alerta_notificacoes_template_id} onValueChange={(v) => setForm((p) => ({ ...p, alerta_notificacoes_template_id: v }))}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione um template..." /></SelectTrigger>
+                    <SelectContent>
+                      {templates.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Usuário Responsável</label>
+                  <Select value={form.alerta_notificacoes_usuario_id} onValueChange={(v) => setForm((p) => ({ ...p, alerta_notificacoes_usuario_id: v }))}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione um usuário..." /></SelectTrigger>
+                    <SelectContent>
+                      {usuarios.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog}>Cancelar</Button>

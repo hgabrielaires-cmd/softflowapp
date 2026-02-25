@@ -1079,7 +1079,11 @@ export type Database = {
       painel_etapas: {
         Row: {
           alerta_notificacoes: boolean
+          alerta_notificacoes_template_id: string | null
+          alerta_notificacoes_usuario_id: string | null
           alerta_whatsapp: boolean
+          alerta_whatsapp_template_id: string | null
+          alerta_whatsapp_usuario_id: string | null
           ativo: boolean
           controla_sla: boolean
           cor: string | null
@@ -1092,7 +1096,11 @@ export type Database = {
         }
         Insert: {
           alerta_notificacoes?: boolean
+          alerta_notificacoes_template_id?: string | null
+          alerta_notificacoes_usuario_id?: string | null
           alerta_whatsapp?: boolean
+          alerta_whatsapp_template_id?: string | null
+          alerta_whatsapp_usuario_id?: string | null
           ativo?: boolean
           controla_sla?: boolean
           cor?: string | null
@@ -1105,7 +1113,11 @@ export type Database = {
         }
         Update: {
           alerta_notificacoes?: boolean
+          alerta_notificacoes_template_id?: string | null
+          alerta_notificacoes_usuario_id?: string | null
           alerta_whatsapp?: boolean
+          alerta_whatsapp_template_id?: string | null
+          alerta_whatsapp_usuario_id?: string | null
           ativo?: boolean
           controla_sla?: boolean
           cor?: string | null
@@ -1116,7 +1128,36 @@ export type Database = {
           prazo_maximo_horas?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "painel_etapas_alerta_notificacoes_template_id_fkey"
+            columns: ["alerta_notificacoes_template_id"]
+            isOneToOne: false
+            referencedRelation: "message_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_etapas_alerta_notificacoes_usuario_id_fkey"
+            columns: ["alerta_notificacoes_usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_etapas_alerta_whatsapp_template_id_fkey"
+            columns: ["alerta_whatsapp_template_id"]
+            isOneToOne: false
+            referencedRelation: "message_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_etapas_alerta_whatsapp_usuario_id_fkey"
+            columns: ["alerta_whatsapp_usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pedidos: {
         Row: {
