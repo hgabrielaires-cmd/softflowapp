@@ -1406,7 +1406,7 @@ export default function Pedidos() {
 
       {/* ─── Create/Edit Dialog ─────────────────────────────────────────────── */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="max-w-2xl flex flex-col h-[90vh] p-0 gap-0 overflow-hidden">
+        <DialogContent className="max-w-2xl flex flex-col h-[90vh] p-0 gap-0 overflow-hidden" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader className="px-6 py-4 border-b border-border shrink-0">
             <DialogTitle className="flex items-center gap-2">
               {form.tipo_pedido === "Upgrade" && <ArrowUpCircle className="h-4 w-4 text-primary" />}
@@ -2148,7 +2148,7 @@ export default function Pedidos() {
 
       {/* ─── Dialog rápido novo cliente ─────────────────────────────────────── */}
       <Dialog open={openClienteDialog} onOpenChange={(open) => { setOpenClienteDialog(open); if (!open) { setClienteContatos([]); setShowContatoClienteForm(false); } }}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-4 w-4" /> Cadastrar Novo Cliente
@@ -2413,7 +2413,7 @@ export default function Pedidos() {
 
       {/* ─── Dialog Visualizar Pedido ─────────────────────────────────────────── */}
       <Dialog open={!!viewingPedido} onOpenChange={(open) => { if (!open) setViewingPedido(null); }}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-4 w-4" /> Visualizar Pedido

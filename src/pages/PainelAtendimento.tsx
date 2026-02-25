@@ -537,8 +537,8 @@ export default function PainelAtendimento() {
       </div>
 
       {/* Detail Dialog */}
-      <Dialog open={!!detailCard} onOpenChange={() => setDetailCard(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <Dialog open={!!detailCard} onOpenChange={(open) => { if (!open) setDetailCard(null); }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {detailCard && TIPO_ICONS[detailCard.tipo_operacao]}
