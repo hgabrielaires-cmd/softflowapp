@@ -557,9 +557,9 @@ export default function Pedidos() {
 
   // Default filial filter from user access
   useEffect(() => {
-    if (filterFilial === "_init_" && filialPadraoId) {
+    if (filialPadraoId && (filterFilial === "_init_" || filterFilial === "all")) {
       setFilterFilial(filialPadraoId);
-    } else if (filterFilial === "_init_") {
+    } else if (!filialPadraoId && filterFilial === "_init_") {
       setFilterFilial("all");
     }
   }, [filialPadraoId]);
@@ -1180,22 +1180,15 @@ export default function Pedidos() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar por cliente..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
-            {canSeeAllBranches ? (
-              <Select value={filterFilial} onValueChange={setFilterFilial}>
-                <SelectTrigger><SelectValue placeholder="Todas as filiais" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as filiais</SelectItem>
-                  {filiaisDoUsuario.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            ) : filiaisDoUsuario.length > 1 ? (
+            {filiaisDoUsuario.length > 0 && (
               <Select value={filterFilial} onValueChange={setFilterFilial}>
                 <SelectTrigger><SelectValue placeholder="Filial" /></SelectTrigger>
                 <SelectContent>
+                  {canSeeAllBranches && <SelectItem value="all">Todas as filiais</SelectItem>}
                   {filiaisDoUsuario.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
                 </SelectContent>
               </Select>
-            ) : null}
+            )}
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger><SelectValue placeholder="Todos os status" /></SelectTrigger>
               <SelectContent>
