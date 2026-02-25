@@ -1495,6 +1495,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          acesso_global: boolean
           active: boolean
           avatar_url: string | null
           comissao_implantacao_percentual: number | null
@@ -1520,6 +1521,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          acesso_global?: boolean
           active?: boolean
           avatar_url?: string | null
           comissao_implantacao_percentual?: number | null
@@ -1545,6 +1547,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          acesso_global?: boolean
           active?: boolean
           avatar_url?: string | null
           comissao_implantacao_percentual?: number | null
@@ -1779,6 +1782,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      usuario_filiais: {
+        Row: {
+          created_at: string
+          filial_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          filial_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          filial_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usuario_filiais_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

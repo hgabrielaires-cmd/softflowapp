@@ -40,7 +40,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send, MessageCircle } from "lucide-react";
+import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send, MessageCircle, Globe } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 
@@ -48,6 +49,8 @@ import { Switch } from "@/components/ui/switch";
 interface UserWithRoles extends Profile {
   roles: AppRole[];
   filial_nome?: string;
+  acesso_global: boolean;
+  filiais_vinculadas?: { id: string; nome: string }[];
 }
 
 const ALL_ROLES: AppRole[] = ["admin", "financeiro", "vendedor", "tecnico"];
@@ -66,6 +69,8 @@ export default function Usuarios() {
   const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState<AppRole>("vendedor");
   const [inviteFilialId, setInviteFilialId] = useState("");
+  const [inviteFilialIds, setInviteFilialIds] = useState<string[]>([]);
+  const [inviteAcessoGlobal, setInviteAcessoGlobal] = useState(false);
   const [inviteComissaoImp, setInviteComissaoImp] = useState("5");
   const [inviteComissaoMens, setInviteComissaoMens] = useState("5");
   const [inviteComissaoServ, setInviteComissaoServ] = useState("5");
@@ -83,6 +88,8 @@ export default function Usuarios() {
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState<AppRole>("vendedor");
   const [editFilialId, setEditFilialId] = useState("");
+  const [editFilialIds, setEditFilialIds] = useState<string[]>([]);
+  const [editAcessoGlobal, setEditAcessoGlobal] = useState(false);
   const [editComissaoImp, setEditComissaoImp] = useState("5");
   const [editComissaoMens, setEditComissaoMens] = useState("5");
   const [editComissaoServ, setEditComissaoServ] = useState("5");
@@ -113,12 +120,23 @@ export default function Usuarios() {
     if (error) { toast.error("Erro ao carregar usuários"); setLoading(false); return; }
 
     const { data: roleData } = await supabase.from("user_roles").select("*");
+    const { data: ufData } = await supabase.from("usuario_filiais").select("user_id, filial_id");
 
-    const enriched: UserWithRoles[] = (profiles || []).map((p: any) => ({
-      ...p,
-      filial_nome: p.filiais?.nome || p.filial || null,
-      roles: (roleData || []).filter((r) => r.user_id === p.user_id).map((r) => r.role as AppRole),
-    }));
+    const enriched: UserWithRoles[] = (profiles || []).map((p: any) => {
+      const userFiliais = (ufData || []).filter((uf) => uf.user_id === p.user_id);
+      const filiaisVinculadas = userFiliais.map((uf) => {
+        const f = filiais.find((fl) => fl.id === uf.filial_id);
+        return f ? { id: f.id, nome: f.nome } : null;
+      }).filter(Boolean) as { id: string; nome: string }[];
+
+      return {
+        ...p,
+        filial_nome: p.filiais?.nome || p.filial || null,
+        roles: (roleData || []).filter((r) => r.user_id === p.user_id).map((r) => r.role as AppRole),
+        acesso_global: p.acesso_global || false,
+        filiais_vinculadas: filiaisVinculadas,
+      };
+    });
 
     setUsers(enriched);
     setLoading(false);
@@ -198,8 +216,11 @@ export default function Usuarios() {
         body: { user_id: data.user.id, password: senhaTemporaria },
       });
 
+      const filialFavorita = inviteFilialIds.length > 0 ? inviteFilialIds[0] : null;
+
       await supabase.from("profiles").update({
-        filial_id: (inviteFilialId && inviteFilialId !== "todas") ? inviteFilialId : null,
+        filial_id: filialFavorita,
+        acesso_global: inviteAcessoGlobal,
         comissao_percentual: parseFloat(inviteComissaoImp) || 5,
         comissao_implantacao_percentual: parseFloat(inviteComissaoImp) || 5,
         comissao_mensalidade_percentual: parseFloat(inviteComissaoMens) || 5,
@@ -212,6 +233,12 @@ export default function Usuarios() {
         telefone: inviteTelefone || null,
         deve_trocar_senha: true,
       } as any).eq("user_id", data.user.id);
+
+      // Insert filiais junction
+      if (inviteFilialIds.length > 0 && !inviteAcessoGlobal) {
+        const rows = inviteFilialIds.map((fId) => ({ user_id: data.user.id, filial_id: fId }));
+        await supabase.from("usuario_filiais").insert(rows);
+      }
 
       await supabase.from("user_roles").insert({ user_id: data.user.id, role: inviteRole });
 
@@ -227,7 +254,7 @@ export default function Usuarios() {
 
       toast.success(`Usuário ${inviteName} criado com sucesso!`);
       setOpenInvite(false);
-      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteComissaoServ("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone("");
+      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteFilialIds([]); setInviteAcessoGlobal(false); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteComissaoServ("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone("");
       loadUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
@@ -241,6 +268,8 @@ export default function Usuarios() {
     setEditName(user.full_name);
     setEditRole(user.roles[0] || "vendedor");
     setEditFilialId(user.filial_id || "todas");
+    setEditFilialIds((user.filiais_vinculadas || []).map((f) => f.id));
+    setEditAcessoGlobal(user.acesso_global || false);
     setEditComissaoImp(((user as any).comissao_implantacao_percentual ?? user.comissao_percentual ?? 5).toString());
     setEditComissaoMens(((user as any).comissao_mensalidade_percentual ?? user.comissao_percentual ?? 5).toString());
     setEditComissaoServ(((user as any).comissao_servico_percentual ?? 5).toString());
@@ -260,9 +289,13 @@ export default function Usuarios() {
     if (!editingUser) return;
     setSaving(true);
     try {
+      // Determine filial_favorita: use filial_id (kept for backward compat), set to first selected or null
+      const filialFavorita = editFilialIds.length > 0 ? editFilialIds[0] : null;
+      
       const { error: profileError } = await supabase.from("profiles").update({
         full_name: editName,
-        filial_id: (editFilialId && editFilialId !== "todas") ? editFilialId : null,
+        filial_id: filialFavorita,
+        acesso_global: editAcessoGlobal,
         comissao_percentual: parseFloat(editComissaoImp) || 0,
         comissao_implantacao_percentual: parseFloat(editComissaoImp) || 0,
         comissao_mensalidade_percentual: parseFloat(editComissaoMens) || 0,
@@ -278,6 +311,14 @@ export default function Usuarios() {
       } as any).eq("user_id", editingUser.user_id);
 
       if (profileError) throw profileError;
+
+      // Update usuario_filiais junction
+      await supabase.from("usuario_filiais").delete().eq("user_id", editingUser.user_id);
+      if (editFilialIds.length > 0 && !editAcessoGlobal) {
+        const rows = editFilialIds.map((fId) => ({ user_id: editingUser.user_id, filial_id: fId }));
+        const { error: ufError } = await supabase.from("usuario_filiais").insert(rows);
+        if (ufError) throw ufError;
+      }
 
       const { data: existingRole } = await supabase
         .from("user_roles")
@@ -371,21 +412,9 @@ export default function Usuarios() {
       u.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  
 
-  const FilialSelect = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger>
-        <SelectValue placeholder="Selecione..." />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="todas">🌐 Todas as filiais</SelectItem>
-        {filiais.map((f) => (
-          <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
+
+
 
   return (
     <AppLayout>
@@ -451,9 +480,11 @@ export default function Usuarios() {
                       </span>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {user.filial_id
-                        ? (user.filial_nome || filiais.find(f => f.id === user.filial_id)?.nome || "—")
-                        : <span className="text-xs text-primary font-medium">🌐 Todas</span>
+                      {(user as any).acesso_global
+                        ? <span className="text-xs text-primary font-medium">🌐 Global</span>
+                        : (user.filiais_vinculadas && user.filiais_vinculadas.length > 0)
+                          ? user.filiais_vinculadas.map((f) => f.nome).join(", ")
+                          : <span className="text-xs text-muted-foreground">—</span>
                       }
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
@@ -595,10 +626,43 @@ export default function Usuarios() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label>Filial</Label>
-                <FilialSelect value={inviteFilialId} onChange={setInviteFilialId} />
+            </div>
+            <div className="rounded-lg border border-border p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filiais de Acesso</p>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Globe className="h-3.5 w-3.5" />
+                    Acesso global
+                  </Label>
+                  <Switch checked={inviteAcessoGlobal} onCheckedChange={(v) => {
+                    setInviteAcessoGlobal(v);
+                    if (v) setInviteFilialIds([]);
+                  }} />
+                </div>
               </div>
+              {!inviteAcessoGlobal && (
+                <div className="grid grid-cols-2 gap-2">
+                  {filiais.map((f) => (
+                    <label key={f.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent rounded px-2 py-1.5">
+                      <Checkbox
+                        checked={inviteFilialIds.includes(f.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setInviteFilialIds((prev) => [...prev, f.id]);
+                          } else {
+                            setInviteFilialIds((prev) => prev.filter((id) => id !== f.id));
+                          }
+                        }}
+                      />
+                      {f.nome}
+                    </label>
+                  ))}
+                </div>
+              )}
+              {inviteAcessoGlobal && (
+                <p className="text-xs text-muted-foreground">Este usuário terá acesso a todas as filiais.</p>
+              )}
             </div>
             <div className="rounded-lg border border-border p-3 space-y-3">
               <div className="flex items-center justify-between">
@@ -750,10 +814,43 @@ export default function Usuarios() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>Filial</Label>
-                      <FilialSelect value={editFilialId} onChange={setEditFilialId} />
+                  </div>
+                  <div className="rounded-lg border border-border p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filiais de Acesso</p>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Globe className="h-3.5 w-3.5" />
+                          Acesso global
+                        </Label>
+                        <Switch checked={editAcessoGlobal} onCheckedChange={(v) => {
+                          setEditAcessoGlobal(v);
+                          if (v) setEditFilialIds([]);
+                        }} />
+                      </div>
                     </div>
+                    {!editAcessoGlobal && (
+                      <div className="grid grid-cols-2 gap-2">
+                        {filiais.map((f) => (
+                          <label key={f.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent rounded px-2 py-1.5">
+                            <Checkbox
+                              checked={editFilialIds.includes(f.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setEditFilialIds((prev) => [...prev, f.id]);
+                                } else {
+                                  setEditFilialIds((prev) => prev.filter((id) => id !== f.id));
+                                }
+                              }}
+                            />
+                            {f.nome}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                    {editAcessoGlobal && (
+                      <p className="text-xs text-muted-foreground">Este usuário terá acesso a todas as filiais.</p>
+                    )}
                   </div>
                   <div className="rounded-lg border border-border p-3 space-y-3">
                     <div className="flex items-center justify-between">

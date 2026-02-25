@@ -33,6 +33,8 @@ interface Props {
   onFilialLevelChange: (filialId: string, nivel: number, field: keyof AlertLevel, value: any) => void;
   templates: { id: string; nome: string }[];
   usuarios: { id: string; full_name: string }[];
+  /** Map filial_id -> user_ids that belong to that filial (includes global users) */
+  usuariosPorFilial?: Record<string, string[]>;
 }
 
 const LEVEL_LABELS = [
@@ -89,18 +91,22 @@ function MultiUserSelect({
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
           <div className="max-h-56 overflow-y-auto p-1">
-            {usuarios.map((u) => (
-              <label
-                key={u.id}
-                className="flex items-center gap-2 px-2 py-1.5 rounded-sm cursor-pointer hover:bg-accent text-sm"
-              >
-                <Checkbox
-                  checked={selectedIds.includes(u.id)}
-                  onCheckedChange={() => toggleUser(u.id)}
-                />
-                {u.full_name}
-              </label>
-            ))}
+            {usuarios.length === 0 ? (
+              <p className="text-xs text-muted-foreground px-2 py-3 text-center">Nenhum usuário vinculado a esta filial</p>
+            ) : (
+              usuarios.map((u) => (
+                <label
+                  key={u.id}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-sm cursor-pointer hover:bg-accent text-sm"
+                >
+                  <Checkbox
+                    checked={selectedIds.includes(u.id)}
+                    onCheckedChange={() => toggleUser(u.id)}
+                  />
+                  {u.full_name}
+                </label>
+              ))
+            )}
           </div>
         </PopoverContent>
       </Popover>
@@ -208,8 +214,16 @@ export function EtapaAlertasConfig({
   onFilialLevelChange,
   templates,
   usuarios,
+  usuariosPorFilial,
 }: Props) {
   const [activeFilial, setActiveFilial] = useState(filiais[0]?.id || "");
+
+  // Filter users for the active filial tab
+  const getUsuariosForFilial = (filialId: string) => {
+    if (!usuariosPorFilial) return usuarios; // fallback: show all
+    const allowedIds = usuariosPorFilial[filialId] || [];
+    return usuarios.filter((u) => allowedIds.includes(u.id));
+  };
 
   return (
     <div className="space-y-3">
@@ -237,7 +251,7 @@ export function EtapaAlertasConfig({
                   levels={filialConfigs[f.id] || [1, 2, 3].map(defaultAlertLevel)}
                   onLevelChange={(nivel, field, value) => onFilialLevelChange(f.id, nivel, field, value)}
                   templates={templates}
-                  usuarios={usuarios}
+                  usuarios={getUsuariosForFilial(f.id)}
                 />
               </TabsContent>
             ))}
