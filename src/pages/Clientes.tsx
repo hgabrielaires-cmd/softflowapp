@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Cliente, Filial, Contrato } from "@/lib/supabase-types";
+import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,6 +104,7 @@ export default function Clientes() {
   const isFinanceiro = roles.includes("financeiro");
   const isVendedor = roles.includes("vendedor");
   const canEdit = isAdmin || isFinanceiro || isVendedor;
+  const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
@@ -217,10 +219,16 @@ export default function Clientes() {
 
   useEffect(() => { fetchData(); }, []);
 
+  // Filter by user's filiais first
+  const allowedFilialIds = filiaisDoUsuario.map(f => f.id);
+  const clientesFiltradosPorFilial = isGlobal
+    ? clientes
+    : clientes.filter((c) => c.filial_id && allowedFilialIds.includes(c.filial_id));
+
   const searchTerm = search.toLowerCase().trim();
   const searchDigits = searchTerm.replace(/\D/g, "");
   const filtered = searchTerm
-    ? clientes.filter((c) =>
+    ? clientesFiltradosPorFilial.filter((c) =>
         c.nome_fantasia.toLowerCase().includes(searchTerm) ||
         (c.razao_social || "").toLowerCase().includes(searchTerm) ||
         (searchDigits.length > 0 && (c.cnpj_cpf || "").replace(/\D/g, "").includes(searchDigits)) ||
@@ -228,7 +236,7 @@ export default function Clientes() {
         (c.contato_nome || "").toLowerCase().includes(searchTerm) ||
         (c.telefone || "").includes(searchTerm)
       )
-    : clientes;
+    : clientesFiltradosPorFilial;
   
   console.log("[SEARCH DEBUG]", { search, searchTerm, totalClientes: clientes.length, filteredCount: filtered.length });
 
@@ -236,7 +244,7 @@ export default function Clientes() {
     setEditing(null);
     setCepError("");
     setCnpjError("");
-    const defaultFilial = isVendedor && profile?.filial_id ? profile.filial_id : "";
+    const defaultFilial = filialPadraoId || (isVendedor && profile?.filial_id ? profile.filial_id : "");
     setForm({ ...emptyForm, filial_id: defaultFilial });
     setFormContatos([]);
     setShowContatoInlineForm(false);
@@ -704,7 +712,7 @@ export default function Clientes() {
                   <SelectValue placeholder="Selecionar filial" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filiais.map((fil) => (
+                  {filiaisDoUsuario.map((fil) => (
                     <SelectItem key={fil.id} value={fil.id}>{fil.nome}</SelectItem>
                   ))}
                 </SelectContent>
