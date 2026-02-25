@@ -93,9 +93,9 @@ export default function PainelAtendimento() {
 
   // Set default filial filter when hook resolves
   useEffect(() => {
-    if (filtroFilial === "_init_" && filialPadraoId) {
+    if (filialPadraoId && (filtroFilial === "_init_" || filtroFilial === "todos")) {
       setFiltroFilial(filialPadraoId);
-    } else if (filtroFilial === "_init_" && !filialPadraoId) {
+    } else if (!filialPadraoId && filtroFilial === "_init_") {
       setFiltroFilial("todos");
     }
   }, [filialPadraoId]);
