@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, GripVertical } from "lucide-react";
-import { EtapaAlertasConfig } from "@/components/EtapaAlertasConfig";
+import { EtapaAlertasConfig, type AlertLevel } from "@/components/EtapaAlertasConfig";
 
 interface PainelEtapa {
   id: string;
@@ -25,13 +25,6 @@ interface PainelEtapa {
   updated_at: string;
 }
 
-interface AlertLevel {
-  nivel: number;
-  template_id: string;
-  usuario_id: string;
-  horas_apos_sla: string;
-  ativo: boolean;
-}
 
 const defaultForm = {
   nome: "",
@@ -46,7 +39,7 @@ const defaultForm = {
 const defaultAlertLevel = (nivel: number): AlertLevel => ({
   nivel,
   template_id: "",
-  usuario_id: "",
+  usuario_ids: [],
   horas_apos_sla: "0",
   ativo: nivel === 1,
 });
@@ -127,7 +120,7 @@ export default function EtapasPainel() {
               canal: "whatsapp",
               nivel: lvl.nivel,
               template_id: lvl.template_id || null,
-              usuario_id: lvl.usuario_id || null,
+              usuario_ids: lvl.usuario_ids.length > 0 ? lvl.usuario_ids : [],
               horas_apos_sla: Number(lvl.horas_apos_sla) || 0,
               ativo: true,
             });
@@ -143,7 +136,7 @@ export default function EtapasPainel() {
               canal: "notificacao",
               nivel: lvl.nivel,
               template_id: lvl.template_id || null,
-              usuario_id: lvl.usuario_id || null,
+              usuario_ids: lvl.usuario_ids.length > 0 ? lvl.usuario_ids : [],
               horas_apos_sla: Number(lvl.horas_apos_sla) || 0,
               ativo: true,
             });
@@ -236,14 +229,14 @@ export default function EtapasPainel() {
     const wLevels: AlertLevel[] = [1, 2, 3].map((n) => {
       const found = alertas?.find((a: any) => a.canal === "whatsapp" && a.nivel === n);
       return found
-        ? { nivel: n, template_id: found.template_id || "", usuario_id: found.usuario_id || "", horas_apos_sla: String(found.horas_apos_sla || 0), ativo: found.ativo }
+        ? { nivel: n, template_id: found.template_id || "", usuario_ids: found.usuario_ids || [], horas_apos_sla: String(found.horas_apos_sla || 0), ativo: found.ativo }
         : defaultAlertLevel(n);
     });
 
     const nLevels: AlertLevel[] = [1, 2, 3].map((n) => {
       const found = alertas?.find((a: any) => a.canal === "notificacao" && a.nivel === n);
       return found
-        ? { nivel: n, template_id: found.template_id || "", usuario_id: found.usuario_id || "", horas_apos_sla: String(found.horas_apos_sla || 0), ativo: found.ativo }
+        ? { nivel: n, template_id: found.template_id || "", usuario_ids: found.usuario_ids || [], horas_apos_sla: String(found.horas_apos_sla || 0), ativo: found.ativo }
         : defaultAlertLevel(n);
     });
 

@@ -1087,7 +1087,7 @@ export type Database = {
           nivel: number
           template_id: string | null
           updated_at: string
-          usuario_id: string | null
+          usuario_ids: string[] | null
         }
         Insert: {
           ativo?: boolean
@@ -1099,7 +1099,7 @@ export type Database = {
           nivel?: number
           template_id?: string | null
           updated_at?: string
-          usuario_id?: string | null
+          usuario_ids?: string[] | null
         }
         Update: {
           ativo?: boolean
@@ -1111,7 +1111,7 @@ export type Database = {
           nivel?: number
           template_id?: string | null
           updated_at?: string
-          usuario_id?: string | null
+          usuario_ids?: string[] | null
         }
         Relationships: [
           {
@@ -1126,13 +1126,6 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "message_templates"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "painel_etapa_alertas_usuario_id_fkey"
-            columns: ["usuario_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
