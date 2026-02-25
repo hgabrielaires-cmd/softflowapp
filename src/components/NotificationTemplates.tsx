@@ -24,14 +24,14 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  MessageSquare, Plus, Loader2, MoreHorizontal,
+  Bell, Plus, Loader2, MoreHorizontal,
   Pencil, Trash2, CheckCircle, XCircle, Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-interface MessageTemplate {
+interface NotificationTemplate {
   id: string;
   nome: string;
   tipo: string;
@@ -43,60 +43,38 @@ interface MessageTemplate {
   updated_at: string;
 }
 
-const TIPOS_MSG = [
-  { value: "whatsapp", label: "WhatsApp" },
-  { value: "email", label: "E-mail" },
-  { value: "sms", label: "SMS" },
-];
-
-const CATEGORIAS = [
-  { value: "termo_aceite", label: "Termo de Aceite" },
-  { value: "boas_vindas", label: "Boas-vindas" },
-  { value: "cobranca", label: "Cobrança" },
+const CATEGORIAS_NOTIF = [
+  { value: "alerta_sla", label: "Alerta SLA / Tarefa Atrasada" },
   { value: "lembrete", label: "Lembrete" },
-  { value: "cancelamento", label: "Cancelamento" },
-  { value: "alerta_sla", label: "Alerta SLA" },
+  { value: "aviso", label: "Aviso" },
+  { value: "informativo", label: "Informativo" },
   { value: "outro", label: "Outro" },
 ];
 
 const VARIAVEIS_DISPONIVEIS = [
-  { var: "{contato.nome}", desc: "Nome do contato" },
+  { var: "{usuario.nome}", desc: "Nome do usuário destinatário" },
   { var: "{cliente.nome_fantasia}", desc: "Nome fantasia do cliente" },
-  { var: "{cliente.razao_social}", desc: "Razão social" },
   { var: "{contrato.numero}", desc: "Nº do contrato" },
-  { var: "{contrato.numero_origem}", desc: "Nº do contrato de origem (base)" },
+  { var: "{operacao.tipo}", desc: "Tipo de operação" },
+  { var: "{etapa.nome}", desc: "Etapa atual" },
+  { var: "{atraso.tempo}", desc: "Tempo de atraso" },
   { var: "{plano.nome}", desc: "Nome do plano" },
-  { var: "{plano.nome_anterior}", desc: "Nome do plano anterior" },
-  { var: "{plano.valor_base}", desc: "Valor base do plano" },
-  { var: "{valores.implantacao}", desc: "Valor implantação" },
-  { var: "{valores.mensalidade}", desc: "Valor mensalidade" },
-  { var: "{valores.mensalidade_atual}", desc: "Mensalidade atual (antes da alteração)" },
-  { var: "{valores.nova_mensalidade}", desc: "Nova mensalidade após alteração" },
-  { var: "{valores.plano_anterior}", desc: "Valor do plano anterior" },
-  { var: "{valores.adicionais_anteriores}", desc: "Valor dos adicionais anteriores" },
-  { var: "{valores.total_anterior}", desc: "Total mensal anterior" },
-  { var: "{modulos.adicionais_anteriores}", desc: "Lista de adicionais anteriores" },
-  { var: "{modulos.adicionais_novos}", desc: "Lista de novos adicionais incluídos" },
-  { var: "{valores.total_adicionais_novos}", desc: "Total dos novos adicionais" },
-  { var: "{regras.mensalidade}", desc: "Regras de mensalidade" },
-  { var: "{link_assinatura}", desc: "Link de assinatura" },
-  { var: "{empresa.nome}", desc: "Nome da empresa" },
   { var: "{vendedor.nome}", desc: "Nome do vendedor" },
+  { var: "{empresa.nome}", desc: "Nome da empresa" },
 ];
 
-export function MessageTemplates() {
+export function NotificationTemplates() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [templates, setTemplates] = useState<MessageTemplate[]>([]);
+  const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [openEditor, setOpenEditor] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<NotificationTemplate | null>(null);
 
   const [form, setForm] = useState({
     nome: "",
-    tipo: "whatsapp",
-    categoria: "termo_aceite",
+    categoria: "alerta_sla",
     conteudo: "",
     descricao: "",
     ativo: true,
@@ -107,9 +85,10 @@ export function MessageTemplates() {
     const { data, error } = await supabase
       .from("message_templates")
       .select("*")
+      .eq("tipo", "notificacao")
       .order("created_at", { ascending: false });
     if (error) toast.error("Erro ao carregar templates: " + error.message);
-    setTemplates((data || []) as MessageTemplate[]);
+    setTemplates((data || []) as NotificationTemplate[]);
     setLoading(false);
   }
 
@@ -117,15 +96,14 @@ export function MessageTemplates() {
 
   function openNew() {
     setEditingTemplate(null);
-    setForm({ nome: "", tipo: "whatsapp", categoria: "termo_aceite", conteudo: "", descricao: "", ativo: true });
+    setForm({ nome: "", categoria: "alerta_sla", conteudo: "", descricao: "", ativo: true });
     setOpenEditor(true);
   }
 
-  function openEdit(t: MessageTemplate) {
+  function openEdit(t: NotificationTemplate) {
     setEditingTemplate(t);
     setForm({
       nome: t.nome,
-      tipo: t.tipo,
       categoria: t.categoria,
       conteudo: t.conteudo,
       descricao: t.descricao || "",
@@ -134,11 +112,10 @@ export function MessageTemplates() {
     setOpenEditor(true);
   }
 
-  function handleDuplicate(t: MessageTemplate) {
+  function handleDuplicate(t: NotificationTemplate) {
     setEditingTemplate(null);
     setForm({
       nome: t.nome + " (cópia)",
-      tipo: t.tipo,
       categoria: t.categoria,
       conteudo: t.conteudo,
       descricao: t.descricao || "",
@@ -155,7 +132,7 @@ export function MessageTemplates() {
     setSaving(true);
     const payload = {
       nome: form.nome.trim(),
-      tipo: form.tipo,
+      tipo: "notificacao",
       categoria: form.categoria,
       conteudo: form.conteudo,
       descricao: form.descricao.trim() || null,
@@ -176,7 +153,7 @@ export function MessageTemplates() {
     loadData();
   }
 
-  async function handleToggleAtivo(t: MessageTemplate) {
+  async function handleToggleAtivo(t: NotificationTemplate) {
     const { error } = await supabase.from("message_templates").update({ ativo: !t.ativo }).eq("id", t.id);
     if (error) { toast.error("Erro ao atualizar status"); return; }
     toast.success(t.ativo ? "Template inativado" : "Template ativado");
@@ -210,11 +187,7 @@ export function MessageTemplates() {
   }
 
   function getCategoriaLabel(cat: string) {
-    return CATEGORIAS.find((c) => c.value === cat)?.label || cat;
-  }
-
-  function getTipoLabel(tipo: string) {
-    return TIPOS_MSG.find((t) => t.value === tipo)?.label || tipo;
+    return CATEGORIAS_NOTIF.find((c) => c.value === cat)?.label || cat;
   }
 
   return (
@@ -222,15 +195,15 @@ export function MessageTemplates() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-primary" />
-            Templates de Mensagens
+            <Bell className="h-5 w-5 text-primary" />
+            Modelos de Notificação
           </h2>
           <p className="text-sm text-muted-foreground">
-            Gerencie os modelos de mensagens para WhatsApp, e-mail e SMS
+            Gerencie os modelos de notificações internas e alertas do sistema
           </p>
         </div>
         <Button className="gap-2" onClick={openNew}>
-          <Plus className="h-4 w-4" /> Novo Template
+          <Plus className="h-4 w-4" /> Novo Modelo
         </Button>
       </div>
 
@@ -239,7 +212,6 @@ export function MessageTemplates() {
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead>Nome</TableHead>
-              <TableHead>Canal</TableHead>
               <TableHead>Categoria</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Atualizado</TableHead>
@@ -249,15 +221,15 @@ export function MessageTemplates() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12">
+                <TableCell colSpan={5} className="text-center py-12">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : templates.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-16 text-muted-foreground">
-                  <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                  Nenhum template cadastrado ainda
+                <TableCell colSpan={5} className="text-center py-16 text-muted-foreground">
+                  <Bell className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  Nenhum modelo de notificação cadastrado ainda
                 </TableCell>
               </TableRow>
             ) : templates.map((t) => (
@@ -269,9 +241,6 @@ export function MessageTemplates() {
                       <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{t.descricao}</p>
                     )}
                   </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="text-xs">{getTipoLabel(t.tipo)}</Badge>
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary" className="text-xs">{getCategoriaLabel(t.categoria)}</Badge>
@@ -321,50 +290,39 @@ export function MessageTemplates() {
 
       {/* Editor Dialog */}
       <Dialog open={openEditor} onOpenChange={setOpenEditor}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-primary" />
-              {editingTemplate ? "Editar Template" : "Novo Template de Mensagem"}
+              <Bell className="h-4 w-4 text-primary" />
+              {editingTemplate ? "Editar Modelo de Notificação" : "Novo Modelo de Notificação"}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSave} className="flex flex-col gap-4">
+          <form onSubmit={handleSave} className="flex flex-col gap-4 overflow-y-auto flex-1 pr-1">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1 col-span-2">
                 <Label className="text-xs">Nome *</Label>
                 <Input
-                  placeholder="Ex: Termo de Aceite - WhatsApp"
+                  placeholder="Ex: Alerta Tarefa Atrasada"
                   value={form.nome}
                   onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
                   className="h-9"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Canal</Label>
-                <Select value={form.tipo} onValueChange={(v) => setForm((f) => ({ ...f, tipo: v }))}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {TIPOS_MSG.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
                 <Label className="text-xs">Categoria</Label>
                 <Select value={form.categoria} onValueChange={(v) => setForm((f) => ({ ...f, categoria: v }))}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {CATEGORIAS.map((c) => (
+                    {CATEGORIAS_NOTIF.map((c) => (
                       <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1 col-span-2">
+              <div className="space-y-1">
                 <Label className="text-xs">Descrição (opcional)</Label>
                 <Input
-                  placeholder="Breve descrição do uso deste template"
+                  placeholder="Breve descrição do uso deste modelo"
                   value={form.descricao}
                   onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))}
                   className="h-9"
@@ -374,18 +332,18 @@ export function MessageTemplates() {
 
             <div className="flex gap-3">
               <div className="flex-1 flex flex-col space-y-1">
-                <Label className="text-xs">Conteúdo da Mensagem *</Label>
+                <Label className="text-xs">Conteúdo da Notificação *</Label>
                 <Textarea
                   ref={textareaRef}
                   value={form.conteudo}
                   onChange={(e) => setForm((f) => ({ ...f, conteudo: e.target.value }))}
-                  placeholder="Digite o conteúdo da mensagem..."
-                  className="min-h-[400px] resize-vertical font-mono text-sm"
+                  placeholder="Digite o conteúdo da notificação..."
+                  className="min-h-[300px] resize-vertical font-mono text-sm"
                 />
               </div>
               <div className="w-[220px] shrink-0 flex flex-col space-y-1">
                 <Label className="text-xs">Variáveis disponíveis</Label>
-                <div className="max-h-[400px] overflow-y-auto rounded-md border border-border bg-muted/30 p-2 space-y-1">
+                <div className="max-h-[300px] overflow-y-auto rounded-md border border-border bg-muted/30 p-2 space-y-1">
                   {VARIAVEIS_DISPONIVEIS.map((v) => (
                     <button
                       key={v.var}
@@ -405,9 +363,9 @@ export function MessageTemplates() {
               <Switch
                 checked={form.ativo}
                 onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))}
-                id="msg-ativo"
+                id="notif-ativo"
               />
-              <Label htmlFor="msg-ativo" className="text-xs cursor-pointer">Ativo</Label>
+              <Label htmlFor="notif-ativo" className="text-xs cursor-pointer">Ativo</Label>
             </div>
 
             <DialogFooter>
@@ -416,7 +374,7 @@ export function MessageTemplates() {
               </Button>
               <Button type="submit" disabled={saving}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingTemplate ? "Salvar Alterações" : "Criar Template"}
+                {editingTemplate ? "Salvar Alterações" : "Criar Modelo"}
               </Button>
             </DialogFooter>
           </form>
@@ -427,14 +385,17 @@ export function MessageTemplates() {
       <AlertDialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir template?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir modelo de notificação?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O template será removido permanentemente.
+              Esta ação não pode ser desfeita. O modelo será removido permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deletingId && handleDelete(deletingId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={() => deletingId && handleDelete(deletingId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
