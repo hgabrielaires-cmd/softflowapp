@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Eye, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Eye, GripVertical, Download } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Jornada, JornadaEtapa, JornadaAtividade, MesaAtendimento, ChecklistItem, Filial } from "@/lib/supabase-types";
 
@@ -36,6 +36,7 @@ interface LocalEtapa {
   nome: string;
   descricao: string;
   mesa_atendimento_id: string;
+  permite_clonar: boolean;
   ordem: number;
   atividades: LocalAtividade[];
 }
@@ -58,7 +59,9 @@ export default function JornadaImplantacao() {
   const [etapas, setEtapas] = useState<LocalEtapa[]>([]);
   const [etapaDialogOpen, setEtapaDialogOpen] = useState(false);
   const [editingEtapa, setEditingEtapa] = useState<LocalEtapa | null>(null);
-  const [etapaForm, setEtapaForm] = useState({ nome: "", descricao: "", mesa_atendimento_id: "" });
+  const [etapaForm, setEtapaForm] = useState({ nome: "", descricao: "", mesa_atendimento_id: "", permite_clonar: false });
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [clonableEtapas, setClonableEtapas] = useState<any[]>([]);
   const [atividadeDialogOpen, setAtividadeDialogOpen] = useState(false);
   const [currentEtapaTempId, setCurrentEtapaTempId] = useState("");
   const [editingAtividade, setEditingAtividade] = useState<LocalAtividade | null>(null);
@@ -184,6 +187,7 @@ export default function JornadaImplantacao() {
           nome: etapa.nome,
           descricao: etapa.descricao || null,
           mesa_atendimento_id: etapa.mesa_atendimento_id || null,
+          permite_clonar: etapa.permite_clonar,
           ordem: etapa.ordem,
         }).select("id").single();
         if (etapaErr) throw etapaErr;
@@ -261,6 +265,7 @@ export default function JornadaImplantacao() {
         nome: e.nome,
         descricao: e.descricao || "",
         mesa_atendimento_id: e.mesa_atendimento_id || "",
+        permite_clonar: (e as any).permite_clonar || false,
         ordem: e.ordem,
         atividades: (ativData || []).map((a: any) => ({
           tempId: crypto.randomUUID(),
@@ -289,13 +294,13 @@ export default function JornadaImplantacao() {
 
   function openNewEtapa() {
     setEditingEtapa(null);
-    setEtapaForm({ nome: "", descricao: "", mesa_atendimento_id: "" });
+    setEtapaForm({ nome: "", descricao: "", mesa_atendimento_id: "", permite_clonar: false });
     setEtapaDialogOpen(true);
   }
 
   function openEditEtapa(etapa: LocalEtapa) {
     setEditingEtapa(etapa);
-    setEtapaForm({ nome: etapa.nome, descricao: etapa.descricao, mesa_atendimento_id: etapa.mesa_atendimento_id });
+    setEtapaForm({ nome: etapa.nome, descricao: etapa.descricao, mesa_atendimento_id: etapa.mesa_atendimento_id, permite_clonar: etapa.permite_clonar });
     setEtapaDialogOpen(true);
   }
 
@@ -309,6 +314,7 @@ export default function JornadaImplantacao() {
         nome: etapaForm.nome,
         descricao: etapaForm.descricao,
         mesa_atendimento_id: etapaForm.mesa_atendimento_id,
+        permite_clonar: etapaForm.permite_clonar,
         ordem: prev.length,
         atividades: [],
       }]);
@@ -421,7 +427,46 @@ export default function JornadaImplantacao() {
     });
   }
 
-  // ─── Filter ────────────────────────────────────────────────────────────────
+  // ─── Import clonable etapas ────────────────────────────────────────────────
+
+  async function openImportDialog() {
+    const { data } = await supabase
+      .from("jornada_etapas")
+      .select("*, jornada_atividades(*), jornadas(nome)")
+      .eq("permite_clonar", true)
+      .order("nome");
+    setClonableEtapas(data || []);
+    setImportDialogOpen(true);
+  }
+
+  async function importEtapa(etapaData: any) {
+    const atividades: LocalAtividade[] = (etapaData.jornada_atividades || [])
+      .sort((a: any, b: any) => a.ordem - b.ordem)
+      .map((a: any) => ({
+        tempId: crypto.randomUUID(),
+        nome: a.nome,
+        descricao: a.descricao || "",
+        horas_estimadas: a.horas_estimadas,
+        checklist: Array.isArray(a.checklist) ? a.checklist : [],
+        tipo_responsabilidade: a.tipo_responsabilidade,
+        ordem: a.ordem,
+      }));
+
+    setEtapas((prev) => [...prev, {
+      tempId: crypto.randomUUID(),
+      nome: etapaData.nome,
+      descricao: etapaData.descricao || "",
+      mesa_atendimento_id: etapaData.mesa_atendimento_id || "",
+      permite_clonar: false,
+      ordem: prev.length,
+      atividades,
+    }]);
+
+    toast.success(`Etapa "${etapaData.nome}" importada com ${atividades.length} atividades!`);
+    setImportDialogOpen(false);
+  }
+
+
 
   const filtered = jornadas.filter((j) => {
     if (search && !j.nome.toLowerCase().includes(search.toLowerCase())) return false;
@@ -577,7 +622,10 @@ export default function JornadaImplantacao() {
             <TabsContent value="etapas" className="space-y-4 mt-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-sm font-semibold">Etapas</h3>
-                <Button size="sm" onClick={openNewEtapa}><Plus className="h-4 w-4 mr-1" />Adicionar Etapa</Button>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={openImportDialog}><Download className="h-4 w-4 mr-1" />Importar Etapa</Button>
+                  <Button size="sm" onClick={openNewEtapa}><Plus className="h-4 w-4 mr-1" />Adicionar Etapa</Button>
+                </div>
               </div>
 
               {etapas.length === 0 ? (
@@ -720,6 +768,10 @@ export default function JornadaImplantacao() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Permite Clonar</label>
+              <Switch checked={etapaForm.permite_clonar} onCheckedChange={(v) => setEtapaForm((p) => ({ ...p, permite_clonar: v }))} />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEtapaDialogOpen(false)}>Cancelar</Button>
@@ -797,6 +849,40 @@ export default function JornadaImplantacao() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setAtividadeDialogOpen(false)}>Cancelar</Button>
             <Button onClick={saveAtividade} disabled={!atividadeForm.nome.trim()}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Import Etapa Dialog ──────────────────────────────────────────────── */}
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Importar Etapa</DialogTitle>
+          </DialogHeader>
+          {clonableEtapas.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">Nenhuma etapa com permissão de clonagem encontrada.</p>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Selecione a etapa que deseja importar:</p>
+              {clonableEtapas.map((etapa) => (
+                <div key={etapa.id} className="border rounded-lg p-3 hover:bg-muted/50 cursor-pointer" onClick={() => importEtapa(etapa)}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{etapa.nome}</p>
+                      {etapa.descricao && <p className="text-xs text-muted-foreground mt-0.5">{etapa.descricao}</p>}
+                      <div className="flex gap-2 mt-1">
+                        <Badge variant="outline" className="text-xs">{etapa.jornada_atividades?.length || 0} atividades</Badge>
+                        {etapa.jornadas && <Badge variant="secondary" className="text-xs">Jornada: {etapa.jornadas.nome}</Badge>}
+                      </div>
+                    </div>
+                    <Download className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImportDialogOpen(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

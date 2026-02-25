@@ -1,0 +1,1 @@
+ALTER TABLE public.jornada_etapas ADD COLUMN permite_clonar boolean NOT NULL DEFAULT false;
