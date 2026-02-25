@@ -76,9 +76,9 @@ export default function EtapasPainel() {
   });
 
   const { data: allTemplates = [] } = useQuery({
-    queryKey: ["message_templates_all_active"],
+    queryKey: ["message_templates_alerta_sla_active"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("message_templates").select("id, nome, tipo").eq("ativo", true).order("nome");
+      const { data, error } = await supabase.from("message_templates").select("id, nome, tipo, categoria").eq("ativo", true).eq("categoria", "alerta_sla").order("nome");
       if (error) throw error;
       return data;
     },
