@@ -101,7 +101,7 @@ export default function Financeiro() {
   const { profile, roles, isAdmin } = useAuth();
   const navigate = useNavigate();
   const isFinanceiro = roles.includes("financeiro");
-  const { filiaisDoUsuario, filialPadraoId } = useUserFiliais();
+  const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais } = useUserFiliais();
 
   const [pedidos, setPedidos] = useState<PedidoFila[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
@@ -243,8 +243,8 @@ export default function Financeiro() {
             <Select value={filterFilial} onValueChange={setFilterFilial}>
               <SelectTrigger><SelectValue placeholder="Todas as filiais" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas as filiais</SelectItem>
-                {filiaisDoUsuario.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                {isGlobal && <SelectItem value="all">Todas as filiais</SelectItem>}
+                {(filiaisDoUsuario.length > 0 ? filiaisDoUsuario : todasFiliais).map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
               </SelectContent>
             </Select>
             <Input type="date" value={filterDe} onChange={(e) => setFilterDe(e.target.value)} title="Data inicial" />
