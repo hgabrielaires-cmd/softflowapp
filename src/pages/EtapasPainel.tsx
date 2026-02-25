@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, GripVertical } from "lucide-react";
 
 interface PainelEtapa {
   id: string;
@@ -26,6 +26,8 @@ export default function EtapasPainel() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<PainelEtapa | null>(null);
   const [form, setForm] = useState({ nome: "", cor: "#3b82f6" });
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
 
   const { data: etapas = [], isLoading } = useQuery({
     queryKey: ["painel_etapas"],
@@ -75,28 +77,31 @@ export default function EtapasPainel() {
     onError: () => toast.error("Erro ao excluir etapa. Pode estar vinculada a atendimentos."),
   });
 
-  const reorderMutation = useMutation({
-    mutationFn: async ({ id, novaOrdem }: { id: string; novaOrdem: number }) => {
-      const { error } = await supabase.from("painel_etapas").update({ ordem: novaOrdem }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["painel_etapas"] }),
-  });
+  async function handleDragEnd() {
+    if (dragItem.current === null || dragOverItem.current === null || dragItem.current === dragOverItem.current) {
+      dragItem.current = null;
+      dragOverItem.current = null;
+      return;
+    }
 
-  function moveUp(index: number) {
-    if (index <= 0) return;
-    const current = etapas[index];
-    const above = etapas[index - 1];
-    reorderMutation.mutate({ id: current.id, novaOrdem: above.ordem });
-    reorderMutation.mutate({ id: above.id, novaOrdem: current.ordem });
-  }
+    const reordered = [...etapas];
+    const [removed] = reordered.splice(dragItem.current, 1);
+    reordered.splice(dragOverItem.current, 0, removed);
 
-  function moveDown(index: number) {
-    if (index >= etapas.length - 1) return;
-    const current = etapas[index];
-    const below = etapas[index + 1];
-    reorderMutation.mutate({ id: current.id, novaOrdem: below.ordem });
-    reorderMutation.mutate({ id: below.id, novaOrdem: current.ordem });
+    // Update all orders in DB
+    const updates = reordered.map((etapa, idx) => 
+      supabase.from("painel_etapas").update({ ordem: idx + 1 }).eq("id", etapa.id)
+    );
+
+    dragItem.current = null;
+    dragOverItem.current = null;
+
+    try {
+      await Promise.all(updates);
+      queryClient.invalidateQueries({ queryKey: ["painel_etapas"] });
+    } catch {
+      toast.error("Erro ao reordenar etapas.");
+    }
   }
 
   function openNew() {
@@ -117,7 +122,11 @@ export default function EtapasPainel() {
     setForm({ nome: "", cor: "#3b82f6" });
   }
 
-  const filtered = etapas.filter((e) => e.nome.toLowerCase().includes(search.toLowerCase()));
+  const filtered = search
+    ? etapas.filter((e) => e.nome.toLowerCase().includes(search.toLowerCase()))
+    : etapas;
+
+  const isDraggable = !search; // Disable drag when searching
 
   return (
     <AppLayout>
@@ -150,16 +159,19 @@ export default function EtapasPainel() {
                 <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhuma etapa encontrada.</TableCell></TableRow>
               ) : (
                 filtered.map((etapa, idx) => (
-                  <TableRow key={etapa.id}>
+                  <TableRow
+                    key={etapa.id}
+                    draggable={isDraggable}
+                    onDragStart={() => { dragItem.current = idx; }}
+                    onDragEnter={() => { dragOverItem.current = idx; }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDragEnd={handleDragEnd}
+                    className={isDraggable ? "cursor-grab active:cursor-grabbing" : ""}
+                  >
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveUp(idx)} disabled={idx === 0}>
-                          <ArrowUp className="h-3 w-3" />
-                        </Button>
+                        {isDraggable && <GripVertical className="h-4 w-4 text-muted-foreground" />}
                         <span className="text-sm font-medium">{etapa.ordem}</span>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveDown(idx)} disabled={idx === filtered.length - 1}>
-                          <ArrowDown className="h-3 w-3" />
-                        </Button>
                       </div>
                     </TableCell>
                     <TableCell className="font-medium">{etapa.nome}</TableCell>
