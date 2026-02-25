@@ -409,6 +409,7 @@ export type Database = {
           complemento: string | null
           created_at: string
           email: string | null
+          etapa_inicial_id: string | null
           id: string
           inscricao_estadual: string | null
           logo_url: string | null
@@ -429,6 +430,7 @@ export type Database = {
           complemento?: string | null
           created_at?: string
           email?: string | null
+          etapa_inicial_id?: string | null
           id?: string
           inscricao_estadual?: string | null
           logo_url?: string | null
@@ -449,6 +451,7 @@ export type Database = {
           complemento?: string | null
           created_at?: string
           email?: string | null
+          etapa_inicial_id?: string | null
           id?: string
           inscricao_estadual?: string | null
           logo_url?: string | null
@@ -460,7 +463,15 @@ export type Database = {
           telefone?: string | null
           uf?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "filiais_etapa_inicial_id_fkey"
+            columns: ["etapa_inicial_id"]
+            isOneToOne: false
+            referencedRelation: "painel_etapas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       filial_parametros: {
         Row: {
