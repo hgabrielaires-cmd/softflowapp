@@ -458,17 +458,23 @@ Deno.serve(async (req) => {
       }
 
       // Módulos adicionais que o cliente já possui (de pedidos anteriores)
+      const totalAdicionaisMens = modulosAdicionaisExistentes.reduce((acc: number, m: any) => 
+        acc + ((m.valor_mensalidade_modulo || 0) * (m.quantidade || 1)), 0);
+
       if (modulosAdicionaisExistentes.length > 0) {
+        // Lista com valor unitário e total por adicional
         const adicionaisHtml = "<ul style=\"margin:4px 0;padding-left:18px;\">" + 
-          modulosAdicionaisExistentes.map((m: any) => `<li>${m.nome} (${m.quantidade}x)</li>`).join("") + "</ul>";
+          modulosAdicionaisExistentes.map((m: any) => {
+            const qty = m.quantidade || 1;
+            const unitVal = m.valor_mensalidade_modulo || 0;
+            const totalVal = unitVal * qty;
+            return `<li>${m.nome} (${qty}x) — Unit.: ${fmtBRL(unitVal)} | Total: ${fmtBRL(totalVal)}</li>`;
+          }).join("") + "</ul>";
         dados["modulos.adicionais_lista"] = adicionaisHtml;
 
         // Bloco HTML completo com título + lista (condicional - só aparece se houver)
         dados["modulos.adicionais_existentes_html"] = `<p style="margin-top:16px;"><strong>Adicionais já existentes:</strong></p>${adicionaisHtml}`;
 
-        // Calcular valor mensal dos adicionais existentes
-        const totalAdicionaisMens = modulosAdicionaisExistentes.reduce((acc: number, m: any) => 
-          acc + ((m.valor_mensalidade_modulo || 0) * (m.quantidade || 1)), 0);
         const totalAdicionaisImpl = modulosAdicionaisExistentes.reduce((acc: number, m: any) => 
           acc + ((m.valor_implantacao_modulo || 0) * (m.quantidade || 1)), 0);
 
@@ -477,13 +483,19 @@ Deno.serve(async (req) => {
           <thead><tr style="background:#f0f0f0;">
             <th style="border:1px solid #ccc;padding:6px;text-align:left;">Módulo</th>
             <th style="border:1px solid #ccc;padding:6px;text-align:center;">Qtd</th>
+            <th style="border:1px solid #ccc;padding:6px;text-align:right;">Unit.</th>
             <th style="border:1px solid #ccc;padding:6px;text-align:right;">Mensalidade</th>
           </tr></thead>
-          <tbody>${modulosAdicionaisExistentes.map((m: any) => `<tr>
+          <tbody>${modulosAdicionaisExistentes.map((m: any) => {
+            const qty = m.quantidade || 1;
+            const unitVal = m.valor_mensalidade_modulo || 0;
+            return `<tr>
             <td style="border:1px solid #ccc;padding:6px;">${m.nome}</td>
-            <td style="border:1px solid #ccc;padding:6px;text-align:center;">${m.quantidade}x</td>
-            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmtBRL((m.valor_mensalidade_modulo || 0) * (m.quantidade || 1))}</td>
-          </tr>`).join("")}</tbody>
+            <td style="border:1px solid #ccc;padding:6px;text-align:center;">${qty}x</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmtBRL(unitVal)}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmtBRL(unitVal * qty)}</td>
+          </tr>`;
+          }).join("")}</tbody>
         </table>`;
 
         // Recalcular resumo financeiro para incluir adicionais existentes
@@ -498,6 +510,33 @@ Deno.serve(async (req) => {
         // Sem adicionais existentes - variável vazia para não aparecer no documento
         dados["modulos.adicionais_existentes_html"] = "";
       }
+
+      // ── Mensalidade Anterior (plano anterior + adicionais existentes - desconto se houver) ──
+      const planoAnteriorMens = planoAnterior.valor_mensalidade_padrao ?? 0;
+      const mensAnteriorTotal = planoAnteriorMens + totalAdicionaisMens;
+      let mensAnteriorHtml = `<strong>${planoAnterior.nome}:</strong> ${fmtBRL(planoAnteriorMens)}`;
+      if (totalAdicionaisMens > 0) {
+        mensAnteriorHtml += `<br>Adicionais: ${fmtBRL(totalAdicionaisMens)}`;
+      }
+      mensAnteriorHtml += `<br><strong>Total anterior: ${fmtBRL(mensAnteriorTotal)}</strong>`;
+      dados["valores.mensalidade_anterior_html"] = mensAnteriorHtml;
+
+      // ── Nova Mensalidade (novo plano + adicionais existentes) ──
+      const novoPlanoMensVal = plano?.valor_mensalidade_padrao ?? 0;
+      const mensNovaTotal = novoPlanoMensVal + totalAdicionaisMens;
+      let mensNovaHtml = `<strong>${plano?.nome || ""}:</strong> ${fmtBRL(novoPlanoMensVal)}`;
+      if (totalAdicionaisMens > 0) {
+        mensNovaHtml += `<br>Adicionais: ${fmtBRL(totalAdicionaisMens)}`;
+      }
+      // Aplicar desconto de mensalidade se houver
+      const descontoMensUpgrade = mensOriginal - mensFinal;
+      if (descontoMensUpgrade > 0) {
+        mensNovaHtml += `<br>Desconto: -${fmtBRL(descontoMensUpgrade)}`;
+        mensNovaHtml += `<br><strong>Total nova mensalidade: ${fmtBRL(mensNovaTotal - descontoMensUpgrade)}</strong>`;
+      } else {
+        mensNovaHtml += `<br><strong>Total nova mensalidade: ${fmtBRL(mensNovaTotal)}</strong>`;
+      }
+      dados["valores.nova_mensalidade_html"] = mensNovaHtml;
     }
 
     // ── Variáveis de Serviços (OA) ──
