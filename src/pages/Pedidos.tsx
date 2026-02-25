@@ -231,7 +231,7 @@ function applyDesconto(original: number, tipo: "R$" | "%", valor: number): numbe
 
 export default function Pedidos() {
   const { profile, roles, isAdmin } = useAuth();
-  const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
+  const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais, loading: loadingFiliais } = useUserFiliais();
   const isFinanceiro = roles.includes("financeiro");
   const isVendedor = roles.includes("vendedor");
   const isTecnico = roles.includes("tecnico") && !isAdmin && !isFinanceiro && !isVendedor;
@@ -1180,15 +1180,15 @@ export default function Pedidos() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar por cliente..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
-            {filiaisDoUsuario.length > 0 && (
-              <Select value={filterFilial} onValueChange={setFilterFilial}>
-                <SelectTrigger><SelectValue placeholder="Filial" /></SelectTrigger>
-                <SelectContent>
-                  {canSeeAllBranches && <SelectItem value="all">Todas as filiais</SelectItem>}
-                  {filiaisDoUsuario.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            )}
+            <Select value={filterFilial} onValueChange={setFilterFilial}>
+              <SelectTrigger><SelectValue placeholder="Filial" /></SelectTrigger>
+              <SelectContent>
+                {canSeeAllBranches && <SelectItem value="all">Todas as filiais</SelectItem>}
+                {(filiaisDoUsuario.length > 0 ? filiaisDoUsuario : todasFiliais).map((f) => (
+                  <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger><SelectValue placeholder="Todos os status" /></SelectTrigger>
               <SelectContent>
