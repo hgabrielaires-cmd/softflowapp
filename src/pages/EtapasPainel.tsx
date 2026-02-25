@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, GripVertical } from "lucide-react";
-import { EtapaAlertasConfig, type AlertLevel } from "@/components/EtapaAlertasConfig";
+import { EtapaAlertasConfig, defaultAlertLevel, type AlertLevel } from "@/components/EtapaAlertasConfig";
 
 interface PainelEtapa {
   id: string;
@@ -25,7 +25,6 @@ interface PainelEtapa {
   updated_at: string;
 }
 
-
 const defaultForm = {
   nome: "",
   cor: "#3b82f6",
@@ -36,13 +35,16 @@ const defaultForm = {
   alerta_notificacoes: false,
 };
 
-const defaultAlertLevel = (nivel: number): AlertLevel => ({
-  nivel,
-  template_id: "",
-  usuario_ids: [],
-  horas_apos_sla: "0",
-  ativo: nivel === 1,
-});
+// filialId -> AlertLevel[]
+type FilialAlertMap = Record<string, AlertLevel[]>;
+
+function buildDefaultFilialMap(filiais: { id: string }[]): FilialAlertMap {
+  const map: FilialAlertMap = {};
+  filiais.forEach((f) => {
+    map[f.id] = [1, 2, 3].map(defaultAlertLevel);
+  });
+  return map;
+}
 
 export default function EtapasPainel() {
   const queryClient = useQueryClient();
@@ -50,8 +52,8 @@ export default function EtapasPainel() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<PainelEtapa | null>(null);
   const [form, setForm] = useState({ ...defaultForm });
-  const [whatsappLevels, setWhatsappLevels] = useState<AlertLevel[]>([1, 2, 3].map(defaultAlertLevel));
-  const [notifLevels, setNotifLevels] = useState<AlertLevel[]>([1, 2, 3].map(defaultAlertLevel));
+  const [whatsappByFilial, setWhatsappByFilial] = useState<FilialAlertMap>({});
+  const [notifByFilial, setNotifByFilial] = useState<FilialAlertMap>({});
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
@@ -61,6 +63,15 @@ export default function EtapasPainel() {
       const { data, error } = await supabase.from("painel_etapas").select("*").order("ordem");
       if (error) throw error;
       return data as PainelEtapa[];
+    },
+  });
+
+  const { data: filiais = [] } = useQuery({
+    queryKey: ["filiais_ativas"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("filiais").select("id, nome").eq("ativa", true).order("nome");
+      if (error) throw error;
+      return data as { id: string; nome: string }[];
     },
   });
 
@@ -106,43 +117,33 @@ export default function EtapasPainel() {
         etapaId = data.id;
       }
 
-      // Save alert levels
       // Delete existing alerts for this etapa
       await supabase.from("painel_etapa_alertas").delete().eq("etapa_id", etapaId);
 
       const alertsToInsert: any[] = [];
 
-      if (form.alerta_whatsapp) {
-        whatsappLevels.forEach((lvl) => {
-          if (lvl.ativo) {
-            alertsToInsert.push({
-              etapa_id: etapaId,
-              canal: "whatsapp",
-              nivel: lvl.nivel,
-              template_id: lvl.template_id || null,
-              usuario_ids: lvl.usuario_ids.length > 0 ? lvl.usuario_ids : [],
-              horas_apos_sla: Number(lvl.horas_apos_sla) || 0,
-              ativo: true,
-            });
-          }
+      const addAlerts = (canal: string, filialMap: FilialAlertMap, isEnabled: boolean) => {
+        if (!isEnabled) return;
+        Object.entries(filialMap).forEach(([filialId, levels]) => {
+          levels.forEach((lvl) => {
+            if (lvl.ativo) {
+              alertsToInsert.push({
+                etapa_id: etapaId,
+                canal,
+                nivel: lvl.nivel,
+                template_id: lvl.template_id || null,
+                usuario_ids: lvl.usuario_ids.length > 0 ? lvl.usuario_ids : [],
+                horas_apos_sla: Number(lvl.horas_apos_sla) || 0,
+                ativo: true,
+                filial_id: filialId,
+              });
+            }
+          });
         });
-      }
+      };
 
-      if (form.alerta_notificacoes) {
-        notifLevels.forEach((lvl) => {
-          if (lvl.ativo) {
-            alertsToInsert.push({
-              etapa_id: etapaId,
-              canal: "notificacao",
-              nivel: lvl.nivel,
-              template_id: lvl.template_id || null,
-              usuario_ids: lvl.usuario_ids.length > 0 ? lvl.usuario_ids : [],
-              horas_apos_sla: Number(lvl.horas_apos_sla) || 0,
-              ativo: true,
-            });
-          }
-        });
-      }
+      addAlerts("whatsapp", whatsappByFilial, form.alerta_whatsapp);
+      addAlerts("notificacao", notifByFilial, form.alerta_notificacoes);
 
       if (alertsToInsert.length > 0) {
         const { error: alertError } = await supabase.from("painel_etapa_alertas").insert(alertsToInsert);
@@ -202,8 +203,8 @@ export default function EtapasPainel() {
   function openNew() {
     setEditing(null);
     setForm({ ...defaultForm });
-    setWhatsappLevels([1, 2, 3].map(defaultAlertLevel));
-    setNotifLevels([1, 2, 3].map(defaultAlertLevel));
+    setWhatsappByFilial(buildDefaultFilialMap(filiais));
+    setNotifByFilial(buildDefaultFilialMap(filiais));
     setDialogOpen(true);
   }
 
@@ -226,22 +227,28 @@ export default function EtapasPainel() {
       .eq("etapa_id", etapa.id)
       .order("nivel");
 
-    const wLevels: AlertLevel[] = [1, 2, 3].map((n) => {
-      const found = alertas?.find((a: any) => a.canal === "whatsapp" && a.nivel === n);
-      return found
-        ? { nivel: n, template_id: found.template_id || "", usuario_ids: found.usuario_ids || [], horas_apos_sla: String(found.horas_apos_sla || 0), ativo: found.ativo }
-        : defaultAlertLevel(n);
+    const wMap: FilialAlertMap = buildDefaultFilialMap(filiais);
+    const nMap: FilialAlertMap = buildDefaultFilialMap(filiais);
+
+    alertas?.forEach((a: any) => {
+      const fId = a.filial_id;
+      if (!fId) return;
+      const targetMap = a.canal === "whatsapp" ? wMap : nMap;
+      if (!targetMap[fId]) targetMap[fId] = [1, 2, 3].map(defaultAlertLevel);
+      const levelIdx = targetMap[fId].findIndex((l) => l.nivel === a.nivel);
+      if (levelIdx >= 0) {
+        targetMap[fId][levelIdx] = {
+          nivel: a.nivel,
+          template_id: a.template_id || "",
+          usuario_ids: a.usuario_ids || [],
+          horas_apos_sla: String(a.horas_apos_sla || 0),
+          ativo: a.ativo,
+        };
+      }
     });
 
-    const nLevels: AlertLevel[] = [1, 2, 3].map((n) => {
-      const found = alertas?.find((a: any) => a.canal === "notificacao" && a.nivel === n);
-      return found
-        ? { nivel: n, template_id: found.template_id || "", usuario_ids: found.usuario_ids || [], horas_apos_sla: String(found.horas_apos_sla || 0), ativo: found.ativo }
-        : defaultAlertLevel(n);
-    });
-
-    setWhatsappLevels(wLevels);
-    setNotifLevels(nLevels);
+    setWhatsappByFilial(wMap);
+    setNotifByFilial(nMap);
     setDialogOpen(true);
   }
 
@@ -249,13 +256,21 @@ export default function EtapasPainel() {
     setDialogOpen(false);
     setEditing(null);
     setForm({ ...defaultForm });
-    setWhatsappLevels([1, 2, 3].map(defaultAlertLevel));
-    setNotifLevels([1, 2, 3].map(defaultAlertLevel));
+    setWhatsappByFilial({});
+    setNotifByFilial({});
   }
 
-  function handleLevelChange(setter: React.Dispatch<React.SetStateAction<AlertLevel[]>>) {
-    return (nivel: number, field: keyof AlertLevel, value: any) => {
-      setter((prev) => prev.map((l) => (l.nivel === nivel ? { ...l, [field]: value } : l)));
+  function handleFilialLevelChange(
+    setter: React.Dispatch<React.SetStateAction<FilialAlertMap>>
+  ) {
+    return (filialId: string, nivel: number, field: keyof AlertLevel, value: any) => {
+      setter((prev) => {
+        const filialLevels = prev[filialId] || [1, 2, 3].map(defaultAlertLevel);
+        return {
+          ...prev,
+          [filialId]: filialLevels.map((l) => (l.nivel === nivel ? { ...l, [field]: value } : l)),
+        };
+      });
     };
   }
 
@@ -378,8 +393,9 @@ export default function EtapasPainel() {
               canalLabel="WhatsApp"
               enabled={form.alerta_whatsapp}
               onEnabledChange={(v) => setForm((p) => ({ ...p, alerta_whatsapp: v }))}
-              levels={whatsappLevels}
-              onLevelChange={handleLevelChange(setWhatsappLevels)}
+              filiais={filiais}
+              filialConfigs={whatsappByFilial}
+              onFilialLevelChange={handleFilialLevelChange(setWhatsappByFilial)}
               templates={templates}
               usuarios={usuarios}
             />
@@ -389,8 +405,9 @@ export default function EtapasPainel() {
               canalLabel="Notificações"
               enabled={form.alerta_notificacoes}
               onEnabledChange={(v) => setForm((p) => ({ ...p, alerta_notificacoes: v }))}
-              levels={notifLevels}
-              onLevelChange={handleLevelChange(setNotifLevels)}
+              filiais={filiais}
+              filialConfigs={notifByFilial}
+              onFilialLevelChange={handleFilialLevelChange(setNotifByFilial)}
               templates={templates}
               usuarios={usuarios}
             />
