@@ -87,10 +87,35 @@ export default function EtapasPainel() {
   const { data: usuarios = [] } = useQuery({
     queryKey: ["profiles_ativos"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("id, full_name").eq("active", true).order("full_name");
+      const { data, error } = await supabase.from("profiles").select("id, full_name, user_id, acesso_global").eq("active", true).order("full_name");
       if (error) throw error;
-      return data;
+      return data as { id: string; full_name: string; user_id: string; acesso_global: boolean }[];
     },
+  });
+
+  // Load usuario_filiais junction for filtering
+  const { data: usuarioFiliais = [] } = useQuery({
+    queryKey: ["usuario_filiais_all"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("usuario_filiais").select("user_id, filial_id");
+      if (error) throw error;
+      return data as { user_id: string; filial_id: string }[];
+    },
+  });
+
+  // Build map: filial_id -> profile ids (includes global users)
+  const usuariosPorFilial: Record<string, string[]> = {};
+  filiais.forEach((f) => {
+    const globalUserIds = usuarios.filter((u) => u.acesso_global).map((u) => u.id);
+    const filialUserIds = usuarioFiliais
+      .filter((uf) => uf.filial_id === f.id)
+      .map((uf) => {
+        const profile = usuarios.find((u) => u.user_id === uf.user_id);
+        return profile?.id;
+      })
+      .filter(Boolean) as string[];
+    // Merge and deduplicate
+    usuariosPorFilial[f.id] = [...new Set([...filialUserIds, ...globalUserIds])];
   });
 
   const saveMutation = useMutation({
@@ -398,6 +423,7 @@ export default function EtapasPainel() {
               onFilialLevelChange={handleFilialLevelChange(setWhatsappByFilial)}
               templates={templates}
               usuarios={usuarios}
+              usuariosPorFilial={usuariosPorFilial}
             />
 
             <EtapaAlertasConfig
@@ -410,6 +436,7 @@ export default function EtapasPainel() {
               onFilialLevelChange={handleFilialLevelChange(setNotifByFilial)}
               templates={templates}
               usuarios={usuarios}
+              usuariosPorFilial={usuariosPorFilial}
             />
           </div>
           <DialogFooter>
