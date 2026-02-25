@@ -70,15 +70,7 @@ const TIPO_COLORS: Record<string, string> = {
   "Treinamento": "bg-emerald-100 text-emerald-700 border-emerald-200",
 };
 
-const ETAPA_COLORS: Record<string, string> = {
-  "Onboard": "border-t-sky-500",
-  "Validação Técnica": "border-t-amber-500",
-  "Agendamento": "border-t-violet-500",
-  "Licença Pendente": "border-t-orange-500",
-  "Em Execução": "border-t-blue-600",
-  "Aguardando Cliente": "border-t-yellow-500",
-  "Concluído": "border-t-emerald-500",
-};
+// Colors now come from the database `cor` field in painel_etapas
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -249,10 +241,8 @@ export default function PainelAtendimento() {
         draggable
         onDragStart={() => handleDragStart(card.id)}
         onClick={() => setDetailCard(card)}
-        className={cn(
-          "bg-card rounded-lg border border-border/60 shadow-sm cursor-pointer hover:shadow-md transition-all duration-150 border-t-[3px]",
-          ETAPA_COLORS[etapa?.nome || ""] || "border-t-muted"
-        )}
+        className="bg-card rounded-lg border border-border/60 shadow-sm cursor-pointer hover:shadow-md transition-all duration-150 border-t-[3px]"
+        style={{ borderTopColor: etapa?.cor || 'hsl(var(--muted))' }}
       >
         <div className="p-3 space-y-2.5">
           {/* Header */}
@@ -414,11 +404,10 @@ export default function PainelAtendimento() {
                   onDrop={() => handleDrop(etapa.id)}
                   className="flex-shrink-0 w-72"
                 >
-                  <div className={cn(
-                    "rounded-t-lg px-3 py-2 flex items-center justify-between border-t-[3px]",
-                    ETAPA_COLORS[etapa.nome] || "border-t-muted",
-                    "bg-muted/40"
-                  )}>
+                  <div
+                    className="rounded-t-lg px-3 py-2 flex items-center justify-between border-t-[3px] bg-muted/40"
+                    style={{ borderTopColor: etapa.cor || 'hsl(var(--muted))' }}
+                  >
                     <span className="font-semibold text-sm text-foreground">{etapa.nome}</span>
                     <Badge variant="secondary" className="text-xs px-1.5">{etapaCards.length}</Badge>
                   </div>
