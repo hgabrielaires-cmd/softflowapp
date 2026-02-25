@@ -100,6 +100,7 @@ const navGroups: NavGroup[] = [
       { icon: <Headphones className="h-4 w-4" />, label: "Onboarding", to: "#helpdesk", children: [
         { icon: <ListOrdered className="h-4 w-4" />, label: "Jornadas de Implantação", to: "/jornadas" },
         { icon: <Headphones className="h-4 w-4" />, label: "Mesas de Atendimento", to: "/mesas-atendimento" },
+        { icon: <ListOrdered className="h-4 w-4" />, label: "Etapas", to: "/etapas-painel" },
       ] },
       { icon: <Bell className="h-4 w-4" />, label: "Notificações", to: "/notificacoes" },
       { icon: <Plug className="h-4 w-4" />, label: "Integrações", to: "/integracoes" },
