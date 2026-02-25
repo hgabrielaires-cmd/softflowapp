@@ -39,11 +39,16 @@ export function useUserFiliais(): UseUserFiliaisReturn {
         user ? supabase.from("usuario_filiais").select("filial_id").eq("user_id", user.id) : Promise.resolve({ data: [] }),
       ]);
       setTodasFiliais((filiaisData || []) as FilialOption[]);
-      setVinculadas((ufData || []).map((u: any) => u.filial_id));
+      const vinculadasIds = (ufData || []).map((u: any) => u.filial_id);
+      // Fallback: se não tem vínculos em usuario_filiais, usar filial_id do profile
+      if (vinculadasIds.length === 0 && profile?.filial_id) {
+        vinculadasIds.push(profile.filial_id);
+      }
+      setVinculadas(vinculadasIds);
       setLoading(false);
     }
     load();
-  }, [user?.id]);
+  }, [user?.id, profile?.filial_id]);
 
   const isGlobal = profile?.acesso_global ?? false;
 
