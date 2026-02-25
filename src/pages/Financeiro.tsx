@@ -143,12 +143,16 @@ export default function Financeiro() {
 
   // Default filial filter from user access
   useEffect(() => {
-    if (filterFilial === "_init_" && filialPadraoId) {
-      setFilterFilial(filialPadraoId);
-    } else if (filterFilial === "_init_") {
-      setFilterFilial("all");
+    if (filterFilial === "_init_") {
+      if (isGlobal && !profile?.filial_favorita_id) {
+        setFilterFilial("all");
+      } else if (filialPadraoId) {
+        setFilterFilial(filialPadraoId);
+      } else {
+        setFilterFilial("all");
+      }
     }
-  }, [filialPadraoId]);
+  }, [filialPadraoId, isGlobal, profile?.filial_favorita_id]);
 
   if (!canAccess) return <Navigate to="/dashboard" replace />;
 

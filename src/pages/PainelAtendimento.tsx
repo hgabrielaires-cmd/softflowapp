@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
+import { useAuth } from "@/context/AuthContext";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,6 +81,7 @@ const TIPO_COLORS: Record<string, string> = {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function PainelAtendimento() {
+  const { profile } = useAuth();
   const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais } = useUserFiliais();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"kanban" | "lista">("kanban");
@@ -93,12 +95,16 @@ export default function PainelAtendimento() {
 
   // Set default filial filter when hook resolves
   useEffect(() => {
-    if (filialPadraoId && (filtroFilial === "_init_" || filtroFilial === "todos")) {
-      setFiltroFilial(filialPadraoId);
-    } else if (!filialPadraoId && filtroFilial === "_init_") {
-      setFiltroFilial("todos");
+    if (filtroFilial === "_init_") {
+      if (isGlobal && !profile?.filial_favorita_id) {
+        setFiltroFilial("todos");
+      } else if (filialPadraoId) {
+        setFiltroFilial(filialPadraoId);
+      } else {
+        setFiltroFilial("todos");
+      }
     }
-  }, [filialPadraoId]);
+  }, [filialPadraoId, isGlobal, profile?.filial_favorita_id]);
 
   // ─── Queries ─────────────────────────────────────────────────────────────
 

@@ -557,12 +557,16 @@ export default function Pedidos() {
 
   // Default filial filter from user access
   useEffect(() => {
-    if (filialPadraoId && (filterFilial === "_init_" || filterFilial === "all")) {
-      setFilterFilial(filialPadraoId);
-    } else if (!filialPadraoId && filterFilial === "_init_") {
-      setFilterFilial("all");
+    if (filterFilial === "_init_") {
+      if (isGlobal && !profile?.filial_favorita_id) {
+        setFilterFilial("all");
+      } else if (filialPadraoId) {
+        setFilterFilial(filialPadraoId);
+      } else {
+        setFilterFilial("all");
+      }
     }
-  }, [filialPadraoId]);
+  }, [filialPadraoId, isGlobal, profile?.filial_favorita_id]);
 
   // ─── Buscar contrato ativo do cliente ─────────────────────────────────────
 

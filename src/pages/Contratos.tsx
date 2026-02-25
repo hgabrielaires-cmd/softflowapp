@@ -323,12 +323,16 @@ export default function Contratos() {
 
   // Default filial filter
   useEffect(() => {
-    if (filterFilial === "_init_" && filialPadraoId) {
-      setFilterFilial(filialPadraoId);
-    } else if (filterFilial === "_init_") {
-      setFilterFilial("all");
+    if (filterFilial === "_init_") {
+      if (isGlobal && !profile?.filial_favorita_id) {
+        setFilterFilial("all");
+      } else if (filialPadraoId) {
+        setFilterFilial(filialPadraoId);
+      } else {
+        setFilterFilial("all");
+      }
     }
-  }, [filialPadraoId]);
+  }, [filialPadraoId, isGlobal, profile?.filial_favorita_id]);
 
   async function loadContatosCliente(clienteId: string) {
     const { data } = await supabase
