@@ -80,7 +80,7 @@ const TIPO_COLORS: Record<string, string> = {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function PainelAtendimento() {
-  const { filiaisDoUsuario, filialPadraoId } = useUserFiliais();
+  const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais } = useUserFiliais();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"kanban" | "lista">("kanban");
   const [search, setSearch] = useState("");
@@ -423,8 +423,8 @@ export default function PainelAtendimento() {
               <SelectValue placeholder="Filial" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todas as filiais</SelectItem>
-              {filiais.map((f: any) => (
+              {isGlobal && <SelectItem value="todos">Todas as filiais</SelectItem>}
+              {(filiaisDoUsuario.length > 0 ? filiaisDoUsuario : todasFiliais).map((f) => (
                 <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
               ))}
             </SelectContent>
