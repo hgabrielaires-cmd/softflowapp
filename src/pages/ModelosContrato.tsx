@@ -8,6 +8,7 @@ import { ContractPreview } from "@/components/ContractPreview";
 import { ClauseEditor } from "@/components/ClauseEditor";
 import { ClauseLibrary } from "@/components/ClauseLibrary";
 import { MessageTemplates } from "@/components/MessageTemplates";
+import { NotificationTemplates } from "@/components/NotificationTemplates";
 import { OrdemAtendimentoTab } from "@/components/OrdemAtendimentoTab";
 import { getExampleData } from "@/lib/contract-variables";
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   FileText, Plus, Loader2, MoreHorizontal,
-  Pencil, Trash2, Building2, CheckCircle, XCircle, Eye, Copy, Upload, MessageSquare, ClipboardList,
+  Pencil, Trash2, Building2, CheckCircle, XCircle, Eye, Copy, Upload, MessageSquare, ClipboardList, Bell,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -405,7 +406,7 @@ export default function ModelosContrato() {
             Modelos de Documentos
           </h1>
           <p className="text-sm text-muted-foreground">
-            Gerencie modelos de contrato, templates de mensagens e ordens de atendimento
+            Gerencie modelos de contrato, templates de mensagens, notificações e ordens de atendimento
           </p>
         </div>
 
@@ -416,6 +417,9 @@ export default function ModelosContrato() {
             </TabsTrigger>
             <TabsTrigger value="mensagens" className="gap-1.5">
               <MessageSquare className="h-3.5 w-3.5" /> Templates de Mensagens
+            </TabsTrigger>
+            <TabsTrigger value="notificacoes" className="gap-1.5">
+              <Bell className="h-3.5 w-3.5" /> Modelos de Notificação
             </TabsTrigger>
             <TabsTrigger value="ordem" className="gap-1.5">
               <ClipboardList className="h-3.5 w-3.5" /> Ordem de Atendimento
@@ -539,6 +543,10 @@ export default function ModelosContrato() {
 
           <TabsContent value="mensagens">
             <MessageTemplates />
+          </TabsContent>
+
+          <TabsContent value="notificacoes">
+            <NotificationTemplates />
           </TabsContent>
 
           <TabsContent value="ordem">
