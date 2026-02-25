@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Eye, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Eye, GripVertical } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Jornada, JornadaEtapa, JornadaAtividade, MesaAtendimento, ChecklistItem, Filial } from "@/lib/supabase-types";
 
@@ -65,7 +65,10 @@ export default function JornadaImplantacao() {
   const [atividadeForm, setAtividadeForm] = useState({ nome: "", descricao: "", horas_estimadas: 0, checklist: [] as ChecklistItem[], tipo_responsabilidade: "Interna" });
   const [horasText, setHorasText] = useState("0:00");
   const [expandedEtapas, setExpandedEtapas] = useState<Set<string>>(new Set());
-
+  const dragEtapaItem = useRef<number | null>(null);
+  const dragEtapaOverItem = useRef<number | null>(null);
+  const dragAtivItem = useRef<{ etapaTempId: string; index: number } | null>(null);
+  const dragAtivOverItem = useRef<{ etapaTempId: string; index: number } | null>(null);
   // ─── Queries ────────────────────────────────────────────────────────────────
 
   const { data: jornadas = [], isLoading } = useQuery({
@@ -317,16 +320,39 @@ export default function JornadaImplantacao() {
     setEtapas((prev) => prev.filter((e) => e.tempId !== tempId));
   }
 
-  function moveEtapa(index: number, direction: "up" | "down") {
+  function handleEtapaDragEnd() {
+    if (dragEtapaItem.current === null || dragEtapaOverItem.current === null || dragEtapaItem.current === dragEtapaOverItem.current) {
+      dragEtapaItem.current = null;
+      dragEtapaOverItem.current = null;
+      return;
+    }
     setEtapas((prev) => {
-      const targetIndex = direction === "up" ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= prev.length) return prev;
-      const next = prev.map((e) => ({ ...e, atividades: [...e.atividades] }));
-      const temp = next[index];
-      next[index] = next[targetIndex];
-      next[targetIndex] = temp;
-      return next.map((e, i) => ({ ...e, ordem: i }));
+      const reordered = [...prev];
+      const [removed] = reordered.splice(dragEtapaItem.current!, 1);
+      reordered.splice(dragEtapaOverItem.current!, 0, removed);
+      dragEtapaItem.current = null;
+      dragEtapaOverItem.current = null;
+      return reordered.map((e, i) => ({ ...e, ordem: i }));
     });
+  }
+
+  function handleAtividadeDragEnd(etapaTempId: string) {
+    const from = dragAtivItem.current;
+    const to = dragAtivOverItem.current;
+    if (!from || !to || from.etapaTempId !== etapaTempId || to.etapaTempId !== etapaTempId || from.index === to.index) {
+      dragAtivItem.current = null;
+      dragAtivOverItem.current = null;
+      return;
+    }
+    setEtapas((prev) => prev.map((e) => {
+      if (e.tempId !== etapaTempId) return e;
+      const reordered = [...e.atividades];
+      const [removed] = reordered.splice(from.index, 1);
+      reordered.splice(to.index, 0, removed);
+      return { ...e, atividades: reordered.map((a, i) => ({ ...a, ordem: i })) };
+    }));
+    dragAtivItem.current = null;
+    dragAtivOverItem.current = null;
   }
 
   // ─── Atividade CRUD ────────────────────────────────────────────────────────
@@ -565,9 +591,18 @@ export default function JornadaImplantacao() {
                     const totalH = Math.floor(totalHoras);
                     const totalM = Math.round((totalHoras - totalH) * 60);
                     return (
-                      <div key={etapa.tempId} className="border rounded-lg">
-                        <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50" onClick={() => toggleExpanded(etapa.tempId)}>
-                          <div className="flex items-center gap-2">
+                      <div
+                        key={etapa.tempId}
+                        className="border rounded-lg"
+                        draggable
+                        onDragStart={() => { dragEtapaItem.current = idx; }}
+                        onDragEnter={() => { dragEtapaOverItem.current = idx; }}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDragEnd={handleEtapaDragEnd}
+                      >
+                        <div className="flex items-center justify-between p-3 hover:bg-muted/50">
+                          <div className="flex items-center gap-2 cursor-pointer flex-1" onClick={() => toggleExpanded(etapa.tempId)}>
+                            <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab flex-shrink-0" />
                             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                             <span className="font-medium text-sm">{idx + 1}. {etapa.nome}</span>
                             {mesaNome && <Badge variant="secondary" className="text-xs">{mesaNome}</Badge>}
@@ -575,8 +610,6 @@ export default function JornadaImplantacao() {
                             {etapa.atividades.length > 0 && <Badge variant="outline" className="text-xs font-mono">{totalH}:{totalM.toString().padStart(2, "0")}h</Badge>}
                           </div>
                           <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" disabled={idx === 0} onClick={() => moveEtapa(idx, "up")}><ArrowUp className="h-3.5 w-3.5" /></Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" disabled={idx === etapas.length - 1} onClick={() => moveEtapa(idx, "down")}><ArrowDown className="h-3.5 w-3.5" /></Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditEtapa(etapa)}><Pencil className="h-3.5 w-3.5" /></Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeEtapa(etapa.tempId)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                           </div>
@@ -595,16 +628,27 @@ export default function JornadaImplantacao() {
                               <p className="text-xs text-muted-foreground text-center py-4">Nenhuma atividade.</p>
                             ) : (
                               <div className="space-y-1.5">
-                                {etapa.atividades.map((a) => (
-                                  <div key={a.tempId} className="flex items-start justify-between bg-muted/30 rounded-md p-2">
-                                    <div className="space-y-0.5">
-                                      <p className="text-sm font-medium">{a.nome}</p>
+                                {etapa.atividades.map((a, aIdx) => (
+                                  <div
+                                    key={a.tempId}
+                                    className="flex items-start justify-between bg-muted/30 rounded-md p-2 cursor-grab active:cursor-grabbing"
+                                    draggable
+                                    onDragStart={(e) => { e.stopPropagation(); dragAtivItem.current = { etapaTempId: etapa.tempId, index: aIdx }; }}
+                                    onDragEnter={(e) => { e.stopPropagation(); dragAtivOverItem.current = { etapaTempId: etapa.tempId, index: aIdx }; }}
+                                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                    onDragEnd={(e) => { e.stopPropagation(); handleAtividadeDragEnd(etapa.tempId); }}
+                                  >
+                                    <div className="flex items-start gap-2">
+                                      <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                      <div className="space-y-0.5">
+                                        <p className="text-sm font-medium">{a.nome}</p>
                                       <div className="flex gap-2 text-xs text-muted-foreground">
                                         <span>{Math.floor(a.horas_estimadas)}:{(Math.round((a.horas_estimadas - Math.floor(a.horas_estimadas)) * 60)).toString().padStart(2, "0")}h estimadas</span>
                                         <span>•</span>
                                         <span>{a.tipo_responsabilidade}</span>
                                         {a.checklist.length > 0 && <><span>•</span><span>{a.checklist.length} itens checklist</span></>}
                                       </div>
+                                    </div>
                                     </div>
                                     <div className="flex gap-1">
                                       {a.checklist.length > 0 && (
