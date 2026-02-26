@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,7 +24,7 @@ import {
   LayoutGrid, List, Search, Clock, Building2, User, Filter,
   GripVertical, ChevronRight, FileText, Package, ArrowUpCircle,
   Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw, ArrowRight, CheckSquare,
-  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare, Info, History, Pencil
+  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare, Info, History, Pencil, MoreHorizontal, XCircle, PauseCircle
 } from "lucide-react";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { ChecklistItem } from "@/lib/supabase-types";
@@ -2423,6 +2424,34 @@ export default function PainelAtendimento() {
               )}
 
             </div>
+          )}
+          {detalhesData && (
+            <DialogFooter className="border-t pt-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    <MoreHorizontal className="h-4 w-4" />
+                    Ações
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    className="gap-2 text-amber-600 focus:text-amber-600"
+                    onClick={() => toast.info("Funcionalidade em desenvolvimento")}
+                  >
+                    <PauseCircle className="h-4 w-4" />
+                    Pausar Projeto
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="gap-2 text-destructive focus:text-destructive"
+                    onClick={() => toast.info("Funcionalidade em desenvolvimento")}
+                  >
+                    <XCircle className="h-4 w-4" />
+                    Recusar Projeto
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </DialogFooter>
           )}
         </DialogContent>
       </Dialog>
