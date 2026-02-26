@@ -1481,49 +1481,6 @@ export default function PainelAtendimento() {
                 </div>
               </div>
 
-              <div>
-                <p className="text-muted-foreground text-xs mb-1">Responsável</p>
-                <Select
-                  value={detailCard.responsavel_id || "nenhum"}
-                  onValueChange={(v) => {
-                    const newVal = v === "nenhum" ? null : v;
-                    atribuirResponsavel.mutate({ cardId: detailCard.id, responsavelId: newVal });
-                    setDetailCard({ ...detailCard, responsavel_id: newVal, profiles: responsaveis.find((r: any) => r.id === newVal) as any });
-                  }}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Selecionar responsável" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="nenhum">Nenhum</SelectItem>
-                    {responsaveis.map((r: any) => (
-                      <SelectItem key={r.id} value={r.id}>{r.full_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Mover etapa */}
-              <div>
-                <p className="text-muted-foreground text-xs mb-1">Mover para Etapa</p>
-                <Select
-                  value={detailCard.etapa_id}
-                  onValueChange={(v) => {
-                    moverCard.mutate({ cardId: detailCard.id, etapaId: v });
-                    setDetailCard({ ...detailCard, etapa_id: v });
-                  }}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {etapas.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
               <div className="text-xs text-muted-foreground pt-2 border-t">
                 Criado em {new Date(detailCard.created_at).toLocaleDateString("pt-BR")} às{" "}
                 {new Date(detailCard.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
