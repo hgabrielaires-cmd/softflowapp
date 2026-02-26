@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus, Tag, ArrowUpCircle, FileText, AlertCircle, Eye, Users, Star, Trash2, MapPin, Send } from "lucide-react";
 import { ClientePlanViewer } from "@/components/ClientePlanViewer";
+import { PedidoComentarios } from "@/components/PedidoComentarios";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -2623,7 +2624,7 @@ export default function Pedidos() {
                   </div>
                 )}
 
-
+                <PedidoComentarios pedidoId={vp.id} />
               </div>
             );
           })()}
