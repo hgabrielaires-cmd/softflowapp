@@ -34,6 +34,7 @@ const PERMISSION_LABELS: Record<string, { label: string; description: string; ic
   "acao.aprovar_pedido": { label: "Aprovar Pedido", description: "Permite aprovar/reprovar pedidos no financeiro", icon: <ShoppingCart className="h-4 w-4" />, group: "Ações" },
   "acao.gerar_contrato": { label: "Gerar Contrato", description: "Permite gerar contratos em PDF", icon: <FileText className="h-4 w-4" />, group: "Ações" },
   "acao.gerenciar_desconto": { label: "Gerenciar Desconto", description: "Permite aprovar/reprovar solicitações de desconto", icon: <DollarSign className="h-4 w-4" />, group: "Ações" },
+  "acao.editar_config_projeto": { label: "Editar Config. Projeto", description: "Permite editar técnico e tipo de atendimento após etapa de agendamento", icon: <Settings className="h-4 w-4" />, group: "Ações" },
 };
 
 const ROLES: AppRole[] = ["admin", "financeiro", "vendedor", "operacional", "tecnico"];

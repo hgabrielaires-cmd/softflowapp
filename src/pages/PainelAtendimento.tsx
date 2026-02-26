@@ -23,7 +23,7 @@ import {
   LayoutGrid, List, Search, Clock, Building2, User, Filter,
   GripVertical, ChevronRight, FileText, Package, ArrowUpCircle,
   Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw, ArrowRight, CheckSquare,
-  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare, Info, History
+  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare, Info, History, Pencil
 } from "lucide-react";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { ChecklistItem } from "@/lib/supabase-types";
@@ -96,7 +96,7 @@ const TIPO_COLORS: Record<string, string> = {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function PainelAtendimento() {
-  const { profile } = useAuth();
+  const { profile, roles } = useAuth();
   const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais } = useUserFiliais();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"kanban" | "lista">("kanban");
@@ -125,7 +125,7 @@ export default function PainelAtendimento() {
   const [historicoOpen, setHistoricoOpen] = useState(false);
   const [historicoData, setHistoricoData] = useState<any[]>([]);
   const [historicoLoading, setHistoricoLoading] = useState(false);
-
+  const [configEditMode, setConfigEditMode] = useState(false);
   // Auto-refresh atrasado status every 60s
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60_000);
@@ -220,6 +220,29 @@ export default function PainelAtendimento() {
       return profiles || [];
     },
   });
+
+  // Query user permissions for editing config after agendamento
+  const { data: userPermissions = [] } = useQuery({
+    queryKey: ["user_permissions_painel", profile?.user_id],
+    queryFn: async () => {
+      if (!profile?.user_id) return [];
+      const { data: userRoles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", profile.user_id);
+      if (!userRoles || userRoles.length === 0) return [];
+      const roleNames = userRoles.map(r => r.role);
+      const { data } = await supabase
+        .from("role_permissions")
+        .select("permissao, ativo")
+        .in("role", roleNames)
+        .eq("ativo", true);
+      return (data || []).map(p => p.permissao);
+    },
+    enabled: !!profile?.user_id,
+  });
+
+  const podeEditarConfigProjeto = userPermissions.includes("acao.editar_config_projeto");
 
   // Precompute SLA da Etapa per card (jornada-based) + total checklist items per jornada
   const { data: jornadaSlaMap = {} } = useQuery({
@@ -1455,7 +1478,7 @@ export default function PainelAtendimento() {
       </div>
 
       {/* Detail Dialog */}
-      <Dialog open={!!detailCard} onOpenChange={(open) => { if (!open) setDetailCard(null); }}>
+      <Dialog open={!!detailCard} onOpenChange={(open) => { if (!open) { setDetailCard(null); setConfigEditMode(false); } }}>
         <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1699,8 +1722,41 @@ export default function PainelAtendimento() {
               })()}
 
               {/* Controles do Projeto (persistem entre etapas) */}
+              {(() => {
+                const etapaAtual = etapas.find(e => e.id === detailCard.etapa_id);
+                const isEtapaAgendamento = etapaAtual?.ordem === 1; // Agendamento é ordem 1
+                const configLocked = !isEtapaAgendamento && !configEditMode;
+
+                return (
               <div className="border rounded-lg p-3 space-y-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Configurações do Projeto</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Configurações do Projeto</p>
+                  {!isEtapaAgendamento && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => {
+                        if (!configEditMode) {
+                          if (!podeEditarConfigProjeto) {
+                            toast.error("Você não tem permissão para editar configurações do projeto");
+                            return;
+                          }
+                          setConfigEditMode(true);
+                        } else {
+                          setConfigEditMode(false);
+                        }
+                      }}
+                      title={configLocked ? "Editar configurações" : "Bloquear configurações"}
+                    >
+                      <Pencil className={cn("h-3.5 w-3.5", configEditMode ? "text-primary" : "text-muted-foreground")} />
+                    </Button>
+                  )}
+                </div>
+
+                {configLocked && (
+                  <p className="text-[10px] text-muted-foreground italic">Campos bloqueados. Clique no lápis para editar.</p>
+                )}
 
                 {/* Toggle Aponta Técnico */}
                 <div className="flex items-center justify-between">
@@ -1711,11 +1767,11 @@ export default function PainelAtendimento() {
                   <Switch
                     id="aponta-agenda"
                     checked={detailCard.aponta_tecnico_agenda || false}
+                    disabled={configLocked}
                     onCheckedChange={async (checked) => {
                       setDetailCard({ ...detailCard, aponta_tecnico_agenda: checked });
                       await supabase.from("painel_atendimento").update({ aponta_tecnico_agenda: checked }).eq("id", detailCard.id);
                       if (!checked) {
-                        // Remove all technicians when toggle is off
                         await supabase.from("painel_tecnicos").delete().eq("card_id", detailCard.id);
                         setTecnicosSelecionados([]);
                       }
@@ -1748,6 +1804,7 @@ export default function PainelAtendimento() {
                               {tec.tipo_tecnico && (
                                 <span className="opacity-70 text-[10px]">· {tec.tipo_tecnico}</span>
                               )}
+                              {!configLocked && (
                               <button
                                 type="button"
                                 className="ml-0.5 rounded-full hover:bg-primary-foreground/20 p-0.5 transition-colors"
@@ -1758,50 +1815,54 @@ export default function PainelAtendimento() {
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                               </button>
+                              )}
                             </span>
                           ))}
                         </div>
                       )}
 
-                      {/* Busca */}
-                      <div className="relative">
-                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                        <Input
-                          placeholder="Buscar técnico..."
-                          value={buscaTecnico}
-                          onChange={(e) => setBuscaTecnico(e.target.value)}
-                          className="h-8 pl-7 text-xs"
-                        />
-                      </div>
+                      {/* Busca e lista - só quando não está locked */}
+                      {!configLocked && (
+                        <>
+                        <div className="relative">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            placeholder="Buscar técnico..."
+                            value={buscaTecnico}
+                            onChange={(e) => setBuscaTecnico(e.target.value)}
+                            className="h-8 pl-7 text-xs"
+                          />
+                        </div>
 
-                      {/* Lista filtrada */}
-                      <div className="space-y-0.5 max-h-28 overflow-y-auto rounded-md border bg-muted/30 p-1.5">
-                        {tecnicos.length === 0 ? (
-                          <p className="text-[10px] text-muted-foreground italic py-2 text-center">Nenhum técnico cadastrado</p>
-                        ) : tecnicosFiltrados.filter((tec: any) => !tecnicosSelecionados.includes(tec.id)).length === 0 ? (
-                          <p className="text-[10px] text-muted-foreground italic py-2 text-center">{buscaTecnico ? "Nenhum resultado" : "Todos selecionados"}</p>
-                        ) : (
-                          tecnicosFiltrados
-                            .filter((tec: any) => !tecnicosSelecionados.includes(tec.id))
-                            .map((tec: any) => (
-                              <button
-                                key={tec.id}
-                                type="button"
-                                className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-accent transition-colors text-left"
-                                onClick={async () => {
-                                  setTecnicosSelecionados((prev) => [...prev, tec.id]);
-                                  await supabase.from("painel_tecnicos").insert({ card_id: detailCard.id, tecnico_id: tec.id });
-                                }}
-                              >
-                                <User className="h-3 w-3 text-muted-foreground shrink-0" />
-                                <span>{tec.full_name}</span>
-                                {tec.tipo_tecnico && (
-                                  <span className="text-[10px] text-muted-foreground ml-auto">({tec.tipo_tecnico})</span>
-                                )}
-                              </button>
-                            ))
-                        )}
-                      </div>
+                        <div className="space-y-0.5 max-h-28 overflow-y-auto rounded-md border bg-muted/30 p-1.5">
+                          {tecnicos.length === 0 ? (
+                            <p className="text-[10px] text-muted-foreground italic py-2 text-center">Nenhum técnico cadastrado</p>
+                          ) : tecnicosFiltrados.filter((tec: any) => !tecnicosSelecionados.includes(tec.id)).length === 0 ? (
+                            <p className="text-[10px] text-muted-foreground italic py-2 text-center">{buscaTecnico ? "Nenhum resultado" : "Todos selecionados"}</p>
+                          ) : (
+                            tecnicosFiltrados
+                              .filter((tec: any) => !tecnicosSelecionados.includes(tec.id))
+                              .map((tec: any) => (
+                                <button
+                                  key={tec.id}
+                                  type="button"
+                                  className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-accent transition-colors text-left"
+                                  onClick={async () => {
+                                    setTecnicosSelecionados((prev) => [...prev, tec.id]);
+                                    await supabase.from("painel_tecnicos").insert({ card_id: detailCard.id, tecnico_id: tec.id });
+                                  }}
+                                >
+                                  <User className="h-3 w-3 text-muted-foreground shrink-0" />
+                                  <span>{tec.full_name}</span>
+                                  {tec.tipo_tecnico && (
+                                    <span className="text-[10px] text-muted-foreground ml-auto">({tec.tipo_tecnico})</span>
+                                  )}
+                                </button>
+                              ))
+                          )}
+                        </div>
+                        </>
+                      )}
                     </div>
                   );
                 })()}
@@ -1809,6 +1870,9 @@ export default function PainelAtendimento() {
                 {/* Tipo de Atendimento */}
                 <div className="space-y-2">
                   <Label className="text-xs font-medium">Tipo de Atendimento</Label>
+                  {configLocked ? (
+                    <p className="text-xs text-foreground">{detailCard.tipo_atendimento_local === "interno" ? "Interno" : detailCard.tipo_atendimento_local === "externo" ? "Externo" : "—"}</p>
+                  ) : (
                   <RadioGroup
                     value={detailCard.tipo_atendimento_local || ""}
                     onValueChange={async (val) => {
@@ -1826,6 +1890,7 @@ export default function PainelAtendimento() {
                       <Label htmlFor="at-externo" className="text-xs cursor-pointer">Externo</Label>
                     </div>
                   </RadioGroup>
+                  )}
                 </div>
 
                 {/* Comentários (thread) */}
@@ -1887,6 +1952,8 @@ export default function PainelAtendimento() {
                   </div>
                 </div>
               </div>
+                );
+              })()}
 
               <div className="text-xs text-muted-foreground pt-2 border-t">
                 Criado em {new Date(detailCard.created_at).toLocaleDateString("pt-BR")} às{" "}
