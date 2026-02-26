@@ -40,10 +40,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send, MessageCircle, Globe } from "lucide-react";
+import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send, MessageCircle, Globe, Wrench } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 
 interface UserWithRoles extends Profile {
@@ -80,6 +81,8 @@ export default function Usuarios() {
   const [invitePermitirCnpjDuplicado, setInvitePermitirCnpjDuplicado] = useState(false);
   const [inviteRecebeComissao, setInviteRecebeComissao] = useState(true);
   const [inviteTelefone, setInviteTelefone] = useState("");
+  const [inviteIsTecnico, setInviteIsTecnico] = useState(false);
+  const [inviteTipoTecnico, setInviteTipoTecnico] = useState("interno");
   const [inviting, setInviting] = useState(false);
 
   // Edit dialog
@@ -100,6 +103,8 @@ export default function Usuarios() {
   const [editRecebeComissao, setEditRecebeComissao] = useState(true);
   const [editTelefone, setEditTelefone] = useState("");
   const [editPermiteEnviarEspelho, setEditPermiteEnviarEspelho] = useState(false);
+  const [editIsTecnico, setEditIsTecnico] = useState(false);
+  const [editTipoTecnico, setEditTipoTecnico] = useState("interno");
   const [editActive, setEditActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -232,6 +237,8 @@ export default function Usuarios() {
         recebe_comissao: inviteRecebeComissao,
         telefone: inviteTelefone || null,
         deve_trocar_senha: true,
+        is_tecnico: inviteIsTecnico,
+        tipo_tecnico: inviteIsTecnico ? inviteTipoTecnico : null,
       } as any).eq("user_id", data.user.id);
 
       // Insert filiais junction
@@ -254,7 +261,7 @@ export default function Usuarios() {
 
       toast.success(`Usuário ${inviteName} criado com sucesso!`);
       setOpenInvite(false);
-      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteFilialIds([]); setInviteAcessoGlobal(false); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteComissaoServ("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone("");
+      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteFilialIds([]); setInviteAcessoGlobal(false); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteComissaoServ("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone(""); setInviteIsTecnico(false); setInviteTipoTecnico("interno");
       loadUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
@@ -280,6 +287,8 @@ export default function Usuarios() {
     setEditRecebeComissao((user as any).recebe_comissao ?? true);
     setEditTelefone((user as any).telefone || "");
     setEditPermiteEnviarEspelho((user as any).permite_enviar_espelho_whatsapp ?? false);
+    setEditIsTecnico((user as any).is_tecnico ?? false);
+    setEditTipoTecnico((user as any).tipo_tecnico || "interno");
     setEditActive(user.active);
     setOpenEdit(true);
   }
@@ -307,6 +316,8 @@ export default function Usuarios() {
         recebe_comissao: editRecebeComissao,
         telefone: editTelefone || null,
         permite_enviar_espelho_whatsapp: editPermiteEnviarEspelho,
+        is_tecnico: editIsTecnico,
+        tipo_tecnico: editIsTecnico ? editTipoTecnico : null,
         active: editActive,
       } as any).eq("user_id", editingUser.user_id);
 
@@ -742,6 +753,37 @@ export default function Usuarios() {
                 <Switch checked={invitePermitirCnpjDuplicado} onCheckedChange={setInvitePermitirCnpjDuplicado} />
               </div>
             </div>
+            <div className="rounded-lg border border-border p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+                    <Wrench className="h-4 w-4 text-primary" />
+                    É Técnico?
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Realiza atendimentos técnicos e pode ser apontado para agenda</p>
+                </div>
+                <Switch checked={inviteIsTecnico} onCheckedChange={setInviteIsTecnico} />
+              </div>
+              {inviteIsTecnico && (
+                <div className="space-y-2 pl-2 border-l-2 border-primary/30">
+                  <Label className="text-xs font-medium">Tipo de Atendimento</Label>
+                  <RadioGroup value={inviteTipoTecnico} onValueChange={setInviteTipoTecnico} className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="interno" id="inv-tec-interno" />
+                      <Label htmlFor="inv-tec-interno" className="text-xs cursor-pointer">Interno</Label>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="externo" id="inv-tec-externo" />
+                      <Label htmlFor="inv-tec-externo" className="text-xs cursor-pointer">Externo</Label>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="ambos" id="inv-tec-ambos" />
+                      <Label htmlFor="inv-tec-ambos" className="text-xs cursor-pointer">Ambos</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
+            </div>
             <div className="flex justify-end gap-2 pt-2 shrink-0">
                <Button type="button" variant="outline" onClick={() => setOpenInvite(false)}>Cancelar</Button>
               <Button type="submit" disabled={inviting}>
@@ -963,6 +1005,38 @@ export default function Usuarios() {
                       </div>
                       <Switch checked={editPermiteEnviarEspelho} onCheckedChange={setEditPermiteEnviarEspelho} />
                     </div>
+                    <div className="border-t border-border" />
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+                          <Wrench className="h-4 w-4 text-primary" />
+                          É Técnico?
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Realiza atendimentos técnicos e pode ser apontado para agenda.
+                        </p>
+                      </div>
+                      <Switch checked={editIsTecnico} onCheckedChange={setEditIsTecnico} />
+                    </div>
+                    {editIsTecnico && (
+                      <div className="space-y-2 pl-4 border-l-2 border-primary/30">
+                        <Label className="text-xs font-medium">Tipo de Atendimento Técnico</Label>
+                        <RadioGroup value={editTipoTecnico} onValueChange={setEditTipoTecnico} className="flex items-center gap-4">
+                          <div className="flex items-center gap-1.5">
+                            <RadioGroupItem value="interno" id="edit-tec-interno" />
+                            <Label htmlFor="edit-tec-interno" className="text-xs cursor-pointer">Interno</Label>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <RadioGroupItem value="externo" id="edit-tec-externo" />
+                            <Label htmlFor="edit-tec-externo" className="text-xs cursor-pointer">Externo</Label>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <RadioGroupItem value="ambos" id="edit-tec-ambos" />
+                            <Label htmlFor="edit-tec-ambos" className="text-xs cursor-pointer">Ambos</Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
 
