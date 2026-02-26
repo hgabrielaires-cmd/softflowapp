@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
@@ -102,6 +103,8 @@ export default function PainelAtendimento() {
   const [slaEtapaJornada, setSlaEtapaJornada] = useState<number | null>(null);
   const [slaProjeto, setSlaProjeto] = useState<number | null>(null);
   const [checklistEtapa, setChecklistEtapa] = useState<any[]>([]);
+  const [checklistProgresso, setChecklistProgresso] = useState<Record<string, boolean>>({});
+  const [finalizando, setFinalizando] = useState(false);
   const [, setTick] = useState(0); // force re-render for atrasado checks
 
   // Auto-refresh atrasado status every 60s
@@ -299,13 +302,25 @@ export default function PainelAtendimento() {
       // Fetch activities for SLA da Etapa + checklist
       const { data: atividades } = await supabase
         .from("jornada_atividades")
-        .select("nome, horas_estimadas, checklist")
+        .select("id, nome, horas_estimadas, checklist")
         .eq("etapa_id", jornadaEtapa[0].id)
         .order("ordem");
 
       const totalEtapa = (atividades || []).reduce((acc, a) => acc + (a.horas_estimadas || 0), 0);
       setSlaEtapaJornada(totalEtapa);
       setChecklistEtapa(atividades || []);
+
+      // Fetch existing progress for this card
+      const { data: progresso } = await supabase
+        .from("painel_checklist_progresso")
+        .select("atividade_id, checklist_index, concluido")
+        .eq("card_id", detailCard.id);
+
+      const progressoMap: Record<string, boolean> = {};
+      (progresso || []).forEach((p: any) => {
+        progressoMap[`${p.atividade_id}_${p.checklist_index}`] = p.concluido;
+      });
+      setChecklistProgresso(progressoMap);
     })();
   }, [detailCard, etapas]);
 
@@ -356,6 +371,73 @@ export default function PainelAtendimento() {
     },
     onError: () => toast.error("Erro ao iniciar atendimento."),
   });
+
+  // ─── Toggle checklist item ─────────────────────────────────────────────
+  async function toggleChecklistItem(atividadeId: string, checklistIndex: number, currentValue: boolean) {
+    if (!detailCard) return;
+    const key = `${atividadeId}_${checklistIndex}`;
+    const newValue = !currentValue;
+    setChecklistProgresso((prev) => ({ ...prev, [key]: newValue }));
+
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from("painel_checklist_progresso")
+      .upsert({
+        card_id: detailCard.id,
+        atividade_id: atividadeId,
+        checklist_index: checklistIndex,
+        concluido: newValue,
+        concluido_por: user?.id || null,
+        concluido_em: newValue ? new Date().toISOString() : null,
+      }, { onConflict: "card_id,atividade_id,checklist_index" });
+
+    if (error) {
+      toast.error("Erro ao salvar checklist.");
+      setChecklistProgresso((prev) => ({ ...prev, [key]: currentValue }));
+    }
+  }
+
+  // ─── Finalizar etapa ──────────────────────────────────────────────────
+  async function finalizarEtapa() {
+    if (!detailCard) return;
+    setFinalizando(true);
+    try {
+      const etapaAtualIdx = etapas.findIndex((e) => e.id === detailCard.etapa_id);
+      const proximaEtapa = etapas[etapaAtualIdx + 1];
+      if (!proximaEtapa) {
+        toast.error("Não há próxima etapa configurada.");
+        return;
+      }
+      // Reset iniciado_em for new stage
+      const { error } = await supabase
+        .from("painel_atendimento")
+        .update({ etapa_id: proximaEtapa.id, iniciado_em: null, iniciado_por: null })
+        .eq("id", detailCard.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+      toast.success(`Avançado para etapa: ${proximaEtapa.nome}`);
+      setDetailCard(null);
+    } catch {
+      toast.error("Erro ao finalizar etapa.");
+    } finally {
+      setFinalizando(false);
+    }
+  }
+
+  // ─── Check if all checklist items completed ───────────────────────────
+  function isChecklistCompleto(): boolean {
+    if (checklistEtapa.length === 0) return true;
+    let totalItens = 0;
+    let totalConcluidos = 0;
+    checklistEtapa.forEach((atividade: any) => {
+      const items = Array.isArray(atividade.checklist) ? atividade.checklist : [];
+      items.forEach((_: any, idx: number) => {
+        totalItens++;
+        if (checklistProgresso[`${atividade.id}_${idx}`]) totalConcluidos++;
+      });
+    });
+    return totalItens > 0 && totalConcluidos === totalItens;
+  }
 
   // ─── SLA inicio check ──────────────────────────────────────────────────
 
@@ -881,36 +963,65 @@ export default function PainelAtendimento() {
                 </div>
               </div>
 
-              {/* Checklist da Etapa (da Jornada) */}
-              {checklistEtapa.length > 0 && (
-                <div className="border rounded-lg p-3">
-                  <p className="text-xs font-semibold mb-2 flex items-center gap-1">
-                    <CheckSquare className="h-3.5 w-3.5" />
-                    Checklist da Etapa ({checklistEtapa.reduce((acc: number, a: any) => acc + (Array.isArray(a.checklist) ? a.checklist.length : 0), 0)} itens)
-                  </p>
-                  <div className="space-y-3">
-                    {checklistEtapa.map((atividade: any, aIdx: number) => {
-                      const items = Array.isArray(atividade.checklist) ? atividade.checklist : [];
-                      if (items.length === 0) return null;
-                      return (
-                        <div key={aIdx}>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">{atividade.nome} <span className="text-[10px]">({formatSLA(atividade.horas_estimadas)})</span></p>
-                          <ul className="space-y-1 pl-2">
-                            {items.map((item: any, cIdx: number) => (
-                              <li key={cIdx} className="flex items-center gap-2 text-xs">
-                                <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">
-                                  {CHECKLIST_TIPO_LABELS[(item as ChecklistItem).tipo || 'check']}
-                                </Badge>
-                                <span>{item.texto || "(sem texto)"}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      );
-                    })}
+              {/* Checklist da Etapa (da Jornada) - Interativo */}
+              {checklistEtapa.length > 0 && (() => {
+                const totalItens = checklistEtapa.reduce((acc: number, a: any) => acc + (Array.isArray(a.checklist) ? a.checklist.length : 0), 0);
+                const totalConcluidos = checklistEtapa.reduce((acc: number, a: any) => {
+                  const items = Array.isArray(a.checklist) ? a.checklist : [];
+                  return acc + items.filter((_: any, idx: number) => checklistProgresso[`${a.id}_${idx}`]).length;
+                }, 0);
+                const isCongelado = !detailCard.iniciado_em;
+                return (
+                  <div className="border rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold flex items-center gap-1">
+                        <CheckSquare className="h-3.5 w-3.5" />
+                        Checklist da Etapa ({totalConcluidos}/{totalItens})
+                      </p>
+                      {totalItens > 0 && (
+                        <Progress value={(totalConcluidos / totalItens) * 100} className="h-1.5 w-20" />
+                      )}
+                    </div>
+                    {isCongelado && (
+                      <p className="text-[10px] text-amber-600 mb-2 flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        Clique em "Iniciar" para liberar o checklist
+                      </p>
+                    )}
+                    <div className="space-y-3">
+                      {checklistEtapa.map((atividade: any, aIdx: number) => {
+                        const items = Array.isArray(atividade.checklist) ? atividade.checklist : [];
+                        if (items.length === 0) return null;
+                        return (
+                          <div key={aIdx}>
+                            <p className="text-xs font-medium text-muted-foreground mb-1">{atividade.nome} <span className="text-[10px]">({formatSLA(atividade.horas_estimadas)})</span></p>
+                            <ul className="space-y-1.5 pl-1">
+                              {items.map((item: any, cIdx: number) => {
+                                const key = `${atividade.id}_${cIdx}`;
+                                const checked = !!checklistProgresso[key];
+                                return (
+                                  <li key={cIdx} className="flex items-center gap-2 text-xs">
+                                    <Checkbox
+                                      checked={checked}
+                                      disabled={isCongelado}
+                                      onCheckedChange={() => toggleChecklistItem(atividade.id, cIdx, checked)}
+                                      className="h-4 w-4"
+                                    />
+                                    <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">
+                                      {CHECKLIST_TIPO_LABELS[(item as ChecklistItem).tipo || 'check']}
+                                    </Badge>
+                                    <span className={cn(checked && "line-through text-muted-foreground")}>{item.texto || "(sem texto)"}</span>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
 
               <div>
@@ -961,6 +1072,23 @@ export default function PainelAtendimento() {
                 {new Date(detailCard.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
               </div>
             </div>
+          )}
+          {detailCard && (
+            <DialogFooter className="border-t pt-3">
+              <Button
+                onClick={finalizarEtapa}
+                disabled={!detailCard.iniciado_em || !isChecklistCompleto() || finalizando}
+                className="w-full"
+              >
+                <ChevronRight className="h-4 w-4 mr-1" />
+                {finalizando ? "Finalizando..." : "Finalizar Etapa"}
+              </Button>
+              {!isChecklistCompleto() && detailCard.iniciado_em && (
+                <p className="text-[10px] text-muted-foreground text-center w-full mt-1">
+                  Complete todos os itens do checklist para finalizar
+                </p>
+              )}
+            </DialogFooter>
           )}
         </DialogContent>
       </Dialog>
