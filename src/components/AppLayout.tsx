@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, LogOut, Bell, User, Menu,
   UserCheck, BookOpen, Headphones, Ticket, FileText, TrendingUp, TrendingDown,
   BarChart3, Plug, ListOrdered, Inbox, Percent, Check, X,
-  Info, AlertTriangle, Zap, Globe, Wrench,
+  Info, AlertTriangle, Zap, Globe, Wrench, Trash2, Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ClientePlanViewer } from "@/components/ClientePlanViewer";
 import { AppRole, ROLE_LABELS, Profile } from "@/lib/supabase-types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -315,7 +317,7 @@ interface SolicitacaoDesconto {
   status: string;
   observacoes: string | null;
   created_at: string;
-  pedidos?: { clientes?: { nome_fantasia: string } | null; valor_implantacao_final?: number; valor_mensalidade_final?: number } | null;
+  pedidos?: { cliente_id?: string; clientes?: { nome_fantasia: string } | null; valor_implantacao_final?: number; valor_mensalidade_final?: number } | null;
   profiles?: { full_name: string } | null;
 }
 
@@ -340,6 +342,8 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
   const [open, setOpen] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [motivoReprova, setMotivoReprova] = useState<Record<string, string>>({});
+  const [selectedNotif, setSelectedNotif] = useState<Notificacao | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const isAdmin = roles.includes("admin");
   const isGestor = isAdmin || (profile as any)?.gestor_desconto === true;
@@ -348,7 +352,7 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     if (!isGestor) return;
     const { data } = await supabase
       .from("solicitacoes_desconto")
-      .select("*, pedidos(valor_implantacao_final, valor_mensalidade_final, clientes(nome_fantasia))")
+      .select("*, pedidos(cliente_id, valor_implantacao_final, valor_mensalidade_final, clientes(nome_fantasia))")
       .eq("status", "Aguardando")
       .order("created_at", { ascending: false });
 
@@ -379,6 +383,19 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     }
   }
 
+  async function deletarNotificacao(notifId: string) {
+    setDeletingId(notifId);
+    // Delete read records first, then the notification itself
+    if (profile?.user_id) {
+      await supabase.from("notificacoes_lidas").delete().eq("notificacao_id", notifId).eq("user_id", profile.user_id);
+    }
+    await supabase.from("notificacoes").delete().eq("id", notifId);
+    setNotificacoes((prev) => prev.filter((n) => n.id !== notifId));
+    setDeletingId(null);
+    if (selectedNotif?.id === notifId) setSelectedNotif(null);
+    toast.success("Notificação removida");
+  }
+
   useEffect(() => {
     if (profile) { loadSolicitacoes(); loadNotificacoes(); }
   }, [profile]);
@@ -407,6 +424,7 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
   const totalBadge = solicitacoes.length + naoLidasCount;
 
   return (
+    <>
     <DropdownMenu open={open} onOpenChange={(v) => { setOpen(v); if (v) { loadSolicitacoes(); loadNotificacoes(); } }}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="h-8 w-8 relative">
@@ -440,18 +458,24 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
             </div>
             {solicitacoes.map((sol) => {
               const clienteNome = (sol.pedidos as any)?.clientes?.nome_fantasia || "—";
+              const clienteId = (sol.pedidos as any)?.cliente_id;
               const vendNome = (sol.profiles as any)?.full_name || "—";
               const impFinal = (sol.pedidos as any)?.valor_implantacao_final;
               const mensFinal = (sol.pedidos as any)?.valor_mensalidade_final;
               return (
                 <div key={sol.id} className="px-4 py-3 border-b border-border space-y-2">
-                  <div>
-                    <p className="font-medium text-sm">{clienteNome}</p>
-                    <p className="text-xs text-muted-foreground">Vendedor: {vendNome}</p>
-                    <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                      {sol.desconto_implantacao_valor > 0 && <p>Implantação: {sol.desconto_implantacao_tipo === "%" ? `${sol.desconto_implantacao_percentual?.toFixed(1)}%` : `R$ ${sol.desconto_implantacao_valor}`} de desconto {impFinal != null && `→ R$ ${impFinal.toFixed(2)}`}</p>}
-                      {sol.desconto_mensalidade_valor > 0 && <p>Mensalidade: {sol.desconto_mensalidade_tipo === "%" ? `${sol.desconto_mensalidade_percentual?.toFixed(1)}%` : `R$ ${sol.desconto_mensalidade_valor}`} de desconto {mensFinal != null && `→ R$ ${mensFinal.toFixed(2)}`}</p>}
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{clienteNome}</p>
+                      <p className="text-xs text-muted-foreground">Vendedor: {vendNome}</p>
+                      <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                        {sol.desconto_implantacao_valor > 0 && <p>Implantação: {sol.desconto_implantacao_tipo === "%" ? `${sol.desconto_implantacao_percentual?.toFixed(1)}%` : `R$ ${sol.desconto_implantacao_valor}`} de desconto {impFinal != null && `→ R$ ${impFinal.toFixed(2)}`}</p>}
+                        {sol.desconto_mensalidade_valor > 0 && <p>Mensalidade: {sol.desconto_mensalidade_tipo === "%" ? `${sol.desconto_mensalidade_percentual?.toFixed(1)}%` : `R$ ${sol.desconto_mensalidade_valor}`} de desconto {mensFinal != null && `→ R$ ${mensFinal.toFixed(2)}`}</p>}
+                      </div>
                     </div>
+                    {clienteId && (
+                      <ClientePlanViewer clienteId={clienteId} clienteNome={clienteNome} variant="icon" className="shrink-0" />
+                    )}
                   </div>
                   <input type="text" placeholder="Motivo (opcional)" className="w-full text-xs border border-border rounded px-2 py-1 bg-background"
                     value={motivoReprova[sol.id] || ""} onChange={(e) => setMotivoReprova((p) => ({ ...p, [sol.id]: e.target.value }))} />
@@ -487,7 +511,7 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
               return (
                 <div key={n.id}
                   className={cn("px-4 py-3 border-b border-border cursor-pointer hover:bg-muted/30 transition-colors", !lida && "bg-primary/5")}
-                  onClick={() => marcarLida(n.id)}>
+                  onClick={() => { marcarLida(n.id); setSelectedNotif(n); }}>
                   <div className="flex items-start gap-2.5">
                     <div className="mt-0.5 flex-shrink-0">{TIPO_ICON[n.tipo] || TIPO_ICON.info}</div>
                     <div className="flex-1 min-w-0">
@@ -497,6 +521,14 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.mensagem}</p>
                     </div>
+                    <button
+                      className="mt-0.5 flex-shrink-0 text-muted-foreground hover:text-destructive transition-colors p-1 rounded"
+                      title="Excluir notificação"
+                      onClick={(e) => { e.stopPropagation(); deletarNotificacao(n.id); }}
+                      disabled={deletingId === n.id}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
               );
@@ -512,6 +544,36 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
         )}
       </DropdownMenuContent>
     </DropdownMenu>
+
+    {/* Dialog de mensagem completa */}
+    <Dialog open={!!selectedNotif} onOpenChange={(v) => { if (!v) setSelectedNotif(null); }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            {selectedNotif && (TIPO_ICON[selectedNotif.tipo] || TIPO_ICON.info)}
+            {selectedNotif?.titulo}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+          {selectedNotif?.mensagem}
+        </div>
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xs text-muted-foreground">
+            {selectedNotif?.created_at && new Date(selectedNotif.created_at).toLocaleString("pt-BR")}
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-destructive hover:text-destructive"
+            onClick={() => selectedNotif && deletarNotificacao(selectedNotif.id)}
+            disabled={deletingId === selectedNotif?.id}
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Excluir
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
