@@ -275,6 +275,21 @@ export default function PainelAtendimento() {
     return `${horas}:${String(minutos).padStart(2, "0")}`;
   }
 
+  function getTempoAtraso(card: PainelCard): string | null {
+    if (card.iniciado_em) return null;
+    const etapa = etapas.find((e) => e.id === card.etapa_id);
+    if (!etapa?.controla_sla || !etapa.prazo_maximo_horas) return null;
+    const criado = new Date(card.created_at).getTime();
+    const limite = criado + etapa.prazo_maximo_horas * 60 * 60 * 1000;
+    const atrasoMs = Date.now() - limite;
+    if (atrasoMs <= 0) return null;
+    const dias = Math.floor(atrasoMs / (1000 * 60 * 60 * 24));
+    const horas = Math.floor((atrasoMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutos = Math.floor((atrasoMs % (1000 * 60 * 60)) / (1000 * 60));
+    if (dias > 0) return `${dias}d ${horas}h`;
+    return `${horas}:${String(minutos).padStart(2, "0")}h`;
+  }
+
   // ─── Filtered cards ──────────────────────────────────────────────────────
 
   const filtered = useMemo(() => {
@@ -373,7 +388,7 @@ export default function PainelAtendimento() {
             {isInicioAtrasado(card) && (
               <Badge variant="destructive" className="text-[10px] px-1.5 py-0 gap-1">
                 <AlertTriangle className="h-2.5 w-2.5" />
-                Tarefa Atrasada
+                Atrasada {getTempoAtraso(card)}
               </Badge>
             )}
             {card.iniciado_em && (
