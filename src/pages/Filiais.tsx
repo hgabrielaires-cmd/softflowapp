@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -30,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Building2, Loader2, Upload, X, Image, Search } from "lucide-react";
+import { Plus, Pencil, Building2, Loader2, Upload, X, Image, Search, Settings } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Filiais() {
@@ -60,6 +61,13 @@ export default function Filiais() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [etapaInicialId, setEtapaInicialId] = useState<string | null>(null);
   const [etapas, setEtapas] = useState<{ id: string; nome: string; ordem: number }[]>([]);
+  const [activeTab, setActiveTab] = useState("geral");
+
+  // Parâmetros da filial
+  const [parcelasMaximasCartao, setParcelasMaximasCartao] = useState(12);
+  const [pixDescontoPercentual, setPixDescontoPercentual] = useState(0);
+  const [regrasPadraoImplantacao, setRegrasPadraoImplantacao] = useState("");
+  const [regrasPadraoMensalidade, setRegrasPadraoMensalidade] = useState("");
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
@@ -84,10 +92,25 @@ export default function Filiais() {
     setCnpjError(""); setCepError("");
     setLogoFile(null); setLogoPreview(null); setRemoveLogo(false);
     setEtapaInicialId(null);
+    setActiveTab("geral");
+    setParcelasMaximasCartao(12);
+    setPixDescontoPercentual(0);
+    setRegrasPadraoImplantacao("");
+    setRegrasPadraoMensalidade("");
   }
 
   function openCreate() {
     setEditing(null); resetForm(); setOpenDialog(true);
+  }
+
+  async function loadParametros(filialId: string) {
+    const { data } = await supabase.from("filial_parametros").select("*").eq("filial_id", filialId).maybeSingle();
+    if (data) {
+      setParcelasMaximasCartao(data.parcelas_maximas_cartao ?? 12);
+      setPixDescontoPercentual(data.pix_desconto_percentual ?? 0);
+      setRegrasPadraoImplantacao(data.regras_padrao_implantacao ?? "");
+      setRegrasPadraoMensalidade(data.regras_padrao_mensalidade ?? "");
+    }
   }
 
   function openEdit(filial: Filial) {
@@ -108,6 +131,13 @@ export default function Filiais() {
     setCnpjError(""); setCepError("");
     setLogoFile(null); setLogoPreview(filial.logo_url || null); setRemoveLogo(false);
     setEtapaInicialId(filial.etapa_inicial_id || null);
+    setActiveTab("geral");
+    // Reset params then load
+    setParcelasMaximasCartao(12);
+    setPixDescontoPercentual(0);
+    setRegrasPadraoImplantacao("");
+    setRegrasPadraoMensalidade("");
+    loadParametros(filial.id);
     setOpenDialog(true);
   }
 
@@ -177,6 +207,23 @@ export default function Filiais() {
     return urlData.publicUrl;
   }
 
+  async function saveParametros(filialId: string) {
+    const paramData = {
+      filial_id: filialId,
+      parcelas_maximas_cartao: parcelasMaximasCartao,
+      pix_desconto_percentual: pixDescontoPercentual,
+      regras_padrao_implantacao: regrasPadraoImplantacao.trim() || null,
+      regras_padrao_mensalidade: regrasPadraoMensalidade.trim() || null,
+    };
+    // Check if exists
+    const { data: existing } = await supabase.from("filial_parametros").select("id").eq("filial_id", filialId).maybeSingle();
+    if (existing) {
+      await supabase.from("filial_parametros").update(paramData).eq("filial_id", filialId);
+    } else {
+      await supabase.from("filial_parametros").insert(paramData);
+    }
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!nome.trim()) return;
@@ -191,6 +238,7 @@ export default function Filiais() {
           .update({ nome: nome.trim(), razao_social: razaoSocial.trim() || null, responsavel: responsavel.trim() || null, ativa, logo_url, cnpj: cnpj.trim() || null, inscricao_estadual: ie, etapa_inicial_id: etapaInicialId, ...endereco })
           .eq("id", editing.id);
         if (error) throw error;
+        await saveParametros(editing.id);
         toast.success("Filial atualizada com sucesso");
       } else {
         const { data: inserted, error } = await supabase.from("filiais")
@@ -201,6 +249,7 @@ export default function Filiais() {
           const logo_url = await uploadLogo(inserted.id);
           await supabase.from("filiais").update({ logo_url }).eq("id", inserted.id);
         }
+        if (inserted) await saveParametros(inserted.id);
         toast.success("Filial criada com sucesso");
       }
       setOpenDialog(false); loadFiliais();
@@ -307,144 +356,218 @@ export default function Filiais() {
             <DialogTitle>{editing ? "Editar filial" : "Nova filial"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              {/* CNPJ com busca */}
-              <div className="space-y-1.5">
-                <Label>CNPJ</Label>
-                <div className="relative">
-                  <Input
-                    placeholder="00.000.000/0000-00"
-                    value={cnpj}
-                    onChange={(e) => setCnpj(e.target.value)}
-                    onBlur={handleCnpjBlur}
-                  />
-                  {loadingCnpj && <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />}
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="geral" className="gap-1.5">
+                  <Building2 className="h-3.5 w-3.5" />
+                  Geral
+                </TabsTrigger>
+                <TabsTrigger value="parametros" className="gap-1.5">
+                  <Settings className="h-3.5 w-3.5" />
+                  Parâmetros da Filial
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="geral" className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {/* CNPJ com busca */}
+                  <div className="space-y-1.5">
+                    <Label>CNPJ</Label>
+                    <div className="relative">
+                      <Input
+                        placeholder="00.000.000/0000-00"
+                        value={cnpj}
+                        onChange={(e) => setCnpj(e.target.value)}
+                        onBlur={handleCnpjBlur}
+                      />
+                      {loadingCnpj && <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />}
+                    </div>
+                    {cnpjError && <p className="text-xs text-destructive">{cnpjError}</p>}
+                  </div>
+
+                  {/* IE */}
+                  <div className="space-y-1.5">
+                    <Label>Inscrição Estadual</Label>
+                    <Input
+                      placeholder={ieIsento ? "ISENTO" : "Inscrição Estadual"}
+                      value={ieIsento ? "ISENTO" : inscricaoEstadual}
+                      onChange={(e) => setInscricaoEstadual(e.target.value)}
+                      disabled={ieIsento}
+                    />
+                    <div className="flex items-center gap-2">
+                      <Checkbox id="ie-isento" checked={ieIsento} onCheckedChange={(v) => { setIeIsento(!!v); if (v) setInscricaoEstadual(""); }} />
+                      <label htmlFor="ie-isento" className="text-xs text-muted-foreground cursor-pointer">Isento</label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Nome da filial *</Label>
+                    <Input placeholder="Ex: Filial São Paulo" value={nome} onChange={(e) => setNome(e.target.value)} required />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Razão Social</Label>
+                    <Input placeholder="Ex: Softflow Tecnologia Ltda" value={razaoSocial} onChange={(e) => setRazaoSocial(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5 col-span-2">
+                    <Label>Responsável (quem assina o contrato)</Label>
+                    <Input placeholder="Ex: José da Silva" value={responsavel} onChange={(e) => setResponsavel(e.target.value)} />
+                  </div>
+
+                  {/* CEP com busca */}
+                  <div className="space-y-1.5">
+                    <Label>CEP</Label>
+                    <div className="relative">
+                      <Input
+                        placeholder="01310-100"
+                        value={endereco.cep}
+                        onChange={(e) => setEndereco(p => ({ ...p, cep: e.target.value }))}
+                        onBlur={handleCepBlur}
+                      />
+                      {loadingCep && <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />}
+                    </div>
+                    {cepError && <p className="text-xs text-destructive">{cepError}</p>}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Logradouro</Label>
+                    <Input placeholder="Av. Paulista" value={endereco.logradouro} onChange={(e) => setEndereco(p => ({ ...p, logradouro: e.target.value }))} />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1.5">
+                      <Label>Número</Label>
+                      <Input placeholder="1000" value={endereco.numero} onChange={(e) => setEndereco(p => ({ ...p, numero: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1.5 col-span-2">
+                      <Label>Complemento</Label>
+                      <Input placeholder="Sala 501" value={endereco.complemento} onChange={(e) => setEndereco(p => ({ ...p, complemento: e.target.value }))} />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Bairro</Label>
+                    <Input placeholder="Centro" value={endereco.bairro} onChange={(e) => setEndereco(p => ({ ...p, bairro: e.target.value }))} />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Cidade</Label>
+                    <Input placeholder="São Paulo" value={endereco.cidade} onChange={(e) => setEndereco(p => ({ ...p, cidade: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>UF</Label>
+                    <Input placeholder="SP" maxLength={2} value={endereco.uf} onChange={(e) => setEndereco(p => ({ ...p, uf: e.target.value.toUpperCase() }))} />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Telefone</Label>
+                    <Input placeholder="(11) 3000-0000" value={endereco.telefone} onChange={(e) => setEndereco(p => ({ ...p, telefone: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>E-mail</Label>
+                    <Input type="email" placeholder="filial@empresa.com" value={endereco.email} onChange={(e) => setEndereco(p => ({ ...p, email: e.target.value }))} />
+                  </div>
                 </div>
-                {cnpjError && <p className="text-xs text-destructive">{cnpjError}</p>}
-              </div>
 
-              {/* IE */}
-              <div className="space-y-1.5">
-                <Label>Inscrição Estadual</Label>
-                <Input
-                  placeholder={ieIsento ? "ISENTO" : "Inscrição Estadual"}
-                  value={ieIsento ? "ISENTO" : inscricaoEstadual}
-                  onChange={(e) => setInscricaoEstadual(e.target.value)}
-                  disabled={ieIsento}
-                />
-                <div className="flex items-center gap-2">
-                  <Checkbox id="ie-isento" checked={ieIsento} onCheckedChange={(v) => { setIeIsento(!!v); if (v) setInscricaoEstadual(""); }} />
-                  <label htmlFor="ie-isento" className="text-xs text-muted-foreground cursor-pointer">Isento</label>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Nome da filial *</Label>
-                <Input placeholder="Ex: Filial São Paulo" value={nome} onChange={(e) => setNome(e.target.value)} required />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Razão Social</Label>
-                <Input placeholder="Ex: Softflow Tecnologia Ltda" value={razaoSocial} onChange={(e) => setRazaoSocial(e.target.value)} />
-              </div>
-              <div className="space-y-1.5 col-span-2">
-                <Label>Responsável (quem assina o contrato)</Label>
-                <Input placeholder="Ex: José da Silva" value={responsavel} onChange={(e) => setResponsavel(e.target.value)} />
-              </div>
-
-              {/* CEP com busca */}
-              <div className="space-y-1.5">
-                <Label>CEP</Label>
-                <div className="relative">
-                  <Input
-                    placeholder="01310-100"
-                    value={endereco.cep}
-                    onChange={(e) => setEndereco(p => ({ ...p, cep: e.target.value }))}
-                    onBlur={handleCepBlur}
-                  />
-                  {loadingCep && <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />}
-                </div>
-                {cepError && <p className="text-xs text-destructive">{cepError}</p>}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Logradouro</Label>
-                <Input placeholder="Av. Paulista" value={endereco.logradouro} onChange={(e) => setEndereco(p => ({ ...p, logradouro: e.target.value }))} />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
+                {/* Logo upload */}
                 <div className="space-y-1.5">
-                  <Label>Número</Label>
-                  <Input placeholder="1000" value={endereco.numero} onChange={(e) => setEndereco(p => ({ ...p, numero: e.target.value }))} />
+                  <Label>Logo da filial</Label>
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                  {logoPreview && !removeLogo ? (
+                    <div className="relative inline-block">
+                      <img src={logoPreview} alt="Logo preview" className="h-20 w-20 rounded-lg object-contain border border-border bg-muted p-1" />
+                      <button type="button" className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center" onClick={() => { setLogoFile(null); setLogoPreview(null); setRemoveLogo(true); }}>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => fileInputRef.current?.click()}>
+                      <Upload className="h-4 w-4" /> Enviar logo
+                    </Button>
+                  )}
+                  <p className="text-xs text-muted-foreground">PNG, JPG ou SVG. Máx 2MB.</p>
                 </div>
-                <div className="space-y-1.5 col-span-2">
-                  <Label>Complemento</Label>
-                  <Input placeholder="Sala 501" value={endereco.complemento} onChange={(e) => setEndereco(p => ({ ...p, complemento: e.target.value }))} />
+
+                <div className="flex items-center gap-3">
+                  <Switch checked={ativa} onCheckedChange={setAtiva} />
+                  <Label>Filial ativa</Label>
                 </div>
-              </div>
+              </TabsContent>
 
-              <div className="space-y-1.5">
-                <Label>Bairro</Label>
-                <Input placeholder="Centro" value={endereco.bairro} onChange={(e) => setEndereco(p => ({ ...p, bairro: e.target.value }))} />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Cidade</Label>
-                <Input placeholder="São Paulo" value={endereco.cidade} onChange={(e) => setEndereco(p => ({ ...p, cidade: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>UF</Label>
-                <Input placeholder="SP" maxLength={2} value={endereco.uf} onChange={(e) => setEndereco(p => ({ ...p, uf: e.target.value.toUpperCase() }))} />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Telefone</Label>
-                <Input placeholder="(11) 3000-0000" value={endereco.telefone} onChange={(e) => setEndereco(p => ({ ...p, telefone: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>E-mail</Label>
-                <Input type="email" placeholder="filial@empresa.com" value={endereco.email} onChange={(e) => setEndereco(p => ({ ...p, email: e.target.value }))} />
-              </div>
-            </div>
-
-            {/* Logo upload */}
-            <div className="space-y-1.5">
-              <Label>Logo da filial</Label>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-              {logoPreview && !removeLogo ? (
-                <div className="relative inline-block">
-                  <img src={logoPreview} alt="Logo preview" className="h-20 w-20 rounded-lg object-contain border border-border bg-muted p-1" />
-                  <button type="button" className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center" onClick={() => { setLogoFile(null); setLogoPreview(null); setRemoveLogo(true); }}>
-                    <X className="h-3 w-3" />
-                  </button>
+              <TabsContent value="parametros" className="space-y-4 mt-4">
+                {/* Etapa inicial */}
+                <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">Onboarding</h3>
+                  <div className="space-y-1.5">
+                    <Label>Etapa inicial após contrato assinado</Label>
+                    <Select value={etapaInicialId || ""} onValueChange={(v) => setEtapaInicialId(v || null)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a etapa inicial" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {etapas.map((et) => (
+                          <SelectItem key={et.id} value={et.id}>{et.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Define em qual etapa do painel o contrato será inserido ao ser assinado.</p>
+                  </div>
                 </div>
-              ) : (
-                <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => fileInputRef.current?.click()}>
-                  <Upload className="h-4 w-4" /> Enviar logo
-                </Button>
-              )}
-              <p className="text-xs text-muted-foreground">PNG, JPG ou SVG. Máx 2MB.</p>
-            </div>
 
-            {/* Etapa inicial após assinatura */}
-            <div className="space-y-1.5">
-              <Label>Etapa inicial após contrato assinado</Label>
-              <Select value={etapaInicialId || ""} onValueChange={(v) => setEtapaInicialId(v || null)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a etapa inicial" />
-                </SelectTrigger>
-                <SelectContent>
-                  {etapas.map((et) => (
-                    <SelectItem key={et.id} value={et.id}>{et.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">Define em qual etapa do painel o contrato será inserido ao ser assinado.</p>
-            </div>
+                {/* Financeiro */}
+                <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">Financeiro</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>Parcelas máximas no cartão</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={48}
+                        value={parcelasMaximasCartao}
+                        onChange={(e) => setParcelasMaximasCartao(Number(e.target.value))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Desconto PIX (%)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.01}
+                        value={pixDescontoPercentual}
+                        onChange={(e) => setPixDescontoPercentual(Number(e.target.value))}
+                      />
+                    </div>
+                  </div>
+                </div>
 
-            <div className="flex items-center gap-3">
-              <Switch checked={ativa} onCheckedChange={setAtiva} />
-              <Label>Filial ativa</Label>
-            </div>
+                {/* Regras padrão */}
+                <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">Regras Padrão de Pagamento</h3>
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label>Regra padrão - Implantação</Label>
+                      <Input
+                        placeholder="Ex: Boleto 30/60/90 dias"
+                        value={regrasPadraoImplantacao}
+                        onChange={(e) => setRegrasPadraoImplantacao(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">Condição de pagamento padrão para implantação desta filial.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Regra padrão - Mensalidade</Label>
+                      <Input
+                        placeholder="Ex: Boleto mensal"
+                        value={regrasPadraoMensalidade}
+                        onChange={(e) => setRegrasPadraoMensalidade(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">Condição de pagamento padrão para mensalidade desta filial.</p>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="outline" onClick={() => setOpenDialog(false)}>Cancelar</Button>
               <Button type="submit" disabled={saving || isQuerying}>
