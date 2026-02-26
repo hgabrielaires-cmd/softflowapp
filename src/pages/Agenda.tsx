@@ -195,7 +195,8 @@ export default function Agenda() {
 
   const modifiersStyles = {
     hasEvent: {
-      backgroundColor: "hsl(var(--primary) / 0.15)",
+      backgroundColor: "hsl(var(--primary))",
+      color: "hsl(var(--primary-foreground))",
       borderRadius: "50%",
       fontWeight: "bold" as const,
     },
@@ -274,7 +275,7 @@ export default function Agenda() {
                 className="pointer-events-auto"
               />
               <div className="mt-2 px-2 flex items-center gap-2 text-xs text-muted-foreground">
-                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "hsl(var(--primary) / 0.15)" }} />
+                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "hsl(var(--primary))" }} />
                 <span>Dias com agendamento</span>
               </div>
             </CardContent>
