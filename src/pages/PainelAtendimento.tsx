@@ -1321,15 +1321,6 @@ export default function PainelAtendimento() {
                                 return (
                                   <li key={cIdx} className="flex flex-col gap-1.5 text-xs border-b border-border/40 pb-2 last:border-0 last:pb-0">
                                     <div className="flex items-center gap-2">
-                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 gap-1">
-                                        {tipo === 'sim_nao' && <ThumbsUp className="h-2.5 w-2.5" />}
-                                        {tipo === 'agendamento' && <CalendarDays className="h-2.5 w-2.5" />}
-                                        {tipo === 'texto' && <Type className="h-2.5 w-2.5" />}
-                                        {tipo === 'anexo' && <Paperclip className="h-2.5 w-2.5" />}
-                                        {tipo === 'quantitativo' && <Hash className="h-2.5 w-2.5" />}
-                                        {tipo === 'check' && <CheckSquare className="h-2.5 w-2.5" />}
-                                        {CHECKLIST_TIPO_LABELS[tipo]}
-                                      </Badge>
                                       <span className={cn("flex-1", prog.concluido && "line-through text-muted-foreground")}>{item.texto || "(sem texto)"}</span>
                                     </div>
 
