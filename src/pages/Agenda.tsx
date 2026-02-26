@@ -287,6 +287,7 @@ export default function Agenda() {
                 {format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 <Badge variant="secondary" className="ml-auto">{agendamentosDoDia.length} agendamento(s)</Badge>
               </CardTitle>
+              <p className="text-sm text-muted-foreground font-medium">Compromissos</p>
             </CardHeader>
             <CardContent>
               {agendamentosDoDia.length === 0 ? (
