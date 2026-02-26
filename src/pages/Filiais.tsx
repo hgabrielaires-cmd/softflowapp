@@ -68,6 +68,8 @@ export default function Filiais() {
   const [pixDescontoPercentual, setPixDescontoPercentual] = useState(0);
   const [regrasPadraoImplantacao, setRegrasPadraoImplantacao] = useState("");
   const [regrasPadraoMensalidade, setRegrasPadraoMensalidade] = useState("");
+  const [congelarAcao, setCongelarAcao] = useState("manter");
+  const [congelarEtapaId, setCongelarEtapaId] = useState<string | null>(null);
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
@@ -97,6 +99,8 @@ export default function Filiais() {
     setPixDescontoPercentual(0);
     setRegrasPadraoImplantacao("");
     setRegrasPadraoMensalidade("");
+    setCongelarAcao("manter");
+    setCongelarEtapaId(null);
   }
 
   function openCreate() {
@@ -110,6 +114,8 @@ export default function Filiais() {
       setPixDescontoPercentual(data.pix_desconto_percentual ?? 0);
       setRegrasPadraoImplantacao(data.regras_padrao_implantacao ?? "");
       setRegrasPadraoMensalidade(data.regras_padrao_mensalidade ?? "");
+      setCongelarAcao((data as any).congelar_acao ?? "manter");
+      setCongelarEtapaId((data as any).congelar_etapa_id ?? null);
     }
   }
 
@@ -137,6 +143,8 @@ export default function Filiais() {
     setPixDescontoPercentual(0);
     setRegrasPadraoImplantacao("");
     setRegrasPadraoMensalidade("");
+    setCongelarAcao("manter");
+    setCongelarEtapaId(null);
     loadParametros(filial.id);
     setOpenDialog(true);
   }
@@ -214,6 +222,8 @@ export default function Filiais() {
       pix_desconto_percentual: pixDescontoPercentual,
       regras_padrao_implantacao: regrasPadraoImplantacao.trim() || null,
       regras_padrao_mensalidade: regrasPadraoMensalidade.trim() || null,
+      congelar_acao: congelarAcao,
+      congelar_etapa_id: congelarAcao === "mover" ? congelarEtapaId : null,
     };
     // Check if exists
     const { data: existing } = await supabase.from("filial_parametros").select("id").eq("filial_id", filialId).maybeSingle();
@@ -563,6 +573,42 @@ export default function Filiais() {
                       />
                       <p className="text-xs text-muted-foreground">Condição de pagamento padrão para mensalidade desta filial.</p>
                     </div>
+                  </div>
+                </div>
+
+                {/* Card Atendimento ao Congelar */}
+                <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">Card Atendimento ao Congelar</h3>
+                  <p className="text-xs text-muted-foreground">Define o comportamento do card no painel de atendimento quando um projeto for congelado/pausado.</p>
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label>Ação ao congelar</Label>
+                      <Select value={congelarAcao} onValueChange={(v) => { setCongelarAcao(v); if (v === "manter") setCongelarEtapaId(null); }}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manter">Manter na mesma etapa</SelectItem>
+                          <SelectItem value="mover">Mover para outra etapa</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {congelarAcao === "mover" && (
+                      <div className="space-y-1.5">
+                        <Label>Etapa de destino ao congelar</Label>
+                        <Select value={congelarEtapaId || ""} onValueChange={(v) => setCongelarEtapaId(v || null)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a etapa" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {etapas.map((et) => (
+                              <SelectItem key={et.id} value={et.id}>{et.nome}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">O card será movido para esta etapa quando o projeto for congelado.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </TabsContent>

@@ -475,6 +475,8 @@ export type Database = {
       }
       filial_parametros: {
         Row: {
+          congelar_acao: string
+          congelar_etapa_id: string | null
           created_at: string
           filial_id: string
           id: string
@@ -485,6 +487,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          congelar_acao?: string
+          congelar_etapa_id?: string | null
           created_at?: string
           filial_id: string
           id?: string
@@ -495,6 +499,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          congelar_acao?: string
+          congelar_etapa_id?: string | null
           created_at?: string
           filial_id?: string
           id?: string
@@ -505,6 +511,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "filial_parametros_congelar_etapa_id_fkey"
+            columns: ["congelar_etapa_id"]
+            isOneToOne: false
+            referencedRelation: "painel_etapas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "filial_parametros_filial_id_fkey"
             columns: ["filial_id"]
