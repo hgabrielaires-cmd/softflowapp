@@ -2027,15 +2027,6 @@ export default function Pedidos() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Desconto adicional (%)</Label>
-                      <Input
-                        type="number" min="0" max="100" step="0.01"
-                        placeholder="0"
-                        value={form.pagamento_implantacao_desconto_percentual}
-                        onChange={(e) => setForm((f) => ({ ...f, pagamento_implantacao_desconto_percentual: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
                       <Label className="text-xs">Observação</Label>
                       <Input
                         placeholder="Ex: Pagamento após conclusão do serviço"
@@ -2099,15 +2090,6 @@ export default function Pedidos() {
                           placeholder={filialParametros ? `Máx ${filialParametros.parcelas_maximas_cartao}x` : "Nº de parcelas"}
                           value={form.pagamento_implantacao_parcelas}
                           onChange={(e) => setForm((f) => ({ ...f, pagamento_implantacao_parcelas: e.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Desconto adicional (%)</Label>
-                        <Input
-                          type="number" min="0" max="100" step="0.01"
-                          placeholder="0"
-                          value={form.pagamento_implantacao_desconto_percentual}
-                          onChange={(e) => setForm((f) => ({ ...f, pagamento_implantacao_desconto_percentual: e.target.value }))}
                         />
                       </div>
                       <div className="space-y-1.5">
