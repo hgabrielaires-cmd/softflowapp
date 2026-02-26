@@ -35,6 +35,8 @@ const PERMISSION_LABELS: Record<string, { label: string; description: string; ic
   "acao.gerar_contrato": { label: "Gerar Contrato", description: "Permite gerar contratos em PDF", icon: <FileText className="h-4 w-4" />, group: "Ações" },
   "acao.gerenciar_desconto": { label: "Gerenciar Desconto", description: "Permite aprovar/reprovar solicitações de desconto", icon: <DollarSign className="h-4 w-4" />, group: "Ações" },
   "acao.editar_config_projeto": { label: "Editar Config. Projeto", description: "Permite editar técnico e tipo de atendimento após etapa de agendamento", icon: <Settings className="h-4 w-4" />, group: "Ações" },
+  "acao.pausar_projeto": { label: "Pausar Projeto", description: "Permite pausar projetos no painel de atendimento", icon: <Settings className="h-4 w-4" />, group: "Ações" },
+  "acao.recusar_projeto": { label: "Recusar Projeto", description: "Permite recusar projetos no painel de atendimento", icon: <Settings className="h-4 w-4" />, group: "Ações" },
 };
 
 const ROLES: AppRole[] = ["admin", "financeiro", "vendedor", "operacional", "tecnico"];

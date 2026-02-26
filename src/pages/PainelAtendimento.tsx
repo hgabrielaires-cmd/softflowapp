@@ -245,6 +245,8 @@ export default function PainelAtendimento() {
   });
 
   const podeEditarConfigProjeto = userPermissions.includes("acao.editar_config_projeto");
+  const podePausarProjeto = userPermissions.includes("acao.pausar_projeto");
+  const podeRecusarProjeto = userPermissions.includes("acao.recusar_projeto");
 
   // Precompute SLA da Etapa per card (jornada-based) + total checklist items per jornada
   const { data: jornadaSlaMap = {} } = useQuery({
@@ -2425,7 +2427,7 @@ export default function PainelAtendimento() {
 
             </div>
           )}
-          {detalhesData && (
+          {detalhesData && (podePausarProjeto || podeRecusarProjeto) && (
             <DialogFooter className="border-t pt-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -2435,20 +2437,24 @@ export default function PainelAtendimento() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    className="gap-2 text-amber-600 focus:text-amber-600"
-                    onClick={() => toast.info("Funcionalidade em desenvolvimento")}
-                  >
-                    <PauseCircle className="h-4 w-4" />
-                    Pausar Projeto
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="gap-2 text-destructive focus:text-destructive"
-                    onClick={() => toast.info("Funcionalidade em desenvolvimento")}
-                  >
-                    <XCircle className="h-4 w-4" />
-                    Recusar Projeto
-                  </DropdownMenuItem>
+                  {podePausarProjeto && (
+                    <DropdownMenuItem
+                      className="gap-2 text-amber-600 focus:text-amber-600"
+                      onClick={() => toast.info("Funcionalidade em desenvolvimento")}
+                    >
+                      <PauseCircle className="h-4 w-4" />
+                      Pausar Projeto
+                    </DropdownMenuItem>
+                  )}
+                  {podeRecusarProjeto && (
+                    <DropdownMenuItem
+                      className="gap-2 text-destructive focus:text-destructive"
+                      onClick={() => toast.info("Funcionalidade em desenvolvimento")}
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Recusar Projeto
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </DialogFooter>
