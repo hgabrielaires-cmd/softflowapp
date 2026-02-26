@@ -1203,6 +1203,7 @@ export type Database = {
           id: string
           nome: string
           ordem: number
+          ordem_entrada: string
           prazo_maximo_horas: number | null
           updated_at: string
         }
@@ -1220,6 +1221,7 @@ export type Database = {
           id?: string
           nome: string
           ordem?: number
+          ordem_entrada?: string
           prazo_maximo_horas?: number | null
           updated_at?: string
         }
@@ -1237,6 +1239,7 @@ export type Database = {
           id?: string
           nome?: string
           ordem?: number
+          ordem_entrada?: string
           prazo_maximo_horas?: number | null
           updated_at?: string
         }

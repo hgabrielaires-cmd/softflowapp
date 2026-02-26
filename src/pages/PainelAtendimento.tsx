@@ -31,6 +31,7 @@ interface PainelEtapa {
   ativo: boolean;
   controla_sla: boolean;
   prazo_maximo_horas: number | null;
+  ordem_entrada: string;
 }
 
 interface PainelCard {
@@ -163,7 +164,7 @@ export default function PainelAtendimento() {
       const { data, error } = await supabase
         .from("painel_atendimento")
         .select("*, clientes(nome_fantasia), filiais(nome), planos(nome), contratos(numero_exibicao), profiles(full_name)")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: true });
       if (error) throw error;
       return data as PainelCard[];
     },
@@ -576,7 +577,13 @@ export default function PainelAtendimento() {
         {viewMode === "kanban" && (
           <div className="flex gap-3 overflow-x-auto pb-4 -mx-2 px-2">
             {etapas.map((etapa) => {
-              const etapaCards = filtered.filter((c) => c.etapa_id === etapa.id);
+              const etapaCards = filtered
+                .filter((c) => c.etapa_id === etapa.id)
+                .sort((a, b) => {
+                  const dateA = new Date(a.created_at).getTime();
+                  const dateB = new Date(b.created_at).getTime();
+                  return etapa.ordem_entrada === "ultimo_acima" ? dateB - dateA : dateA - dateB;
+                });
               return (
                 <div
                   key={etapa.id}
