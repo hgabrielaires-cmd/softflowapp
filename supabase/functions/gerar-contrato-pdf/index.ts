@@ -431,7 +431,12 @@ Deno.serve(async (req) => {
       "filial.email": filial?.email || "",
       "filial.assinatura_url": filial?.assinatura_url || "",
       "filial.assinatura_html": filial?.assinatura_url
-        ? `<div style="margin-top:20px;"><img src="${filial.assinatura_url}" style="max-height:80px;max-width:200px;" /><br><strong>${filial?.responsavel || ""}</strong><br>${filial?.razao_social || filial?.nome || ""}</div>`
+        ? `<div style="margin-top:40px;text-align:center;display:inline-block;">
+            <img src="${filial.assinatura_url}" style="max-height:80px;max-width:200px;display:block;margin:0 auto;" />
+            <hr style="border:none;border-top:1px solid #333;width:200px;margin:8px auto 6px;" />
+            <strong style="display:block;font-size:11px;text-transform:uppercase;">${filial?.responsavel || filial?.nome || ""}</strong>
+            <span style="display:block;font-size:10px;color:#555;text-transform:uppercase;">${filial?.razao_social || ""}</span>
+          </div>`
         : "",
     };
 
