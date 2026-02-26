@@ -1800,10 +1800,12 @@ export type Database = {
           full_name: string
           gestor_desconto: boolean | null
           id: string
+          is_tecnico: boolean
           permite_enviar_espelho_whatsapp: boolean
           permitir_cnpj_duplicado: boolean | null
           recebe_comissao: boolean
           telefone: string | null
+          tipo_tecnico: string | null
           updated_at: string
           user_id: string
         }
@@ -1826,10 +1828,12 @@ export type Database = {
           full_name: string
           gestor_desconto?: boolean | null
           id?: string
+          is_tecnico?: boolean
           permite_enviar_espelho_whatsapp?: boolean
           permitir_cnpj_duplicado?: boolean | null
           recebe_comissao?: boolean
           telefone?: string | null
+          tipo_tecnico?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1852,10 +1856,12 @@ export type Database = {
           full_name?: string
           gestor_desconto?: boolean | null
           id?: string
+          is_tecnico?: boolean
           permite_enviar_espelho_whatsapp?: boolean
           permitir_cnpj_duplicado?: boolean | null
           recebe_comissao?: boolean
           telefone?: string | null
+          tipo_tecnico?: string | null
           updated_at?: string
           user_id?: string
         }

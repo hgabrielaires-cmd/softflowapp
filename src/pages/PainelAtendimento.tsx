@@ -200,18 +200,15 @@ export default function PainelAtendimento() {
     },
   });
 
-  // Fetch users with tecnico role
+  // Fetch users marked as tecnico in profiles
   const { data: tecnicos = [] } = useQuery({
     queryKey: ["tecnicos_painel"],
     queryFn: async () => {
-      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "tecnico");
-      if (!roles || roles.length === 0) return [];
-      const userIds = roles.map((r) => r.user_id);
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, full_name, user_id")
+        .select("id, full_name, tipo_tecnico")
         .eq("active", true)
-        .in("user_id", userIds)
+        .eq("is_tecnico", true)
         .order("full_name");
       return profiles || [];
     },
@@ -1344,7 +1341,10 @@ export default function PainelAtendimento() {
                               }}
                               className="h-3.5 w-3.5"
                             />
-                            <Label htmlFor={`tec-${tec.id}`} className="text-xs cursor-pointer">{tec.full_name}</Label>
+                            <Label htmlFor={`tec-${tec.id}`} className="text-xs cursor-pointer">
+                              {tec.full_name}
+                              {tec.tipo_tecnico && <span className="text-[10px] text-muted-foreground ml-1">({tec.tipo_tecnico})</span>}
+                            </Label>
                           </div>
                         ))
                       )}
