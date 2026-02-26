@@ -1465,6 +1465,15 @@ export default function PainelAtendimento() {
           </DialogHeader>
           {detailCard && (
             <div className="space-y-4 overflow-y-auto flex-1 pr-1">
+              {/* Progress do Projeto - no topo */}
+              <div>
+                <p className="text-muted-foreground text-xs mb-1">Progresso do Projeto</p>
+                <div className="flex items-center gap-2">
+                  <Progress value={calcProgress(detailCard)} className="h-2 flex-1" />
+                  <span className="text-sm font-medium">{calcProgress(detailCard)}%</span>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-muted-foreground text-xs">Contrato</p>
@@ -1597,14 +1606,6 @@ export default function PainelAtendimento() {
                 )}
               </div>
 
-              {/* Progress */}
-              <div>
-                <p className="text-muted-foreground text-xs mb-1">Progresso do Projeto</p>
-                <div className="flex items-center gap-2">
-                  <Progress value={calcProgress(detailCard)} className="h-2 flex-1" />
-                  <span className="text-sm font-medium">{calcProgress(detailCard)}%</span>
-                </div>
-              </div>
 
               {/* Checklist da Etapa (da Jornada) - Interativo */}
               {checklistEtapa.length > 0 && (() => {
