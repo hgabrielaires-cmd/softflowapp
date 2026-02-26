@@ -118,6 +118,7 @@ export default function PainelAtendimento() {
   const [novoComentario, setNovoComentario] = useState("");
   const [comentarios, setComentarios] = useState<any[]>([]);
   const [tecnicosSelecionados, setTecnicosSelecionados] = useState<string[]>([]);
+  const [buscaTecnico, setBuscaTecnico] = useState("");
 
   // Auto-refresh atrasado status every 60s
   useEffect(() => {
@@ -220,6 +221,7 @@ export default function PainelAtendimento() {
       setComentarios([]);
       setTecnicosSelecionados([]);
       setNovoComentario("");
+      setBuscaTecnico("");
       return;
     }
     (async () => {
@@ -1315,42 +1317,87 @@ export default function PainelAtendimento() {
                 </div>
 
                 {/* Lista de Técnicos (multi-select) - só aparece quando toggle ON */}
-                {detailCard.aponta_tecnico_agenda && (
-                  <div className="space-y-1.5 pl-2 border-l-2 border-primary/30">
-                    <Label className="text-xs font-medium flex items-center gap-1.5">
-                      <User className="h-3.5 w-3.5" />
-                      Técnicos
-                    </Label>
-                    <div className="space-y-1 max-h-32 overflow-y-auto">
-                      {tecnicos.length === 0 ? (
-                        <p className="text-[10px] text-muted-foreground italic">Nenhum técnico cadastrado</p>
-                      ) : (
-                        tecnicos.map((tec: any) => (
-                          <div key={tec.id} className="flex items-center gap-2">
-                            <Checkbox
-                              id={`tec-${tec.id}`}
-                              checked={tecnicosSelecionados.includes(tec.id)}
-                              onCheckedChange={async (checked) => {
-                                if (checked) {
-                                  setTecnicosSelecionados((prev) => [...prev, tec.id]);
-                                  await supabase.from("painel_tecnicos").insert({ card_id: detailCard.id, tecnico_id: tec.id });
-                                } else {
+                {detailCard.aponta_tecnico_agenda && (() => {
+                  const tecnicosFiltrados = tecnicos.filter((tec: any) =>
+                    tec.full_name.toLowerCase().includes(buscaTecnico.toLowerCase())
+                  );
+                  const tecnicosSelecionadosData = tecnicos.filter((tec: any) => tecnicosSelecionados.includes(tec.id));
+                  return (
+                    <div className="space-y-2 pl-2 border-l-2 border-primary/30">
+                      <Label className="text-xs font-medium flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5" />
+                        Técnicos
+                      </Label>
+
+                      {/* Chips dos selecionados */}
+                      {tecnicosSelecionadosData.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {tecnicosSelecionadosData.map((tec: any) => (
+                            <span
+                              key={tec.id}
+                              className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground shadow-sm"
+                            >
+                              {tec.full_name}
+                              {tec.tipo_tecnico && (
+                                <span className="opacity-70 text-[10px]">· {tec.tipo_tecnico}</span>
+                              )}
+                              <button
+                                type="button"
+                                className="ml-0.5 rounded-full hover:bg-primary-foreground/20 p-0.5 transition-colors"
+                                onClick={async () => {
                                   setTecnicosSelecionados((prev) => prev.filter((id) => id !== tec.id));
                                   await supabase.from("painel_tecnicos").delete().eq("card_id", detailCard.id).eq("tecnico_id", tec.id);
-                                }
-                              }}
-                              className="h-3.5 w-3.5"
-                            />
-                            <Label htmlFor={`tec-${tec.id}`} className="text-xs cursor-pointer">
-                              {tec.full_name}
-                              {tec.tipo_tecnico && <span className="text-[10px] text-muted-foreground ml-1">({tec.tipo_tecnico})</span>}
-                            </Label>
-                          </div>
-                        ))
+                                }}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                              </button>
+                            </span>
+                          ))}
+                        </div>
                       )}
+
+                      {/* Busca */}
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          placeholder="Buscar técnico..."
+                          value={buscaTecnico}
+                          onChange={(e) => setBuscaTecnico(e.target.value)}
+                          className="h-8 pl-7 text-xs"
+                        />
+                      </div>
+
+                      {/* Lista filtrada */}
+                      <div className="space-y-0.5 max-h-28 overflow-y-auto rounded-md border bg-muted/30 p-1.5">
+                        {tecnicos.length === 0 ? (
+                          <p className="text-[10px] text-muted-foreground italic py-2 text-center">Nenhum técnico cadastrado</p>
+                        ) : tecnicosFiltrados.filter((tec: any) => !tecnicosSelecionados.includes(tec.id)).length === 0 ? (
+                          <p className="text-[10px] text-muted-foreground italic py-2 text-center">{buscaTecnico ? "Nenhum resultado" : "Todos selecionados"}</p>
+                        ) : (
+                          tecnicosFiltrados
+                            .filter((tec: any) => !tecnicosSelecionados.includes(tec.id))
+                            .map((tec: any) => (
+                              <button
+                                key={tec.id}
+                                type="button"
+                                className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-accent transition-colors text-left"
+                                onClick={async () => {
+                                  setTecnicosSelecionados((prev) => [...prev, tec.id]);
+                                  await supabase.from("painel_tecnicos").insert({ card_id: detailCard.id, tecnico_id: tec.id });
+                                }}
+                              >
+                                <User className="h-3 w-3 text-muted-foreground shrink-0" />
+                                <span>{tec.full_name}</span>
+                                {tec.tipo_tecnico && (
+                                  <span className="text-[10px] text-muted-foreground ml-auto">({tec.tipo_tecnico})</span>
+                                )}
+                              </button>
+                            ))
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Tipo de Atendimento */}
                 <div className="space-y-2">
