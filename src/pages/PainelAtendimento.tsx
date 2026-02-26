@@ -115,6 +115,9 @@ export default function PainelAtendimento() {
   const [checklistProgresso, setChecklistProgresso] = useState<Record<string, { concluido: boolean; valor_texto?: string; valor_data?: string }>>({});
   const [finalizando, setFinalizando] = useState(false);
   const [, setTick] = useState(0); // force re-render for atrasado checks
+  const [novoComentario, setNovoComentario] = useState("");
+  const [comentarios, setComentarios] = useState<any[]>([]);
+  const [tecnicosSelecionados, setTecnicosSelecionados] = useState<string[]>([]);
 
   // Auto-refresh atrasado status every 60s
   useEffect(() => {
@@ -196,6 +199,48 @@ export default function PainelAtendimento() {
       return data || [];
     },
   });
+
+  // Fetch users with tecnico role
+  const { data: tecnicos = [] } = useQuery({
+    queryKey: ["tecnicos_painel"],
+    queryFn: async () => {
+      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "tecnico");
+      if (!roles || roles.length === 0) return [];
+      const userIds = roles.map((r) => r.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, user_id")
+        .eq("active", true)
+        .in("user_id", userIds)
+        .order("full_name");
+      return profiles || [];
+    },
+  });
+
+  // Fetch comentarios and tecnicos when card opens
+  useEffect(() => {
+    if (!detailCard) {
+      setComentarios([]);
+      setTecnicosSelecionados([]);
+      setNovoComentario("");
+      return;
+    }
+    (async () => {
+      const [{ data: coms }, { data: tecs }] = await Promise.all([
+        supabase
+          .from("painel_comentarios")
+          .select("id, texto, criado_por, created_at")
+          .eq("card_id", detailCard.id)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("painel_tecnicos")
+          .select("tecnico_id")
+          .eq("card_id", detailCard.id),
+      ]);
+      setComentarios(coms || []);
+      setTecnicosSelecionados((tecs || []).map((t: any) => t.tecnico_id));
+    })();
+  }, [detailCard?.id]);
 
   // ─── Sync contratos assinados ───────────────────────────────────────────
   const syncContratosAssinados = useCallback(async () => {
@@ -1247,8 +1292,11 @@ export default function PainelAtendimento() {
                 );
               })()}
 
-              {/* Toggles e Comentário */}
+              {/* Controles do Projeto (persistem entre etapas) */}
               <div className="border rounded-lg p-3 space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Configurações do Projeto</p>
+
+                {/* Toggle Aponta Técnico */}
                 <div className="flex items-center justify-between">
                   <Label htmlFor="aponta-agenda" className="text-xs font-medium flex items-center gap-1.5">
                     <CalendarDays className="h-3.5 w-3.5" />
@@ -1260,10 +1308,51 @@ export default function PainelAtendimento() {
                     onCheckedChange={async (checked) => {
                       setDetailCard({ ...detailCard, aponta_tecnico_agenda: checked });
                       await supabase.from("painel_atendimento").update({ aponta_tecnico_agenda: checked }).eq("id", detailCard.id);
+                      if (!checked) {
+                        // Remove all technicians when toggle is off
+                        await supabase.from("painel_tecnicos").delete().eq("card_id", detailCard.id);
+                        setTecnicosSelecionados([]);
+                      }
                     }}
                   />
                 </div>
 
+                {/* Lista de Técnicos (multi-select) - só aparece quando toggle ON */}
+                {detailCard.aponta_tecnico_agenda && (
+                  <div className="space-y-1.5 pl-2 border-l-2 border-primary/30">
+                    <Label className="text-xs font-medium flex items-center gap-1.5">
+                      <User className="h-3.5 w-3.5" />
+                      Técnicos
+                    </Label>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {tecnicos.length === 0 ? (
+                        <p className="text-[10px] text-muted-foreground italic">Nenhum técnico cadastrado</p>
+                      ) : (
+                        tecnicos.map((tec: any) => (
+                          <div key={tec.id} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`tec-${tec.id}`}
+                              checked={tecnicosSelecionados.includes(tec.id)}
+                              onCheckedChange={async (checked) => {
+                                if (checked) {
+                                  setTecnicosSelecionados((prev) => [...prev, tec.id]);
+                                  await supabase.from("painel_tecnicos").insert({ card_id: detailCard.id, tecnico_id: tec.id });
+                                } else {
+                                  setTecnicosSelecionados((prev) => prev.filter((id) => id !== tec.id));
+                                  await supabase.from("painel_tecnicos").delete().eq("card_id", detailCard.id).eq("tecnico_id", tec.id);
+                                }
+                              }}
+                              className="h-3.5 w-3.5"
+                            />
+                            <Label htmlFor={`tec-${tec.id}`} className="text-xs cursor-pointer">{tec.full_name}</Label>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tipo de Atendimento */}
                 <div className="space-y-2">
                   <Label className="text-xs font-medium">Tipo de Atendimento</Label>
                   <RadioGroup
@@ -1285,20 +1374,63 @@ export default function PainelAtendimento() {
                   </RadioGroup>
                 </div>
 
-                <div className="space-y-1.5">
+                {/* Comentários (thread) */}
+                <div className="space-y-2">
                   <Label className="text-xs font-medium flex items-center gap-1.5">
                     <MessageSquare className="h-3.5 w-3.5" />
-                    Comentário
+                    Comentários ({comentarios.length})
                   </Label>
-                  <Textarea
-                    className="text-xs min-h-[60px] resize-none"
-                    placeholder="Adicione um comentário sobre este atendimento..."
-                    value={detailCard.comentario || ""}
-                    onChange={(e) => setDetailCard({ ...detailCard, comentario: e.target.value })}
-                    onBlur={async () => {
-                      await supabase.from("painel_atendimento").update({ comentario: detailCard.comentario || null }).eq("id", detailCard.id);
-                    }}
-                  />
+                  {comentarios.length > 0 && (
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                      {comentarios.map((com: any) => {
+                        const autor = responsaveis.find((r: any) => r.id === com.criado_por) ||
+                          { full_name: "Usuário" };
+                        return (
+                          <div key={com.id} className="bg-muted/50 rounded p-2 text-xs">
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className="font-medium text-foreground">{(autor as any).full_name?.split(" ")[0]}</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {new Date(com.created_at).toLocaleDateString("pt-BR")} {new Date(com.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            </div>
+                            <p className="text-foreground/80">{com.texto}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <Textarea
+                      className="text-xs min-h-[50px] resize-none flex-1"
+                      placeholder="Digite um comentário..."
+                      value={novoComentario}
+                      onChange={(e) => setNovoComentario(e.target.value)}
+                    />
+                    <Button
+                      size="sm"
+                      className="self-end h-8"
+                      disabled={!novoComentario.trim()}
+                      onClick={async () => {
+                        const { data: { user } } = await supabase.auth.getUser();
+                        if (!user || !detailCard) return;
+                        const { data: myProfile } = await supabase.from("profiles").select("id").eq("user_id", user.id).maybeSingle();
+                        const { data: novo, error } = await supabase
+                          .from("painel_comentarios")
+                          .insert({ card_id: detailCard.id, texto: novoComentario.trim(), criado_por: myProfile?.id || user.id })
+                          .select("id, texto, criado_por, created_at")
+                          .single();
+                        if (!error && novo) {
+                          setComentarios((prev) => [...prev, novo]);
+                          setNovoComentario("");
+                          toast.success("Comentário adicionado!");
+                        } else {
+                          toast.error("Erro ao adicionar comentário.");
+                        }
+                      }}
+                    >
+                      Incluir
+                    </Button>
+                  </div>
                 </div>
               </div>
 
