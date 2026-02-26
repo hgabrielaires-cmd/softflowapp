@@ -177,7 +177,7 @@ export default function PainelAtendimento() {
         for (const rec of zapsignRecords) {
           try {
             await supabase.functions.invoke("zapsign", {
-              body: { action: "check_status", contrato_id: rec.contrato_id },
+              body: { action: "status", contrato_id: rec.contrato_id },
             });
           } catch {
             // ignore
