@@ -1465,133 +1465,22 @@ export default function PainelAtendimento() {
           </DialogHeader>
           {detailCard && (
             <div className="space-y-4 overflow-y-auto flex-1 pr-1">
-              {/* Progress do Projeto - no topo */}
-              <div>
-                <p className="text-muted-foreground text-xs mb-1">Progresso do Projeto</p>
-                <div className="flex items-center gap-2">
-                  <Progress value={calcProgress(detailCard)} className="h-2 flex-1" />
-                  <span className="text-sm font-medium">{calcProgress(detailCard)}%</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-muted-foreground text-xs">Contrato</p>
-                  <p className="font-medium font-mono">{detailCard.contratos?.numero_exibicao}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Tipo da Operação</p>
-                  <Badge variant="outline" className={cn("text-xs gap-1 mt-0.5", TIPO_COLORS[detailCard.tipo_operacao] || "")}>
-                    {TIPO_ICONS[detailCard.tipo_operacao]}
-                    {detailCard.tipo_operacao}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Filial</p>
-                  <p className="font-medium">{detailCard.filiais?.nome || "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Plano</p>
-                  {detailCard.tipo_operacao === "Upgrade" && planoAnteriorNome ? (
-                    <p className="font-medium flex items-center gap-1.5 flex-wrap">
-                      <span className="line-through text-muted-foreground">{planoAnteriorNome}</span>
-                      <ArrowRight className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <span className="text-primary">{detailCard.planos?.nome || "—"}</span>
-                    </p>
-                  ) : (
-                    <p className="font-medium">{detailCard.planos?.nome || "—"}</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Etapa Atual</p>
-                  <Badge variant="secondary" className="mt-0.5">
-                    {etapas.find((e) => e.id === detailCard.etapa_id)?.nome || "—"}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">SLA da Etapa</p>
-                  <p className="font-medium flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    {slaEtapaJornada !== null ? formatSLA(slaEtapaJornada) : "—"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Vencimento SLA</p>
-                  {(() => {
-                    const venc = getVencimentoSla(detailCard.iniciado_em, slaEtapaJornada);
-                    const atrasado = isEtapaSlaAtrasado(detailCard);
-                    const excedido = getTempoExcedidoSla(detailCard);
-                    if (!venc) return <p className="font-medium text-muted-foreground">—</p>;
-                    return (
-                      <div>
-                        <p className={cn("font-medium flex items-center gap-1", atrasado && "text-destructive")}>
-                          <Clock className="h-3.5 w-3.5" />
-                          {venc.toLocaleDateString("pt-BR")} {venc.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                        {atrasado && excedido && (
-                          <Badge variant="destructive" className="text-[10px] mt-1 gap-1">
-                            <AlertTriangle className="h-2.5 w-2.5" />
-                            SLA Atrasado — {excedido}
-                          </Badge>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">SLA do Projeto</p>
-                  <p className="font-medium flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    {slaProjeto !== null ? formatSLA(slaProjeto) : "—"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Responsável</p>
-                  <p className="font-medium flex items-center gap-1">
-                    <User className="h-3.5 w-3.5 text-muted-foreground" />
-                    {detailCard.profiles?.full_name || "Nenhum"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Status de Início */}
-              <div className="p-3 rounded-lg border bg-muted/30">
-                {detailCard.iniciado_em ? (
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200" variant="outline">
-                      <Play className="h-3 w-3 mr-1" />
-                      Em andamento
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      Iniciado em {new Date(detailCard.iniciado_em).toLocaleDateString("pt-BR")} às{" "}
-                      {new Date(detailCard.iniciado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        {isInicioAtrasado(detailCard) ? (
-                          <Badge variant="destructive" className="gap-1">
-                            <AlertTriangle className="h-3 w-3" />
-                            Tarefa Atrasada
-                          </Badge>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">Aguardando início</span>
-                        )}
-                      </div>
-                      {(() => {
-                        const tempo = getTempoRestante(detailCard);
-                        return tempo ? (
-                          <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
-                            <Clock className="h-3 w-3" />
-                            Vence em {tempo}h
-                          </span>
-                        ) : null;
-                      })()}
-                    </div>
+              {/* Botão Iniciar / Em Andamento + Progresso do Projeto - no topo */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  {detailCard.iniciado_em ? (
                     <Button
                       size="sm"
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      disabled
+                    >
+                      <Play className="h-4 w-4 mr-1" />
+                      Em andamento
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                       onClick={(e) => {
                         e.stopPropagation();
                         iniciarAtendimento.mutate(detailCard.id);
@@ -1600,10 +1489,38 @@ export default function PainelAtendimento() {
                       disabled={iniciarAtendimento.isPending}
                     >
                       <Play className="h-4 w-4 mr-1" />
-                      {iniciarAtendimento.isPending ? "Iniciando..." : "Iniciar"}
+                      {iniciarAtendimento.isPending ? "Iniciando..." : "Iniciar Etapa"}
                     </Button>
+                  )}
+                  {detailCard.iniciado_em && (
+                    <span className="text-xs text-muted-foreground">
+                      Iniciado em {new Date(detailCard.iniciado_em).toLocaleDateString("pt-BR")} às{" "}
+                      {new Date(detailCard.iniciado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  )}
+                  {!detailCard.iniciado_em && isInicioAtrasado(detailCard) && (
+                    <Badge variant="destructive" className="gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      Tarefa Atrasada
+                    </Badge>
+                  )}
+                  {!detailCard.iniciado_em && (() => {
+                    const tempo = getTempoRestante(detailCard);
+                    return tempo ? (
+                      <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
+                        <Clock className="h-3 w-3" />
+                        Vence em {tempo}h
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs mb-1">Progresso do Projeto</p>
+                  <div className="flex items-center gap-2">
+                    <Progress value={calcProgress(detailCard)} className="h-2 flex-1" />
+                    <span className="text-sm font-medium">{calcProgress(detailCard)}%</span>
                   </div>
-                )}
+                </div>
               </div>
 
 
