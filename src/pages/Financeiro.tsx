@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Filial } from "@/lib/supabase-types";
+import { PedidoComentarios } from "@/components/PedidoComentarios";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -530,6 +531,9 @@ export default function Financeiro() {
                   <p className="text-xs">{selected.observacoes}</p>
                 </div>
               )}
+
+              {/* Comentários Internos */}
+              <PedidoComentarios pedidoId={selected.id} />
             </div>
             <div className="flex gap-2 pt-2">
               <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleAprovar(selected)} disabled={processando}>
