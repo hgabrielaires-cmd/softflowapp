@@ -1445,6 +1445,7 @@ export type Database = {
           etapa_nome: string
           id: string
           saida_em: string | null
+          sla_cumprido: boolean | null
           sla_previsto_horas: number | null
           tempo_real_horas: number | null
           usuario_id: string | null
@@ -1457,6 +1458,7 @@ export type Database = {
           etapa_nome: string
           id?: string
           saida_em?: string | null
+          sla_cumprido?: boolean | null
           sla_previsto_horas?: number | null
           tempo_real_horas?: number | null
           usuario_id?: string | null
@@ -1469,6 +1471,7 @@ export type Database = {
           etapa_nome?: string
           id?: string
           saida_em?: string | null
+          sla_cumprido?: boolean | null
           sla_previsto_horas?: number | null
           tempo_real_horas?: number | null
           usuario_id?: string | null
