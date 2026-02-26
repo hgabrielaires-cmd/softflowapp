@@ -215,9 +215,21 @@ export interface JornadaEtapa {
   mesa_atendimento?: MesaAtendimento | null;
 }
 
+export type ChecklistItemTipo = 'check' | 'sim_nao' | 'texto' | 'agendamento' | 'anexo' | 'quantitativo';
+
+export const CHECKLIST_TIPO_LABELS: Record<ChecklistItemTipo, string> = {
+  check: 'Check',
+  sim_nao: 'Sim ou Não',
+  texto: 'Texto Livre',
+  agendamento: 'Agendamento',
+  anexo: 'Anexo (11MB)',
+  quantitativo: 'Quantitativo',
+};
+
 export interface ChecklistItem {
   texto: string;
   concluido: boolean;
+  tipo: ChecklistItemTipo;
 }
 
 export interface JornadaAtividade {

@@ -13,9 +13,10 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Eye, GripVertical, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Eye, GripVertical, Download, Calendar, Paperclip, Hash, ToggleLeft, Type, CheckSquare } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { Jornada, JornadaEtapa, JornadaAtividade, MesaAtendimento, ChecklistItem, Filial } from "@/lib/supabase-types";
+import type { Jornada, JornadaEtapa, JornadaAtividade, MesaAtendimento, ChecklistItem, ChecklistItemTipo, Filial } from "@/lib/supabase-types";
+import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 
 // ─── Local state types for creation ──────────────────────────────────────────
 
@@ -414,11 +415,15 @@ export default function JornadaImplantacao() {
   // ─── Checklist helpers ─────────────────────────────────────────────────────
 
   function addChecklistItem() {
-    setAtividadeForm((prev) => ({ ...prev, checklist: [...prev.checklist, { texto: "", concluido: false }] }));
+    setAtividadeForm((prev) => ({ ...prev, checklist: [...prev.checklist, { texto: "", concluido: false, tipo: "check" as ChecklistItemTipo }] }));
   }
 
   function updateChecklistText(index: number, texto: string) {
     setAtividadeForm((prev) => ({ ...prev, checklist: prev.checklist.map((c, i) => i === index ? { ...c, texto } : c) }));
+  }
+
+  function updateChecklistTipo(index: number, tipo: ChecklistItemTipo) {
+    setAtividadeForm((prev) => ({ ...prev, checklist: prev.checklist.map((c, i) => i === index ? { ...c, tipo } : c) }));
   }
 
   function removeChecklistItem(index: number) {
@@ -717,7 +722,7 @@ export default function JornadaImplantacao() {
                                             <ul className="space-y-1">
                                               {a.checklist.map((item, idx) => (
                                                 <li key={idx} className="flex items-start gap-2 text-xs">
-                                                  <span className="text-muted-foreground mt-0.5">•</span>
+                                                  <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">{CHECKLIST_TIPO_LABELS[(item as ChecklistItem).tipo || 'check']}</Badge>
                                                   <span>{item.texto || "(sem texto)"}</span>
                                                 </li>
                                               ))}
@@ -851,8 +856,17 @@ export default function JornadaImplantacao() {
                 <div className="space-y-2">
                   {atividadeForm.checklist.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-2">
-                      <Checkbox checked={false} disabled className="opacity-50" />
-                      <Input value={item.texto} onChange={(e) => updateChecklistText(idx, e.target.value)} placeholder="Item do checklist..." className="flex-1 h-8 text-sm" />
+                      <Select value={item.tipo || "check"} onValueChange={(v) => updateChecklistTipo(idx, v as ChecklistItemTipo)}>
+                        <SelectTrigger className="w-[140px] h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(CHECKLIST_TIPO_LABELS).map(([key, label]) => (
+                            <SelectItem key={key} value={key}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input value={item.texto} onChange={(e) => updateChecklistText(idx, e.target.value)} placeholder="Descrição do item..." className="flex-1 h-8 text-sm" />
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeChecklistItem(idx)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
                     </div>
                   ))}
