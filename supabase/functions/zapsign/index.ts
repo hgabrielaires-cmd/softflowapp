@@ -109,11 +109,21 @@ Deno.serve(async (req) => {
       // Email associado ao plano ZapSign
       const zapsignEmail = Deno.env.get("ZAPSIGN_EMAIL")?.trim() || "";
 
+      // Verificar se a filial tem assinatura embutida no PDF
+      let filialAssinaturaUrl = "";
+      if (filialId) {
+        const { data: filialData } = await supabase.from("filiais").select("assinatura_url").eq("id", filialId).maybeSingle();
+        filialAssinaturaUrl = filialData?.assinatura_url || "";
+      }
+
+      const temAssinaturaEmbutida = !!filialAssinaturaUrl;
+      console.log(`[ZapSign] Assinatura embutida: ${temAssinaturaEmbutida ? "SIM" : "NÃO"}`);
+
       // Montar signatários
       const signers: any[] = [];
 
-      // Signatário 1: Representante da contratada (filial)
-      if (filialNome) {
+      // Signatário 1: Representante da contratada (filial) — SÓ se NÃO tiver assinatura embutida
+      if (!temAssinaturaEmbutida && filialNome) {
         signers.push({
           name: filialNome,
           email: zapsignEmail,
@@ -123,7 +133,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Signatário 2: Decisor/cliente
+      // Signatário (único se embutida): Decisor/cliente
       const clienteEmail = decisor?.email || (contrato as any).clientes?.email || "";
       const clienteNome = decisor?.nome || (contrato as any).clientes?.nome_fantasia || "Cliente";
       signers.push({
@@ -202,8 +212,8 @@ Deno.serve(async (req) => {
         sign_url: `https://app.zapsign.co/verificar/${s.token}`,
       }));
 
-      // Auto-assinar o primeiro signatário (representante da empresa)
-      if (returnedSigners.length > 0) {
+      // Auto-assinar o primeiro signatário (representante da empresa) — SÓ se NÃO tiver assinatura embutida
+      if (!temAssinaturaEmbutida && returnedSigners.length > 1) {
         const companySignerToken = returnedSigners[0].token;
         const userToken = Deno.env.get("ZAPSIGN_USER_TOKEN")?.trim();
 
@@ -222,7 +232,6 @@ Deno.serve(async (req) => {
             console.log("Auto-sign response:", autoSignResponse.status, autoSignText);
 
             if (autoSignResponse.ok) {
-              // Atualizar status do signatário da empresa
               returnedSigners = returnedSigners.map((s: any, i: number) =>
                 i === 0 ? { ...s, status: "signed" } : s
               );
@@ -235,6 +244,8 @@ Deno.serve(async (req) => {
         } else {
           console.warn("ZAPSIGN_USER_TOKEN não configurado - assinatura automática da empresa não será realizada");
         }
+      } else if (temAssinaturaEmbutida) {
+        console.log("[ZapSign] Assinatura da empresa embutida no PDF — enviando apenas cliente para assinar.");
       }
 
       // Salvar no banco

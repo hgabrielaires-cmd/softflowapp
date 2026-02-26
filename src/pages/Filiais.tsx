@@ -59,6 +59,10 @@ export default function Filiais() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [removeLogo, setRemoveLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [assinaturaFile, setAssinaturaFile] = useState<File | null>(null);
+  const [assinaturaPreview, setAssinaturaPreview] = useState<string | null>(null);
+  const [removeAssinatura, setRemoveAssinatura] = useState(false);
+  const assinaturaInputRef = useRef<HTMLInputElement>(null);
   const [etapaInicialId, setEtapaInicialId] = useState<string | null>(null);
   const [etapas, setEtapas] = useState<{ id: string; nome: string; ordem: number }[]>([]);
   const [activeTab, setActiveTab] = useState("geral");
@@ -93,6 +97,7 @@ export default function Filiais() {
     setEndereco({ logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "", cep: "", telefone: "", email: "" });
     setCnpjError(""); setCepError("");
     setLogoFile(null); setLogoPreview(null); setRemoveLogo(false);
+    setAssinaturaFile(null); setAssinaturaPreview(null); setRemoveAssinatura(false);
     setEtapaInicialId(null);
     setActiveTab("geral");
     setParcelasMaximasCartao(12);
@@ -136,6 +141,7 @@ export default function Filiais() {
     });
     setCnpjError(""); setCepError("");
     setLogoFile(null); setLogoPreview(filial.logo_url || null); setRemoveLogo(false);
+    setAssinaturaFile(null); setAssinaturaPreview((filial as any).assinatura_url || null); setRemoveAssinatura(false);
     setEtapaInicialId(filial.etapa_inicial_id || null);
     setActiveTab("geral");
     // Reset params then load
@@ -215,6 +221,27 @@ export default function Filiais() {
     return urlData.publicUrl;
   }
 
+  function handleAssinaturaChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Selecione um arquivo de imagem"); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error("A imagem deve ter no máximo 2MB"); return; }
+    setAssinaturaFile(file); setRemoveAssinatura(false);
+    const reader = new FileReader();
+    reader.onload = () => setAssinaturaPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  async function uploadAssinatura(filialId: string): Promise<string | null> {
+    if (!assinaturaFile) return null;
+    const ext = assinaturaFile.name.split(".").pop() || "png";
+    const path = `${filialId}/assinatura.${ext}`;
+    const { error } = await supabase.storage.from("filiais-logos").upload(path, assinaturaFile, { upsert: true });
+    if (error) throw new Error("Erro ao enviar assinatura: " + error.message);
+    const { data: urlData } = supabase.storage.from("filiais-logos").getPublicUrl(path);
+    return urlData.publicUrl;
+  }
+
   async function saveParametros(filialId: string) {
     const paramData = {
       filial_id: filialId,
@@ -244,8 +271,11 @@ export default function Filiais() {
         let logo_url = editing.logo_url;
         if (logoFile) logo_url = await uploadLogo(editing.id);
         else if (removeLogo) logo_url = null;
+        let assinatura_url = (editing as any).assinatura_url;
+        if (assinaturaFile) assinatura_url = await uploadAssinatura(editing.id);
+        else if (removeAssinatura) assinatura_url = null;
         const { error } = await supabase.from("filiais")
-          .update({ nome: nome.trim(), razao_social: razaoSocial.trim() || null, responsavel: responsavel.trim() || null, ativa, logo_url, cnpj: cnpj.trim() || null, inscricao_estadual: ie, etapa_inicial_id: etapaInicialId, ...endereco })
+          .update({ nome: nome.trim(), razao_social: razaoSocial.trim() || null, responsavel: responsavel.trim() || null, ativa, logo_url, assinatura_url, cnpj: cnpj.trim() || null, inscricao_estadual: ie, etapa_inicial_id: etapaInicialId, ...endereco })
           .eq("id", editing.id);
         if (error) throw error;
         await saveParametros(editing.id);
@@ -255,9 +285,11 @@ export default function Filiais() {
           .insert({ nome: nome.trim(), razao_social: razaoSocial.trim() || null, responsavel: responsavel.trim() || null, ativa, cnpj: cnpj.trim() || null, inscricao_estadual: ie, etapa_inicial_id: etapaInicialId, ...endereco })
           .select("id").single();
         if (error) throw error;
-        if (logoFile && inserted) {
-          const logo_url = await uploadLogo(inserted.id);
-          await supabase.from("filiais").update({ logo_url }).eq("id", inserted.id);
+        if (inserted) {
+          const updates: any = {};
+          if (logoFile) updates.logo_url = await uploadLogo(inserted.id);
+          if (assinaturaFile) updates.assinatura_url = await uploadAssinatura(inserted.id);
+          if (Object.keys(updates).length > 0) await supabase.from("filiais").update(updates).eq("id", inserted.id);
         }
         if (inserted) await saveParametros(inserted.id);
         toast.success("Filial criada com sucesso");
@@ -495,6 +527,25 @@ export default function Filiais() {
                     </Button>
                   )}
                   <p className="text-xs text-muted-foreground">PNG, JPG ou SVG. Máx 2MB.</p>
+                </div>
+
+                {/* Assinatura upload */}
+                <div className="space-y-1.5">
+                  <Label>Assinatura do representante</Label>
+                  <p className="text-xs text-muted-foreground">Imagem da assinatura que será embutida nos contratos. Use fundo transparente (PNG) para melhor resultado.</p>
+                  <input ref={assinaturaInputRef} type="file" accept="image/*" className="hidden" onChange={handleAssinaturaChange} />
+                  {assinaturaPreview && !removeAssinatura ? (
+                    <div className="relative inline-block">
+                      <img src={assinaturaPreview} alt="Assinatura preview" className="h-16 w-40 rounded-lg object-contain border border-border bg-white p-1" />
+                      <button type="button" className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center" onClick={() => { setAssinaturaFile(null); setAssinaturaPreview(null); setRemoveAssinatura(true); }}>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => assinaturaInputRef.current?.click()}>
+                      <Upload className="h-4 w-4" /> Enviar assinatura
+                    </Button>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-3">

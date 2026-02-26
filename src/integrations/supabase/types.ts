@@ -401,6 +401,7 @@ export type Database = {
       }
       filiais: {
         Row: {
+          assinatura_url: string | null
           ativa: boolean
           bairro: string | null
           cep: string | null
@@ -422,6 +423,7 @@ export type Database = {
           uf: string | null
         }
         Insert: {
+          assinatura_url?: string | null
           ativa?: boolean
           bairro?: string | null
           cep?: string | null
@@ -443,6 +445,7 @@ export type Database = {
           uf?: string | null
         }
         Update: {
+          assinatura_url?: string | null
           ativa?: boolean
           bairro?: string | null
           cep?: string | null
