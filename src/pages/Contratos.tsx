@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Filial } from "@/lib/supabase-types";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
+import { PedidoComentarios } from "@/components/PedidoComentarios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -1514,6 +1515,13 @@ Estou à disposição.`;
                   </p>
                 )}
               </div>
+
+              {/* Comentários Internos do Pedido */}
+              {selected.pedido_id && (
+                <div className="border-t border-border pt-4">
+                  <PedidoComentarios pedidoId={selected.pedido_id} />
+                </div>
+              )}
 
               {/* Cancelar */}
               {canManage && selected.status === "Ativo" && (

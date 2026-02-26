@@ -29,6 +29,7 @@ import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { ChecklistItem } from "@/lib/supabase-types";
 import { cn } from "@/lib/utils";
 import { AgendamentoChecklist } from "@/components/AgendamentoChecklist";
+import { PedidoComentarios } from "@/components/PedidoComentarios";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -2087,6 +2088,12 @@ export default function PainelAtendimento() {
                     </Button>
                   );
                 })()}
+              {/* Comentários Internos do Pedido */}
+              {detailCard.pedido_id && (
+                <div className="border-t border-border pt-3 mt-3">
+                  <PedidoComentarios pedidoId={detailCard.pedido_id} />
+                </div>
+              )}
                 <Button
                   size="sm"
                   onClick={finalizarEtapa}
