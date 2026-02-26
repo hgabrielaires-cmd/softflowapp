@@ -24,6 +24,7 @@ import Servicos from "./pages/Servicos";
 import Integracoes from "./pages/Integracoes";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import Agenda from "./pages/Agenda";
 import TrocarSenha from "./pages/TrocarSenha";
 import MesasAtendimento from "./pages/MesasAtendimento";
 import JornadaImplantacao from "./pages/JornadaImplantacao";
@@ -88,11 +89,7 @@ const App = () => (
               path="/agenda"
               element={
                 <ProtectedRoute>
-                  <ComingSoon
-                    module="Módulo 5"
-                    title="Agenda Operacional"
-                    description="Em desenvolvimento. Controle de instalações, treinamentos e retreinamentos."
-                  />
+                  <Agenda />
                 </ProtectedRoute>
               }
             />
