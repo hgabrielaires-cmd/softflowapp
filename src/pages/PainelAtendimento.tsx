@@ -2158,11 +2158,11 @@ export default function PainelAtendimento() {
               <RefreshCw className="h-4 w-4 animate-spin mr-2" /> Carregando...
             </div>
           ) : detalhesData && (
-            <div className="space-y-0 overflow-y-auto flex-1 pr-1">
+            <div className="space-y-3 overflow-y-auto flex-1 pr-1">
 
               {/* ── PEDIDO ── */}
               {detalhesData.pedidoInfo && (
-                <div className="rounded-lg border bg-card p-4">
+                <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)]">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
                       <FileText className="h-4 w-4 text-primary" />
@@ -2192,7 +2192,7 @@ export default function PainelAtendimento() {
 
               {/* ── CONTRATO ── */}
               {detalhesData.contratoInfo && (
-                <div className="rounded-lg border bg-card p-4 mt-3">
+                <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)]">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="h-7 w-7 rounded-md bg-emerald-light flex items-center justify-center">
                       <CheckSquare className="h-4 w-4 text-emerald" />
@@ -2228,7 +2228,7 @@ export default function PainelAtendimento() {
 
               {/* ── DADOS DA EMPRESA ── */}
               {detalhesData.clienteInfo && (
-                <div className="rounded-lg border bg-card p-4 mt-3">
+                <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)]">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
                       <Building2 className="h-4 w-4 text-primary" />
@@ -2305,7 +2305,7 @@ export default function PainelAtendimento() {
 
               {/* ── PLANO CONTRATADO + MÓDULOS DO PLANO + ADICIONAIS ── */}
               {detalhesData.planoNome && (
-                <div className="rounded-lg border bg-card p-4 mt-3 space-y-4">
+                <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-4">
                   {/* Plano Contratado */}
                   <div>
                     <div className="flex items-center gap-2 mb-2">
@@ -2362,7 +2362,7 @@ export default function PainelAtendimento() {
 
               {/* ── SERVIÇOS (OA) ── */}
               {detalhesData.servicosOA.length > 0 && (
-                <div className="rounded-lg border bg-card p-4 mt-3">
+                <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)]">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="h-7 w-7 rounded-md bg-teal-100 flex items-center justify-center">
                       <Wrench className="h-4 w-4 text-teal-600" />
@@ -2385,7 +2385,7 @@ export default function PainelAtendimento() {
 
               {/* ── OBSERVAÇÕES ── */}
               {(detalhesData.obsCard || detalhesData.observacoes.length > 0) && (
-                <div className="rounded-lg border bg-card p-4 mt-3">
+                <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)]">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center">
                       <MessageSquare className="h-4 w-4 text-muted-foreground" />
@@ -2417,7 +2417,7 @@ export default function PainelAtendimento() {
 
               {/* Comentários Internos do Pedido */}
               {detailCard?.pedido_id && (
-                <div className="rounded-lg border bg-card p-4 mt-3">
+                <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)]">
                   <PedidoComentarios pedidoId={detailCard.pedido_id} readOnly />
                 </div>
               )}
