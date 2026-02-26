@@ -209,9 +209,10 @@ serve(async (req) => {
         const cliente = clienteMap[card.cliente_id];
         const contrato = contratoMap[card.contrato_id];
 
-        // Calculate atraso tempo display
-        const horasInt = Math.floor(horasAtrasado);
-        const minutosInt = Math.floor((horasAtrasado % 1) * 60);
+        // Calculate atraso tempo display — total elapsed time (SLA + delay)
+        const totalHorasDesdeCreacao = (now - criado) / (1000 * 60 * 60);
+        const horasInt = Math.floor(totalHorasDesdeCreacao);
+        const minutosInt = Math.floor((totalHorasDesdeCreacao % 1) * 60);
         const atrasoTempo = horasInt > 0
           ? `${horasInt}h${minutosInt > 0 ? String(minutosInt).padStart(2, "0") + "min" : ""}`
           : `${minutosInt}min`;
