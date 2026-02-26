@@ -1074,20 +1074,31 @@ export default function PainelAtendimento() {
             </div>
           )}
           {detailCard && (
-            <DialogFooter className="border-t pt-3">
-              <Button
-                onClick={finalizarEtapa}
-                disabled={!detailCard.iniciado_em || !isChecklistCompleto() || finalizando}
-                className="w-full"
-              >
-                <ChevronRight className="h-4 w-4 mr-1" />
-                {finalizando ? "Finalizando..." : "Finalizar Etapa"}
-              </Button>
-              {!isChecklistCompleto() && detailCard.iniciado_em && (
-                <p className="text-[10px] text-muted-foreground text-center w-full mt-1">
-                  Complete todos os itens do checklist para finalizar
-                </p>
-              )}
+            <DialogFooter className="border-t pt-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {!isChecklistCompleto() && detailCard.iniciado_em && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Complete todos os itens do checklist para finalizar
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-amber-500 hover:bg-amber-600 text-white border-amber-500 hover:border-amber-600"
+                >
+                  Histórico
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={finalizarEtapa}
+                  disabled={!detailCard.iniciado_em || !isChecklistCompleto() || finalizando}
+                >
+                  <ChevronRight className="h-4 w-4 mr-1" />
+                  {finalizando ? "Finalizando..." : "Finalizar Etapa"}
+                </Button>
+              </div>
             </DialogFooter>
           )}
         </DialogContent>
