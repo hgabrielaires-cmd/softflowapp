@@ -24,6 +24,7 @@ import {
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { ChecklistItem } from "@/lib/supabase-types";
 import { cn } from "@/lib/utils";
+import { AgendamentoChecklist } from "@/components/AgendamentoChecklist";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1144,28 +1145,19 @@ export default function PainelAtendimento() {
                                       </div>
                                     )}
 
-                                    {tipo === 'agendamento' && (
-                                      <div className="flex items-center gap-2 pl-1">
-                                        <Input
-                                          type="datetime-local"
-                                          className="h-7 text-xs w-52"
-                                          disabled={isCongelado}
-                                          value={prog.valor_data ? new Date(prog.valor_data).toISOString().slice(0, 16) : ''}
-                                          onChange={(e) => {
-                                            const val = e.target.value;
-                                            saveChecklistItem(atividade.id, cIdx, {
-                                              concluido: !!val,
-                                              valor_data: val ? new Date(val).toISOString() : undefined,
-                                            });
-                                          }}
-                                        />
-                                        {prog.valor_data && (
-                                          <span className="text-[10px] text-muted-foreground">
-                                            {new Date(prog.valor_data).toLocaleDateString("pt-BR")} às{" "}
-                                            {new Date(prog.valor_data).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                                          </span>
-                                        )}
-                                      </div>
+                                    {tipo === 'agendamento' && detailCard && (
+                                      <AgendamentoChecklist
+                                        cardId={detailCard.id}
+                                        atividadeId={atividade.id}
+                                        checklistIndex={cIdx}
+                                        disabled={isCongelado}
+                                        onUpdate={(has) => {
+                                          setChecklistProgresso((p) => ({
+                                            ...p,
+                                            [key]: { ...p[key], concluido: has },
+                                          }));
+                                        }}
+                                      />
                                     )}
 
                                     {tipo === 'texto' && (

@@ -1,0 +1,247 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { CalendarDays, Plus, X, Clock } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+
+interface Agendamento {
+  id?: string;
+  data: string; // YYYY-MM-DD
+  hora_inicio?: string | null;
+  hora_fim?: string | null;
+  observacao?: string | null;
+}
+
+interface Props {
+  cardId: string;
+  atividadeId: string;
+  checklistIndex: number;
+  disabled?: boolean;
+  onUpdate?: (hasAgendamentos: boolean) => void;
+}
+
+export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disabled, onUpdate }: Props) {
+  const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
+  // Load existing agendamentos
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("painel_agendamentos")
+        .select("*")
+        .eq("card_id", cardId)
+        .eq("atividade_id", atividadeId)
+        .eq("checklist_index", checklistIndex)
+        .order("data");
+      if (!error && data) {
+        setAgendamentos(data.map((d: any) => ({
+          id: d.id,
+          data: d.data,
+          hora_inicio: d.hora_inicio,
+          hora_fim: d.hora_fim,
+          observacao: d.observacao,
+        })));
+        setSelectedDates(data.map((d: any) => new Date(d.data + "T12:00:00")));
+        onUpdate?.(data.length > 0);
+      }
+      setLoading(false);
+    })();
+  }, [cardId, atividadeId, checklistIndex]);
+
+  async function handleSelectDates(dates: Date[] | undefined) {
+    if (!dates) return;
+    setSelectedDates(dates);
+  }
+
+  async function confirmarDatas() {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Find dates to add (not in current agendamentos)
+    const currentDatesSet = new Set(agendamentos.map(a => a.data));
+    const selectedDatesStr = selectedDates.map(d => format(d, "yyyy-MM-dd"));
+    const selectedSet = new Set(selectedDatesStr);
+
+    // Dates to add
+    const toAdd = selectedDatesStr.filter(d => !currentDatesSet.has(d));
+    // Dates to remove
+    const toRemove = agendamentos.filter(a => !selectedSet.has(a.data));
+
+    // Insert new
+    if (toAdd.length > 0) {
+      const { error } = await supabase.from("painel_agendamentos").insert(
+        toAdd.map(data => ({
+          card_id: cardId,
+          atividade_id: atividadeId,
+          checklist_index: checklistIndex,
+          data,
+          criado_por: user?.id || null,
+        }))
+      );
+      if (error) { toast.error("Erro ao salvar agendamentos"); return; }
+    }
+
+    // Remove deleted
+    if (toRemove.length > 0) {
+      const ids = toRemove.filter(a => a.id).map(a => a.id!);
+      if (ids.length > 0) {
+        await supabase.from("painel_agendamentos").delete().in("id", ids);
+      }
+    }
+
+    // Reload
+    const { data } = await supabase
+      .from("painel_agendamentos")
+      .select("*")
+      .eq("card_id", cardId)
+      .eq("atividade_id", atividadeId)
+      .eq("checklist_index", checklistIndex)
+      .order("data");
+
+    if (data) {
+      setAgendamentos(data.map((d: any) => ({
+        id: d.id,
+        data: d.data,
+        hora_inicio: d.hora_inicio,
+        hora_fim: d.hora_fim,
+        observacao: d.observacao,
+      })));
+      setSelectedDates(data.map((d: any) => new Date(d.data + "T12:00:00")));
+      onUpdate?.(data.length > 0);
+    }
+
+    // Also mark checklist item as concluido
+    await supabase.from("painel_checklist_progresso").upsert({
+      card_id: cardId,
+      atividade_id: atividadeId,
+      checklist_index: checklistIndex,
+      concluido: (data?.length || 0) > 0,
+      concluido_por: user?.id || null,
+      concluido_em: new Date().toISOString(),
+      valor_texto: `${data?.length || 0} dia(s) agendado(s)`,
+    }, { onConflict: "card_id,atividade_id,checklist_index" });
+
+    setPopoverOpen(false);
+    toast.success("Agendamento atualizado!");
+  }
+
+  async function updateHorario(agId: string, field: "hora_inicio" | "hora_fim", value: string) {
+    await supabase.from("painel_agendamentos").update({ [field]: value || null }).eq("id", agId);
+    setAgendamentos(prev => prev.map(a => a.id === agId ? { ...a, [field]: value || null } : a));
+  }
+
+  async function removeAgendamento(agId: string) {
+    await supabase.from("painel_agendamentos").delete().eq("id", agId);
+    setAgendamentos(prev => {
+      const updated = prev.filter(a => a.id !== agId);
+      setSelectedDates(updated.map(a => new Date(a.data + "T12:00:00")));
+      onUpdate?.(updated.length > 0);
+
+      // Update checklist progress
+      (async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from("painel_checklist_progresso").upsert({
+          card_id: cardId,
+          atividade_id: atividadeId,
+          checklist_index: checklistIndex,
+          concluido: updated.length > 0,
+          concluido_por: user?.id || null,
+          concluido_em: updated.length > 0 ? new Date().toISOString() : null,
+          valor_texto: updated.length > 0 ? `${updated.length} dia(s) agendado(s)` : null,
+        }, { onConflict: "card_id,atividade_id,checklist_index" });
+      })();
+
+      return updated;
+    });
+    toast.success("Data removida!");
+  }
+
+  if (loading) return <span className="text-[10px] text-muted-foreground">Carregando...</span>;
+
+  return (
+    <div className="space-y-2 pl-1 w-full">
+      {/* Add dates button */}
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1" disabled={disabled}>
+            <CalendarDays className="h-3 w-3" />
+            {agendamentos.length > 0 ? `${agendamentos.length} dia(s)` : "Agendar datas"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <div className="p-3 space-y-3">
+            <Calendar
+              mode="multiple"
+              selected={selectedDates}
+              onSelect={handleSelectDates}
+              locale={ptBR}
+              className={cn("pointer-events-auto")}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setPopoverOpen(false)}>
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={confirmarDatas}>
+                Confirmar
+              </Button>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {/* List of agendamentos */}
+      {agendamentos.length > 0 && (
+        <div className="space-y-1.5">
+          {agendamentos.map((ag) => (
+            <div key={ag.id} className="flex items-center gap-2 bg-muted/50 rounded px-2 py-1.5 text-xs">
+              <CalendarDays className="h-3 w-3 text-primary shrink-0" />
+              <span className="font-medium min-w-[70px]">
+                {format(new Date(ag.data + "T12:00:00"), "dd/MM/yyyy")}
+              </span>
+              <div className="flex items-center gap-1">
+                <Clock className="h-2.5 w-2.5 text-muted-foreground" />
+                <Input
+                  type="time"
+                  className="h-6 w-[75px] text-[11px] px-1"
+                  value={ag.hora_inicio || ""}
+                  disabled={disabled}
+                  onChange={(e) => ag.id && updateHorario(ag.id, "hora_inicio", e.target.value)}
+                  placeholder="Início"
+                />
+                <span className="text-muted-foreground">-</span>
+                <Input
+                  type="time"
+                  className="h-6 w-[75px] text-[11px] px-1"
+                  value={ag.hora_fim || ""}
+                  disabled={disabled}
+                  onChange={(e) => ag.id && updateHorario(ag.id, "hora_fim", e.target.value)}
+                  placeholder="Fim"
+                />
+              </div>
+              {!disabled && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 shrink-0"
+                  onClick={() => ag.id && removeAgendamento(ag.id)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
