@@ -1246,6 +1246,7 @@ export type Database = {
           card_id: string
           created_at: string
           criado_por: string
+          etapa_id: string | null
           id: string
           texto: string
         }
@@ -1253,6 +1254,7 @@ export type Database = {
           card_id: string
           created_at?: string
           criado_por: string
+          etapa_id?: string | null
           id?: string
           texto: string
         }
@@ -1260,6 +1262,7 @@ export type Database = {
           card_id?: string
           created_at?: string
           criado_por?: string
+          etapa_id?: string | null
           id?: string
           texto?: string
         }
@@ -1269,6 +1272,13 @@ export type Database = {
             columns: ["card_id"]
             isOneToOne: false
             referencedRelation: "painel_atendimento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_comentarios_etapa_id_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "painel_etapas"
             referencedColumns: ["id"]
           },
         ]

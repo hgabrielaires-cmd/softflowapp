@@ -23,7 +23,7 @@ import {
   LayoutGrid, List, Search, Clock, Building2, User, Filter,
   GripVertical, ChevronRight, FileText, Package, ArrowUpCircle,
   Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw, ArrowRight, CheckSquare,
-  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare, Info
+  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare, Info, History
 } from "lucide-react";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { ChecklistItem } from "@/lib/supabase-types";
@@ -122,6 +122,9 @@ export default function PainelAtendimento() {
   const [comentarios, setComentarios] = useState<any[]>([]);
   const [tecnicosSelecionados, setTecnicosSelecionados] = useState<string[]>([]);
   const [buscaTecnico, setBuscaTecnico] = useState("");
+  const [historicoOpen, setHistoricoOpen] = useState(false);
+  const [historicoData, setHistoricoData] = useState<any[]>([]);
+  const [historicoLoading, setHistoricoLoading] = useState(false);
 
   // Auto-refresh atrasado status every 60s
   useEffect(() => {
@@ -233,6 +236,7 @@ export default function PainelAtendimento() {
           .from("painel_comentarios")
           .select("id, texto, criado_por, created_at")
           .eq("card_id", detailCard.id)
+          .eq("etapa_id", detailCard.etapa_id)
           .order("created_at", { ascending: true }),
         supabase
           .from("painel_tecnicos")
@@ -623,6 +627,131 @@ export default function PainelAtendimento() {
       toast.error("Erro ao carregar detalhes.");
     } finally {
       setDetalhesLoading(false);
+    }
+  }
+
+  // ─── Fetch Histórico de Etapas Anteriores ─────────────────────────────
+  async function fetchHistorico(card: PainelCard) {
+    setHistoricoLoading(true);
+    setHistoricoOpen(true);
+    try {
+      // 1. Get completed stage history (saida_em IS NOT NULL)
+      const { data: historico } = await supabase
+        .from("painel_historico_etapas")
+        .select("id, etapa_id, etapa_nome, entrada_em, saida_em")
+        .eq("card_id", card.id)
+        .not("saida_em", "is", null)
+        .order("entrada_em", { ascending: true });
+
+      if (!historico || historico.length === 0) {
+        setHistoricoData([]);
+        setHistoricoLoading(false);
+        return;
+      }
+
+      // 2. For each historical stage, get checklist + comments
+      let resolvedJornadaId = card.jornada_id;
+      if (!resolvedJornadaId && card.plano_id) {
+        const { data: jornada } = await supabase
+          .from("jornadas")
+          .select("id")
+          .eq("vinculo_tipo", "plano")
+          .eq("vinculo_id", card.plano_id)
+          .eq("ativo", true)
+          .limit(1);
+        resolvedJornadaId = jornada?.[0]?.id || null;
+      }
+
+      const result: any[] = [];
+
+      for (const h of historico) {
+        // Get checklist activities for this stage
+        let atividades: any[] = [];
+        let progressoMap: Record<string, any> = {};
+
+        if (resolvedJornadaId) {
+          const { data: jornadaEtapa } = await supabase
+            .from("jornada_etapas")
+            .select("id")
+            .eq("jornada_id", resolvedJornadaId)
+            .eq("nome", h.etapa_nome)
+            .limit(1);
+
+          if (jornadaEtapa && jornadaEtapa.length > 0) {
+            const { data: atv } = await supabase
+              .from("jornada_atividades")
+              .select("id, nome, horas_estimadas, checklist")
+              .eq("etapa_id", jornadaEtapa[0].id)
+              .order("ordem");
+            atividades = atv || [];
+
+            // Get progress
+            const { data: progresso } = await supabase
+              .from("painel_checklist_progresso")
+              .select("atividade_id, checklist_index, concluido, valor_texto, valor_data, concluido_por, concluido_em")
+              .eq("card_id", card.id);
+
+            // Get profile names
+            const userIds = [...new Set((progresso || []).map((p: any) => p.concluido_por).filter(Boolean))];
+            let profileMap: Record<string, string> = {};
+            if (userIds.length > 0) {
+              const { data: profiles } = await supabase
+                .from("profiles")
+                .select("user_id, full_name")
+                .in("user_id", userIds);
+              (profiles || []).forEach((p: any) => { profileMap[p.user_id] = p.full_name; });
+            }
+
+            (progresso || []).forEach((p: any) => {
+              progressoMap[`${p.atividade_id}_${p.checklist_index}`] = {
+                concluido: p.concluido,
+                valor_texto: p.valor_texto || undefined,
+                concluido_por_nome: p.concluido_por ? profileMap[p.concluido_por] : undefined,
+                concluido_em: p.concluido_em || undefined,
+              };
+            });
+          }
+        }
+
+        // Get comments for this stage (by etapa_id or by date range)
+        let stageComments: any[] = [];
+        const { data: comsByEtapa } = await supabase
+          .from("painel_comentarios")
+          .select("id, texto, criado_por, created_at")
+          .eq("card_id", card.id)
+          .eq("etapa_id", h.etapa_id)
+          .order("created_at", { ascending: true });
+
+        if (comsByEtapa && comsByEtapa.length > 0) {
+          stageComments = comsByEtapa;
+        } else if (h.entrada_em && h.saida_em) {
+          // Fallback: match by date range for old comments without etapa_id
+          const { data: comsByDate } = await supabase
+            .from("painel_comentarios")
+            .select("id, texto, criado_por, created_at")
+            .eq("card_id", card.id)
+            .is("etapa_id", null)
+            .gte("created_at", h.entrada_em)
+            .lte("created_at", h.saida_em)
+            .order("created_at", { ascending: true });
+          stageComments = comsByDate || [];
+        }
+
+        result.push({
+          etapa_nome: h.etapa_nome,
+          entrada_em: h.entrada_em,
+          saida_em: h.saida_em,
+          atividades,
+          progressoMap,
+          comentarios: stageComments,
+        });
+      }
+
+      setHistoricoData(result);
+    } catch {
+      toast.error("Erro ao carregar histórico.");
+    } finally {
+      setHistoricoLoading(false);
     }
   }
 
@@ -1623,7 +1752,7 @@ export default function PainelAtendimento() {
                         const { data: myProfile } = await supabase.from("profiles").select("id").eq("user_id", user.id).maybeSingle();
                         const { data: novo, error } = await supabase
                           .from("painel_comentarios")
-                          .insert({ card_id: detailCard.id, texto: novoComentario.trim(), criado_por: myProfile?.id || user.id })
+                          .insert({ card_id: detailCard.id, texto: novoComentario.trim(), criado_por: myProfile?.id || user.id, etapa_id: detailCard.etapa_id })
                           .select("id, texto, criado_por, created_at")
                           .single();
                         if (!error && novo) {
@@ -1665,13 +1794,22 @@ export default function PainelAtendimento() {
                   <Info className="h-4 w-4 mr-1" />
                   Detalhes
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-amber-500 hover:bg-amber-600 text-white border-amber-500 hover:border-amber-600"
-                >
-                  Histórico
-                </Button>
+                {(() => {
+                  // Only show Histórico from second etapa onwards
+                  const etapaAtualIdx = etapas.findIndex((e) => e.id === detailCard.etapa_id);
+                  if (etapaAtualIdx <= 0) return null;
+                  return (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-amber-500 hover:bg-amber-600 text-white border-amber-500 hover:border-amber-600"
+                      onClick={() => fetchHistorico(detailCard)}
+                    >
+                      <History className="h-4 w-4 mr-1" />
+                      Histórico
+                    </Button>
+                  );
+                })()}
                 <Button
                   size="sm"
                   onClick={finalizarEtapa}
@@ -1943,6 +2081,135 @@ export default function PainelAtendimento() {
                 </div>
               )}
 
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Histórico Dialog */}
+      <Dialog open={historicoOpen} onOpenChange={setHistoricoOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <History className="h-5 w-5 text-amber-500" />
+              Histórico de Etapas
+            </DialogTitle>
+          </DialogHeader>
+          {historicoLoading ? (
+            <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
+              <RefreshCw className="h-4 w-4 animate-spin mr-2" /> Carregando...
+            </div>
+          ) : historicoData.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground text-sm">
+              Nenhum histórico disponível.
+            </div>
+          ) : (
+            <div className="space-y-4 overflow-y-auto flex-1 pr-1">
+              {historicoData.map((stage: any, sIdx: number) => (
+                <div key={sIdx} className="rounded-lg border bg-card overflow-hidden">
+                  {/* Stage Header */}
+                  <div className="bg-amber-50 dark:bg-amber-950/30 px-4 py-3 border-b flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold">
+                        {sIdx + 1}
+                      </div>
+                      <h4 className="text-sm font-bold text-foreground">{stage.etapa_nome}</h4>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                      <span>{new Date(stage.entrada_em).toLocaleDateString("pt-BR")} {new Date(stage.entrada_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                      <ArrowRight className="h-3 w-3" />
+                      <span>{new Date(stage.saida_em).toLocaleDateString("pt-BR")} {new Date(stage.saida_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 space-y-3">
+                    {/* Checklist read-only */}
+                    {stage.atividades.length > 0 && (
+                      <div className="space-y-2">
+                        {stage.atividades.map((atividade: any, aIdx: number) => {
+                          const items = Array.isArray(atividade.checklist) ? atividade.checklist : [];
+                          if (items.length === 0) return null;
+                          return (
+                            <div key={aIdx}>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">{atividade.nome}</p>
+                              <ul className="space-y-1 pl-1">
+                                {items.map((item: any, cIdx: number) => {
+                                  const key = `${atividade.id}_${cIdx}`;
+                                  const prog = stage.progressoMap[key] || { concluido: false };
+                                  return (
+                                    <li key={cIdx} className="flex flex-col gap-0.5 text-xs border-b border-border/30 pb-1.5 last:border-0 last:pb-0">
+                                      <div className="flex items-center gap-2">
+                                        <div className={cn(
+                                          "h-4 w-4 rounded-sm border flex items-center justify-center shrink-0",
+                                          prog.concluido ? "bg-emerald-500 border-emerald-500 text-white" : "border-muted-foreground/30"
+                                        )}>
+                                          {prog.concluido && <CheckSquare className="h-3 w-3" />}
+                                        </div>
+                                        <span className={cn("flex-1", prog.concluido && "line-through text-muted-foreground")}>
+                                          {item.texto || "(sem texto)"}
+                                        </span>
+                                        {prog.valor_texto && (
+                                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                            {prog.valor_texto === 'sim' ? '✓ Sim' : prog.valor_texto === 'nao' ? '✗ Não' : prog.valor_texto}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      {prog.concluido && prog.concluido_por_nome && (
+                                        <div className="flex items-center gap-1.5 pl-6 text-[10px] text-muted-foreground">
+                                          <User className="h-2.5 w-2.5" />
+                                          <span>{prog.concluido_por_nome}</span>
+                                          {prog.concluido_em && (
+                                            <>
+                                              <span>·</span>
+                                              <span>{new Date(prog.concluido_em).toLocaleDateString("pt-BR")} {new Date(prog.concluido_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                                            </>
+                                          )}
+                                        </div>
+                                      )}
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Comments from this stage */}
+                    {stage.comentarios.length > 0 && (
+                      <>
+                        <div className="border-t pt-3">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-2 flex items-center gap-1">
+                            <MessageSquare className="h-3 w-3" />
+                            Comentários
+                          </p>
+                          <div className="space-y-1.5">
+                            {stage.comentarios.map((com: any) => {
+                              const autor = responsaveis.find((r: any) => r.id === com.criado_por) || { full_name: "Usuário" };
+                              return (
+                                <div key={com.id} className="bg-muted/50 rounded p-2 text-xs">
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <span className="font-medium text-foreground">{(autor as any).full_name?.split(" ")[0]}</span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {new Date(com.created_at).toLocaleDateString("pt-BR")} {new Date(com.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                                    </span>
+                                  </div>
+                                  <p className="text-foreground/80">{com.texto}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {stage.atividades.length === 0 && stage.comentarios.length === 0 && (
+                      <p className="text-xs text-muted-foreground italic text-center py-2">Nenhum registro nesta etapa</p>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </DialogContent>
