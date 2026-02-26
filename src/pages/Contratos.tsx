@@ -177,6 +177,7 @@ export default function Contratos() {
   const [zapsignDetailContrato, setZapsignDetailContrato] = useState<Contrato | null>(null);
   const [reenviandoWhatsapp, setReenviandoWhatsapp] = useState(false);
   const [linkedMessageTemplate, setLinkedMessageTemplate] = useState<{ conteudo: string } | null>(null);
+  const [syncingStatuses, setSyncingStatuses] = useState(false);
 
   // ── ZapSign + WhatsApp animated popup state ──
   const [openZapsignPopup, setOpenZapsignPopup] = useState(false);
@@ -1041,11 +1042,43 @@ Estou à disposição.`;
             <h1 className="text-2xl font-bold text-foreground">Contratos</h1>
             <p className="text-sm text-muted-foreground">Gestão e visualização de contratos ativos</p>
           </div>
-          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
-            <FileCheck className="h-4 w-4 text-emerald-600" />
-            <span className="text-sm font-semibold text-emerald-700">
-              {ativos} ativo{ativos !== 1 ? "s" : ""}
-            </span>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="icon"
+              title="Atualizar status de assinaturas"
+              disabled={syncingStatuses}
+              onClick={async () => {
+                setSyncingStatuses(true);
+                try {
+                  const { data: zapsignData } = await supabase.from("contratos_zapsign").select("*");
+                  const zMap: Record<string, ZapSignRecord> = {};
+                  (zapsignData || []).forEach((z: any) => { zMap[z.contrato_id] = z as ZapSignRecord; });
+                  const pendentes = (zapsignData || []).filter(
+                    (z: any) => z.status === "Enviado" || z.status === "Pendente"
+                  );
+                  if (pendentes.length > 0) {
+                    await syncZapsignStatuses(pendentes, zMap);
+                    toast.success("Status das assinaturas atualizados!");
+                  } else {
+                    setZapsignRecords(zMap);
+                    toast.info("Nenhum contrato pendente de assinatura.");
+                  }
+                } catch {
+                  toast.error("Erro ao sincronizar status.");
+                } finally {
+                  setSyncingStatuses(false);
+                }
+              }}
+            >
+              <RefreshCw className={`h-4 w-4 ${syncingStatuses ? "animate-spin" : ""}`} />
+            </Button>
+            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
+              <FileCheck className="h-4 w-4 text-emerald-600" />
+              <span className="text-sm font-semibold text-emerald-700">
+                {ativos} ativo{ativos !== 1 ? "s" : ""}
+              </span>
+            </div>
           </div>
         </div>
 
