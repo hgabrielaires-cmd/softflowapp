@@ -1,0 +1,2 @@
+ALTER TABLE public.painel_etapas ADD COLUMN ordem_entrada text NOT NULL DEFAULT 'ultimo_abaixo';
+COMMENT ON COLUMN public.painel_etapas.ordem_entrada IS 'ultimo_abaixo = novos cards vão para baixo, ultimo_acima = novos cards vão para cima';

@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, GripVertical } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EtapaAlertasConfig, defaultAlertLevel, type AlertLevel } from "@/components/EtapaAlertasConfig";
 
 interface PainelEtapa {
@@ -19,6 +20,7 @@ interface PainelEtapa {
   ativo: boolean;
   controla_sla: boolean;
   prazo_maximo_horas: number | null;
+  ordem_entrada: string;
   alerta_whatsapp: boolean;
   alerta_notificacoes: boolean;
   created_at: string;
@@ -31,6 +33,7 @@ const defaultForm = {
   controla_sla: false,
   prazo_horas: "",
   prazo_minutos: "",
+  ordem_entrada: "ultimo_abaixo",
   alerta_whatsapp: false,
   alerta_notificacoes: false,
 };
@@ -128,6 +131,7 @@ export default function EtapasPainel() {
         cor: form.cor || null,
         controla_sla: form.controla_sla,
         prazo_maximo_horas: form.controla_sla && (form.prazo_horas || form.prazo_minutos) ? Number(form.prazo_horas || 0) + Number(form.prazo_minutos || 0) / 60 : null,
+        ordem_entrada: form.ordem_entrada,
         alerta_whatsapp: form.alerta_whatsapp,
         alerta_notificacoes: form.alerta_notificacoes,
       };
@@ -245,6 +249,7 @@ export default function EtapasPainel() {
       controla_sla: etapa.controla_sla,
       prazo_horas: etapa.prazo_maximo_horas != null ? String(Math.floor(etapa.prazo_maximo_horas)) : "",
       prazo_minutos: etapa.prazo_maximo_horas != null ? String(Math.round((etapa.prazo_maximo_horas % 1) * 60)) : "",
+      ordem_entrada: etapa.ordem_entrada || "ultimo_abaixo",
       alerta_whatsapp: etapa.alerta_whatsapp,
       alerta_notificacoes: etapa.alerta_notificacoes,
     });
@@ -417,6 +422,21 @@ export default function EtapasPainel() {
                 <p className="text-xs text-muted-foreground mt-1">Se ultrapassado, o card aparecerá como "Tarefa Atrasada" no painel.</p>
               </div>
             )}
+
+            <div>
+              <label className="text-sm font-medium">Ordem de Entrada</label>
+              <p className="text-xs text-muted-foreground mb-2">Define se novos cards aparecem no topo ou no final da coluna no Kanban.</p>
+              <RadioGroup value={form.ordem_entrada} onValueChange={(v) => setForm((p) => ({ ...p, ordem_entrada: v }))} className="flex gap-4">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="ultimo_abaixo" id="ordem_abaixo" />
+                  <label htmlFor="ordem_abaixo" className="text-sm cursor-pointer">Novos por último (abaixo)</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="ultimo_acima" id="ordem_acima" />
+                  <label htmlFor="ordem_acima" className="text-sm cursor-pointer">Novos primeiro (acima)</label>
+                </div>
+              </RadioGroup>
+            </div>
 
             <EtapaAlertasConfig
               canal="whatsapp"
