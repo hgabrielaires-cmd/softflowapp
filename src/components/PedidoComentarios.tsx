@@ -38,9 +38,10 @@ interface Comentario {
 
 interface Props {
   pedidoId: string;
+  readOnly?: boolean;
 }
 
-export function PedidoComentarios({ pedidoId }: Props) {
+export function PedidoComentarios({ pedidoId, readOnly = false }: Props) {
   const { user } = useAuth();
   const [comentarios, setComentarios] = useState<Comentario[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
@@ -154,6 +155,7 @@ export function PedidoComentarios({ pedidoId }: Props) {
       </p>
 
       {/* Form */}
+      {!readOnly && (
       <div className="space-y-2 bg-muted/30 rounded-md p-3">
         <Textarea
           placeholder="Escreva um comentário..."
@@ -217,6 +219,7 @@ export function PedidoComentarios({ pedidoId }: Props) {
           </Button>
         </div>
       </div>
+      )}
 
       {/* Lista */}
       {loading ? (

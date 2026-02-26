@@ -2133,7 +2133,7 @@ export default function PainelAtendimento() {
               {/* Comentários Internos do Pedido */}
               {detailCard.pedido_id && (
                 <div className="border-t border-border pt-3 mt-3">
-                  <PedidoComentarios pedidoId={detailCard.pedido_id} />
+                  <PedidoComentarios pedidoId={detailCard.pedido_id} readOnly />
                 </div>
               )}
                 <Button
