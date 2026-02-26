@@ -273,7 +273,7 @@ export default function Agenda() {
                 modifiers={modifiers}
                 modifiersStyles={modifiersStyles}
                 classNames={{
-                  day_selected: "bg-transparent text-foreground border-2 border-primary rounded-full hover:bg-primary/10 focus:bg-primary/10 font-bold",
+                  day_selected: "bg-primary/15 text-primary border-2 border-primary/50 rounded-full hover:bg-primary/20 focus:bg-primary/20 font-bold",
                 }}
                 className="pointer-events-auto"
               />
