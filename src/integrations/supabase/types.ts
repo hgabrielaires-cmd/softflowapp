@@ -864,6 +864,7 @@ export type Database = {
           id: string
           nome: string
           permite_revenda: boolean
+          quantidade_maxima: number | null
           valor_implantacao_modulo: number | null
           valor_mensalidade_modulo: number | null
         }
@@ -874,6 +875,7 @@ export type Database = {
           id?: string
           nome: string
           permite_revenda?: boolean
+          quantidade_maxima?: number | null
           valor_implantacao_modulo?: number | null
           valor_mensalidade_modulo?: number | null
         }
@@ -884,6 +886,7 @@ export type Database = {
           id?: string
           nome?: string
           permite_revenda?: boolean
+          quantidade_maxima?: number | null
           valor_implantacao_modulo?: number | null
           valor_mensalidade_modulo?: number | null
         }

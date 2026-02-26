@@ -88,6 +88,7 @@ interface ModuloOpcional {
   valor_mensalidade_modulo: number | null;
   incluso_no_plano: boolean;
   permite_revenda: boolean;
+  quantidade_maxima: number | null;
 }
 
 interface ModuloAdicionadoItem {
@@ -415,6 +416,7 @@ export default function Pedidos() {
           valor_mensalidade_modulo: v.modulo.valor_mensalidade_modulo ?? 0,
           incluso_no_plano: v.incluso_no_plano,
           permite_revenda: v.modulo.permite_revenda ?? false,
+          quantidade_maxima: v.modulo.quantidade_maxima ?? null,
         });
       }
     });
@@ -438,8 +440,17 @@ export default function Pedidos() {
     const modulo = modulosDisponiveis.find((m) => m.id === moduloBuscaId);
     if (!modulo) return;
 
-    // Se já existe, só incrementa quantidade
+    // Validar quantidade máxima
     const jaExiste = form.modulos_adicionais.find((m) => m.modulo_id === moduloBuscaId);
+    const qtdAtual = jaExiste ? jaExiste.quantidade : 0;
+    const novaQtd = qtdAtual + qtd;
+
+    if (modulo.quantidade_maxima != null && novaQtd > modulo.quantidade_maxima) {
+      toast.error(`Quantidade máxima excedida para "${modulo.nome}". Máximo permitido: ${modulo.quantidade_maxima} por contrato.`);
+      return;
+    }
+
+    // Se já existe, só incrementa quantidade
     if (jaExiste) {
       setForm((f) => ({
         ...f,
