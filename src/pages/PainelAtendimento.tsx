@@ -63,6 +63,10 @@ interface PainelCard {
   aponta_tecnico_agenda: boolean;
   tipo_atendimento_local: string | null;
   comentario: string | null;
+  pausado: boolean;
+  pausado_em: string | null;
+  pausado_por: string | null;
+  pausado_motivo: string | null;
   created_at: string;
   updated_at: string;
   // Joins
@@ -128,6 +132,9 @@ export default function PainelAtendimento() {
   const [historicoData, setHistoricoData] = useState<any[]>([]);
   const [historicoLoading, setHistoricoLoading] = useState(false);
   const [configEditMode, setConfigEditMode] = useState(false);
+  const [pausarOpen, setPausarOpen] = useState(false);
+  const [pausarMotivo, setPausarMotivo] = useState("");
+  const [pausando, setPausando] = useState(false);
   // Auto-refresh atrasado status every 60s
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60_000);
@@ -982,7 +989,117 @@ export default function PainelAtendimento() {
     }
   }
 
-  // Ensure current stage has a history entry (on card open)
+  // ─── Pausar Projeto ─────────────────────────────────────────────────────
+  async function handlePausarProjeto() {
+    if (!detailCard || !pausarMotivo.trim()) return;
+    setPausando(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      // Get filial params for congelar behavior
+      const { data: params } = await supabase
+        .from("filial_parametros")
+        .select("congelar_acao, congelar_etapa_id")
+        .eq("filial_id", detailCard.filial_id)
+        .maybeSingle();
+
+      const congelarAcao = params?.congelar_acao || "manter";
+      const congelarEtapaId = params?.congelar_etapa_id;
+
+      // Register history exit from current stage
+      const sla = getSlaEtapaForCard(detailCard);
+      await registrarSaidaEtapa(detailCard.id, detailCard.etapa_id, sla);
+
+      // Add pause comment to history
+      await supabase.from("painel_comentarios").insert({
+        card_id: detailCard.id,
+        etapa_id: detailCard.etapa_id,
+        criado_por: user.id,
+        texto: `⏸️ Projeto pausado: ${pausarMotivo.trim()}`,
+      });
+
+      let novaEtapaId = detailCard.etapa_id;
+
+      // If configured to move to another stage
+      if (congelarAcao === "mover" && congelarEtapaId) {
+        novaEtapaId = congelarEtapaId;
+        const etapaDestino = etapas.find(e => e.id === congelarEtapaId);
+        if (etapaDestino) {
+          await registrarEntradaEtapa(detailCard.id, congelarEtapaId, etapaDestino.nome);
+        }
+      }
+
+      // Update card: mark as paused, reset iniciado_em
+      const { error } = await supabase
+        .from("painel_atendimento")
+        .update({
+          pausado: true,
+          pausado_em: new Date().toISOString(),
+          pausado_por: user.id,
+          pausado_motivo: pausarMotivo.trim(),
+          iniciado_em: null,
+          iniciado_por: null,
+          etapa_id: novaEtapaId,
+        })
+        .eq("id", detailCard.id);
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+      toast.success("Projeto pausado com sucesso!");
+      setPausarOpen(false);
+      setPausarMotivo("");
+      setDetailCard(null);
+    } catch (err: any) {
+      toast.error("Erro ao pausar projeto: " + (err.message || ""));
+    } finally {
+      setPausando(false);
+    }
+  }
+
+  // ─── Despausar (ao iniciar etapa novamente) ─────────────────────────────
+  async function handleDespausar(cardId: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const { error } = await supabase
+      .from("painel_atendimento")
+      .update({
+        pausado: false,
+        pausado_em: null,
+        pausado_por: null,
+        pausado_motivo: null,
+        iniciado_em: new Date().toISOString(),
+        iniciado_por: user.id,
+        responsavel_id: prof?.id || null,
+      })
+      .eq("id", cardId);
+    if (error) {
+      toast.error("Erro ao retomar projeto.");
+      return;
+    }
+
+    // Add comment about resuming
+    const card = cards.find(c => c.id === cardId) || detailCard;
+    if (card) {
+      await supabase.from("painel_comentarios").insert({
+        card_id: cardId,
+        etapa_id: card.etapa_id,
+        criado_por: user.id,
+        texto: "▶️ Projeto retomado.",
+      });
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+    toast.success("Projeto retomado! Você é o responsável.");
+  }
+
+
   useEffect(() => {
     if (!detailCard) return;
     (async () => {
@@ -1254,19 +1371,25 @@ export default function PainelAtendimento() {
 
           {/* Status tags */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            {isInicioAtrasado(card) && (
+            {card.pausado && (
+              <Badge className="text-[10px] px-1.5 py-0 gap-1 bg-amber-100 text-amber-700 border-amber-200" variant="outline">
+                <PauseCircle className="h-2.5 w-2.5" />
+                Pausado
+              </Badge>
+            )}
+            {!card.pausado && isInicioAtrasado(card) && (
               <Badge variant="destructive" className="text-[10px] px-1.5 py-0 gap-1">
                 <AlertTriangle className="h-2.5 w-2.5" />
                 Atrasada {getTempoAtraso(card)}
               </Badge>
             )}
-            {isEtapaSlaAtrasado(card) && (
+            {!card.pausado && isEtapaSlaAtrasado(card) && (
               <Badge variant="destructive" className="text-[10px] px-1.5 py-0 gap-1">
                 <Clock className="h-2.5 w-2.5" />
                 SLA Atrasado {getTempoExcedidoSla(card)}
               </Badge>
             )}
-            {card.iniciado_em && !isEtapaSlaAtrasado(card) && (
+            {!card.pausado && card.iniciado_em && !isEtapaSlaAtrasado(card) && (
               <Badge className="text-[10px] px-1.5 py-0 gap-1 bg-emerald-100 text-emerald-700 border-emerald-200" variant="outline">
                 <Play className="h-2.5 w-2.5" />
                 Em andamento
@@ -1549,10 +1672,45 @@ export default function PainelAtendimento() {
           </DialogHeader>
           {detailCard && (
             <div className="space-y-4 overflow-y-auto flex-1 pr-1">
-              {/* Botão Iniciar / Em Andamento + Progresso do Projeto - no topo */}
+              {/* Botão Iniciar / Em Andamento / Pausado + Progresso do Projeto - no topo */}
               <div className="space-y-2">
+                {/* Pausado banner */}
+                {detailCard.pausado && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
+                    <div className="flex items-center gap-2 text-amber-700">
+                      <PauseCircle className="h-4 w-4" />
+                      <span className="text-sm font-semibold">Projeto Pausado</span>
+                    </div>
+                    {detailCard.pausado_motivo && (
+                      <p className="text-xs text-amber-600">Motivo: {detailCard.pausado_motivo}</p>
+                    )}
+                    {detailCard.pausado_em && (
+                      <p className="text-[10px] text-muted-foreground">
+                        Pausado em {new Date(detailCard.pausado_em).toLocaleDateString("pt-BR")} às{" "}
+                        {new Date(detailCard.pausado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                        {detailCard.pausado_por && (() => {
+                          const autor = responsaveis.find((r: any) => r.id === detailCard.pausado_por);
+                          return autor ? ` por ${(autor as any).full_name?.split(" ")[0]}` : "";
+                        })()}
+                      </p>
+                    )}
+                  </div>
+                )}
                 <div className="flex items-center gap-3">
-                  {detailCard.iniciado_em ? (
+                  {detailCard.pausado ? (
+                    <Button
+                      size="sm"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDespausar(detailCard.id);
+                        setDetailCard({ ...detailCard, pausado: false, pausado_em: null, pausado_por: null, pausado_motivo: null, iniciado_em: new Date().toISOString() });
+                      }}
+                    >
+                      <Play className="h-4 w-4 mr-1" />
+                      Retomar Projeto
+                    </Button>
+                  ) : detailCard.iniciado_em ? (
                     <Button
                       size="sm"
                       className="bg-green-600 hover:bg-green-700 text-white"
@@ -2437,10 +2595,10 @@ export default function PainelAtendimento() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {podePausarProjeto && (
+                  {podePausarProjeto && !detailCard?.pausado && (
                     <DropdownMenuItem
                       className="gap-2 text-amber-600 focus:text-amber-600"
-                      onClick={() => toast.info("Funcionalidade em desenvolvimento")}
+                      onClick={() => setPausarOpen(true)}
                     >
                       <PauseCircle className="h-4 w-4" />
                       Pausar Projeto
@@ -2630,6 +2788,44 @@ export default function PainelAtendimento() {
               ))}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Pausar Dialog */}
+      <Dialog open={pausarOpen} onOpenChange={(open) => { if (!open) { setPausarOpen(false); setPausarMotivo(""); } }}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <PauseCircle className="h-5 w-5" />
+              Pausar Projeto
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Motivo da pausa *</Label>
+              <Textarea
+                placeholder="Descreva o motivo para pausar o projeto..."
+                value={pausarMotivo}
+                onChange={(e) => setPausarMotivo(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              O projeto será congelado e o botão "Iniciar Etapa" ficará disponível para retomá-lo posteriormente.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPausarOpen(false); setPausarMotivo(""); }}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              onClick={handlePausarProjeto}
+              disabled={!pausarMotivo.trim() || pausando}
+            >
+              {pausando ? "Pausando..." : "Confirmar Pausa"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AppLayout>
