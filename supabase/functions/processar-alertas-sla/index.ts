@@ -209,13 +209,20 @@ serve(async (req) => {
         const cliente = clienteMap[card.cliente_id];
         const contrato = contratoMap[card.contrato_id];
 
-        // Calculate atraso tempo display — total elapsed time (SLA + delay)
-        const totalHorasDesdeCreacao = (now - criado) / (1000 * 60 * 60);
-        const horasInt = Math.floor(totalHorasDesdeCreacao);
-        const minutosInt = Math.floor((totalHorasDesdeCreacao % 1) * 60);
+        // Calculate atraso tempo display (time past SLA only)
+        const horasInt = Math.floor(horasAtrasado);
+        const minutosInt = Math.floor((horasAtrasado % 1) * 60);
         const atrasoTempo = horasInt > 0
           ? `${horasInt}h${minutosInt > 0 ? String(minutosInt).padStart(2, "0") + "min" : ""}`
           : `${minutosInt}min`;
+
+        // Calculate total elapsed time since card creation
+        const totalHorasDesdeCreacao = (now - criado) / (1000 * 60 * 60);
+        const totalHorasInt = Math.floor(totalHorasDesdeCreacao);
+        const totalMinutosInt = Math.floor((totalHorasDesdeCreacao % 1) * 60);
+        const atrasoTempoTotal = totalHorasInt > 0
+          ? `${totalHorasInt}h${totalMinutosInt > 0 ? String(totalMinutosInt).padStart(2, "0") + "min" : ""}`
+          : `${totalMinutosInt}min`;
 
         const replaceVars = (text: string, userName?: string) => {
           return text
@@ -224,6 +231,7 @@ serve(async (req) => {
             .replace(/\{contrato\.numero\}/g, contrato?.numero_exibicao || "N/A")
             .replace(/\{operacao\.tipo\}/g, card.tipo_operacao || "N/A")
             .replace(/\{etapa\.nome\}/g, etapa?.nome || "N/A")
+            .replace(/\{atraso\.tempo_total\}/g, atrasoTempoTotal)
             .replace(/\{atraso\.tempo\}/g, atrasoTempo);
         };
 
