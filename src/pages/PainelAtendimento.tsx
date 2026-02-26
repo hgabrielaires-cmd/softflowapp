@@ -23,7 +23,7 @@ import {
   LayoutGrid, List, Search, Clock, Building2, User, Filter,
   GripVertical, ChevronRight, FileText, Package, ArrowUpCircle,
   Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw, ArrowRight, CheckSquare,
-  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare
+  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare, Info
 } from "lucide-react";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { ChecklistItem } from "@/lib/supabase-types";
@@ -106,6 +106,9 @@ export default function PainelAtendimento() {
   const [filtroResponsavel, setFiltroResponsavel] = useState<string>("todos");
   const [filtroEtapa, setFiltroEtapa] = useState<string>("todos");
   const [detailCard, setDetailCard] = useState<PainelCard | null>(null);
+  const [detalhesOpen, setDetalhesOpen] = useState(false);
+  const [detalhesData, setDetalhesData] = useState<any>(null);
+  const [detalhesLoading, setDetalhesLoading] = useState(false);
   const [planoAnteriorNome, setPlanoAnteriorNome] = useState<string | null>(null);
   const [dragCardId, setDragCardId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -499,7 +502,63 @@ export default function PainelAtendimento() {
     }
   }
 
-  // ─── Histórico de etapas helpers ─────────────────────────────────────
+  async function fetchDetalhes(card: PainelCard) {
+    setDetalhesLoading(true);
+    setDetalhesOpen(true);
+    try {
+      // 1. Licenças (módulos do plano)
+      let modulos: any[] = [];
+      if (card.plano_id) {
+        const { data } = await supabase
+          .from("plano_modulos")
+          .select("modulo_id, modulos(nome)")
+          .eq("plano_id", card.plano_id)
+          .eq("incluso_no_plano", true)
+          .order("ordem");
+        modulos = (data || []).map((m: any) => m.modulos?.nome).filter(Boolean);
+      }
+
+      // 2. Observações (comentários do card - não financeiras)
+      const { data: obs } = await supabase
+        .from("painel_comentarios")
+        .select("texto, created_at, criado_por, profiles:criado_por(full_name)")
+        .eq("card_id", card.id)
+        .order("created_at", { ascending: false });
+
+      // Also get observacoes field from card
+      const obsCard = card.observacoes;
+
+      // 3. Data do pedido
+      let dataPedido: string | null = null;
+      if (card.pedido_id) {
+        const { data: ped } = await supabase
+          .from("pedidos")
+          .select("created_at")
+          .eq("id", card.pedido_id)
+          .single();
+        dataPedido = ped?.created_at || null;
+      }
+
+      // 4. Data de assinatura do contrato
+      let dataAssinatura: string | null = null;
+      if (card.contrato_id) {
+        const { data: zap } = await supabase
+          .from("contratos_zapsign")
+          .select("updated_at, status")
+          .eq("contrato_id", card.contrato_id)
+          .eq("status", "Assinado")
+          .maybeSingle();
+        dataAssinatura = zap?.updated_at || null;
+      }
+
+      setDetalhesData({ modulos, observacoes: obs || [], obsCard, dataPedido, dataAssinatura });
+    } catch {
+      toast.error("Erro ao carregar detalhes.");
+    } finally {
+      setDetalhesLoading(false);
+    }
+  }
+
   async function registrarEntradaEtapa(cardId: string, etapaId: string, etapaNome: string) {
     const { data: { user } } = await supabase.auth.getUser();
     await supabase.from("painel_historico_etapas").insert({
@@ -1543,6 +1602,14 @@ export default function PainelAtendimento() {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => fetchDetalhes(detailCard)}
+                >
+                  <Info className="h-4 w-4 mr-1" />
+                  Detalhes
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="bg-amber-500 hover:bg-amber-600 text-white border-amber-500 hover:border-amber-600"
                 >
                   Histórico
@@ -1557,6 +1624,102 @@ export default function PainelAtendimento() {
                 </Button>
               </div>
             </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Detalhes Dialog */}
+      <Dialog open={detalhesOpen} onOpenChange={setDetalhesOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="h-4 w-4" />
+              Detalhes do Atendimento
+            </DialogTitle>
+          </DialogHeader>
+          {detalhesLoading ? (
+            <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
+              Carregando...
+            </div>
+          ) : detalhesData && (
+            <div className="space-y-5 overflow-y-auto flex-1 pr-1">
+              {/* Datas */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg border bg-muted/30">
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">Data do Pedido</p>
+                  <p className="text-sm font-medium">
+                    {detalhesData.dataPedido
+                      ? `${new Date(detalhesData.dataPedido).toLocaleDateString("pt-BR")} às ${new Date(detalhesData.dataPedido).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                      : "—"}
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg border bg-muted/30">
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">Assinatura do Contrato</p>
+                  <p className="text-sm font-medium">
+                    {detalhesData.dataAssinatura
+                      ? `${new Date(detalhesData.dataAssinatura).toLocaleDateString("pt-BR")} às ${new Date(detalhesData.dataAssinatura).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Licenças / Módulos */}
+              <div>
+                <p className="text-xs font-semibold mb-2 flex items-center gap-1.5">
+                  <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                  Licenças (Módulos do Plano)
+                </p>
+                {detalhesData.modulos.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">Nenhum módulo vinculado</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {detalhesData.modulos.map((nome: string, i: number) => (
+                      <Badge key={i} variant="secondary" className="text-xs">
+                        {nome}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Observações do card */}
+              {detalhesData.obsCard && (
+                <div>
+                  <p className="text-xs font-semibold mb-1.5 flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                    Observações do Card
+                  </p>
+                  <div className="p-2.5 rounded-md border bg-muted/20 text-xs whitespace-pre-wrap">
+                    {detalhesData.obsCard}
+                  </div>
+                </div>
+              )}
+
+              {/* Comentários / Observações Técnicas */}
+              <div>
+                <p className="text-xs font-semibold mb-2 flex items-center gap-1.5">
+                  <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                  Observações Técnicas ({detalhesData.observacoes.length})
+                </p>
+                {detalhesData.observacoes.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">Nenhuma observação registrada</p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {detalhesData.observacoes.map((obs: any) => (
+                      <div key={obs.created_at} className="p-2.5 rounded-md border bg-muted/20">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[11px] font-medium">{obs.profiles?.full_name || "—"}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {new Date(obs.created_at).toLocaleDateString("pt-BR")} {new Date(obs.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                        <p className="text-xs whitespace-pre-wrap">{obs.texto}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
