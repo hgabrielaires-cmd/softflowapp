@@ -394,12 +394,6 @@ export default function PainelAtendimento() {
               <Building2 className="h-3 w-3" />
               {card.filiais?.nome || "—"}
             </span>
-            {card.planos?.nome && (
-              <span className="flex items-center gap-1 truncate">
-                <FileText className="h-3 w-3" />
-                {card.planos.nome}
-              </span>
-            )}
           </div>
 
           {/* Countdown SLA */}
