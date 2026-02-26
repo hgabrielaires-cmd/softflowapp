@@ -100,6 +100,7 @@ export default function PainelAtendimento() {
   const [dragCardId, setDragCardId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [slaEtapaJornada, setSlaEtapaJornada] = useState<number | null>(null);
+  const [slaProjeto, setSlaProjeto] = useState<number | null>(null);
   const [checklistEtapa, setChecklistEtapa] = useState<any[]>([]);
   const [, setTick] = useState(0); // force re-render for atrasado checks
 
@@ -236,13 +237,13 @@ export default function PainelAtendimento() {
   useEffect(() => {
     if (!detailCard || !detailCard.plano_id) {
       setSlaEtapaJornada(null);
+      setSlaProjeto(null);
       setChecklistEtapa([]);
       return;
     }
     (async () => {
       // Find jornada linked to this plano
-      const jornadaId = detailCard.jornada_id;
-      let resolvedJornadaId = jornadaId;
+      let resolvedJornadaId = detailCard.jornada_id;
       if (!resolvedJornadaId) {
         const { data: jornada } = await supabase
           .from("jornadas")
@@ -253,13 +254,32 @@ export default function PainelAtendimento() {
           .limit(1);
         if (!jornada || jornada.length === 0) {
           setSlaEtapaJornada(null);
+          setSlaProjeto(null);
           setChecklistEtapa([]);
           return;
         }
         resolvedJornadaId = jornada[0].id;
       }
 
-      // Find jornada_etapa matching current painel_etapa name
+      // Fetch ALL jornada_etapas for SLA do Projeto (total hours)
+      const { data: todasEtapasJornada } = await supabase
+        .from("jornada_etapas")
+        .select("id")
+        .eq("jornada_id", resolvedJornadaId);
+
+      if (todasEtapasJornada && todasEtapasJornada.length > 0) {
+        const etapaIds = todasEtapasJornada.map((e) => e.id);
+        const { data: todasAtividades } = await supabase
+          .from("jornada_atividades")
+          .select("horas_estimadas")
+          .in("etapa_id", etapaIds);
+        const totalProjeto = (todasAtividades || []).reduce((acc, a) => acc + (a.horas_estimadas || 0), 0);
+        setSlaProjeto(totalProjeto);
+      } else {
+        setSlaProjeto(null);
+      }
+
+      // Find jornada_etapa matching current painel_etapa name for SLA da Etapa
       const etapaAtual = etapas.find((e) => e.id === detailCard.etapa_id);
       if (!etapaAtual) { setSlaEtapaJornada(null); setChecklistEtapa([]); return; }
 
@@ -276,15 +296,15 @@ export default function PainelAtendimento() {
         return;
       }
 
-      // Fetch activities for SLA + checklist
+      // Fetch activities for SLA da Etapa + checklist
       const { data: atividades } = await supabase
         .from("jornada_atividades")
         .select("nome, horas_estimadas, checklist")
         .eq("etapa_id", jornadaEtapa[0].id)
         .order("ordem");
 
-      const total = (atividades || []).reduce((acc, a) => acc + (a.horas_estimadas || 0), 0);
-      setSlaEtapaJornada(total);
+      const totalEtapa = (atividades || []).reduce((acc, a) => acc + (a.horas_estimadas || 0), 0);
+      setSlaEtapaJornada(totalEtapa);
       setChecklistEtapa(atividades || []);
     })();
   }, [detailCard, etapas]);
@@ -795,7 +815,7 @@ export default function PainelAtendimento() {
                   <p className="text-muted-foreground text-xs">SLA do Projeto</p>
                   <p className="font-medium flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    {formatSLA(detailCard.sla_horas)}
+                    {slaProjeto !== null ? formatSLA(slaProjeto) : "—"}
                   </p>
                 </div>
               </div>
