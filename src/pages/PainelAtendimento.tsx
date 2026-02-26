@@ -66,7 +66,7 @@ interface PainelCard {
   // Joins
   clientes?: { nome_fantasia: string } | null;
   filiais?: { nome: string } | null;
-  planos?: { nome: string } | null;
+  planos?: { nome: string; descricao: string | null } | null;
   contratos?: { numero_exibicao: string } | null;
   profiles?: { full_name: string } | null;
 }
@@ -190,7 +190,7 @@ export default function PainelAtendimento() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("painel_atendimento")
-        .select("*, clientes(nome_fantasia), filiais(nome), planos(nome), contratos(numero_exibicao), profiles(full_name)")
+        .select("*, clientes(nome_fantasia), filiais(nome), planos(nome, descricao), contratos(numero_exibicao), profiles(full_name)")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data as PainelCard[];
@@ -704,9 +704,10 @@ export default function PainelAtendimento() {
         .eq("ativo", true)
         .order("decisor", { ascending: false });
 
-      // 5. Módulos do plano
+      // 5. Módulos do plano + descrição do plano
       let modulosPlano: string[] = [];
       let planoNome: string | null = card.planos?.nome || null;
+      let planoDescricao: string | null = card.planos?.descricao || null;
       if (card.plano_id) {
         const { data: mods } = await supabase
           .from("plano_modulos")
@@ -715,10 +716,19 @@ export default function PainelAtendimento() {
           .eq("incluso_no_plano", true)
           .order("ordem");
         modulosPlano = (mods || []).map((m: any) => m.modulos?.nome).filter(Boolean);
+        // If description not loaded from join, fetch it
+        if (!planoDescricao) {
+          const { data: planoData } = await supabase
+            .from("planos")
+            .select("descricao")
+            .eq("id", card.plano_id)
+            .single();
+          planoDescricao = planoData?.descricao || null;
+        }
       }
 
-      // 6. Módulos adicionais (do pedido)
-      let modulosAdicionais: any[] = [];
+      // 6. Módulos adicionais (do pedido) - com quantidade
+      let modulosAdicionais: { nome: string; quantidade: number }[] = [];
       if (pedidoInfo?.modulos_adicionais) {
         const modsAd = Array.isArray(pedidoInfo.modulos_adicionais) ? pedidoInfo.modulos_adicionais : [];
         if (modsAd.length > 0) {
@@ -728,7 +738,11 @@ export default function PainelAtendimento() {
               .from("modulos")
               .select("id, nome")
               .in("id", modIds);
-            modulosAdicionais = (modNames || []).map((m: any) => m.nome);
+            const nameMap: Record<string, string> = {};
+            (modNames || []).forEach((m: any) => { nameMap[m.id] = m.nome; });
+            modulosAdicionais = modsAd
+              .filter((m: any) => nameMap[m.modulo_id])
+              .map((m: any) => ({ nome: nameMap[m.modulo_id], quantidade: m.quantidade || 1 }));
           }
         }
       }
@@ -752,6 +766,7 @@ export default function PainelAtendimento() {
         clienteInfo,
         contatos: contatos || [],
         planoNome,
+        planoDescricao,
         modulosPlano,
         modulosAdicionais,
         servicosOA,
@@ -2245,46 +2260,60 @@ export default function PainelAtendimento() {
                 </div>
               )}
 
-              {/* ── PLANO CONTRATADO + MÓDULOS ── */}
+              {/* ── PLANO CONTRATADO + MÓDULOS DO PLANO + ADICIONAIS ── */}
               {detalhesData.planoNome && (
-                <div className="rounded-lg border bg-card p-4 mt-3">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
-                      <Package className="h-4 w-4 text-primary" />
+                <div className="rounded-lg border bg-card p-4 mt-3 space-y-4">
+                  {/* Plano Contratado */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+                        <Package className="h-4 w-4 text-primary" />
+                      </div>
+                      <h4 className="text-sm font-bold text-foreground">
+                        {detailCard?.tipo_operacao === "Upgrade" ? "Novo Plano Contratado" : "Plano Contratado"}
+                      </h4>
                     </div>
-                    <h4 className="text-sm font-bold text-foreground">Plano Contratado</h4>
-                    <Badge variant="secondary" className="ml-auto text-xs">{detalhesData.planoNome}</Badge>
+                    <p className="text-sm font-semibold ml-9">
+                      {detalhesData.planoNome}
+                    </p>
+                    {detailCard?.tipo_operacao === "Upgrade" && planoAnteriorNome && (
+                      <p className="text-xs text-muted-foreground ml-9 mt-0.5">
+                        Plano anterior: <span className="line-through">{planoAnteriorNome}</span>
+                      </p>
+                    )}
                   </div>
-                  {detalhesData.modulosPlano.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {detalhesData.modulosPlano.map((nome: string, i: number) => (
-                        <Badge key={i} variant="outline" className="text-xs bg-muted/40">
-                          {nome}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic">Nenhum módulo vinculado ao plano</p>
-                  )}
-                </div>
-              )}
 
-              {/* ── MÓDULOS ADICIONAIS ── */}
-              {detalhesData.modulosAdicionais.length > 0 && (
-                <div className="rounded-lg border bg-card p-4 mt-3">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="h-7 w-7 rounded-md bg-violet-100 flex items-center justify-center">
-                      <Layers className="h-4 w-4 text-violet-600" />
+                  {/* Módulos do Plano (da descrição) */}
+                  {detalhesData.planoDescricao && (
+                    <div className="ml-9">
+                      <p className="text-xs font-semibold text-muted-foreground mb-1.5">Módulos do Plano</p>
+                      <div className="space-y-0.5">
+                        {detalhesData.planoDescricao.split(",").map((item: string, i: number) => {
+                          const trimmed = item.trim();
+                          return trimmed ? (
+                            <p key={i} className="text-xs text-foreground">• {trimmed}</p>
+                          ) : null;
+                        })}
+                      </div>
                     </div>
-                    <h4 className="text-sm font-bold text-foreground">Módulos Adicionais</h4>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {detalhesData.modulosAdicionais.map((nome: string, i: number) => (
-                      <Badge key={i} variant="outline" className="text-xs bg-violet-50 text-violet-700 border-violet-200">
-                        {nome}
-                      </Badge>
-                    ))}
-                  </div>
+                  )}
+
+                  {/* Módulos Adicionais */}
+                  {detalhesData.modulosAdicionais.length > 0 && (
+                    <div className="ml-9 pt-2 border-t">
+                      <p className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1">
+                        <Layers className="h-3.5 w-3.5 text-violet-600" />
+                        Módulos Adicionais
+                      </p>
+                      <div className="space-y-0.5">
+                        {detalhesData.modulosAdicionais.map((mod: { nome: string; quantidade: number }, i: number) => (
+                          <p key={i} className="text-xs text-foreground">
+                            {mod.quantidade > 1 ? `${mod.quantidade} ` : ""}{mod.nome}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
