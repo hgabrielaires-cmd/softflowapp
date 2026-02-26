@@ -1121,6 +1121,63 @@ export type Database = {
           },
         ]
       }
+      painel_checklist_progresso: {
+        Row: {
+          atividade_id: string
+          card_id: string
+          checklist_index: number
+          concluido: boolean
+          concluido_em: string | null
+          concluido_por: string | null
+          created_at: string
+          id: string
+          updated_at: string
+          valor_data: string | null
+          valor_texto: string | null
+        }
+        Insert: {
+          atividade_id: string
+          card_id: string
+          checklist_index: number
+          concluido?: boolean
+          concluido_em?: string | null
+          concluido_por?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          valor_data?: string | null
+          valor_texto?: string | null
+        }
+        Update: {
+          atividade_id?: string
+          card_id?: string
+          checklist_index?: number
+          concluido?: boolean
+          concluido_em?: string | null
+          concluido_por?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          valor_data?: string | null
+          valor_texto?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "painel_checklist_progresso_atividade_id_fkey"
+            columns: ["atividade_id"]
+            isOneToOne: false
+            referencedRelation: "jornada_atividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_checklist_progresso_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "painel_atendimento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       painel_etapa_alertas: {
         Row: {
           ativo: boolean
