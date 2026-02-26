@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import {
   LayoutGrid, List, Search, Clock, Building2, User, Filter,
   GripVertical, ChevronRight, FileText, Package, ArrowUpCircle,
-  Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw
+  Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw, ArrowRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -93,6 +93,7 @@ export default function PainelAtendimento() {
   const [filtroResponsavel, setFiltroResponsavel] = useState<string>("todos");
   const [filtroEtapa, setFiltroEtapa] = useState<string>("todos");
   const [detailCard, setDetailCard] = useState<PainelCard | null>(null);
+  const [planoAnteriorNome, setPlanoAnteriorNome] = useState<string | null>(null);
   const [dragCardId, setDragCardId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [, setTick] = useState(0); // force re-render for atrasado checks
@@ -102,6 +103,30 @@ export default function PainelAtendimento() {
     const interval = setInterval(() => setTick((t) => t + 1), 60_000);
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch plano anterior for Upgrade cards
+  useEffect(() => {
+    if (!detailCard || detailCard.tipo_operacao !== "Upgrade") {
+      setPlanoAnteriorNome(null);
+      return;
+    }
+    (async () => {
+      // Get contrato_origem_id from the aditivo contract
+      const { data: contrato } = await supabase
+        .from("contratos")
+        .select("contrato_origem_id")
+        .eq("id", detailCard.contrato_id)
+        .single();
+      if (!contrato?.contrato_origem_id) { setPlanoAnteriorNome(null); return; }
+      // Get the plan from the base contract
+      const { data: base } = await supabase
+        .from("contratos")
+        .select("plano_id, planos:plano_id(nome)")
+        .eq("id", contrato.contrato_origem_id)
+        .single();
+      setPlanoAnteriorNome((base?.planos as any)?.nome || null);
+    })();
+  }, [detailCard]);
 
 
   // Set default filial filter when hook resolves
@@ -675,7 +700,15 @@ export default function PainelAtendimento() {
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Plano</p>
-                  <p className="font-medium">{detailCard.planos?.nome || "—"}</p>
+                  {detailCard.tipo_operacao === "Upgrade" && planoAnteriorNome ? (
+                    <p className="font-medium flex items-center gap-1.5 flex-wrap">
+                      <span className="line-through text-muted-foreground">{planoAnteriorNome}</span>
+                      <ArrowRight className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="text-primary">{detailCard.planos?.nome || "—"}</span>
+                    </p>
+                  ) : (
+                    <p className="font-medium">{detailCard.planos?.nome || "—"}</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Etapa Atual</p>
