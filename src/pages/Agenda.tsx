@@ -297,50 +297,79 @@ export default function Agenda() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {agendamentosDoDia.map((ag) => (
-                    <div key={ag.id} className="border rounded-lg p-3 hover:bg-accent/50 transition-colors">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            {ag.hora_inicio && (
-                              <Badge variant="outline" className="text-xs font-mono shrink-0">
-                                <Clock className="h-3 w-3 mr-1" />
-                                {ag.hora_inicio.slice(0, 5)}
-                                {ag.hora_fim && ` - ${ag.hora_fim.slice(0, 5)}`}
-                              </Badge>
+                  {agendamentosDoDia.map((ag) => {
+                    // Outras datas agendadas para o mesmo card (contrato)
+                    const outrasData = agendamentosFiltrados
+                      .filter((o) => o.card_id === ag.card_id && o.id !== ag.id)
+                      .map((o) => o.data)
+                      .filter((v, i, arr) => arr.indexOf(v) === i)
+                      .sort();
+
+                    return (
+                      <div key={ag.id} className="border rounded-lg p-3 hover:bg-accent/50 transition-colors">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              {ag.hora_inicio && (
+                                <Badge variant="outline" className="text-xs font-mono shrink-0">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  {ag.hora_inicio.slice(0, 5)}
+                                  {ag.hora_fim && ` - ${ag.hora_fim.slice(0, 5)}`}
+                                </Badge>
+                              )}
+                              {ag.tipo_atendimento && (
+                                <Badge variant="secondary" className="text-xs">
+                                  <MapPin className="h-3 w-3 mr-1" />
+                                  {ag.tipo_atendimento}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="font-medium text-sm text-foreground truncate">{ag.cliente_nome}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Contrato: {ag.contrato_numero} · {ag.atividade_nome}
+                            </p>
+                            {ag.tecnicos.length > 0 && (
+                              <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                                <User className="h-3 w-3 text-muted-foreground" />
+                                {ag.tecnicos.map((t) => (
+                                  <Badge key={t.id} variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
+                                    {t.full_name}
+                                  </Badge>
+                                ))}
+                              </div>
                             )}
-                            {ag.tipo_atendimento && (
-                              <Badge variant="secondary" className="text-xs">
-                                <MapPin className="h-3 w-3 mr-1" />
-                                {ag.tipo_atendimento}
-                              </Badge>
+                            {ag.observacao && (
+                              <p className="text-xs text-muted-foreground mt-1 italic">"{ag.observacao}"</p>
+                            )}
+                            {outrasData.length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-border/50">
+                                <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                                  <CalendarDays className="h-3 w-3" />
+                                  Agendamentos Programados
+                                </p>
+                                <div className="flex flex-wrap gap-1">
+                                  {outrasData.map((d) => (
+                                    <Badge
+                                      key={d}
+                                      variant="outline"
+                                      className="text-xs font-mono cursor-pointer hover:bg-primary/10"
+                                      onClick={() => setSelectedDate(parseISO(d))}
+                                    >
+                                      {format(parseISO(d), "dd/MM", { locale: ptBR })}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
                             )}
                           </div>
-                          <p className="font-medium text-sm text-foreground truncate">{ag.cliente_nome}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Contrato: {ag.contrato_numero} · {ag.atividade_nome}
-                          </p>
-                          {ag.tecnicos.length > 0 && (
-                            <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                              <User className="h-3 w-3 text-muted-foreground" />
-                              {ag.tecnicos.map((t) => (
-                                <Badge key={t.id} variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
-                                  {t.full_name}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                          {ag.observacao && (
-                            <p className="text-xs text-muted-foreground mt-1 italic">"{ag.observacao}"</p>
-                          )}
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            <Building2 className="h-3 w-3 mr-1" />
+                            {ag.filial_nome}
+                          </Badge>
                         </div>
-                        <Badge variant="outline" className="text-xs shrink-0">
-                          <Building2 className="h-3 w-3 mr-1" />
-                          {ag.filial_nome}
-                        </Badge>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
