@@ -97,6 +97,7 @@ export default function PainelAtendimento() {
   const [planoAnteriorNome, setPlanoAnteriorNome] = useState<string | null>(null);
   const [dragCardId, setDragCardId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [slaEtapaJornada, setSlaEtapaJornada] = useState<number | null>(null);
   const [, setTick] = useState(0); // force re-render for atrasado checks
 
   // Auto-refresh atrasado status every 60s
@@ -130,7 +131,7 @@ export default function PainelAtendimento() {
   }, [detailCard]);
 
 
-  // Set default filial filter when hook resolves
+
   useEffect(() => {
     if (filtroFilial === "_init_") {
       if (isGlobal && !profile?.filial_favorita_id) {
@@ -227,6 +228,31 @@ export default function PainelAtendimento() {
       syncContratosAssinados();
     }
   }, [cards.length, hasSynced, syncContratosAssinados]);
+
+  // Fetch SLA da Etapa from jornada_etapa matching current painel_etapa name
+  useEffect(() => {
+    if (!detailCard || !detailCard.jornada_id) {
+      setSlaEtapaJornada(null);
+      return;
+    }
+    (async () => {
+      const etapaAtual = etapas.find((e) => e.id === detailCard.etapa_id);
+      if (!etapaAtual) { setSlaEtapaJornada(null); return; }
+      const { data: jornadaEtapa } = await supabase
+        .from("jornada_etapas")
+        .select("id")
+        .eq("jornada_id", detailCard.jornada_id)
+        .eq("nome", etapaAtual.nome)
+        .limit(1);
+      if (!jornadaEtapa || jornadaEtapa.length === 0) { setSlaEtapaJornada(null); return; }
+      const { data: atividades } = await supabase
+        .from("jornada_atividades")
+        .select("horas_estimadas")
+        .eq("etapa_id", jornadaEtapa[0].id);
+      const total = (atividades || []).reduce((acc, a) => acc + (a.horas_estimadas || 0), 0);
+      setSlaEtapaJornada(total);
+    })();
+  }, [detailCard, etapas]);
 
   // ─── Mutations ───────────────────────────────────────────────────────────
 
@@ -724,7 +750,14 @@ export default function PainelAtendimento() {
                   </Badge>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-xs">SLA</p>
+                  <p className="text-muted-foreground text-xs">SLA da Etapa</p>
+                  <p className="font-medium flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                    {slaEtapaJornada !== null ? formatSLA(slaEtapaJornada) : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">SLA do Projeto</p>
                   <p className="font-medium flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                     {formatSLA(detailCard.sla_horas)}
