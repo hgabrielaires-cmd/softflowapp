@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, Paperclip, Download, Trash2, MessageSquare } from "lucide-react";
+import { Loader2, Paperclip, Download, Trash2, MessageSquare, Reply } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -33,6 +33,7 @@ interface Comentario {
   prioridade: string;
   anexo_url: string | null;
   anexo_nome: string | null;
+  parent_id: string | null;
   created_at: string;
 }
 
@@ -52,6 +53,11 @@ export function PedidoComentarios({ pedidoId, readOnly = false }: Props) {
   const [arquivo, setArquivo] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Reply state
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyTexto, setReplyTexto] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+
   const fetchComentarios = async () => {
     const { data } = await supabase
       .from("pedido_comentarios")
@@ -61,7 +67,6 @@ export function PedidoComentarios({ pedidoId, readOnly = false }: Props) {
 
     if (data) {
       setComentarios(data as Comentario[]);
-      // fetch profile names
       const userIds = [...new Set(data.map((c: any) => c.user_id))];
       if (userIds.length > 0) {
         const { data: profs } = await supabase
@@ -116,10 +121,9 @@ export function PedidoComentarios({ pedidoId, readOnly = false }: Props) {
         const { data: urlData } = supabase.storage
           .from("pedido-anexos")
           .getPublicUrl(path);
-        // bucket is private, use signed URL
         const { data: signedData } = await supabase.storage
           .from("pedido-anexos")
-          .createSignedUrl(path, 60 * 60 * 24 * 365); // 1 year
+          .createSignedUrl(path, 60 * 60 * 24 * 365);
         anexo_url = signedData?.signedUrl || urlData.publicUrl;
         anexo_nome = arquivo.name;
       }
@@ -147,6 +151,87 @@ export function PedidoComentarios({ pedidoId, readOnly = false }: Props) {
       setSending(false);
     }
   };
+
+  const handleEnviarResposta = async (parentComentario: Comentario) => {
+    if (!replyTexto.trim() || !user) return;
+    setSendingReply(true);
+
+    try {
+      // Insert reply
+      const { error } = await supabase.from("pedido_comentarios").insert({
+        pedido_id: pedidoId,
+        user_id: user.id,
+        texto: replyTexto.trim(),
+        prioridade: "normal",
+        parent_id: parentComentario.id,
+      });
+      if (error) throw error;
+
+      // Get current user profile name
+      const { data: myProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const meuNome = myProfile?.full_name || "Usuário";
+
+      // Get pedido vendedor to notify
+      const { data: pedido } = await supabase
+        .from("pedidos")
+        .select("vendedor_id")
+        .eq("id", pedidoId)
+        .maybeSingle();
+
+      // Notify the original comment author (if different from current user)
+      const destinatarioId = parentComentario.user_id;
+      if (destinatarioId !== user.id) {
+        // Get the profile.id for the destinatario (notifications use profile.id in some contexts)
+        const agora = new Date();
+        const dataHora = format(agora, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+
+        await supabase.from("notificacoes").insert({
+          titulo: "Nova resposta no seu comentário",
+          mensagem: `${meuNome} respondeu ao seu comentário em ${dataHora}:\n"${replyTexto.trim().substring(0, 100)}${replyTexto.trim().length > 100 ? "..." : ""}"`,
+          tipo: "info",
+          destinatario_user_id: destinatarioId,
+          criado_por: user.id,
+        });
+      }
+
+      // Also notify vendedor if different from both
+      if (pedido?.vendedor_id && pedido.vendedor_id !== user.id && pedido.vendedor_id !== destinatarioId) {
+        const agora = new Date();
+        const dataHora = format(agora, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+
+        await supabase.from("notificacoes").insert({
+          titulo: "Nova resposta em comentário do pedido",
+          mensagem: `${meuNome} respondeu a um comentário em ${dataHora}:\n"${replyTexto.trim().substring(0, 100)}${replyTexto.trim().length > 100 ? "..." : ""}"`,
+          tipo: "info",
+          destinatario_user_id: pedido.vendedor_id,
+          criado_por: user.id,
+        });
+      }
+
+      setReplyTexto("");
+      setReplyingTo(null);
+      toast.success("Resposta enviada!");
+      fetchComentarios();
+    } catch (err: any) {
+      toast.error("Erro ao enviar resposta: " + err.message);
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
+  // Separate top-level comments and replies
+  const topLevelComentarios = comentarios.filter(c => !c.parent_id);
+  const repliesMap: Record<string, Comentario[]> = {};
+  comentarios.filter(c => c.parent_id).forEach(c => {
+    if (!repliesMap[c.parent_id!]) repliesMap[c.parent_id!] = [];
+    repliesMap[c.parent_id!].push(c);
+  });
+  // Sort replies ascending
+  Object.values(repliesMap).forEach(arr => arr.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
 
   return (
     <div className="border-t border-border pt-3 space-y-3">
@@ -226,33 +311,98 @@ export function PedidoComentarios({ pedidoId, readOnly = false }: Props) {
         <div className="flex justify-center py-4">
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         </div>
-      ) : comentarios.length === 0 ? (
+      ) : topLevelComentarios.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-2">Nenhum comentário ainda.</p>
       ) : (
-        <div className="space-y-2 max-h-[250px] overflow-y-auto">
-          {comentarios.map((c) => {
+        <div className="space-y-2 max-h-[300px] overflow-y-auto">
+          {topLevelComentarios.map((c) => {
             const pri = PRIORIDADE_MAP[c.prioridade] || PRIORIDADE_MAP.normal;
+            const replies = repliesMap[c.id] || [];
             return (
-              <div key={c.id} className="bg-background border border-border rounded-md p-2.5 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium">{profiles[c.user_id] || "Usuário"}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted">{pri.emoji} {pri.label}</span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {format(new Date(c.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
-                    </span>
+              <div key={c.id} className="space-y-1">
+                <div className="bg-background border border-border rounded-md p-2.5 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium">{profiles[c.user_id] || "Usuário"}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted">{pri.emoji} {pri.label}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {format(new Date(c.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                      </span>
+                    </div>
                   </div>
+                  <p className="text-xs whitespace-pre-wrap">{c.texto}</p>
+                  {c.anexo_url && c.anexo_nome && (
+                    <a
+                      href={c.anexo_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
+                    >
+                      <Download className="h-3 w-3" /> {c.anexo_nome}
+                    </a>
+                  )}
+                  {/* Reply button */}
+                  {user && (
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() => { setReplyingTo(replyingTo === c.id ? null : c.id); setReplyTexto(""); }}
+                        className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        <Reply className="h-3 w-3" /> Responder
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs whitespace-pre-wrap">{c.texto}</p>
-                {c.anexo_url && c.anexo_nome && (
-                  <a
-                    href={c.anexo_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
-                  >
-                    <Download className="h-3 w-3" /> {c.anexo_nome}
-                  </a>
+
+                {/* Replies */}
+                {replies.length > 0 && (
+                  <div className="ml-4 space-y-1">
+                    {replies.map((r) => (
+                      <div key={r.id} className="bg-muted/40 border border-border/50 rounded-md p-2 space-y-0.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-medium flex items-center gap-1">
+                            <Reply className="h-2.5 w-2.5 text-muted-foreground" />
+                            {profiles[r.user_id] || "Usuário"}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {format(new Date(r.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                          </span>
+                        </div>
+                        <p className="text-xs whitespace-pre-wrap">{r.texto}</p>
+                        {r.anexo_url && r.anexo_nome && (
+                          <a
+                            href={r.anexo_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
+                          >
+                            <Download className="h-3 w-3" /> {r.anexo_nome}
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Reply form */}
+                {replyingTo === c.id && (
+                  <div className="ml-4 flex gap-2 items-start">
+                    <Textarea
+                      placeholder="Escreva sua resposta..."
+                      value={replyTexto}
+                      onChange={(e) => setReplyTexto(e.target.value)}
+                      className="min-h-[40px] text-xs flex-1"
+                    />
+                    <Button
+                      size="sm"
+                      className="text-xs h-8"
+                      disabled={sendingReply || !replyTexto.trim()}
+                      onClick={() => handleEnviarResposta(c)}
+                    >
+                      {sendingReply ? <Loader2 className="h-3 w-3 animate-spin" /> : "Enviar"}
+                    </Button>
+                  </div>
                 )}
               </div>
             );
