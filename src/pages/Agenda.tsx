@@ -268,7 +268,7 @@ export default function Agenda() {
                 modifiers={modifiers}
                 modifiersClassNames={modifiersClassNames}
                 classNames={{
-                  day_selected: "agenda-day-selected",
+                  day_selected: "agenda-day-selected !bg-transparent !shadow-none !outline-none",
                 }}
                 className="pointer-events-auto"
               />
