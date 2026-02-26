@@ -1331,6 +1331,54 @@ export type Database = {
           },
         ]
       }
+      painel_historico_etapas: {
+        Row: {
+          card_id: string
+          created_at: string
+          entrada_em: string
+          etapa_id: string
+          etapa_nome: string
+          id: string
+          saida_em: string | null
+          usuario_id: string | null
+        }
+        Insert: {
+          card_id: string
+          created_at?: string
+          entrada_em?: string
+          etapa_id: string
+          etapa_nome: string
+          id?: string
+          saida_em?: string | null
+          usuario_id?: string | null
+        }
+        Update: {
+          card_id?: string
+          created_at?: string
+          entrada_em?: string
+          etapa_id?: string
+          etapa_nome?: string
+          id?: string
+          saida_em?: string | null
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "painel_historico_etapas_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "painel_atendimento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_historico_etapas_etapa_id_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "painel_etapas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pedidos: {
         Row: {
           cliente_id: string

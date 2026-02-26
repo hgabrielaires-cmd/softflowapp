@@ -408,6 +408,78 @@ export default function PainelAtendimento() {
     }
   }
 
+  // ─── Histórico de etapas helpers ─────────────────────────────────────
+  async function registrarEntradaEtapa(cardId: string, etapaId: string, etapaNome: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from("painel_historico_etapas").insert({
+      card_id: cardId,
+      etapa_id: etapaId,
+      etapa_nome: etapaNome,
+      entrada_em: new Date().toISOString(),
+      usuario_id: user?.id || null,
+    });
+  }
+
+  async function registrarSaidaEtapa(cardId: string, etapaId: string) {
+    // Find the open record (saida_em IS NULL) for this card+etapa
+    const { data } = await supabase
+      .from("painel_historico_etapas")
+      .select("id")
+      .eq("card_id", cardId)
+      .eq("etapa_id", etapaId)
+      .is("saida_em", null)
+      .order("entrada_em", { ascending: false })
+      .limit(1);
+    if (data && data.length > 0) {
+      await supabase
+        .from("painel_historico_etapas")
+        .update({ saida_em: new Date().toISOString() })
+        .eq("id", data[0].id);
+    }
+  }
+
+  // Ensure current stage has a history entry (on card open)
+  useEffect(() => {
+    if (!detailCard) return;
+    (async () => {
+      const etapa = etapas.find((e) => e.id === detailCard.etapa_id);
+      if (!etapa) return;
+      // Check if there's already an open entry for this card+etapa
+      const { data } = await supabase
+        .from("painel_historico_etapas")
+        .select("id")
+        .eq("card_id", detailCard.id)
+        .eq("etapa_id", detailCard.etapa_id)
+        .is("saida_em", null)
+        .limit(1);
+      if (!data || data.length === 0) {
+        // Create entry with card's updated_at as entrance time (approximation)
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from("painel_historico_etapas").insert({
+          card_id: detailCard.id,
+          etapa_id: detailCard.etapa_id,
+          etapa_nome: etapa.nome,
+          entrada_em: detailCard.updated_at,
+          usuario_id: user?.id || null,
+        });
+      }
+    })();
+  }, [detailCard?.id, detailCard?.etapa_id, etapas]);
+
+  // ─── Tempo na etapa (para exibir no card) ───────────────────────────
+  function getTempoNaEtapa(card: PainelCard): string {
+    // Use updated_at as proxy for when card entered current stage
+    const entrada = new Date(card.updated_at).getTime();
+    const agora = Date.now();
+    const diffMs = agora - entrada;
+    const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    if (dias > 0) return `${dias}d ${horas}h`;
+    if (horas > 0) return `${horas}h ${minutos}m`;
+    return `${minutos}m`;
+  }
+
   // ─── Finalizar etapa ──────────────────────────────────────────────────
   async function finalizarEtapa() {
     if (!detailCard) return;
@@ -419,6 +491,10 @@ export default function PainelAtendimento() {
         toast.error("Não há próxima etapa configurada.");
         return;
       }
+      // Register exit from current stage
+      await registrarSaidaEtapa(detailCard.id, detailCard.etapa_id);
+      // Register entry into next stage
+      await registrarEntradaEtapa(detailCard.id, proximaEtapa.id, proximaEtapa.nome);
       // Reset iniciado_em for new stage
       const { error } = await supabase
         .from("painel_atendimento")
@@ -519,7 +595,6 @@ export default function PainelAtendimento() {
     if (dragCardId) {
       const card = cards.find((c) => c.id === dragCardId);
       if (card && card.etapa_id !== etapaId) {
-        // Validação: não mover para "Em Execução" se etapas anteriores obrigatórias não concluídas
         const etapaDestino = etapas.find((e) => e.id === etapaId);
         if (etapaDestino?.nome === "Em Execução") {
           const etapaAtual = etapas.find((e) => e.id === card.etapa_id);
@@ -529,6 +604,11 @@ export default function PainelAtendimento() {
             return;
           }
         }
+        // Record history on drag
+        (async () => {
+          await registrarSaidaEtapa(card.id, card.etapa_id);
+          if (etapaDestino) await registrarEntradaEtapa(card.id, etapaId, etapaDestino.nome);
+        })();
         moverCard.mutate({ cardId: dragCardId, etapaId });
       }
     }
@@ -637,9 +717,11 @@ export default function PainelAtendimento() {
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              {formatSLA(card.sla_horas)}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground" title="Tempo nesta etapa">
+                <Clock className="h-3 w-3" />
+                {getTempoNaEtapa(card)}
+              </div>
             </div>
           </div>
 
