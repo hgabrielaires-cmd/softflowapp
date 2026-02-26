@@ -365,15 +365,25 @@ export default function PainelAtendimento() {
     mutationFn: async (cardId: string) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
+      // Ao iniciar, o usuário se torna responsável pelo card
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
       const { error } = await supabase
         .from("painel_atendimento")
-        .update({ iniciado_em: new Date().toISOString(), iniciado_por: user.id })
+        .update({
+          iniciado_em: new Date().toISOString(),
+          iniciado_por: user.id,
+          responsavel_id: prof?.id || null,
+        })
         .eq("id", cardId);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
-      toast.success("Atendimento iniciado!");
+      toast.success("Atendimento iniciado! Você é o responsável.");
     },
     onError: () => toast.error("Erro ao iniciar atendimento."),
   });
@@ -993,6 +1003,13 @@ export default function PainelAtendimento() {
                   <p className="font-medium flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                     {slaProjeto !== null ? formatSLA(slaProjeto) : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Responsável</p>
+                  <p className="font-medium flex items-center gap-1">
+                    <User className="h-3.5 w-3.5 text-muted-foreground" />
+                    {detailCard.profiles?.full_name || "Nenhum"}
                   </p>
                 </div>
               </div>
