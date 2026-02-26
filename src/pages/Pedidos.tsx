@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -44,7 +44,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus, Tag, ArrowUpCircle, FileText, AlertCircle, Eye, Users, Star, Trash2, MapPin, Send } from "lucide-react";
+import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus, Tag, ArrowUpCircle, FileText, AlertCircle, Eye, Users, Star, Trash2, MapPin, Send, MessageSquare, Paperclip, Download } from "lucide-react";
 import { ClientePlanViewer } from "@/components/ClientePlanViewer";
 import { PedidoComentarios } from "@/components/PedidoComentarios";
 import { Switch } from "@/components/ui/switch";
@@ -232,7 +232,7 @@ function applyDesconto(original: number, tipo: "R$" | "%", valor: number): numbe
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Pedidos() {
-  const { profile, roles, isAdmin } = useAuth();
+  const { user, profile, roles, isAdmin } = useAuth();
   const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais, loading: loadingFiliais } = useUserFiliais();
   const isFinanceiro = roles.includes("financeiro");
   const isVendedor = roles.includes("vendedor");
@@ -312,6 +312,89 @@ export default function Pedidos() {
   const [showContatoClienteForm, setShowContatoClienteForm] = useState(false);
   const [editingContatoClienteIdx, setEditingContatoClienteIdx] = useState<number | null>(null);
   const [inlineContatoClienteForm, setInlineContatoClienteForm] = useState({ nome: "", cargo: "", telefone: "", email: "", decisor: false, ativo: true });
+
+  // Draft comments (antes de salvar pedido)
+  interface DraftComentario {
+    texto: string;
+    prioridade: string;
+    arquivo: File | null;
+    arquivo_nome: string | null;
+  }
+  const [draftComentarios, setDraftComentarios] = useState<DraftComentario[]>([]);
+  const [openComentarioDialog, setOpenComentarioDialog] = useState(false);
+  const [draftTexto, setDraftTexto] = useState("");
+  const [draftPrioridade, setDraftPrioridade] = useState("normal");
+  const [draftArquivo, setDraftArquivo] = useState<File | null>(null);
+  const draftFileRef = useRef<HTMLInputElement>(null);
+  const [editingDraftIdx, setEditingDraftIdx] = useState<number | null>(null);
+
+  const PRIORIDADES_DRAFT = [
+    { value: "normal", label: "Normal", emoji: "🟢" },
+    { value: "medio", label: "Médio", emoji: "🟡" },
+    { value: "urgente", label: "Urgente", emoji: "🔴" },
+    { value: "prioridade", label: "Prioridade", emoji: "⚡" },
+  ] as const;
+
+  const PRIORIDADE_MAP_DRAFT: Record<string, { label: string; emoji: string }> = {
+    normal: { label: "Normal", emoji: "🟢" },
+    medio: { label: "Médio", emoji: "🟡" },
+    urgente: { label: "Urgente", emoji: "🔴" },
+    prioridade: { label: "Prioridade", emoji: "⚡" },
+  };
+
+  const MAX_FILE_SIZE_DRAFT = 11 * 1024 * 1024;
+
+  function handleAddDraftComentario() {
+    if (!draftTexto.trim()) { toast.error("Digite um comentário."); return; }
+    if (editingDraftIdx !== null) {
+      setDraftComentarios(prev => prev.map((c, i) => i === editingDraftIdx ? { texto: draftTexto.trim(), prioridade: draftPrioridade, arquivo: draftArquivo, arquivo_nome: draftArquivo?.name || null } : c));
+    } else {
+      setDraftComentarios(prev => [...prev, { texto: draftTexto.trim(), prioridade: draftPrioridade, arquivo: draftArquivo, arquivo_nome: draftArquivo?.name || null }]);
+    }
+    setDraftTexto("");
+    setDraftPrioridade("normal");
+    setDraftArquivo(null);
+    setEditingDraftIdx(null);
+    if (draftFileRef.current) draftFileRef.current.value = "";
+    setOpenComentarioDialog(false);
+  }
+
+  function handleDraftFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > MAX_FILE_SIZE_DRAFT) {
+      toast.error("Arquivo excede o limite de 11 MB.");
+      e.target.value = "";
+      return;
+    }
+    setDraftArquivo(file);
+  }
+
+  async function salvarDraftComentarios(pedidoId: string) {
+    if (!user || draftComentarios.length === 0) return;
+    for (const draft of draftComentarios) {
+      let anexo_url: string | null = null;
+      let anexo_nome: string | null = null;
+      if (draft.arquivo) {
+        const ext = draft.arquivo.name.split(".").pop();
+        const path = `${pedidoId}/${crypto.randomUUID()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage.from("pedido-anexos").upload(path, draft.arquivo);
+        if (!uploadErr) {
+          const { data: signedData } = await supabase.storage.from("pedido-anexos").createSignedUrl(path, 60 * 60 * 24 * 365);
+          anexo_url = signedData?.signedUrl || null;
+          anexo_nome = draft.arquivo.name;
+        }
+      }
+      await supabase.from("pedido_comentarios").insert({
+        pedido_id: pedidoId,
+        user_id: user.id,
+        texto: draft.texto,
+        prioridade: draft.prioridade,
+        anexo_url,
+        anexo_nome,
+      });
+    }
+  }
 
   // ─── Computed values ─────────────────────────────────────────────────────
 
@@ -768,6 +851,7 @@ export default function Pedidos() {
     setContratoAtivo(null);
     setModulosJaContratados([]);
     setPlanoAnteriorValores(null);
+    setDraftComentarios([]);
     setOpenDialog(true);
     // Carregar limites do vendedor atual
     if (profile?.user_id) carregarLimitesDesconto(profile.user_id);
@@ -949,11 +1033,13 @@ export default function Pedidos() {
             aprovado_em: null,
             motivo_reprovacao: null,
           }, { onConflict: "pedido_id" });
+          await salvarDraftComentarios(editingPedido.id);
           toast.warning("Desconto acima do limite! Solicitação de aprovação enviada ao gestor.");
         } else if (descontoJaAprovadoSemMudanca) {
           // Desconto já aprovado e valores não mudaram: salvar mantendo status "Desconto Aprovado"
           const { error } = await supabase.from("pedidos").update(payload).eq("id", editingPedido.id);
           if (error) throw error;
+          await salvarDraftComentarios(editingPedido.id);
           toast.success("Pedido atualizado com sucesso!");
         } else if (isReprovado || wasAwaitingDesconto) {
           payload.financeiro_status = "Aguardando";
@@ -965,9 +1051,11 @@ export default function Pedidos() {
           const { error } = await supabase.from("pedidos").update(payload).eq("id", editingPedido.id);
           if (error) throw error;
           toast.success(isReprovado ? "Pedido reenviado para o financeiro!" : "Pedido enviado para o financeiro!");
+          await salvarDraftComentarios(editingPedido.id);
         } else {
           const { error } = await supabase.from("pedidos").update(payload).eq("id", editingPedido.id);
           if (error) throw error;
+          await salvarDraftComentarios(editingPedido.id);
           toast.success("Pedido atualizado com sucesso!");
         }
       } else {
@@ -980,6 +1068,7 @@ export default function Pedidos() {
           };
           const { data: novoPedido, error } = await supabase.from("pedidos").insert(insertPayload as any).select().single();
           if (error) throw error;
+          await salvarDraftComentarios(novoPedido.id);
           await supabase.from("solicitacoes_desconto").insert({
             pedido_id: novoPedido.id,
             vendedor_id: vendedorId,
@@ -999,12 +1088,14 @@ export default function Pedidos() {
             financeiro_status: "Aguardando",
             contrato_liberado: false,
           };
-          const { error } = await supabase.from("pedidos").insert(insertPayload as any);
+          const { data: novoPedido2, error } = await supabase.from("pedidos").insert(insertPayload as any).select().single();
           if (error) throw error;
+          await salvarDraftComentarios(novoPedido2.id);
           toast.success("Pedido criado com sucesso!");
         }
       }
       setOpenDialog(false);
+      setDraftComentarios([]);
       loadData();
     } catch (err: unknown) {
       console.error("Erro ao salvar pedido:", err);
@@ -2129,6 +2220,79 @@ export default function Pedidos() {
               </div>
             )}
 
+            {/* ─── Comentários Internos (draft) ──────────────────────────── */}
+            <div className="border border-border rounded-md p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <MessageSquare className="h-3.5 w-3.5" /> Comentários Internos
+                  {draftComentarios.length > 0 && (
+                    <span className="ml-1 bg-primary text-primary-foreground text-[10px] rounded-full px-1.5 py-0.5">{draftComentarios.length}</span>
+                  )}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs gap-1"
+                  onClick={() => {
+                    setEditingDraftIdx(null);
+                    setDraftTexto("");
+                    setDraftPrioridade("normal");
+                    setDraftArquivo(null);
+                    setOpenComentarioDialog(true);
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5" /> Comentário
+                </Button>
+              </div>
+              {draftComentarios.length > 0 && (
+                <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
+                  {draftComentarios.map((dc, idx) => {
+                    const pri = PRIORIDADE_MAP_DRAFT[dc.prioridade] || PRIORIDADE_MAP_DRAFT.normal;
+                    return (
+                      <div key={idx} className="bg-muted/40 border border-border rounded-md p-2 space-y-0.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted">{pri.emoji} {pri.label}</span>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5"
+                              onClick={() => {
+                                setEditingDraftIdx(idx);
+                                setDraftTexto(dc.texto);
+                                setDraftPrioridade(dc.prioridade);
+                                setDraftArquivo(dc.arquivo);
+                                setOpenComentarioDialog(true);
+                              }}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5"
+                              onClick={() => setDraftComentarios(prev => prev.filter((_, i) => i !== idx))}
+                            >
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                        <p className="text-xs whitespace-pre-wrap">{dc.texto}</p>
+                        {dc.arquivo_nome && (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <Paperclip className="h-3 w-3" /> {dc.arquivo_nome}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             </div>{/* end scrollable area */}
             <DialogFooter className="px-6 py-4 border-t border-border shrink-0">
               <Button type="button" variant="outline" onClick={() => setOpenDialog(false)}>Cancelar</Button>
@@ -2152,7 +2316,79 @@ export default function Pedidos() {
         </DialogContent>
       </Dialog>
 
-      {/* ─── Dialog rápido novo cliente ─────────────────────────────────────── */}
+      {/* ─── Dialog Comentário Interno (draft) ────────────────────────────── */}
+      <Dialog open={openComentarioDialog} onOpenChange={setOpenComentarioDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <MessageSquare className="h-4 w-4" /> {editingDraftIdx !== null ? "Editar Comentário" : "Novo Comentário Interno"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Textarea
+              placeholder="Escreva um comentário..."
+              value={draftTexto}
+              onChange={(e) => setDraftTexto(e.target.value)}
+              className="min-h-[80px] text-sm"
+            />
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">Prioridade:</Label>
+              <div className="flex flex-wrap gap-2">
+                {PRIORIDADES_DRAFT.map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => setDraftPrioridade(p.value)}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border transition-colors ${
+                      draftPrioridade === p.value
+                        ? "border-primary bg-primary/10 font-semibold"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    {p.emoji} {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={() => draftFileRef.current?.click()}
+              >
+                <Paperclip className="h-3.5 w-3.5 mr-1" />
+                {draftArquivo ? draftArquivo.name : "Anexar (máx 11MB)"}
+              </Button>
+              <input
+                type="file"
+                ref={draftFileRef}
+                className="hidden"
+                onChange={handleDraftFileChange}
+              />
+              {draftArquivo && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => { setDraftArquivo(null); if (draftFileRef.current) draftFileRef.current.value = ""; }}
+                >
+                  <Trash2 className="h-3 w-3 text-destructive" />
+                </Button>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpenComentarioDialog(false)}>Cancelar</Button>
+            <Button type="button" onClick={handleAddDraftComentario} disabled={!draftTexto.trim()}>
+              {editingDraftIdx !== null ? "Salvar" : "Adicionar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={openClienteDialog} onOpenChange={(open) => { setOpenClienteDialog(open); if (!open) { setClienteContatos([]); setShowContatoClienteForm(false); } }}>
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
