@@ -112,7 +112,7 @@ export default function PainelAtendimento() {
   const [slaEtapaJornada, setSlaEtapaJornada] = useState<number | null>(null);
   const [slaProjeto, setSlaProjeto] = useState<number | null>(null);
   const [checklistEtapa, setChecklistEtapa] = useState<any[]>([]);
-  const [checklistProgresso, setChecklistProgresso] = useState<Record<string, { concluido: boolean; valor_texto?: string; valor_data?: string }>>({});
+  const [checklistProgresso, setChecklistProgresso] = useState<Record<string, { concluido: boolean; valor_texto?: string; valor_data?: string; concluido_por?: string; concluido_em?: string; concluido_por_nome?: string }>>({});
   const [finalizando, setFinalizando] = useState(false);
   const [, setTick] = useState(0); // force re-render for atrasado checks
   const [novoComentario, setNovoComentario] = useState("");
@@ -366,15 +366,29 @@ export default function PainelAtendimento() {
       // Fetch existing progress for this card
       const { data: progresso } = await supabase
         .from("painel_checklist_progresso")
-        .select("atividade_id, checklist_index, concluido, valor_texto, valor_data")
+        .select("atividade_id, checklist_index, concluido, valor_texto, valor_data, concluido_por, concluido_em")
         .eq("card_id", detailCard.id);
 
-      const progressoMap: Record<string, { concluido: boolean; valor_texto?: string; valor_data?: string }> = {};
+      // Fetch profile names for concluido_por
+      const userIds = [...new Set((progresso || []).map((p: any) => p.concluido_por).filter(Boolean))];
+      let profileMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", userIds);
+        (profiles || []).forEach((p: any) => { profileMap[p.user_id] = p.full_name; });
+      }
+
+      const progressoMap: Record<string, { concluido: boolean; valor_texto?: string; valor_data?: string; concluido_por?: string; concluido_em?: string; concluido_por_nome?: string }> = {};
       (progresso || []).forEach((p: any) => {
         progressoMap[`${p.atividade_id}_${p.checklist_index}`] = {
           concluido: p.concluido,
           valor_texto: p.valor_texto || undefined,
           valor_data: p.valor_data || undefined,
+          concluido_por: p.concluido_por || undefined,
+          concluido_em: p.concluido_em || undefined,
+          concluido_por_nome: p.concluido_por ? profileMap[p.concluido_por] : undefined,
         };
       });
       setChecklistProgresso(progressoMap);
@@ -447,10 +461,25 @@ export default function PainelAtendimento() {
     if (!detailCard) return;
     const key = `${atividadeId}_${checklistIndex}`;
     const prev = checklistProgresso[key] || { concluido: false };
-    const newVal = { ...prev, ...updates };
+    const { data: { user } } = await supabase.auth.getUser();
+    const now = new Date().toISOString();
+
+    // Get current user's name for immediate display
+    let userName = prev.concluido_por_nome;
+    if (user && !userName) {
+      const { data: prof } = await supabase.from("profiles").select("full_name").eq("user_id", user.id).single();
+      userName = prof?.full_name || undefined;
+    }
+
+    const newVal = {
+      ...prev,
+      ...updates,
+      concluido_por: updates.concluido ? user?.id : prev.concluido_por,
+      concluido_em: updates.concluido ? now : (updates.concluido === false ? undefined : prev.concluido_em),
+      concluido_por_nome: updates.concluido ? userName : (updates.concluido === false ? undefined : prev.concluido_por_nome),
+    };
     setChecklistProgresso((p) => ({ ...p, [key]: newVal }));
 
-    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
       .from("painel_checklist_progresso")
       .upsert({
@@ -461,7 +490,7 @@ export default function PainelAtendimento() {
         valor_texto: newVal.valor_texto || null,
         valor_data: newVal.valor_data || null,
         concluido_por: user?.id || null,
-        concluido_em: newVal.concluido ? new Date().toISOString() : null,
+        concluido_em: newVal.concluido ? now : null,
       }, { onConflict: "card_id,atividade_id,checklist_index" });
 
     if (error) {
@@ -1177,6 +1206,20 @@ export default function PainelAtendimento() {
                                       </Badge>
                                       <span className={cn("flex-1", prog.concluido && "line-through text-muted-foreground")}>{item.texto || "(sem texto)"}</span>
                                     </div>
+
+                                    {/* Quem executou e quando */}
+                                    {prog.concluido && prog.concluido_por_nome && (
+                                      <div className="flex items-center gap-1.5 pl-1 text-[10px] text-muted-foreground">
+                                        <User className="h-2.5 w-2.5" />
+                                        <span>{prog.concluido_por_nome}</span>
+                                        {prog.concluido_em && (
+                                          <>
+                                            <span>·</span>
+                                            <span>{new Date(prog.concluido_em).toLocaleDateString("pt-BR")} {new Date(prog.concluido_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
 
                                     {/* Type-specific inputs */}
                                     {tipo === 'check' && (
