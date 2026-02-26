@@ -1605,7 +1605,7 @@ export default function PainelAtendimento() {
               </div>
 
               {/* Cabeçalho de informações do card */}
-              <div className="rounded-lg border border-border/60 bg-card p-3 shadow-sm grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-xs">
+              <div className="rounded-lg border border-border bg-card p-3 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-xs">
                 <div>
                   <p className="text-muted-foreground">Tipo</p>
                   <div className="flex items-center gap-1 font-medium">
@@ -1692,7 +1692,7 @@ export default function PainelAtendimento() {
                 const checklistPercent = totalItens > 0 ? Math.round((totalConcluidos / totalItens) * 100) : 0;
                 const isCongelado = !detailCard.iniciado_em;
                 return (
-                  <div className="rounded-lg border border-border/60 bg-card p-3 shadow-sm">
+                  <div className="rounded-lg border border-border bg-card p-3 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)]">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-xs font-semibold flex items-center gap-1">
                         <CheckSquare className="h-3.5 w-3.5" />
@@ -1863,7 +1863,7 @@ export default function PainelAtendimento() {
                 const configLocked = !isEtapaAgendamento && !configEditMode;
 
                 return (
-              <div className="rounded-lg border border-border/60 bg-card p-3 shadow-sm space-y-3">
+              <div className="rounded-lg border border-border bg-card p-3 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Configurações do Projeto</p>
                   {!isEtapaAgendamento && (
