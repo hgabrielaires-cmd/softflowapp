@@ -339,6 +339,36 @@ export default function PainelAtendimento() {
     },
   });
 
+  // Fetch highest priority per pedido (for card display)
+  const PRIORIDADE_PESO: Record<string, number> = { prioridade: 4, urgente: 3, medio: 2, normal: 1 };
+  const PRIORIDADE_DISPLAY: Record<string, { label: string; emoji: string; className: string }> = {
+    prioridade: { label: "Alta Prioridade", emoji: "⚡", className: "bg-purple-100 text-purple-700 border-purple-200" },
+    urgente: { label: "Urgente", emoji: "🔴", className: "bg-red-100 text-red-700 border-red-200" },
+    medio: { label: "Médio", emoji: "🟡", className: "bg-yellow-100 text-yellow-700 border-yellow-200" },
+    normal: { label: "Normal", emoji: "🟢", className: "bg-green-100 text-green-700 border-green-200" },
+  };
+
+  const pedidoIds = useMemo(() => [...new Set(cards.map(c => c.pedido_id).filter(Boolean))], [cards]);
+
+  const { data: pedidoPrioridadeMap = {} } = useQuery({
+    queryKey: ["pedido_prioridade_map", pedidoIds.join(",")],
+    enabled: pedidoIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("pedido_comentarios")
+        .select("pedido_id, prioridade")
+        .in("pedido_id", pedidoIds);
+      const map: Record<string, string> = {};
+      (data || []).forEach((r: any) => {
+        const current = map[r.pedido_id];
+        if (!current || (PRIORIDADE_PESO[r.prioridade] || 0) > (PRIORIDADE_PESO[current] || 0)) {
+          map[r.pedido_id] = r.prioridade;
+        }
+      });
+      return map;
+    },
+  });
+
   // Fetch completed checklist items per card
   const { data: cardProgressMap = {} } = useQuery({
     queryKey: ["card_checklist_progress", cards.map(c => c.id).join(",")],
@@ -1243,6 +1273,18 @@ export default function PainelAtendimento() {
               {TIPO_ICONS[card.tipo_operacao]}
               {card.tipo_operacao}
             </Badge>
+            {/* Priority from pedido comments */}
+            {(() => {
+              const pri = card.pedido_id ? pedidoPrioridadeMap[card.pedido_id] : null;
+              if (!pri || pri === "normal") return null;
+              const display = PRIORIDADE_DISPLAY[pri];
+              if (!display) return null;
+              return (
+                <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 gap-1", display.className)}>
+                  {display.emoji} {display.label}
+                </Badge>
+              );
+            })()}
           </div>
 
           {/* Info row */}
