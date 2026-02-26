@@ -1086,6 +1086,7 @@ export type Database = {
           horas_apos_sla: number
           id: string
           nivel: number
+          notificar_vendedor: boolean
           template_id: string | null
           updated_at: string
           usuario_ids: string[] | null
@@ -1099,6 +1100,7 @@ export type Database = {
           horas_apos_sla?: number
           id?: string
           nivel?: number
+          notificar_vendedor?: boolean
           template_id?: string | null
           updated_at?: string
           usuario_ids?: string[] | null
@@ -1112,6 +1114,7 @@ export type Database = {
           horas_apos_sla?: number
           id?: string
           nivel?: number
+          notificar_vendedor?: boolean
           template_id?: string | null
           updated_at?: string
           usuario_ids?: string[] | null
