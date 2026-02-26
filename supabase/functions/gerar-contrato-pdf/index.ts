@@ -429,6 +429,10 @@ Deno.serve(async (req) => {
       "filial.endereco_completo": enderecoFilial,
       "filial.telefone": filial?.telefone || "",
       "filial.email": filial?.email || "",
+      "filial.assinatura_url": filial?.assinatura_url || "",
+      "filial.assinatura_html": filial?.assinatura_url
+        ? `<div style="margin-top:20px;"><img src="${filial.assinatura_url}" style="max-height:80px;max-width:200px;" /><br><strong>${filial?.responsavel || ""}</strong><br>${filial?.razao_social || filial?.nome || ""}</div>`
+        : "",
     };
 
     // ── Variáveis de Upgrade de Plano ──
