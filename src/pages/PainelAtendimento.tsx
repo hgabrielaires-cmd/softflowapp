@@ -1546,6 +1546,83 @@ export default function PainelAtendimento() {
                 </div>
               </div>
 
+              {/* Cabeçalho de informações do card */}
+              <div className="border rounded-lg p-3 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-xs">
+                <div>
+                  <p className="text-muted-foreground">Tipo</p>
+                  <div className="flex items-center gap-1 font-medium">
+                    {TIPO_ICONS[detailCard.tipo_operacao]}
+                    <Badge variant="outline" className={cn("text-[10px]", TIPO_COLORS[detailCard.tipo_operacao])}>
+                      {detailCard.tipo_operacao}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Contrato</p>
+                  <p className="font-medium">{detailCard.contratos?.numero_exibicao || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Filial</p>
+                  <p className="font-medium flex items-center gap-1"><Building2 className="h-3 w-3" />{detailCard.filiais?.nome || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">SLA Etapa</p>
+                  <p className="font-medium">{formatSLA(slaEtapaJornada || 0)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">SLA Projeto</p>
+                  <p className="font-medium">{formatSLA(slaProjeto || 0)}</p>
+                </div>
+                {detailCard.iniciado_em && slaEtapaJornada && slaEtapaJornada > 0 && (
+                  <div>
+                    <p className="text-muted-foreground">Vencimento SLA</p>
+                    {(() => {
+                      const venc = getVencimentoSla(detailCard.iniciado_em, slaEtapaJornada);
+                      const atrasado = isEtapaSlaAtrasado(detailCard);
+                      const tempoExcedido = getTempoExcedidoSla(detailCard);
+                      return venc ? (
+                        <div>
+                          <p className={cn("font-medium", atrasado && "text-destructive")}>
+                            {venc.toLocaleDateString("pt-BR")} {venc.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                          {atrasado && tempoExcedido && (
+                            <Badge variant="destructive" className="text-[10px] mt-0.5 gap-1">
+                              <AlertTriangle className="h-2.5 w-2.5" />
+                              SLA Atrasado: {tempoExcedido}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : <p className="font-medium">—</p>;
+                    })()}
+                  </div>
+                )}
+                {detailCard.profiles?.full_name && (
+                  <div>
+                    <p className="text-muted-foreground">Responsável</p>
+                    <p className="font-medium flex items-center gap-1"><User className="h-3 w-3" />{detailCard.profiles.full_name}</p>
+                  </div>
+                )}
+                {detailCard.tipo_atendimento_local && (
+                  <div>
+                    <p className="text-muted-foreground">Atendimento</p>
+                    <p className="font-medium">{detailCard.tipo_atendimento_local}</p>
+                  </div>
+                )}
+                {detailCard.tipo_operacao === "Upgrade" && planoAnteriorNome && (
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">Plano</p>
+                    <p className="font-medium flex items-center gap-1">
+                      {planoAnteriorNome} <ArrowRight className="h-3 w-3" /> {detailCard.planos?.nome || "—"}
+                    </p>
+                  </div>
+                )}
+                {detailCard.tipo_operacao !== "Upgrade" && detailCard.planos?.nome && (
+                  <div>
+                    <p className="text-muted-foreground">Plano</p>
+                    <p className="font-medium">{detailCard.planos.nome}</p>
+                  </div>
+                )}
+              </div>
 
               {/* Checklist da Etapa (da Jornada) - Interativo */}
               {checklistEtapa.length > 0 && (() => {
