@@ -15,6 +15,7 @@ export interface AlertLevel {
   usuario_ids: string[];
   horas_apos_sla: string;
   ativo: boolean;
+  notificar_vendedor: boolean;
 }
 
 export interface FilialAlertConfig {
@@ -49,6 +50,7 @@ export const defaultAlertLevel = (nivel: number): AlertLevel => ({
   usuario_ids: [],
   horas_apos_sla: "0",
   ativo: nivel === 1,
+  notificar_vendedor: false,
 });
 
 function MultiUserSelect({
@@ -193,6 +195,13 @@ function AlertLevelsConfig({
                     selectedIds={level.usuario_ids}
                     onChange={(ids) => onLevelChange(lvl.nivel, "usuario_ids", ids)}
                     usuarios={usuarios}
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <label className="text-xs font-medium text-muted-foreground">Notificar Vendedor do Pedido</label>
+                  <Switch
+                    checked={level.notificar_vendedor}
+                    onCheckedChange={(v) => onLevelChange(lvl.nivel, "notificar_vendedor", v)}
                   />
                 </div>
               </div>

@@ -164,6 +164,7 @@ export default function EtapasPainel() {
                 horas_apos_sla: Number(lvl.horas_apos_sla) || 0,
                 ativo: true,
                 filial_id: filialId,
+                notificar_vendedor: lvl.notificar_vendedor || false,
               });
             }
           });
@@ -271,6 +272,7 @@ export default function EtapasPainel() {
           usuario_ids: a.usuario_ids || [],
           horas_apos_sla: String(a.horas_apos_sla || 0),
           ativo: a.ativo,
+          notificar_vendedor: a.notificar_vendedor || false,
         };
       }
     });
