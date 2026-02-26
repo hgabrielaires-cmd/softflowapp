@@ -221,6 +221,54 @@ export default function PainelAtendimento() {
     },
   });
 
+  // Precompute SLA da Etapa per card (jornada-based)
+  const { data: jornadaSlaMap = {} } = useQuery({
+    queryKey: ["jornada_sla_map"],
+    queryFn: async () => {
+      // Fetch all active jornadas
+      const { data: jornadas } = await supabase
+        .from("jornadas")
+        .select("id, vinculo_id")
+        .eq("ativo", true)
+        .eq("vinculo_tipo", "plano");
+      if (!jornadas || jornadas.length === 0) return {};
+
+      const jornadaIds = jornadas.map(j => j.id);
+      const { data: jornadaEtapas } = await supabase
+        .from("jornada_etapas")
+        .select("id, jornada_id, nome")
+        .in("jornada_id", jornadaIds);
+      if (!jornadaEtapas || jornadaEtapas.length === 0) return {};
+
+      const etapaIds = jornadaEtapas.map(e => e.id);
+      const { data: atividades } = await supabase
+        .from("jornada_atividades")
+        .select("etapa_id, horas_estimadas")
+        .in("etapa_id", etapaIds);
+
+      // Map: jornada_id -> { etapa_nome -> total_horas }
+      const result: Record<string, Record<string, number>> = {};
+      // Also map plano_id -> jornada_id
+      const planoJornadaMap: Record<string, string> = {};
+      jornadas.forEach(j => { planoJornadaMap[j.vinculo_id] = j.id; });
+
+      jornadaEtapas.forEach(je => {
+        if (!result[je.jornada_id]) result[je.jornada_id] = {};
+        const total = (atividades || [])
+          .filter(a => a.etapa_id === je.id)
+          .reduce((acc, a) => acc + (a.horas_estimadas || 0), 0);
+        result[je.jornada_id][je.nome] = total;
+      });
+
+      // Final map: plano_id -> { etapa_nome -> horas }
+      const finalMap: Record<string, Record<string, number>> = {};
+      Object.entries(planoJornadaMap).forEach(([planoId, jornadaId]) => {
+        finalMap[planoId] = result[jornadaId] || {};
+      });
+      return finalMap;
+    },
+  });
+
   // Fetch comentarios and tecnicos when card opens
   useEffect(() => {
     if (!detailCard) {
@@ -638,7 +686,7 @@ export default function PainelAtendimento() {
       // 1. Get completed stage history (saida_em IS NOT NULL)
       const { data: historico } = await supabase
         .from("painel_historico_etapas")
-        .select("id, etapa_id, etapa_nome, entrada_em, saida_em")
+        .select("id, etapa_id, etapa_nome, entrada_em, saida_em, sla_previsto_horas, tempo_real_horas")
         .eq("card_id", card.id)
         .not("saida_em", "is", null)
         .order("entrada_em", { ascending: true });
@@ -741,6 +789,8 @@ export default function PainelAtendimento() {
           etapa_nome: h.etapa_nome,
           entrada_em: h.entrada_em,
           saida_em: h.saida_em,
+          sla_previsto_horas: (h as any).sla_previsto_horas,
+          tempo_real_horas: (h as any).tempo_real_horas,
           atividades,
           progressoMap,
           comentarios: stageComments,
@@ -766,20 +816,27 @@ export default function PainelAtendimento() {
     });
   }
 
-  async function registrarSaidaEtapa(cardId: string, etapaId: string) {
+  async function registrarSaidaEtapa(cardId: string, etapaId: string, slaPrevisto?: number | null) {
     // Find the open record (saida_em IS NULL) for this card+etapa
     const { data } = await supabase
       .from("painel_historico_etapas")
-      .select("id")
+      .select("id, entrada_em")
       .eq("card_id", cardId)
       .eq("etapa_id", etapaId)
       .is("saida_em", null)
       .order("entrada_em", { ascending: false })
       .limit(1);
     if (data && data.length > 0) {
+      const now = new Date();
+      const entrada = new Date(data[0].entrada_em);
+      const tempoRealHoras = (now.getTime() - entrada.getTime()) / (1000 * 60 * 60);
       await supabase
         .from("painel_historico_etapas")
-        .update({ saida_em: new Date().toISOString() })
+        .update({
+          saida_em: now.toISOString(),
+          sla_previsto_horas: slaPrevisto ?? null,
+          tempo_real_horas: Math.round(tempoRealHoras * 100) / 100,
+        })
         .eq("id", data[0].id);
     }
   }
@@ -838,7 +895,7 @@ export default function PainelAtendimento() {
         return;
       }
       // Register exit from current stage
-      await registrarSaidaEtapa(detailCard.id, detailCard.etapa_id);
+      await registrarSaidaEtapa(detailCard.id, detailCard.etapa_id, slaEtapaJornada);
       // Register entry into next stage
       await registrarEntradaEtapa(detailCard.id, proximaEtapa.id, proximaEtapa.nome);
       // Reset iniciado_em for new stage
@@ -913,6 +970,44 @@ export default function PainelAtendimento() {
     return `${horas}:${String(minutos).padStart(2, "0")}h`;
   }
 
+  // ─── SLA da Etapa (jornada-based) for kanban cards ──────────────────────
+  function getSlaEtapaForCard(card: PainelCard): number | null {
+    if (!card.plano_id) return null;
+    const planoMap = jornadaSlaMap[card.plano_id];
+    if (!planoMap) return null;
+    const etapa = etapas.find((e) => e.id === card.etapa_id);
+    if (!etapa) return null;
+    return planoMap[etapa.nome] ?? null;
+  }
+
+  function isEtapaSlaAtrasado(card: PainelCard): boolean {
+    if (!card.iniciado_em) return false;
+    const sla = getSlaEtapaForCard(card);
+    if (!sla || sla <= 0) return false;
+    const inicio = new Date(card.iniciado_em).getTime();
+    return Date.now() > inicio + sla * 60 * 60 * 1000;
+  }
+
+  function getVencimentoSla(iniciado_em: string | null, sla: number | null): Date | null {
+    if (!iniciado_em || !sla || sla <= 0) return null;
+    return new Date(new Date(iniciado_em).getTime() + sla * 60 * 60 * 1000);
+  }
+
+  function getTempoExcedidoSla(card: PainelCard): string | null {
+    if (!card.iniciado_em) return null;
+    const sla = getSlaEtapaForCard(card);
+    if (!sla || sla <= 0) return null;
+    const inicio = new Date(card.iniciado_em).getTime();
+    const atrasoMs = Date.now() - (inicio + sla * 60 * 60 * 1000);
+    if (atrasoMs <= 0) return null;
+    const dias = Math.floor(atrasoMs / (1000 * 60 * 60 * 24));
+    const horas = Math.floor((atrasoMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutos = Math.floor((atrasoMs % (1000 * 60 * 60)) / (1000 * 60));
+    if (dias > 0) return `${dias}d ${horas}h`;
+    if (horas > 0) return `${horas}h ${minutos}m`;
+    return `${minutos}m`;
+  }
+
   // ─── Filtered cards ──────────────────────────────────────────────────────
 
   const filtered = useMemo(() => {
@@ -952,7 +1047,8 @@ export default function PainelAtendimento() {
         }
         // Record history on drag
         (async () => {
-          await registrarSaidaEtapa(card.id, card.etapa_id);
+          const dragSla = getSlaEtapaForCard(card);
+          await registrarSaidaEtapa(card.id, card.etapa_id, dragSla);
           if (etapaDestino) await registrarEntradaEtapa(card.id, etapaId, etapaDestino.nome);
         })();
         moverCard.mutate({ cardId: dragCardId, etapaId });
@@ -1018,7 +1114,13 @@ export default function PainelAtendimento() {
                 Atrasada {getTempoAtraso(card)}
               </Badge>
             )}
-            {card.iniciado_em && (
+            {isEtapaSlaAtrasado(card) && (
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0 gap-1">
+                <Clock className="h-2.5 w-2.5" />
+                SLA Atrasado {getTempoExcedidoSla(card)}
+              </Badge>
+            )}
+            {card.iniciado_em && !isEtapaSlaAtrasado(card) && (
               <Badge className="text-[10px] px-1.5 py-0 gap-1 bg-emerald-100 text-emerald-700 border-emerald-200" variant="outline">
                 <Play className="h-2.5 w-2.5" />
                 Em andamento
@@ -1332,6 +1434,29 @@ export default function PainelAtendimento() {
                     <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                     {slaEtapaJornada !== null ? formatSLA(slaEtapaJornada) : "—"}
                   </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Vencimento SLA</p>
+                  {(() => {
+                    const venc = getVencimentoSla(detailCard.iniciado_em, slaEtapaJornada);
+                    const atrasado = isEtapaSlaAtrasado(detailCard);
+                    const excedido = getTempoExcedidoSla(detailCard);
+                    if (!venc) return <p className="font-medium text-muted-foreground">—</p>;
+                    return (
+                      <div>
+                        <p className={cn("font-medium flex items-center gap-1", atrasado && "text-destructive")}>
+                          <Clock className="h-3.5 w-3.5" />
+                          {venc.toLocaleDateString("pt-BR")} {venc.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                        {atrasado && excedido && (
+                          <Badge variant="destructive" className="text-[10px] mt-1 gap-1">
+                            <AlertTriangle className="h-2.5 w-2.5" />
+                            SLA Atrasado — {excedido}
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">SLA do Projeto</p>
@@ -2108,18 +2233,48 @@ export default function PainelAtendimento() {
               {historicoData.map((stage: any, sIdx: number) => (
                 <div key={sIdx} className="rounded-lg border bg-card overflow-hidden">
                   {/* Stage Header */}
-                  <div className="bg-amber-50 dark:bg-amber-950/30 px-4 py-3 border-b flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-6 w-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold">
-                        {sIdx + 1}
+                  <div className="bg-amber-50 dark:bg-amber-950/30 px-4 py-3 border-b">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold">
+                          {sIdx + 1}
+                        </div>
+                        <h4 className="text-sm font-bold text-foreground">{stage.etapa_nome}</h4>
                       </div>
-                      <h4 className="text-sm font-bold text-foreground">{stage.etapa_nome}</h4>
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                        <span>{new Date(stage.entrada_em).toLocaleDateString("pt-BR")} {new Date(stage.entrada_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                        <ArrowRight className="h-3 w-3" />
+                        <span>{new Date(stage.saida_em).toLocaleDateString("pt-BR")} {new Date(stage.saida_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                      <span>{new Date(stage.entrada_em).toLocaleDateString("pt-BR")} {new Date(stage.entrada_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
-                      <ArrowRight className="h-3 w-3" />
-                      <span>{new Date(stage.saida_em).toLocaleDateString("pt-BR")} {new Date(stage.saida_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
-                    </div>
+                    {/* SLA Previsto vs Real */}
+                    {(stage.sla_previsto_horas != null || stage.tempo_real_horas != null) && (
+                      <div className="flex items-center gap-4 mt-2 text-[11px]">
+                        {stage.sla_previsto_horas != null && (
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            Previsto: <span className="font-semibold text-foreground">{formatSLA(stage.sla_previsto_horas)}</span>
+                          </span>
+                        )}
+                        {stage.tempo_real_horas != null && (
+                          <span className={cn(
+                            "flex items-center gap-1",
+                            stage.sla_previsto_horas != null && stage.tempo_real_horas > stage.sla_previsto_horas
+                              ? "text-destructive font-semibold"
+                              : "text-muted-foreground"
+                          )}>
+                            <Clock className="h-3 w-3" />
+                            Real: <span className="font-semibold">{formatSLA(stage.tempo_real_horas)}</span>
+                          </span>
+                        )}
+                        {stage.sla_previsto_horas != null && stage.tempo_real_horas != null && stage.tempo_real_horas > stage.sla_previsto_horas && (
+                          <Badge variant="destructive" className="text-[9px] px-1.5 py-0 gap-0.5">
+                            <AlertTriangle className="h-2.5 w-2.5" />
+                            SLA Excedido
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-4 space-y-3">
