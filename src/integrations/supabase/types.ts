@@ -1532,6 +1532,47 @@ export type Database = {
           },
         ]
       }
+      pedido_comentarios: {
+        Row: {
+          anexo_nome: string | null
+          anexo_url: string | null
+          created_at: string
+          id: string
+          pedido_id: string
+          prioridade: string
+          texto: string
+          user_id: string
+        }
+        Insert: {
+          anexo_nome?: string | null
+          anexo_url?: string | null
+          created_at?: string
+          id?: string
+          pedido_id: string
+          prioridade?: string
+          texto: string
+          user_id: string
+        }
+        Update: {
+          anexo_nome?: string | null
+          anexo_url?: string | null
+          created_at?: string
+          id?: string
+          pedido_id?: string
+          prioridade?: string
+          texto?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedido_comentarios_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pedidos: {
         Row: {
           cliente_id: string
