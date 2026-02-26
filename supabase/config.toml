@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.evolution-api]
 verify_jwt = false
+
+[functions.processar-alertas-sla]
+verify_jwt = false
