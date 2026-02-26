@@ -168,8 +168,18 @@
 .agenda-day-selected {
   background-color: hsl(var(--primary) / 0.2) !important;
   color: hsl(var(--primary)) !important;
-  border-radius: 50%;
+  border-radius: 50% !important;
   font-weight: bold;
+}
+
+/* Remove square highlight on selected cell */
+[aria-selected="true"],
+.rdp-day_selected,
+td:has(.agenda-day-selected) {
+  background: transparent !important;
+  border-radius: 50% !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .agenda-day-selected.agenda-has-event {
