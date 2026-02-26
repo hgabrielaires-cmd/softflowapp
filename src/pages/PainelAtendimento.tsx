@@ -686,7 +686,7 @@ export default function PainelAtendimento() {
       // 1. Get completed stage history (saida_em IS NOT NULL)
       const { data: historico } = await supabase
         .from("painel_historico_etapas")
-        .select("id, etapa_id, etapa_nome, entrada_em, saida_em, sla_previsto_horas, tempo_real_horas")
+        .select("id, etapa_id, etapa_nome, entrada_em, saida_em, sla_previsto_horas, tempo_real_horas, sla_cumprido")
         .eq("card_id", card.id)
         .not("saida_em", "is", null)
         .order("entrada_em", { ascending: true });
@@ -791,6 +791,7 @@ export default function PainelAtendimento() {
           saida_em: h.saida_em,
           sla_previsto_horas: (h as any).sla_previsto_horas,
           tempo_real_horas: (h as any).tempo_real_horas,
+          sla_cumprido: (h as any).sla_cumprido,
           atividades,
           progressoMap,
           comentarios: stageComments,
@@ -830,12 +831,15 @@ export default function PainelAtendimento() {
       const now = new Date();
       const entrada = new Date(data[0].entrada_em);
       const tempoRealHoras = (now.getTime() - entrada.getTime()) / (1000 * 60 * 60);
+      const tempoReal = Math.round(tempoRealHoras * 100) / 100;
+      const slaCumprido = slaPrevisto != null && slaPrevisto > 0 ? tempoReal <= slaPrevisto : null;
       await supabase
         .from("painel_historico_etapas")
         .update({
           saida_em: now.toISOString(),
           sla_previsto_horas: slaPrevisto ?? null,
-          tempo_real_horas: Math.round(tempoRealHoras * 100) / 100,
+          tempo_real_horas: tempoReal,
+          sla_cumprido: slaCumprido,
         })
         .eq("id", data[0].id);
     }
@@ -2240,6 +2244,18 @@ export default function PainelAtendimento() {
                           {sIdx + 1}
                         </div>
                         <h4 className="text-sm font-bold text-foreground">{stage.etapa_nome}</h4>
+                        {stage.sla_cumprido === true && (
+                          <Badge className="text-[9px] px-1.5 py-0 gap-0.5 bg-emerald-100 text-emerald-700 border-emerald-200" variant="outline">
+                            <CheckSquare className="h-2.5 w-2.5" />
+                            SLA Cumprido {stage.tempo_real_horas != null ? `(${formatSLA(stage.tempo_real_horas)})` : ""}
+                          </Badge>
+                        )}
+                        {stage.sla_cumprido === false && (
+                          <Badge variant="destructive" className="text-[9px] px-1.5 py-0 gap-0.5">
+                            <AlertTriangle className="h-2.5 w-2.5" />
+                            SLA Não Cumprido {stage.tempo_real_horas != null ? `(${formatSLA(stage.tempo_real_horas)})` : ""}
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                         <span>{new Date(stage.entrada_em).toLocaleDateString("pt-BR")} {new Date(stage.entrada_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
