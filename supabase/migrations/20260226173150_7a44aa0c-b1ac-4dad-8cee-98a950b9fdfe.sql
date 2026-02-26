@@ -1,0 +1,1 @@
+ALTER TABLE public.modulos ADD COLUMN quantidade_maxima integer DEFAULT NULL;
