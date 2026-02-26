@@ -17,8 +17,10 @@ import { toast } from "sonner";
 import {
   LayoutGrid, List, Search, Clock, Building2, User, Filter,
   GripVertical, ChevronRight, FileText, Package, ArrowUpCircle,
-  Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw, ArrowRight
+  Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw, ArrowRight, CheckSquare
 } from "lucide-react";
+import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
+import type { ChecklistItem } from "@/lib/supabase-types";
 import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -98,6 +100,7 @@ export default function PainelAtendimento() {
   const [dragCardId, setDragCardId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [slaEtapaJornada, setSlaEtapaJornada] = useState<number | null>(null);
+  const [checklistEtapa, setChecklistEtapa] = useState<any[]>([]);
   const [, setTick] = useState(0); // force re-render for atrasado checks
 
   // Auto-refresh atrasado status every 60s
@@ -229,28 +232,60 @@ export default function PainelAtendimento() {
     }
   }, [cards.length, hasSynced, syncContratosAssinados]);
 
-  // Fetch SLA da Etapa from jornada_etapa matching current painel_etapa name
+  // Fetch SLA da Etapa + Checklist from jornada linked to the card's plano
   useEffect(() => {
-    if (!detailCard || !detailCard.jornada_id) {
+    if (!detailCard || !detailCard.plano_id) {
       setSlaEtapaJornada(null);
+      setChecklistEtapa([]);
       return;
     }
     (async () => {
+      // Find jornada linked to this plano
+      const jornadaId = detailCard.jornada_id;
+      let resolvedJornadaId = jornadaId;
+      if (!resolvedJornadaId) {
+        const { data: jornada } = await supabase
+          .from("jornadas")
+          .select("id")
+          .eq("vinculo_tipo", "plano")
+          .eq("vinculo_id", detailCard.plano_id)
+          .eq("ativo", true)
+          .limit(1);
+        if (!jornada || jornada.length === 0) {
+          setSlaEtapaJornada(null);
+          setChecklistEtapa([]);
+          return;
+        }
+        resolvedJornadaId = jornada[0].id;
+      }
+
+      // Find jornada_etapa matching current painel_etapa name
       const etapaAtual = etapas.find((e) => e.id === detailCard.etapa_id);
-      if (!etapaAtual) { setSlaEtapaJornada(null); return; }
+      if (!etapaAtual) { setSlaEtapaJornada(null); setChecklistEtapa([]); return; }
+
       const { data: jornadaEtapa } = await supabase
         .from("jornada_etapas")
         .select("id")
-        .eq("jornada_id", detailCard.jornada_id)
+        .eq("jornada_id", resolvedJornadaId)
         .eq("nome", etapaAtual.nome)
         .limit(1);
-      if (!jornadaEtapa || jornadaEtapa.length === 0) { setSlaEtapaJornada(null); return; }
+
+      if (!jornadaEtapa || jornadaEtapa.length === 0) {
+        setSlaEtapaJornada(null);
+        setChecklistEtapa([]);
+        return;
+      }
+
+      // Fetch activities for SLA + checklist
       const { data: atividades } = await supabase
         .from("jornada_atividades")
-        .select("horas_estimadas")
-        .eq("etapa_id", jornadaEtapa[0].id);
+        .select("nome, horas_estimadas, checklist")
+        .eq("etapa_id", jornadaEtapa[0].id)
+        .order("ordem");
+
       const total = (atividades || []).reduce((acc, a) => acc + (a.horas_estimadas || 0), 0);
       setSlaEtapaJornada(total);
+      setChecklistEtapa(atividades || []);
     })();
   }, [detailCard, etapas]);
 
@@ -826,7 +861,38 @@ export default function PainelAtendimento() {
                 </div>
               </div>
 
-              {/* Responsável */}
+              {/* Checklist da Etapa (da Jornada) */}
+              {checklistEtapa.length > 0 && (
+                <div className="border rounded-lg p-3">
+                  <p className="text-xs font-semibold mb-2 flex items-center gap-1">
+                    <CheckSquare className="h-3.5 w-3.5" />
+                    Checklist da Etapa ({checklistEtapa.reduce((acc: number, a: any) => acc + (Array.isArray(a.checklist) ? a.checklist.length : 0), 0)} itens)
+                  </p>
+                  <div className="space-y-3">
+                    {checklistEtapa.map((atividade: any, aIdx: number) => {
+                      const items = Array.isArray(atividade.checklist) ? atividade.checklist : [];
+                      if (items.length === 0) return null;
+                      return (
+                        <div key={aIdx}>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">{atividade.nome} <span className="text-[10px]">({formatSLA(atividade.horas_estimadas)})</span></p>
+                          <ul className="space-y-1 pl-2">
+                            {items.map((item: any, cIdx: number) => (
+                              <li key={cIdx} className="flex items-center gap-2 text-xs">
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">
+                                  {CHECKLIST_TIPO_LABELS[(item as ChecklistItem).tipo || 'check']}
+                                </Badge>
+                                <span>{item.texto || "(sem texto)"}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Responsável</p>
                 <Select
