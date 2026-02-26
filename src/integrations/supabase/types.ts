@@ -1091,6 +1091,10 @@ export type Database = {
           iniciado_por: string | null
           jornada_id: string | null
           observacoes: string | null
+          pausado: boolean
+          pausado_em: string | null
+          pausado_motivo: string | null
+          pausado_por: string | null
           pedido_id: string | null
           plano_id: string | null
           responsavel_id: string | null
@@ -1112,6 +1116,10 @@ export type Database = {
           iniciado_por?: string | null
           jornada_id?: string | null
           observacoes?: string | null
+          pausado?: boolean
+          pausado_em?: string | null
+          pausado_motivo?: string | null
+          pausado_por?: string | null
           pedido_id?: string | null
           plano_id?: string | null
           responsavel_id?: string | null
@@ -1133,6 +1141,10 @@ export type Database = {
           iniciado_por?: string | null
           jornada_id?: string | null
           observacoes?: string | null
+          pausado?: boolean
+          pausado_em?: string | null
+          pausado_motivo?: string | null
+          pausado_por?: string | null
           pedido_id?: string | null
           plano_id?: string | null
           responsavel_id?: string | null
