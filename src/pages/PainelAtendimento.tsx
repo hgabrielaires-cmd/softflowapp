@@ -221,7 +221,7 @@ export default function PainelAtendimento() {
     },
   });
 
-  // Precompute SLA da Etapa per card (jornada-based)
+  // Precompute SLA da Etapa per card (jornada-based) + total checklist items per jornada
   const { data: jornadaSlaMap = {} } = useQuery({
     queryKey: ["jornada_sla_map"],
     queryFn: async () => {
@@ -243,7 +243,7 @@ export default function PainelAtendimento() {
       const etapaIds = jornadaEtapas.map(e => e.id);
       const { data: atividades } = await supabase
         .from("jornada_atividades")
-        .select("etapa_id, horas_estimadas")
+        .select("etapa_id, horas_estimadas, checklist")
         .in("etapa_id", etapaIds);
 
       // Map: jornada_id -> { etapa_nome -> total_horas }
@@ -266,6 +266,69 @@ export default function PainelAtendimento() {
         finalMap[planoId] = result[jornadaId] || {};
       });
       return finalMap;
+    },
+  });
+
+  // Precompute total checklist items per plano (across all jornada etapas)
+  const { data: totalChecklistPorPlano = {} } = useQuery({
+    queryKey: ["total_checklist_por_plano"],
+    queryFn: async () => {
+      const { data: jornadas } = await supabase
+        .from("jornadas")
+        .select("id, vinculo_id")
+        .eq("ativo", true)
+        .eq("vinculo_tipo", "plano");
+      if (!jornadas || jornadas.length === 0) return {};
+
+      const jornadaIds = jornadas.map(j => j.id);
+      const { data: jornadaEtapas } = await supabase
+        .from("jornada_etapas")
+        .select("id, jornada_id")
+        .in("jornada_id", jornadaIds);
+      if (!jornadaEtapas || jornadaEtapas.length === 0) return {};
+
+      const etapaIds = jornadaEtapas.map(e => e.id);
+      const { data: atividades } = await supabase
+        .from("jornada_atividades")
+        .select("etapa_id, checklist")
+        .in("etapa_id", etapaIds);
+
+      // plano_id -> total checklist items
+      const planoJornadaMap: Record<string, string> = {};
+      jornadas.forEach(j => { planoJornadaMap[j.vinculo_id] = j.id; });
+
+      const jornadaTotals: Record<string, number> = {};
+      jornadaEtapas.forEach(je => {
+        const atividadesEtapa = (atividades || []).filter(a => a.etapa_id === je.id);
+        const count = atividadesEtapa.reduce((acc, a) => {
+          const cl = Array.isArray(a.checklist) ? a.checklist : [];
+          return acc + cl.length;
+        }, 0);
+        jornadaTotals[je.jornada_id] = (jornadaTotals[je.jornada_id] || 0) + count;
+      });
+
+      const result: Record<string, number> = {};
+      Object.entries(planoJornadaMap).forEach(([planoId, jornadaId]) => {
+        result[planoId] = jornadaTotals[jornadaId] || 0;
+      });
+      return result;
+    },
+  });
+
+  // Fetch completed checklist items per card
+  const { data: cardProgressMap = {} } = useQuery({
+    queryKey: ["card_checklist_progress", cards.map(c => c.id).join(",")],
+    enabled: cards.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("painel_checklist_progresso")
+        .select("card_id, concluido")
+        .eq("concluido", true);
+      const counts: Record<string, number> = {};
+      (data || []).forEach((r: any) => {
+        counts[r.card_id] = (counts[r.card_id] || 0) + 1;
+      });
+      return counts;
     },
   });
 
@@ -551,6 +614,8 @@ export default function PainelAtendimento() {
     if (error) {
       toast.error("Erro ao salvar checklist.");
       setChecklistProgresso((p) => ({ ...p, [key]: prev }));
+    } else {
+      queryClient.invalidateQueries({ queryKey: ["card_checklist_progress"] });
     }
   }
 
@@ -1070,15 +1135,14 @@ export default function PainelAtendimento() {
     return m > 0 ? `${h}h${m.toString().padStart(2, "0")}` : `${h}h`;
   }
 
-  // ─── Progress calculation ────────────────────────────────────────────────
+  // ─── Progress calculation (real checklist-based) ──────────────────────
 
   function calcProgress(card: PainelCard): number {
-    const etapa = etapas.find((e) => e.id === card.etapa_id);
-    if (!etapa || etapas.length === 0) return 0;
-    const concluido = etapas.find((e) => e.nome === "Concluído");
-    if (concluido && card.etapa_id === concluido.id) return 100;
-    const maxOrdem = Math.max(...etapas.map((e) => e.ordem));
-    return Math.round((etapa.ordem / maxOrdem) * 100);
+    if (!card.plano_id) return 0;
+    const total = totalChecklistPorPlano[card.plano_id] || 0;
+    if (total === 0) return 0;
+    const concluidos = cardProgressMap[card.id] || 0;
+    return Math.min(100, Math.round((concluidos / total) * 100));
   }
 
   // ─── Unique operation types ──────────────────────────────────────────────
@@ -1108,6 +1172,12 @@ export default function PainelAtendimento() {
             <span className="text-[10px] text-muted-foreground font-mono shrink-0">
               {card.contratos?.numero_exibicao}
             </span>
+          </div>
+
+          {/* Progress bar right below the name */}
+          <div className="flex items-center gap-2">
+            <Progress value={progress} className="h-1.5 flex-1" />
+            <span className="text-[10px] font-semibold text-muted-foreground shrink-0">{progress}%</span>
           </div>
 
           {/* Status tags */}
@@ -1176,9 +1246,6 @@ export default function PainelAtendimento() {
               </div>
             </div>
           </div>
-
-          {/* Progress */}
-          <Progress value={progress} className="h-1" />
         </div>
       </div>
     );
@@ -1532,7 +1599,7 @@ export default function PainelAtendimento() {
 
               {/* Progress */}
               <div>
-                <p className="text-muted-foreground text-xs mb-1">Progresso</p>
+                <p className="text-muted-foreground text-xs mb-1">Progresso do Projeto</p>
                 <div className="flex items-center gap-2">
                   <Progress value={calcProgress(detailCard)} className="h-2 flex-1" />
                   <span className="text-sm font-medium">{calcProgress(detailCard)}%</span>
@@ -1546,6 +1613,7 @@ export default function PainelAtendimento() {
                   const items = Array.isArray(a.checklist) ? a.checklist : [];
                   return acc + items.filter((_: any, idx: number) => checklistProgresso[`${a.id}_${idx}`]?.concluido).length;
                 }, 0);
+                const checklistPercent = totalItens > 0 ? Math.round((totalConcluidos / totalItens) * 100) : 0;
                 const isCongelado = !detailCard.iniciado_em;
                 return (
                   <div className="border rounded-lg p-3">
@@ -1554,9 +1622,12 @@ export default function PainelAtendimento() {
                         <CheckSquare className="h-3.5 w-3.5" />
                         Checklist da Etapa ({totalConcluidos}/{totalItens})
                       </p>
-                      {totalItens > 0 && (
-                        <Progress value={(totalConcluidos / totalItens) * 100} className="h-1.5 w-20" />
-                      )}
+                      <div className="flex items-center gap-2">
+                        {totalItens > 0 && (
+                          <Progress value={checklistPercent} className="h-1.5 w-20" />
+                        )}
+                        <span className="text-[10px] font-semibold text-muted-foreground">{checklistPercent}%</span>
+                      </div>
                     </div>
                     {isCongelado && (
                       <p className="text-[10px] text-amber-600 mb-2 flex items-center gap-1">
