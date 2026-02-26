@@ -1164,20 +1164,20 @@ export default function PainelAtendimento() {
         style={{ borderTopColor: etapa?.cor || 'hsl(var(--muted))' }}
       >
         <div className="p-3 space-y-2.5">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-2">
-            <p className="font-semibold text-sm text-foreground leading-tight truncate flex-1">
-              {card.clientes?.nome_fantasia || "Cliente"}
-            </p>
-            <span className="text-[10px] text-muted-foreground font-mono shrink-0">
-              {card.contratos?.numero_exibicao}
-            </span>
-          </div>
-
-          {/* Progress bar right below the name */}
-          <div className="flex items-center gap-2">
-            <Progress value={progress} className="h-1.5 flex-1" />
-            <span className="text-[10px] font-semibold text-muted-foreground shrink-0">{progress}%</span>
+          {/* Header + Progress */}
+          <div>
+            <div className="flex items-start justify-between gap-2">
+              <p className="font-semibold text-sm text-foreground leading-tight truncate flex-1">
+                {card.clientes?.nome_fantasia || "Cliente"}
+              </p>
+              <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+                {card.contratos?.numero_exibicao}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 mt-1.5">
+              <Progress value={progress} className="h-1.5 flex-1" />
+              <span className="text-[10px] font-semibold text-muted-foreground shrink-0">{progress}%</span>
+            </div>
           </div>
 
           {/* Status tags */}
