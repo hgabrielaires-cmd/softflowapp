@@ -1241,6 +1241,38 @@ export type Database = {
           },
         ]
       }
+      painel_comentarios: {
+        Row: {
+          card_id: string
+          created_at: string
+          criado_por: string
+          id: string
+          texto: string
+        }
+        Insert: {
+          card_id: string
+          created_at?: string
+          criado_por: string
+          id?: string
+          texto: string
+        }
+        Update: {
+          card_id?: string
+          created_at?: string
+          criado_por?: string
+          id?: string
+          texto?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "painel_comentarios_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "painel_atendimento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       painel_etapa_alertas: {
         Row: {
           ativo: boolean
@@ -1438,6 +1470,42 @@ export type Database = {
             columns: ["etapa_id"]
             isOneToOne: false
             referencedRelation: "painel_etapas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      painel_tecnicos: {
+        Row: {
+          card_id: string
+          created_at: string
+          id: string
+          tecnico_id: string
+        }
+        Insert: {
+          card_id: string
+          created_at?: string
+          id?: string
+          tecnico_id: string
+        }
+        Update: {
+          card_id?: string
+          created_at?: string
+          id?: string
+          tecnico_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "painel_tecnicos_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "painel_atendimento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_tecnicos_tecnico_id_fkey"
+            columns: ["tecnico_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
