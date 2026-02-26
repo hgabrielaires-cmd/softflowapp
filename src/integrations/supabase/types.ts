@@ -1445,6 +1445,8 @@ export type Database = {
           etapa_nome: string
           id: string
           saida_em: string | null
+          sla_previsto_horas: number | null
+          tempo_real_horas: number | null
           usuario_id: string | null
         }
         Insert: {
@@ -1455,6 +1457,8 @@ export type Database = {
           etapa_nome: string
           id?: string
           saida_em?: string | null
+          sla_previsto_horas?: number | null
+          tempo_real_horas?: number | null
           usuario_id?: string | null
         }
         Update: {
@@ -1465,6 +1469,8 @@ export type Database = {
           etapa_nome?: string
           id?: string
           saida_em?: string | null
+          sla_previsto_horas?: number | null
+          tempo_real_horas?: number | null
           usuario_id?: string | null
         }
         Relationships: [
