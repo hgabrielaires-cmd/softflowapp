@@ -962,6 +962,51 @@ export type Database = {
           },
         ]
       }
+      painel_alertas_enviados: {
+        Row: {
+          alerta_id: string
+          canal: string
+          card_id: string
+          detalhes: Json
+          enviado_em: string
+          id: string
+          nivel: number
+        }
+        Insert: {
+          alerta_id: string
+          canal: string
+          card_id: string
+          detalhes?: Json
+          enviado_em?: string
+          id?: string
+          nivel: number
+        }
+        Update: {
+          alerta_id?: string
+          canal?: string
+          card_id?: string
+          detalhes?: Json
+          enviado_em?: string
+          id?: string
+          nivel?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "painel_alertas_enviados_alerta_id_fkey"
+            columns: ["alerta_id"]
+            isOneToOne: false
+            referencedRelation: "painel_etapa_alertas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_alertas_enviados_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "painel_atendimento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       painel_atendimento: {
         Row: {
           cliente_id: string
