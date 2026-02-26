@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
         signers,
         lang: "pt-br",
         disable_signer_emails: false,
-        sandbox: true,
+        sandbox: false,
       };
 
       console.log("=== ZAPSIGN REQUEST ===");
