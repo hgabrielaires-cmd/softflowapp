@@ -413,14 +413,20 @@ function ConfigDialog({ open, onOpenChange, def, config, onSave }: ConfigDialogP
   const [token, setToken] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [ambiente, setAmbiente] = useState<"sandbox" | "production">("sandbox");
 
   useEffect(() => {
     if (config) {
       setAtivo(config.ativo);
       setToken(config.token || "");
+      // Read environment from server_url field for zapsign
+      if (def.key === "zapsign") {
+        setAmbiente(config.server_url === "production" ? "production" : "sandbox");
+      }
     } else {
       setAtivo(false);
       setToken("");
+      setAmbiente("sandbox");
     }
     setShowToken(false);
   }, [config, open]);
@@ -428,12 +434,15 @@ function ConfigDialog({ open, onOpenChange, def, config, onSave }: ConfigDialogP
   async function handleSave() {
     setSaving(true);
     try {
-      await onSave(def.key, ativo, token.trim());
+      const serverUrl = def.key === "zapsign" ? ambiente : undefined;
+      await onSave(def.key, ativo, token.trim(), serverUrl);
       onOpenChange(false);
     } finally {
       setSaving(false);
     }
   }
+
+  const isZapsign = def.key === "zapsign";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -460,6 +469,30 @@ function ConfigDialog({ open, onOpenChange, def, config, onSave }: ConfigDialogP
             </div>
             <Switch checked={ativo} onCheckedChange={setAtivo} />
           </div>
+
+          {/* ZapSign: Ambiente toggle */}
+          {isZapsign && (
+            <div className="flex items-center justify-between rounded-lg border border-border p-4">
+              <div>
+                <Label className="text-sm font-medium">Ambiente</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {ambiente === "sandbox" ? "🧪 Homologação — não consome créditos" : "🚀 Produção — documentos reais"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-medium ${ambiente === "sandbox" ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+                  Homolog.
+                </span>
+                <Switch
+                  checked={ambiente === "production"}
+                  onCheckedChange={(checked) => setAmbiente(checked ? "production" : "sandbox")}
+                />
+                <span className={`text-xs font-medium ${ambiente === "production" ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                  Produção
+                </span>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="token" className="text-sm font-medium">{def.tokenLabel}</Label>
