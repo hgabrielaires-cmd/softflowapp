@@ -134,6 +134,16 @@ Deno.serve(async (req) => {
         lock_email: true,
       });
 
+      // Buscar configuração de ambiente (sandbox/production) do banco
+      const { data: zapsignConfig } = await supabase
+        .from("integracoes_config")
+        .select("server_url")
+        .eq("nome", "zapsign")
+        .maybeSingle();
+      
+      const isSandbox = zapsignConfig?.server_url !== "production";
+      console.log(`[ZapSign] Ambiente: ${isSandbox ? "HOMOLOGAÇÃO (sandbox)" : "PRODUÇÃO"}`);
+
       // Enviar para ZapSign
       const docName = `Contrato ${contrato.numero_exibicao} - ${(contrato as any).clientes?.nome_fantasia || ""}`;
 
@@ -144,7 +154,7 @@ Deno.serve(async (req) => {
         signers,
         lang: "pt-br",
         disable_signer_emails: false,
-        sandbox: false,
+        sandbox: isSandbox,
       };
 
       console.log("=== ZAPSIGN REQUEST ===");
