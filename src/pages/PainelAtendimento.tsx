@@ -18,7 +18,8 @@ import { toast } from "sonner";
 import {
   LayoutGrid, List, Search, Clock, Building2, User, Filter,
   GripVertical, ChevronRight, FileText, Package, ArrowUpCircle,
-  Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw, ArrowRight, CheckSquare
+  Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw, ArrowRight, CheckSquare,
+  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type
 } from "lucide-react";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { ChecklistItem } from "@/lib/supabase-types";
@@ -103,7 +104,7 @@ export default function PainelAtendimento() {
   const [slaEtapaJornada, setSlaEtapaJornada] = useState<number | null>(null);
   const [slaProjeto, setSlaProjeto] = useState<number | null>(null);
   const [checklistEtapa, setChecklistEtapa] = useState<any[]>([]);
-  const [checklistProgresso, setChecklistProgresso] = useState<Record<string, boolean>>({});
+  const [checklistProgresso, setChecklistProgresso] = useState<Record<string, { concluido: boolean; valor_texto?: string; valor_data?: string }>>({});
   const [finalizando, setFinalizando] = useState(false);
   const [, setTick] = useState(0); // force re-render for atrasado checks
 
@@ -313,12 +314,16 @@ export default function PainelAtendimento() {
       // Fetch existing progress for this card
       const { data: progresso } = await supabase
         .from("painel_checklist_progresso")
-        .select("atividade_id, checklist_index, concluido")
+        .select("atividade_id, checklist_index, concluido, valor_texto, valor_data")
         .eq("card_id", detailCard.id);
 
-      const progressoMap: Record<string, boolean> = {};
+      const progressoMap: Record<string, { concluido: boolean; valor_texto?: string; valor_data?: string }> = {};
       (progresso || []).forEach((p: any) => {
-        progressoMap[`${p.atividade_id}_${p.checklist_index}`] = p.concluido;
+        progressoMap[`${p.atividade_id}_${p.checklist_index}`] = {
+          concluido: p.concluido,
+          valor_texto: p.valor_texto || undefined,
+          valor_data: p.valor_data || undefined,
+        };
       });
       setChecklistProgresso(progressoMap);
     })();
@@ -373,11 +378,15 @@ export default function PainelAtendimento() {
   });
 
   // ─── Toggle checklist item ─────────────────────────────────────────────
-  async function toggleChecklistItem(atividadeId: string, checklistIndex: number, currentValue: boolean) {
+  async function saveChecklistItem(
+    atividadeId: string, checklistIndex: number,
+    updates: { concluido?: boolean; valor_texto?: string; valor_data?: string }
+  ) {
     if (!detailCard) return;
     const key = `${atividadeId}_${checklistIndex}`;
-    const newValue = !currentValue;
-    setChecklistProgresso((prev) => ({ ...prev, [key]: newValue }));
+    const prev = checklistProgresso[key] || { concluido: false };
+    const newVal = { ...prev, ...updates };
+    setChecklistProgresso((p) => ({ ...p, [key]: newVal }));
 
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
@@ -386,14 +395,16 @@ export default function PainelAtendimento() {
         card_id: detailCard.id,
         atividade_id: atividadeId,
         checklist_index: checklistIndex,
-        concluido: newValue,
+        concluido: newVal.concluido,
+        valor_texto: newVal.valor_texto || null,
+        valor_data: newVal.valor_data || null,
         concluido_por: user?.id || null,
-        concluido_em: newValue ? new Date().toISOString() : null,
+        concluido_em: newVal.concluido ? new Date().toISOString() : null,
       }, { onConflict: "card_id,atividade_id,checklist_index" });
 
     if (error) {
       toast.error("Erro ao salvar checklist.");
-      setChecklistProgresso((prev) => ({ ...prev, [key]: currentValue }));
+      setChecklistProgresso((p) => ({ ...p, [key]: prev }));
     }
   }
 
@@ -433,7 +444,8 @@ export default function PainelAtendimento() {
       const items = Array.isArray(atividade.checklist) ? atividade.checklist : [];
       items.forEach((_: any, idx: number) => {
         totalItens++;
-        if (checklistProgresso[`${atividade.id}_${idx}`]) totalConcluidos++;
+        const prog = checklistProgresso[`${atividade.id}_${idx}`];
+        if (prog?.concluido) totalConcluidos++;
       });
     });
     return totalItens > 0 && totalConcluidos === totalItens;
@@ -968,7 +980,7 @@ export default function PainelAtendimento() {
                 const totalItens = checklistEtapa.reduce((acc: number, a: any) => acc + (Array.isArray(a.checklist) ? a.checklist.length : 0), 0);
                 const totalConcluidos = checklistEtapa.reduce((acc: number, a: any) => {
                   const items = Array.isArray(a.checklist) ? a.checklist : [];
-                  return acc + items.filter((_: any, idx: number) => checklistProgresso[`${a.id}_${idx}`]).length;
+                  return acc + items.filter((_: any, idx: number) => checklistProgresso[`${a.id}_${idx}`]?.concluido).length;
                 }, 0);
                 const isCongelado = !detailCard.iniciado_em;
                 return (
@@ -994,23 +1006,137 @@ export default function PainelAtendimento() {
                         if (items.length === 0) return null;
                         return (
                           <div key={aIdx}>
-                            <p className="text-xs font-medium text-muted-foreground mb-1">{atividade.nome} <span className="text-[10px]">({formatSLA(atividade.horas_estimadas)})</span></p>
-                            <ul className="space-y-1.5 pl-1">
+                            <p className="text-xs font-medium text-muted-foreground mb-1.5">{atividade.nome} <span className="text-[10px]">({formatSLA(atividade.horas_estimadas)})</span></p>
+                            <ul className="space-y-2 pl-1">
                               {items.map((item: any, cIdx: number) => {
                                 const key = `${atividade.id}_${cIdx}`;
-                                const checked = !!checklistProgresso[key];
+                                const prog = checklistProgresso[key] || { concluido: false };
+                                const tipo = (item as ChecklistItem).tipo || 'check';
                                 return (
-                                  <li key={cIdx} className="flex items-center gap-2 text-xs">
-                                    <Checkbox
-                                      checked={checked}
-                                      disabled={isCongelado}
-                                      onCheckedChange={() => toggleChecklistItem(atividade.id, cIdx, checked)}
-                                      className="h-4 w-4"
-                                    />
-                                    <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">
-                                      {CHECKLIST_TIPO_LABELS[(item as ChecklistItem).tipo || 'check']}
-                                    </Badge>
-                                    <span className={cn(checked && "line-through text-muted-foreground")}>{item.texto || "(sem texto)"}</span>
+                                  <li key={cIdx} className="flex flex-col gap-1.5 text-xs border-b border-border/40 pb-2 last:border-0 last:pb-0">
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 gap-1">
+                                        {tipo === 'sim_nao' && <ThumbsUp className="h-2.5 w-2.5" />}
+                                        {tipo === 'agendamento' && <CalendarDays className="h-2.5 w-2.5" />}
+                                        {tipo === 'texto' && <Type className="h-2.5 w-2.5" />}
+                                        {tipo === 'anexo' && <Paperclip className="h-2.5 w-2.5" />}
+                                        {tipo === 'quantitativo' && <Hash className="h-2.5 w-2.5" />}
+                                        {tipo === 'check' && <CheckSquare className="h-2.5 w-2.5" />}
+                                        {CHECKLIST_TIPO_LABELS[tipo]}
+                                      </Badge>
+                                      <span className={cn("flex-1", prog.concluido && "line-through text-muted-foreground")}>{item.texto || "(sem texto)"}</span>
+                                    </div>
+
+                                    {/* Type-specific inputs */}
+                                    {tipo === 'check' && (
+                                      <div className="pl-1">
+                                        <Checkbox
+                                          checked={prog.concluido}
+                                          disabled={isCongelado}
+                                          onCheckedChange={() => saveChecklistItem(atividade.id, cIdx, { concluido: !prog.concluido })}
+                                          className="h-4 w-4"
+                                        />
+                                      </div>
+                                    )}
+
+                                    {tipo === 'sim_nao' && (
+                                      <div className="flex gap-1.5 pl-1">
+                                        <Button
+                                          size="sm"
+                                          variant={prog.valor_texto === 'sim' ? 'default' : 'outline'}
+                                          className={cn("h-7 text-[11px] px-3", prog.valor_texto === 'sim' && "bg-emerald-600 hover:bg-emerald-700")}
+                                          disabled={isCongelado}
+                                          onClick={() => saveChecklistItem(atividade.id, cIdx, { concluido: true, valor_texto: 'sim' })}
+                                        >
+                                          <ThumbsUp className="h-3 w-3 mr-1" /> Sim
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant={prog.valor_texto === 'nao' ? 'default' : 'outline'}
+                                          className={cn("h-7 text-[11px] px-3", prog.valor_texto === 'nao' && "bg-red-600 hover:bg-red-700")}
+                                          disabled={isCongelado}
+                                          onClick={() => saveChecklistItem(atividade.id, cIdx, { concluido: true, valor_texto: 'nao' })}
+                                        >
+                                          <ThumbsDown className="h-3 w-3 mr-1" /> Não
+                                        </Button>
+                                      </div>
+                                    )}
+
+                                    {tipo === 'agendamento' && (
+                                      <div className="flex items-center gap-2 pl-1">
+                                        <Input
+                                          type="datetime-local"
+                                          className="h-7 text-xs w-52"
+                                          disabled={isCongelado}
+                                          value={prog.valor_data ? new Date(prog.valor_data).toISOString().slice(0, 16) : ''}
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            saveChecklistItem(atividade.id, cIdx, {
+                                              concluido: !!val,
+                                              valor_data: val ? new Date(val).toISOString() : undefined,
+                                            });
+                                          }}
+                                        />
+                                        {prog.valor_data && (
+                                          <span className="text-[10px] text-muted-foreground">
+                                            {new Date(prog.valor_data).toLocaleDateString("pt-BR")} às{" "}
+                                            {new Date(prog.valor_data).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {tipo === 'texto' && (
+                                      <div className="pl-1">
+                                        <Input
+                                          className="h-7 text-xs"
+                                          placeholder="Digite aqui..."
+                                          disabled={isCongelado}
+                                          value={prog.valor_texto || ''}
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            setChecklistProgresso((p) => ({ ...p, [key]: { ...prog, valor_texto: val, concluido: !!val } }));
+                                          }}
+                                          onBlur={(e) => {
+                                            saveChecklistItem(atividade.id, cIdx, { concluido: !!e.target.value, valor_texto: e.target.value });
+                                          }}
+                                        />
+                                      </div>
+                                    )}
+
+                                    {tipo === 'quantitativo' && (
+                                      <div className="pl-1">
+                                        <Input
+                                          type="number"
+                                          className="h-7 text-xs w-28"
+                                          placeholder="Qtd"
+                                          disabled={isCongelado}
+                                          value={prog.valor_texto || ''}
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            setChecklistProgresso((p) => ({ ...p, [key]: { ...prog, valor_texto: val, concluido: !!val } }));
+                                          }}
+                                          onBlur={(e) => {
+                                            saveChecklistItem(atividade.id, cIdx, { concluido: !!e.target.value, valor_texto: e.target.value });
+                                          }}
+                                        />
+                                      </div>
+                                    )}
+
+                                    {tipo === 'anexo' && (
+                                      <div className="pl-1">
+                                        <Button
+                                          size="sm"
+                                          variant={prog.concluido ? 'default' : 'outline'}
+                                          className="h-7 text-[11px]"
+                                          disabled={isCongelado}
+                                          onClick={() => saveChecklistItem(atividade.id, cIdx, { concluido: !prog.concluido })}
+                                        >
+                                          <Paperclip className="h-3 w-3 mr-1" />
+                                          {prog.concluido ? "Anexado ✓" : "Marcar como Anexado"}
+                                        </Button>
+                                      </div>
+                                    )}
                                   </li>
                                 );
                               })}
