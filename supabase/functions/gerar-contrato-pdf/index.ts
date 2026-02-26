@@ -682,7 +682,8 @@ Deno.serve(async (req) => {
         <strong style="display:block;font-size:11px;text-transform:uppercase;">${filial?.responsavel || filial?.nome || ""}</strong>
         <span style="display:block;font-size:10px;color:#555;text-transform:uppercase;">${filial?.razao_social || ""}</span>
       </div>
-    </div>`
+    </div>
+    <p style="text-align:center;font-size:9px;margin-top:20px;color:#777;">© Copyright SOFTPLUS TECNOLOGIA. Todos os Direitos reservados. Proibida reprodução não autorizada.</p>`
   : ""}</body></html>`;
 
       // Chamar Browserless PDF API
