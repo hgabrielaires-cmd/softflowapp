@@ -193,13 +193,8 @@ export default function Agenda() {
     },
   }), [datasComAgendamento]);
 
-  const modifiersStyles = {
-    hasEvent: {
-      backgroundColor: "hsl(var(--primary))",
-      color: "hsl(var(--primary-foreground))",
-      borderRadius: "50%",
-      fontWeight: "bold" as const,
-    },
+  const modifiersClassNames = {
+    hasEvent: "agenda-has-event",
   };
 
   return (
@@ -271,9 +266,9 @@ export default function Agenda() {
                 onSelect={(d) => d && setSelectedDate(d)}
                 locale={ptBR}
                 modifiers={modifiers}
-                modifiersStyles={modifiersStyles}
+                modifiersClassNames={modifiersClassNames}
                 classNames={{
-                  day_selected: "bg-primary/20 text-primary rounded-full hover:bg-primary/25 focus:bg-primary/25 font-bold",
+                  day_selected: "agenda-day-selected",
                 }}
                 className="pointer-events-auto"
               />
