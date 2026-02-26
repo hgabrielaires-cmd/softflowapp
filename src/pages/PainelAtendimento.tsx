@@ -14,12 +14,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   LayoutGrid, List, Search, Clock, Building2, User, Filter,
   GripVertical, ChevronRight, FileText, Package, ArrowUpCircle,
   Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw, ArrowRight, CheckSquare,
-  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type
+  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare
 } from "lucide-react";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { ChecklistItem } from "@/lib/supabase-types";
@@ -54,6 +58,9 @@ interface PainelCard {
   observacoes: string | null;
   iniciado_em: string | null;
   iniciado_por: string | null;
+  aponta_tecnico_agenda: boolean;
+  tipo_atendimento_local: string | null;
+  comentario: string | null;
   created_at: string;
   updated_at: string;
   // Joins
@@ -1240,6 +1247,60 @@ export default function PainelAtendimento() {
                 );
               })()}
 
+              {/* Toggles e Comentário */}
+              <div className="border rounded-lg p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="aponta-agenda" className="text-xs font-medium flex items-center gap-1.5">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    Aponta Técnico para Agenda
+                  </Label>
+                  <Switch
+                    id="aponta-agenda"
+                    checked={detailCard.aponta_tecnico_agenda || false}
+                    onCheckedChange={async (checked) => {
+                      setDetailCard({ ...detailCard, aponta_tecnico_agenda: checked });
+                      await supabase.from("painel_atendimento").update({ aponta_tecnico_agenda: checked }).eq("id", detailCard.id);
+                    }}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">Tipo de Atendimento</Label>
+                  <RadioGroup
+                    value={detailCard.tipo_atendimento_local || ""}
+                    onValueChange={async (val) => {
+                      setDetailCard({ ...detailCard, tipo_atendimento_local: val });
+                      await supabase.from("painel_atendimento").update({ tipo_atendimento_local: val }).eq("id", detailCard.id);
+                    }}
+                    className="flex items-center gap-4"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="interno" id="at-interno" />
+                      <Label htmlFor="at-interno" className="text-xs cursor-pointer">Interno</Label>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="externo" id="at-externo" />
+                      <Label htmlFor="at-externo" className="text-xs cursor-pointer">Externo</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium flex items-center gap-1.5">
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    Comentário
+                  </Label>
+                  <Textarea
+                    className="text-xs min-h-[60px] resize-none"
+                    placeholder="Adicione um comentário sobre este atendimento..."
+                    value={detailCard.comentario || ""}
+                    onChange={(e) => setDetailCard({ ...detailCard, comentario: e.target.value })}
+                    onBlur={async () => {
+                      await supabase.from("painel_atendimento").update({ comentario: detailCard.comentario || null }).eq("id", detailCard.id);
+                    }}
+                  />
+                </div>
+              </div>
 
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Responsável</p>

@@ -1063,7 +1063,9 @@ export type Database = {
       }
       painel_atendimento: {
         Row: {
+          aponta_tecnico_agenda: boolean
           cliente_id: string
+          comentario: string | null
           contrato_id: string
           created_at: string
           etapa_id: string
@@ -1077,11 +1079,14 @@ export type Database = {
           plano_id: string | null
           responsavel_id: string | null
           sla_horas: number
+          tipo_atendimento_local: string | null
           tipo_operacao: string
           updated_at: string
         }
         Insert: {
+          aponta_tecnico_agenda?: boolean
           cliente_id: string
+          comentario?: string | null
           contrato_id: string
           created_at?: string
           etapa_id: string
@@ -1095,11 +1100,14 @@ export type Database = {
           plano_id?: string | null
           responsavel_id?: string | null
           sla_horas?: number
+          tipo_atendimento_local?: string | null
           tipo_operacao: string
           updated_at?: string
         }
         Update: {
+          aponta_tecnico_agenda?: boolean
           cliente_id?: string
+          comentario?: string | null
           contrato_id?: string
           created_at?: string
           etapa_id?: string
@@ -1113,6 +1121,7 @@ export type Database = {
           plano_id?: string | null
           responsavel_id?: string | null
           sla_horas?: number
+          tipo_atendimento_local?: string | null
           tipo_operacao?: string
           updated_at?: string
         }
