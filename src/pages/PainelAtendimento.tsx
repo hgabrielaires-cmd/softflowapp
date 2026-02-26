@@ -506,52 +506,119 @@ export default function PainelAtendimento() {
     setDetalhesLoading(true);
     setDetalhesOpen(true);
     try {
-      // 1. Licenças (módulos do plano)
-      let modulos: any[] = [];
+      // 1. Pedido info
+      let pedidoInfo: any = null;
+      if (card.pedido_id) {
+        const { data: ped } = await supabase
+          .from("pedidos")
+          .select("numero_exibicao, created_at, vendedor_id, tipo_pedido, modulos_adicionais, servicos_pedido, tipo_atendimento")
+          .eq("id", card.pedido_id)
+          .single();
+        if (ped) {
+          // Get vendedor name
+          const { data: vendProf } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("user_id", ped.vendedor_id)
+            .single();
+          pedidoInfo = { ...ped, vendedor_nome: vendProf?.full_name || "—" };
+        }
+      }
+
+      // 2. Contrato info
+      let contratoInfo: any = null;
+      if (card.contrato_id) {
+        const { data: contr } = await supabase
+          .from("contratos")
+          .select("numero_exibicao, status, tipo, created_at")
+          .eq("id", card.contrato_id)
+          .single();
+        contratoInfo = contr;
+        // Check ZapSign signature
+        const { data: zap } = await supabase
+          .from("contratos_zapsign")
+          .select("updated_at, status")
+          .eq("contrato_id", card.contrato_id)
+          .maybeSingle();
+        if (contratoInfo) {
+          contratoInfo.assinado = zap?.status === "Assinado";
+          contratoInfo.dataAssinatura = zap?.status === "Assinado" ? zap.updated_at : null;
+          contratoInfo.statusZapsign = zap?.status || null;
+        }
+      }
+
+      // 3. Dados da empresa (cliente)
+      let clienteInfo: any = null;
+      const { data: cli } = await supabase
+        .from("clientes")
+        .select("nome_fantasia, razao_social, cnpj_cpf, telefone, email, cidade, uf, logradouro, numero, bairro, complemento, cep")
+        .eq("id", card.cliente_id)
+        .single();
+      clienteInfo = cli;
+
+      // 4. Contatos do cliente
+      const { data: contatos } = await supabase
+        .from("cliente_contatos")
+        .select("nome, email, telefone, cargo, decisor")
+        .eq("cliente_id", card.cliente_id)
+        .eq("ativo", true)
+        .order("decisor", { ascending: false });
+
+      // 5. Módulos do plano
+      let modulosPlano: string[] = [];
+      let planoNome: string | null = card.planos?.nome || null;
       if (card.plano_id) {
-        const { data } = await supabase
+        const { data: mods } = await supabase
           .from("plano_modulos")
           .select("modulo_id, modulos(nome)")
           .eq("plano_id", card.plano_id)
           .eq("incluso_no_plano", true)
           .order("ordem");
-        modulos = (data || []).map((m: any) => m.modulos?.nome).filter(Boolean);
+        modulosPlano = (mods || []).map((m: any) => m.modulos?.nome).filter(Boolean);
       }
 
-      // 2. Observações (comentários do card - não financeiras)
+      // 6. Módulos adicionais (do pedido)
+      let modulosAdicionais: any[] = [];
+      if (pedidoInfo?.modulos_adicionais) {
+        const modsAd = Array.isArray(pedidoInfo.modulos_adicionais) ? pedidoInfo.modulos_adicionais : [];
+        if (modsAd.length > 0) {
+          const modIds = modsAd.map((m: any) => m.modulo_id).filter(Boolean);
+          if (modIds.length > 0) {
+            const { data: modNames } = await supabase
+              .from("modulos")
+              .select("id, nome")
+              .in("id", modIds);
+            modulosAdicionais = (modNames || []).map((m: any) => m.nome);
+          }
+        }
+      }
+
+      // 7. Serviços (OA)
+      let servicosOA: any[] = [];
+      if (pedidoInfo?.servicos_pedido) {
+        servicosOA = Array.isArray(pedidoInfo.servicos_pedido) ? pedidoInfo.servicos_pedido : [];
+      }
+
+      // 8. Observações técnicas
       const { data: obs } = await supabase
         .from("painel_comentarios")
         .select("texto, created_at, criado_por, profiles:criado_por(full_name)")
         .eq("card_id", card.id)
         .order("created_at", { ascending: false });
 
-      // Also get observacoes field from card
-      const obsCard = card.observacoes;
-
-      // 3. Data do pedido
-      let dataPedido: string | null = null;
-      if (card.pedido_id) {
-        const { data: ped } = await supabase
-          .from("pedidos")
-          .select("created_at")
-          .eq("id", card.pedido_id)
-          .single();
-        dataPedido = ped?.created_at || null;
-      }
-
-      // 4. Data de assinatura do contrato
-      let dataAssinatura: string | null = null;
-      if (card.contrato_id) {
-        const { data: zap } = await supabase
-          .from("contratos_zapsign")
-          .select("updated_at, status")
-          .eq("contrato_id", card.contrato_id)
-          .eq("status", "Assinado")
-          .maybeSingle();
-        dataAssinatura = zap?.updated_at || null;
-      }
-
-      setDetalhesData({ modulos, observacoes: obs || [], obsCard, dataPedido, dataAssinatura });
+      setDetalhesData({
+        pedidoInfo,
+        contratoInfo,
+        clienteInfo,
+        contatos: contatos || [],
+        planoNome,
+        modulosPlano,
+        modulosAdicionais,
+        servicosOA,
+        obsCard: card.observacoes,
+        observacoes: obs || [],
+        tipoOperacao: card.tipo_operacao,
+      });
     } catch {
       toast.error("Erro ao carregar detalhes.");
     } finally {
@@ -1630,95 +1697,261 @@ export default function PainelAtendimento() {
 
       {/* Detalhes Dialog */}
       <Dialog open={detalhesOpen} onOpenChange={setDetalhesOpen}>
-        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Info className="h-4 w-4" />
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Info className="h-5 w-5 text-primary" />
               Detalhes do Atendimento
             </DialogTitle>
           </DialogHeader>
           {detalhesLoading ? (
-            <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
-              Carregando...
+            <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
+              <RefreshCw className="h-4 w-4 animate-spin mr-2" /> Carregando...
             </div>
           ) : detalhesData && (
-            <div className="space-y-5 overflow-y-auto flex-1 pr-1">
-              {/* Datas */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg border bg-muted/30">
-                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">Data do Pedido</p>
-                  <p className="text-sm font-medium">
-                    {detalhesData.dataPedido
-                      ? `${new Date(detalhesData.dataPedido).toLocaleDateString("pt-BR")} às ${new Date(detalhesData.dataPedido).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
-                      : "—"}
-                  </p>
-                </div>
-                <div className="p-3 rounded-lg border bg-muted/30">
-                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-1">Assinatura do Contrato</p>
-                  <p className="text-sm font-medium">
-                    {detalhesData.dataAssinatura
-                      ? `${new Date(detalhesData.dataAssinatura).toLocaleDateString("pt-BR")} às ${new Date(detalhesData.dataAssinatura).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
-                      : "—"}
-                  </p>
-                </div>
-              </div>
+            <div className="space-y-0 overflow-y-auto flex-1 pr-1">
 
-              {/* Licenças / Módulos */}
-              <div>
-                <p className="text-xs font-semibold mb-2 flex items-center gap-1.5">
-                  <Package className="h-3.5 w-3.5 text-muted-foreground" />
-                  Licenças (Módulos do Plano)
-                </p>
-                {detalhesData.modulos.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">Nenhum módulo vinculado</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {detalhesData.modulos.map((nome: string, i: number) => (
-                      <Badge key={i} variant="secondary" className="text-xs">
-                        {nome}
-                      </Badge>
-                    ))}
+              {/* ── PEDIDO ── */}
+              {detalhesData.pedidoInfo && (
+                <div className="rounded-lg border bg-card p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+                      <FileText className="h-4 w-4 text-primary" />
+                    </div>
+                    <h4 className="text-sm font-bold text-foreground">Pedido</h4>
                   </div>
-                )}
-              </div>
-
-              {/* Observações do card */}
-              {detalhesData.obsCard && (
-                <div>
-                  <p className="text-xs font-semibold mb-1.5 flex items-center gap-1.5">
-                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                    Observações do Card
-                  </p>
-                  <div className="p-2.5 rounded-md border bg-muted/20 text-xs whitespace-pre-wrap">
-                    {detalhesData.obsCard}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Número</p>
+                      <p className="text-sm font-semibold text-foreground">{detalhesData.pedidoInfo.numero_exibicao || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Data/Hora</p>
+                      <p className="text-sm font-medium text-foreground">
+                        {detalhesData.pedidoInfo.created_at
+                          ? `${new Date(detalhesData.pedidoInfo.created_at).toLocaleDateString("pt-BR")} ${new Date(detalhesData.pedidoInfo.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                          : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Vendedor</p>
+                      <p className="text-sm font-medium text-foreground">{detalhesData.pedidoInfo.vendedor_nome}</p>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Comentários / Observações Técnicas */}
-              <div>
-                <p className="text-xs font-semibold mb-2 flex items-center gap-1.5">
-                  <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
-                  Observações Técnicas ({detalhesData.observacoes.length})
-                </p>
-                {detalhesData.observacoes.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">Nenhuma observação registrada</p>
-                ) : (
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {detalhesData.observacoes.map((obs: any) => (
-                      <div key={obs.created_at} className="p-2.5 rounded-md border bg-muted/20">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[11px] font-medium">{obs.profiles?.full_name || "—"}</span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {new Date(obs.created_at).toLocaleDateString("pt-BR")} {new Date(obs.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                          </span>
-                        </div>
-                        <p className="text-xs whitespace-pre-wrap">{obs.texto}</p>
+              {/* ── CONTRATO ── */}
+              {detalhesData.contratoInfo && (
+                <div className="rounded-lg border bg-card p-4 mt-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-7 w-7 rounded-md bg-emerald-light flex items-center justify-center">
+                      <CheckSquare className="h-4 w-4 text-emerald" />
+                    </div>
+                    <h4 className="text-sm font-bold text-foreground">Contrato</h4>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Número</p>
+                      <p className="text-sm font-semibold text-foreground">{detalhesData.contratoInfo.numero_exibicao || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Status</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <Badge variant="secondary" className={cn("text-[11px]",
+                          detalhesData.contratoInfo.assinado ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200"
+                        )}>
+                          {detalhesData.contratoInfo.status} {detalhesData.contratoInfo.assinado ? "• Assinado" : detalhesData.contratoInfo.statusZapsign ? `• ${detalhesData.contratoInfo.statusZapsign}` : ""}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Assinatura</p>
+                      <p className="text-sm font-medium text-foreground">
+                        {detalhesData.contratoInfo.dataAssinatura
+                          ? `${new Date(detalhesData.contratoInfo.dataAssinatura).toLocaleDateString("pt-BR")} ${new Date(detalhesData.contratoInfo.dataAssinatura).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── DADOS DA EMPRESA ── */}
+              {detalhesData.clienteInfo && (
+                <div className="rounded-lg border bg-card p-4 mt-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+                      <Building2 className="h-4 w-4 text-primary" />
+                    </div>
+                    <h4 className="text-sm font-bold text-foreground">Dados da Empresa</h4>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">Nome Fantasia:</span>{" "}
+                      <span className="font-medium text-foreground">{detalhesData.clienteInfo.nome_fantasia}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Razão Social:</span>{" "}
+                      <span className="font-medium text-foreground">{detalhesData.clienteInfo.razao_social || "—"}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">CNPJ/CPF:</span>{" "}
+                      <span className="font-medium text-foreground">{detalhesData.clienteInfo.cnpj_cpf}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Telefone:</span>{" "}
+                      <span className="font-medium text-foreground">{detalhesData.clienteInfo.telefone || "—"}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">E-mail:</span>{" "}
+                      <span className="font-medium text-foreground">{detalhesData.clienteInfo.email || "—"}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Cidade/UF:</span>{" "}
+                      <span className="font-medium text-foreground">{[detalhesData.clienteInfo.cidade, detalhesData.clienteInfo.uf].filter(Boolean).join("/") || "—"}</span>
+                    </div>
+                    {detalhesData.clienteInfo.logradouro && (
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Endereço:</span>{" "}
+                        <span className="font-medium text-foreground">
+                          {[detalhesData.clienteInfo.logradouro, detalhesData.clienteInfo.numero, detalhesData.clienteInfo.bairro, detalhesData.clienteInfo.complemento].filter(Boolean).join(", ")}
+                          {detalhesData.clienteInfo.cep ? ` - CEP: ${detalhesData.clienteInfo.cep}` : ""}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contatos */}
+                  {detalhesData.contatos.length > 0 && (
+                    <>
+                      <div className="border-t my-3" />
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-2">Contatos</p>
+                      <div className="space-y-2">
+                        {detalhesData.contatos.map((c: any, i: number) => (
+                          <div key={i} className={cn("flex items-center justify-between text-xs rounded-md px-3 py-2 border",
+                            c.decisor ? "bg-primary/5 border-primary/20" : "bg-muted/30"
+                          )}>
+                            <div className="flex items-center gap-2">
+                              <User className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="font-medium text-foreground">{c.nome}</span>
+                              {c.cargo && <span className="text-muted-foreground">({c.cargo})</span>}
+                              {c.decisor && (
+                                <Badge variant="default" className="text-[9px] px-1.5 py-0 h-4 bg-primary text-primary-foreground">
+                                  Decisor
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 text-muted-foreground">
+                              {c.telefone && <span>📱 {c.telefone}</span>}
+                              {c.email && <span>✉️ {c.email}</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* ── PLANO CONTRATADO + MÓDULOS ── */}
+              {detalhesData.planoNome && (
+                <div className="rounded-lg border bg-card p-4 mt-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+                      <Package className="h-4 w-4 text-primary" />
+                    </div>
+                    <h4 className="text-sm font-bold text-foreground">Plano Contratado</h4>
+                    <Badge variant="secondary" className="ml-auto text-xs">{detalhesData.planoNome}</Badge>
+                  </div>
+                  {detalhesData.modulosPlano.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {detalhesData.modulosPlano.map((nome: string, i: number) => (
+                        <Badge key={i} variant="outline" className="text-xs bg-muted/40">
+                          {nome}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">Nenhum módulo vinculado ao plano</p>
+                  )}
+                </div>
+              )}
+
+              {/* ── MÓDULOS ADICIONAIS ── */}
+              {detalhesData.modulosAdicionais.length > 0 && (
+                <div className="rounded-lg border bg-card p-4 mt-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-7 w-7 rounded-md bg-violet-100 flex items-center justify-center">
+                      <Layers className="h-4 w-4 text-violet-600" />
+                    </div>
+                    <h4 className="text-sm font-bold text-foreground">Módulos Adicionais</h4>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {detalhesData.modulosAdicionais.map((nome: string, i: number) => (
+                      <Badge key={i} variant="outline" className="text-xs bg-violet-50 text-violet-700 border-violet-200">
+                        {nome}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── SERVIÇOS (OA) ── */}
+              {detalhesData.servicosOA.length > 0 && (
+                <div className="rounded-lg border bg-card p-4 mt-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-7 w-7 rounded-md bg-teal-100 flex items-center justify-center">
+                      <Wrench className="h-4 w-4 text-teal-600" />
+                    </div>
+                    <h4 className="text-sm font-bold text-foreground">Serviços (OA)</h4>
+                    {detalhesData.pedidoInfo?.tipo_atendimento && (
+                      <Badge variant="secondary" className="ml-auto text-[10px]">{detalhesData.pedidoInfo.tipo_atendimento}</Badge>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    {detalhesData.servicosOA.map((s: any, i: number) => (
+                      <div key={i} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded border bg-muted/20">
+                        <span className="font-medium text-foreground">{s.nome || s.descricao || `Serviço ${i + 1}`}</span>
+                        {s.quantidade && <span className="text-muted-foreground">x{s.quantidade}</span>}
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+
+              {/* ── OBSERVAÇÕES ── */}
+              {(detalhesData.obsCard || detalhesData.observacoes.length > 0) && (
+                <div className="rounded-lg border bg-card p-4 mt-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center">
+                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <h4 className="text-sm font-bold text-foreground">Observações</h4>
+                  </div>
+                  {detalhesData.obsCard && (
+                    <div className="p-2.5 rounded-md border bg-muted/20 text-xs whitespace-pre-wrap mb-2">
+                      {detalhesData.obsCard}
+                    </div>
+                  )}
+                  {detalhesData.observacoes.length > 0 && (
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {detalhesData.observacoes.map((obs: any) => (
+                        <div key={obs.created_at} className="p-2.5 rounded-md border bg-muted/20">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] font-medium text-foreground">{obs.profiles?.full_name || "—"}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {new Date(obs.created_at).toLocaleDateString("pt-BR")} {new Date(obs.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                          <p className="text-xs whitespace-pre-wrap text-foreground">{obs.texto}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
             </div>
           )}
         </DialogContent>
