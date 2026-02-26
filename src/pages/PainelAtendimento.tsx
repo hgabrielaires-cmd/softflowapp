@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import {
   LayoutGrid, List, Search, Clock, Building2, User, Filter,
   GripVertical, ChevronRight, FileText, Package, ArrowUpCircle,
-  Wrench, GraduationCap, Layers, Play, AlertTriangle
+  Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -94,6 +94,15 @@ export default function PainelAtendimento() {
   const [filtroEtapa, setFiltroEtapa] = useState<string>("todos");
   const [detailCard, setDetailCard] = useState<PainelCard | null>(null);
   const [dragCardId, setDragCardId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [, setTick] = useState(0); // force re-render for atrasado checks
+
+  // Auto-refresh atrasado status every 60s
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
 
   // Set default filial filter when hook resolves
   useEffect(() => {
@@ -144,6 +153,54 @@ export default function PainelAtendimento() {
       return data || [];
     },
   });
+
+  // ─── Sync contratos assinados ───────────────────────────────────────────
+  const syncContratosAssinados = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const cardContratoIds = cards
+        .filter((c) => c.contrato_id)
+        .map((c) => c.contrato_id);
+
+      if (cardContratoIds.length === 0) {
+        setSyncing(false);
+        return;
+      }
+
+      const { data: zapsignRecords } = await supabase
+        .from("contratos_zapsign")
+        .select("contrato_id, status")
+        .in("contrato_id", cardContratoIds)
+        .in("status", ["Enviado", "Pendente"]);
+
+      if (zapsignRecords && zapsignRecords.length > 0) {
+        for (const rec of zapsignRecords) {
+          try {
+            await supabase.functions.invoke("zapsign", {
+              body: { action: "check_status", contrato_id: rec.contrato_id },
+            });
+          } catch {
+            // ignore
+          }
+        }
+        queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+      }
+      toast.success("Painel atualizado!");
+    } catch {
+      // silent
+    } finally {
+      setSyncing(false);
+    }
+  }, [cards, queryClient]);
+
+  // Sync on first load
+  const [hasSynced, setHasSynced] = useState(false);
+  useEffect(() => {
+    if (cards.length > 0 && !hasSynced) {
+      setHasSynced(true);
+      syncContratosAssinados();
+    }
+  }, [cards.length, hasSynced, syncContratosAssinados]);
 
   // ─── Mutations ───────────────────────────────────────────────────────────
 
@@ -386,6 +443,16 @@ export default function PainelAtendimento() {
               onClick={() => setViewMode("lista")}
             >
               <List className="h-4 w-4 mr-1" /> Lista
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => syncContratosAssinados()}
+              disabled={syncing}
+              title="Atualizar status dos contratos"
+            >
+              <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
             </Button>
           </div>
         </div>
