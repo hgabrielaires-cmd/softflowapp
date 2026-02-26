@@ -13,14 +13,14 @@ const PRIORIDADES = [
   { value: "normal", label: "Normal", emoji: "🟢" },
   { value: "medio", label: "Médio", emoji: "🟡" },
   { value: "urgente", label: "Urgente", emoji: "🔴" },
-  { value: "prioridade", label: "Prioridade", emoji: "⚡" },
+  { value: "prioridade", label: "Alta Prioridade", emoji: "⚡" },
 ] as const;
 
 const PRIORIDADE_MAP: Record<string, { label: string; emoji: string }> = {
   normal: { label: "Normal", emoji: "🟢" },
   medio: { label: "Médio", emoji: "🟡" },
   urgente: { label: "Urgente", emoji: "🔴" },
-  prioridade: { label: "Prioridade", emoji: "⚡" },
+  prioridade: { label: "Alta Prioridade", emoji: "⚡" },
 };
 
 const MAX_FILE_SIZE = 11 * 1024 * 1024; // 11MB
