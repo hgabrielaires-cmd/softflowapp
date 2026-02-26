@@ -272,6 +272,9 @@ export default function Agenda() {
                 locale={ptBR}
                 modifiers={modifiers}
                 modifiersStyles={modifiersStyles}
+                classNames={{
+                  day_selected: "bg-muted text-foreground hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground",
+                }}
                 className="pointer-events-auto"
               />
               <div className="mt-2 px-2 flex items-center gap-2 text-xs text-muted-foreground">
