@@ -123,6 +123,14 @@ export default function JornadaImplantacao() {
     },
   });
 
+  const { data: painelEtapas = [] } = useQuery({
+    queryKey: ["painel_etapas_for_jornada"],
+    queryFn: async () => {
+      const { data } = await supabase.from("painel_etapas").select("id, nome").eq("ativo", true).order("ordem");
+      return data || [];
+    },
+  });
+
   // ─── Auto-fill description ─────────────────────────────────────────────────
 
   useEffect(() => {
@@ -752,7 +760,13 @@ export default function JornadaImplantacao() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">Nome da Etapa *</label>
-              <Input value={etapaForm.nome} onChange={(e) => setEtapaForm((p) => ({ ...p, nome: e.target.value }))} placeholder="Ex: Validação de equipamentos e Rede" />
+              <Select value={etapaForm.nome || "placeholder"} onValueChange={(v) => setEtapaForm((p) => ({ ...p, nome: v === "placeholder" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione a etapa..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="placeholder" disabled>Selecione a etapa...</SelectItem>
+                  {painelEtapas.map((e) => <SelectItem key={e.id} value={e.nome}>{e.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-medium">Descrição</label>
