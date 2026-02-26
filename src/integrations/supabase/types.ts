@@ -1538,6 +1538,7 @@ export type Database = {
           anexo_url: string | null
           created_at: string
           id: string
+          parent_id: string | null
           pedido_id: string
           prioridade: string
           texto: string
@@ -1548,6 +1549,7 @@ export type Database = {
           anexo_url?: string | null
           created_at?: string
           id?: string
+          parent_id?: string | null
           pedido_id: string
           prioridade?: string
           texto: string
@@ -1558,12 +1560,20 @@ export type Database = {
           anexo_url?: string | null
           created_at?: string
           id?: string
+          parent_id?: string | null
           pedido_id?: string
           prioridade?: string
           texto?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "pedido_comentarios_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "pedido_comentarios"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pedido_comentarios_pedido_id_fkey"
             columns: ["pedido_id"]
