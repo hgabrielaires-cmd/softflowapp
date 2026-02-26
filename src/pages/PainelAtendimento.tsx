@@ -253,13 +253,26 @@ export default function PainelAtendimento() {
   // ─── SLA inicio check ──────────────────────────────────────────────────
 
   function isInicioAtrasado(card: PainelCard): boolean {
-    if (card.iniciado_em) return false; // já iniciou
+    if (card.iniciado_em) return false;
     const etapa = etapas.find((e) => e.id === card.etapa_id);
     if (!etapa?.controla_sla || !etapa.prazo_maximo_horas) return false;
     const criado = new Date(card.created_at).getTime();
     const agora = Date.now();
     const diffHoras = (agora - criado) / (1000 * 60 * 60);
     return diffHoras > etapa.prazo_maximo_horas;
+  }
+
+  function getTempoRestante(card: PainelCard): string | null {
+    if (card.iniciado_em) return null;
+    const etapa = etapas.find((e) => e.id === card.etapa_id);
+    if (!etapa?.controla_sla || !etapa.prazo_maximo_horas) return null;
+    const criado = new Date(card.created_at).getTime();
+    const limite = criado + etapa.prazo_maximo_horas * 60 * 60 * 1000;
+    const restanteMs = limite - Date.now();
+    if (restanteMs <= 0) return null; // já atrasou
+    const horas = Math.floor(restanteMs / (1000 * 60 * 60));
+    const minutos = Math.floor((restanteMs % (1000 * 60 * 60)) / (1000 * 60));
+    return `${horas}:${String(minutos).padStart(2, "0")}`;
   }
 
   // ─── Filtered cards ──────────────────────────────────────────────────────
@@ -388,6 +401,17 @@ export default function PainelAtendimento() {
               </span>
             )}
           </div>
+
+          {/* Countdown SLA */}
+          {(() => {
+            const tempo = getTempoRestante(card);
+            return tempo ? (
+              <div className="flex items-center gap-1 text-[10px] text-amber-600 font-medium">
+                <Clock className="h-2.5 w-2.5" />
+                Vence em {tempo}h
+              </div>
+            ) : null;
+          })()}
 
           {/* Footer */}
           <div className="flex items-center justify-between pt-1 border-t border-border/40">
@@ -674,15 +698,26 @@ export default function PainelAtendimento() {
                   </div>
                 ) : (
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {isInicioAtrasado(detailCard) ? (
-                        <Badge variant="destructive" className="gap-1">
-                          <AlertTriangle className="h-3 w-3" />
-                          Tarefa Atrasada
-                        </Badge>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">Aguardando início</span>
-                      )}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        {isInicioAtrasado(detailCard) ? (
+                          <Badge variant="destructive" className="gap-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            Tarefa Atrasada
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Aguardando início</span>
+                        )}
+                      </div>
+                      {(() => {
+                        const tempo = getTempoRestante(detailCard);
+                        return tempo ? (
+                          <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
+                            <Clock className="h-3 w-3" />
+                            Vence em {tempo}h
+                          </span>
+                        ) : null;
+                      })()}
                     </div>
                     <Button
                       size="sm"
