@@ -962,6 +962,60 @@ export type Database = {
           },
         ]
       }
+      painel_agendamentos: {
+        Row: {
+          atividade_id: string
+          card_id: string
+          checklist_index: number
+          created_at: string
+          criado_por: string | null
+          data: string
+          hora_fim: string | null
+          hora_inicio: string | null
+          id: string
+          observacao: string | null
+        }
+        Insert: {
+          atividade_id: string
+          card_id: string
+          checklist_index: number
+          created_at?: string
+          criado_por?: string | null
+          data: string
+          hora_fim?: string | null
+          hora_inicio?: string | null
+          id?: string
+          observacao?: string | null
+        }
+        Update: {
+          atividade_id?: string
+          card_id?: string
+          checklist_index?: number
+          created_at?: string
+          criado_por?: string | null
+          data?: string
+          hora_fim?: string | null
+          hora_inicio?: string | null
+          id?: string
+          observacao?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "painel_agendamentos_atividade_id_fkey"
+            columns: ["atividade_id"]
+            isOneToOne: false
+            referencedRelation: "jornada_atividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_agendamentos_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "painel_atendimento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       painel_alertas_enviados: {
         Row: {
           alerta_id: string
