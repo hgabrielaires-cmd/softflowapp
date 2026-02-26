@@ -2094,6 +2094,13 @@ export default function PainelAtendimento() {
                 Criado em {new Date(detailCard.created_at).toLocaleDateString("pt-BR")} às{" "}
                 {new Date(detailCard.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
               </div>
+
+              {/* Comentários Internos do Pedido */}
+              {detailCard.pedido_id && (
+                <div className="border-t border-border pt-3 mt-3">
+                  <PedidoComentarios pedidoId={detailCard.pedido_id} readOnly />
+                </div>
+              )}
             </div>
           )}
           {detailCard && (
@@ -2130,12 +2137,6 @@ export default function PainelAtendimento() {
                     </Button>
                   );
                 })()}
-              {/* Comentários Internos do Pedido */}
-              {detailCard.pedido_id && (
-                <div className="border-t border-border pt-3 mt-3">
-                  <PedidoComentarios pedidoId={detailCard.pedido_id} readOnly />
-                </div>
-              )}
                 <Button
                   size="sm"
                   onClick={finalizarEtapa}
