@@ -19,6 +19,8 @@ import {
   Copy,
   Check,
   X,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   Select,
@@ -132,6 +134,7 @@ export default function Dashboard() {
   const [dialogType, setDialogType] = useState<DialogType>(null);
   const [dialogFilter, setDialogFilter] = useState<string>("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [expandedPedidos, setExpandedPedidos] = useState<Set<string>>(new Set());
 
   // Inicializa filial padrão
   useEffect(() => {
@@ -422,6 +425,25 @@ export default function Dashboard() {
     setDialogType(type);
     setDialogFilter(filter);
     setDialogOpen(true);
+    setExpandedPedidos(new Set());
+  }
+
+  function toggleExpand(id: string) {
+    setExpandedPedidos(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function getPlanoNome(planoId: string) {
+    return planos.find(pl => pl.id === planoId)?.nome || "Sem plano";
+  }
+
+  function getModulosTexto(modulos: any) {
+    if (!modulos || !Array.isArray(modulos) || modulos.length === 0) return null;
+    return modulos.map((m: any) => m.nome || m.modulo_nome || "Módulo").join(", ");
   }
 
   async function copyToClipboard(text: string, id: string) {
@@ -830,22 +852,55 @@ export default function Dashboard() {
                 ) : (
                   dialogPedidos.map((p) => {
                     const tipoInfo = getTipoLabel(p.tipo_pedido);
+                    const isExpanded = expandedPedidos.has(p.id);
+                    const planoNome = getPlanoNome(p.plano_id);
+                    const modulosTexto = getModulosTexto(p.modulos_adicionais);
                     return (
-                      <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30 gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{p.cliente_nome}</p>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-xs text-muted-foreground">
-                              Impl: <span className="font-medium text-foreground">{fmtBRL(p.valor_implantacao_final)}</span>
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              Mens: <span className="font-medium text-foreground">{fmtBRL(p.valor_mensalidade_final)}</span>
-                            </span>
+                      <div key={p.id} className="rounded-lg border border-border bg-muted/30 overflow-hidden">
+                        <div className="flex items-center justify-between p-3 gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{p.cliente_nome}</p>
+                            <div className="flex items-center gap-3 mt-1">
+                              <span className="text-xs text-muted-foreground">
+                                Impl: <span className="font-medium text-foreground">{fmtBRL(p.valor_implantacao_final)}</span>
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                Mens: <span className="font-medium text-foreground">{fmtBRL(p.valor_mensalidade_final)}</span>
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge variant="outline" className={`${tipoInfo.color} text-[11px]`}>
+                              {tipoInfo.label}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={(e) => { e.stopPropagation(); toggleExpand(p.id); }}
+                              title="Ver detalhes"
+                            >
+                              {isExpanded ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                            </Button>
                           </div>
                         </div>
-                        <Badge variant="outline" className={`${tipoInfo.color} shrink-0 text-[11px]`}>
-                          {tipoInfo.label}
-                        </Badge>
+                        {isExpanded && (
+                          <div className="px-3 pb-3 pt-0 border-t border-border/50 bg-muted/50 space-y-1">
+                            <p className="text-xs text-muted-foreground">
+                              📦 Plano: <span className="font-medium text-foreground">{planoNome}</span>
+                            </p>
+                            {modulosTexto && (
+                              <p className="text-xs text-muted-foreground">
+                                🧩 Módulos Adicionais: <span className="font-medium text-foreground">{modulosTexto}</span>
+                              </p>
+                            )}
+                            {p.tipo_pedido === "OA" && (
+                              <p className="text-xs text-muted-foreground">
+                                📋 Tipo: <span className="font-medium text-foreground">Ordem de Atendimento</span>
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })
