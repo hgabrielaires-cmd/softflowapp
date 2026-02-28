@@ -735,6 +735,37 @@ export default function Usuarios() {
               )}
             </div>
             <div className="rounded-lg border border-border p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+                    <Wrench className="h-4 w-4 text-primary" />
+                    É Técnico?
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Realiza atendimentos técnicos e pode ser apontado para agenda</p>
+                </div>
+                <Switch checked={inviteIsTecnico} onCheckedChange={setInviteIsTecnico} />
+              </div>
+              {inviteIsTecnico && (
+                <div className="space-y-2 pl-2 border-l-2 border-primary/30">
+                  <Label className="text-xs font-medium">Tipo de Atendimento</Label>
+                  <RadioGroup value={inviteTipoTecnico} onValueChange={setInviteTipoTecnico} className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="interno" id="inv-tec-interno" />
+                      <Label htmlFor="inv-tec-interno" className="text-xs cursor-pointer">Interno</Label>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="externo" id="inv-tec-externo" />
+                      <Label htmlFor="inv-tec-externo" className="text-xs cursor-pointer">Externo</Label>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="ambos" id="inv-tec-ambos" />
+                      <Label htmlFor="inv-tec-ambos" className="text-xs cursor-pointer">Ambos</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
+            </div>
+            <div className="rounded-lg border border-border p-3 space-y-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Limite de Desconto</p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -774,37 +805,6 @@ export default function Usuarios() {
                 </div>
                 <Switch checked={invitePermitirCnpjDuplicado} onCheckedChange={setInvitePermitirCnpjDuplicado} />
               </div>
-            </div>
-            <div className="rounded-lg border border-border p-3 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
-                    <Wrench className="h-4 w-4 text-primary" />
-                    É Técnico?
-                  </Label>
-                  <p className="text-xs text-muted-foreground">Realiza atendimentos técnicos e pode ser apontado para agenda</p>
-                </div>
-                <Switch checked={inviteIsTecnico} onCheckedChange={setInviteIsTecnico} />
-              </div>
-              {inviteIsTecnico && (
-                <div className="space-y-2 pl-2 border-l-2 border-primary/30">
-                  <Label className="text-xs font-medium">Tipo de Atendimento</Label>
-                  <RadioGroup value={inviteTipoTecnico} onValueChange={setInviteTipoTecnico} className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5">
-                      <RadioGroupItem value="interno" id="inv-tec-interno" />
-                      <Label htmlFor="inv-tec-interno" className="text-xs cursor-pointer">Interno</Label>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <RadioGroupItem value="externo" id="inv-tec-externo" />
-                      <Label htmlFor="inv-tec-externo" className="text-xs cursor-pointer">Externo</Label>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <RadioGroupItem value="ambos" id="inv-tec-ambos" />
-                      <Label htmlFor="inv-tec-ambos" className="text-xs cursor-pointer">Ambos</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              )}
             </div>
             <div className="flex justify-end gap-2 pt-2 shrink-0">
                <Button type="button" variant="outline" onClick={() => setOpenInvite(false)}>Cancelar</Button>
@@ -969,6 +969,37 @@ export default function Usuarios() {
                     )}
                   </div>
                   <div className="rounded-lg border border-border p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+                          <Wrench className="h-4 w-4 text-primary" />
+                          É Técnico?
+                        </Label>
+                        <p className="text-xs text-muted-foreground">Realiza atendimentos técnicos e pode ser apontado para agenda</p>
+                      </div>
+                      <Switch checked={editIsTecnico} onCheckedChange={setEditIsTecnico} />
+                    </div>
+                    {editIsTecnico && (
+                      <div className="space-y-2 pl-2 border-l-2 border-primary/30">
+                        <Label className="text-xs font-medium">Tipo de Atendimento Técnico</Label>
+                        <RadioGroup value={editTipoTecnico} onValueChange={setEditTipoTecnico} className="flex items-center gap-4">
+                          <div className="flex items-center gap-1.5">
+                            <RadioGroupItem value="interno" id="edit-tec-interno" />
+                            <Label htmlFor="edit-tec-interno" className="text-xs cursor-pointer">Interno</Label>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <RadioGroupItem value="externo" id="edit-tec-externo" />
+                            <Label htmlFor="edit-tec-externo" className="text-xs cursor-pointer">Externo</Label>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <RadioGroupItem value="ambos" id="edit-tec-ambos" />
+                            <Label htmlFor="edit-tec-ambos" className="text-xs cursor-pointer">Ambos</Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+                    )}
+                  </div>
+                  <div className="rounded-lg border border-border p-3 space-y-3">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Limite de Desconto</p>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
@@ -1042,38 +1073,6 @@ export default function Usuarios() {
                       </div>
                       <Switch checked={editPermiteEnviarEspelho} onCheckedChange={setEditPermiteEnviarEspelho} />
                     </div>
-                    <div className="border-t border-border" />
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
-                          <Wrench className="h-4 w-4 text-primary" />
-                          É Técnico?
-                        </Label>
-                        <p className="text-xs text-muted-foreground">
-                          Realiza atendimentos técnicos e pode ser apontado para agenda.
-                        </p>
-                      </div>
-                      <Switch checked={editIsTecnico} onCheckedChange={setEditIsTecnico} />
-                    </div>
-                    {editIsTecnico && (
-                      <div className="space-y-2 pl-4 border-l-2 border-primary/30">
-                        <Label className="text-xs font-medium">Tipo de Atendimento Técnico</Label>
-                        <RadioGroup value={editTipoTecnico} onValueChange={setEditTipoTecnico} className="flex items-center gap-4">
-                          <div className="flex items-center gap-1.5">
-                            <RadioGroupItem value="interno" id="edit-tec-interno" />
-                            <Label htmlFor="edit-tec-interno" className="text-xs cursor-pointer">Interno</Label>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <RadioGroupItem value="externo" id="edit-tec-externo" />
-                            <Label htmlFor="edit-tec-externo" className="text-xs cursor-pointer">Externo</Label>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <RadioGroupItem value="ambos" id="edit-tec-ambos" />
-                            <Label htmlFor="edit-tec-ambos" className="text-xs cursor-pointer">Ambos</Label>
-                          </div>
-                        </RadioGroup>
-                      </div>
-                    )}
                   </div>
                 </TabsContent>
 
