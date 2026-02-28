@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Lock, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Flowy } from "@/components/Flowy";
 import logoSoftflowBranca from "@/assets/logo-softflow-branca.png";
 import logoSoftflowAzul from "@/assets/logo-softflow-azul.png";
 import logoSoftplusAzul from "@/assets/logo-softplus-azul.png";
@@ -16,7 +18,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-
+  const [flowyDialog, setFlowyDialog] = useState<{ open: boolean; message: string }>({ open: false, message: "" });
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -42,7 +44,7 @@ export default function Login() {
       .single();
 
     if (profile?.active === false) {
-      toast.error("Sua conta está inativa. Entre em contato com o administrador.");
+      setFlowyDialog({ open: true, message: "Sua conta está inativa. Entre em contato com o administrador." });
       await supabase.auth.signOut();
       setLoading(false);
       return;
@@ -57,7 +59,7 @@ export default function Login() {
         .limit(1);
 
       if (!ufData || ufData.length === 0) {
-        toast.error("Seu usuário não possui nenhuma filial vinculada. Entre em contato com o administrador.");
+        setFlowyDialog({ open: true, message: "Seu usuário não possui nenhuma filial vinculada. Entre em contato com o administrador." });
         await supabase.auth.signOut();
         setLoading(false);
         return;
@@ -164,5 +166,15 @@ Entre em contato com o administrador para obter acesso.<br />
           </div>
         </div>
       </div>
+
+      <Dialog open={flowyDialog.open} onOpenChange={(open) => setFlowyDialog({ ...flowyDialog, open })}>
+        <DialogContent className="sm:max-w-sm flex flex-col items-center gap-4 pt-8">
+          <Flowy mood="triste" size="lg" />
+          <p className="text-center text-sm text-foreground font-medium">{flowyDialog.message}</p>
+          <Button className="w-full" onClick={() => setFlowyDialog({ open: false, message: "" })}>
+            Entendi
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>);
 }
