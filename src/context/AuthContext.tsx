@@ -57,9 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if ((data as any).deve_trocar_senha === true) {
         setDeveTrocarSenha(true);
       }
-      // Verificar se tem filial vinculada
-      if (!data.filial_id && !data.acesso_global) {
-        // Checar usuario_filiais
+      // Verificar se tem filial vinculada (filial_id OU usuario_filiais)
+      if (!data.filial_id) {
         const { data: ufData } = await supabase
           .from("usuario_filiais")
           .select("filial_id")
