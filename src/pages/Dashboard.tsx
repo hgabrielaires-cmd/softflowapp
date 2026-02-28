@@ -91,6 +91,8 @@ interface PedidoRow {
   comissao_implantacao_valor: number;
   comissao_mensalidade_valor: number;
   cliente_nome: string;
+  desconto_aprovado_por_nome: string | null;
+  status_pedido: string;
 }
 
 interface PlanoInfo {
@@ -244,7 +246,7 @@ export default function Dashboard() {
       // Pedidos with client name
       let pedidoQuery = supabase
         .from("pedidos")
-        .select("id, valor_total, valor_implantacao_final, valor_mensalidade_final, desconto_implantacao_valor, desconto_mensalidade_valor, desconto_implantacao_tipo, desconto_mensalidade_tipo, valor_implantacao_original, valor_mensalidade_original, financeiro_status, tipo_pedido, plano_id, contrato_id, modulos_adicionais, cliente_id, comissao_implantacao_valor, comissao_mensalidade_valor, clientes(nome_fantasia)")
+        .select("id, valor_total, valor_implantacao_final, valor_mensalidade_final, desconto_implantacao_valor, desconto_mensalidade_valor, desconto_implantacao_tipo, desconto_mensalidade_tipo, valor_implantacao_original, valor_mensalidade_original, financeiro_status, tipo_pedido, plano_id, contrato_id, modulos_adicionais, cliente_id, comissao_implantacao_valor, comissao_mensalidade_valor, status_pedido, clientes(nome_fantasia)")
         .gte("created_at", start.toISOString())
         .lte("created_at", end.toISOString());
 
@@ -261,7 +263,40 @@ export default function Dashboard() {
       const mappedPedidos = (pedidosData || []).map((p: any) => ({
         ...p,
         cliente_nome: p.clientes?.nome_fantasia || "Cliente",
+        desconto_aprovado_por_nome: null as string | null,
       })) as PedidoRow[];
+
+      // Fetch discount approvals for pedidos with discounts
+      const pedidoIds = mappedPedidos
+        .filter(p => (p.desconto_implantacao_valor || 0) > 0 || (p.desconto_mensalidade_valor || 0) > 0)
+        .map(p => p.id);
+
+      if (pedidoIds.length > 0) {
+        const { data: solicitacoes } = await supabase
+          .from("solicitacoes_desconto")
+          .select("pedido_id, aprovado_por, status")
+          .in("pedido_id", pedidoIds)
+          .eq("status", "Aprovado");
+
+        if (solicitacoes && solicitacoes.length > 0) {
+          const approverIds = [...new Set(solicitacoes.map((s: any) => s.aprovado_por).filter(Boolean))];
+          let approverMap = new Map<string, string>();
+          if (approverIds.length > 0) {
+            const { data: approverProfiles } = await supabase
+              .from("profiles")
+              .select("user_id, full_name")
+              .in("user_id", approverIds);
+            (approverProfiles || []).forEach((ap: any) => approverMap.set(ap.user_id, ap.full_name));
+          }
+          solicitacoes.forEach((s: any) => {
+            const pedido = mappedPedidos.find(p => p.id === s.pedido_id);
+            if (pedido && s.aprovado_por) {
+              pedido.desconto_aprovado_por_nome = approverMap.get(s.aprovado_por) || null;
+            }
+          });
+        }
+      }
+
       setPedidos(mappedPedidos);
 
       // Planos
@@ -864,21 +899,57 @@ export default function Dashboard() {
                     const descMens = p.desconto_mensalidade_tipo === "%"
                       ? `${p.desconto_mensalidade_valor}% (${fmtBRL((p.valor_mensalidade_original * (p.desconto_mensalidade_valor || 0)) / 100)})`
                       : fmtBRL(p.desconto_mensalidade_valor || 0);
+                    const isExpanded = expandedPedidos.has(p.id);
+                    const planoNome = getPlanoNome(p.plano_id);
+                    const modulosTexto = getModulosTexto(p.modulos_adicionais);
                     return (
-                      <div key={p.id} className="p-3 rounded-lg border border-border bg-muted/30 space-y-1">
-                        <p className="text-sm font-medium text-foreground truncate">{p.cliente_nome}</p>
-                        <div className="flex flex-wrap items-center gap-3">
-                          {(p.desconto_implantacao_valor || 0) > 0 && (
-                            <span className="text-xs text-muted-foreground">
-                              Desc. Impl: <span className="font-medium text-destructive">{descImpl}</span>
-                            </span>
-                          )}
-                          {(p.desconto_mensalidade_valor || 0) > 0 && (
-                            <span className="text-xs text-muted-foreground">
-                              Desc. Mens: <span className="font-medium text-destructive">{descMens}</span>
-                            </span>
-                          )}
+                      <div key={p.id} className="rounded-lg border border-border bg-muted/30 overflow-hidden">
+                        <div className="flex items-center justify-between p-3 gap-3">
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <p className="text-sm font-medium text-foreground truncate">{p.cliente_nome}</p>
+                            <div className="flex flex-wrap items-center gap-3">
+                              {(p.desconto_implantacao_valor || 0) > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  Desc. Impl: <span className="font-medium text-destructive">{descImpl}</span>
+                                </span>
+                              )}
+                              {(p.desconto_mensalidade_valor || 0) > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  Desc. Mens: <span className="font-medium text-destructive">{descMens}</span>
+                                </span>
+                              )}
+                            </div>
+                            {p.desconto_aprovado_por_nome && (
+                              <p className="text-xs text-muted-foreground">
+                                ✅ Aprovado por: <span className="font-medium text-foreground">{p.desconto_aprovado_por_nome}</span>
+                              </p>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0"
+                            onClick={(e) => { e.stopPropagation(); toggleExpand(p.id); }}
+                            title="Ver detalhes"
+                          >
+                            {isExpanded ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          </Button>
                         </div>
+                        {isExpanded && (
+                          <div className="px-3 pb-3 pt-0 border-t border-border/50 bg-muted/50 space-y-1">
+                            <p className="text-xs text-muted-foreground">
+                              📦 Plano: <span className="font-medium text-foreground">{planoNome}</span>
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              💵 Impl: <span className="font-medium text-foreground">{fmtBRL(p.valor_implantacao_final)}</span> | Mens: <span className="font-medium text-foreground">{fmtBRL(p.valor_mensalidade_final)}</span>
+                            </p>
+                            {modulosTexto && (
+                              <p className="text-xs text-muted-foreground">
+                                🧩 Módulos: <span className="font-medium text-foreground">{modulosTexto}</span>
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })
