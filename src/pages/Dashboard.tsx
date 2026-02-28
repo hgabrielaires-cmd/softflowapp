@@ -93,6 +93,7 @@ interface PedidoRow {
   cliente_nome: string;
   desconto_aprovado_por_nome: string | null;
   status_pedido: string;
+  numero_exibicao: string;
 }
 
 interface PlanoInfo {
@@ -246,7 +247,7 @@ export default function Dashboard() {
       // Pedidos with client name
       let pedidoQuery = supabase
         .from("pedidos")
-        .select("id, valor_total, valor_implantacao_final, valor_mensalidade_final, desconto_implantacao_valor, desconto_mensalidade_valor, desconto_implantacao_tipo, desconto_mensalidade_tipo, valor_implantacao_original, valor_mensalidade_original, financeiro_status, tipo_pedido, plano_id, contrato_id, modulos_adicionais, cliente_id, comissao_implantacao_valor, comissao_mensalidade_valor, status_pedido, clientes(nome_fantasia)")
+        .select("id, valor_total, valor_implantacao_final, valor_mensalidade_final, desconto_implantacao_valor, desconto_mensalidade_valor, desconto_implantacao_tipo, desconto_mensalidade_tipo, valor_implantacao_original, valor_mensalidade_original, financeiro_status, tipo_pedido, plano_id, contrato_id, modulos_adicionais, cliente_id, comissao_implantacao_valor, comissao_mensalidade_valor, status_pedido, numero_exibicao, clientes(nome_fantasia)")
         .gte("created_at", start.toISOString())
         .lte("created_at", end.toISOString());
 
@@ -906,16 +907,19 @@ export default function Dashboard() {
                       <div key={p.id} className="rounded-lg border border-border bg-muted/30 overflow-hidden">
                         <div className="flex items-center justify-between p-3 gap-3">
                           <div className="flex-1 min-w-0 space-y-1">
-                            <p className="text-sm font-medium text-foreground truncate">{p.cliente_nome}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-foreground truncate">{p.cliente_nome}</p>
+                              <span className="text-[10px] text-muted-foreground shrink-0">#{p.numero_exibicao}</span>
+                            </div>
                             <div className="flex flex-wrap items-center gap-3">
                               {(p.desconto_implantacao_valor || 0) > 0 && (
                                 <span className="text-xs text-muted-foreground">
-                                  Desc. Impl: <span className="font-medium text-destructive">{descImpl}</span>
+                                  Impl: <span className="line-through opacity-60">{fmtBRL(p.valor_implantacao_original)}</span> → <span className="font-medium text-foreground">{fmtBRL(p.valor_implantacao_final)}</span>
                                 </span>
                               )}
                               {(p.desconto_mensalidade_valor || 0) > 0 && (
                                 <span className="text-xs text-muted-foreground">
-                                  Desc. Mens: <span className="font-medium text-destructive">{descMens}</span>
+                                  Mens: <span className="line-through opacity-60">{fmtBRL(p.valor_mensalidade_original)}</span> → <span className="font-medium text-foreground">{fmtBRL(p.valor_mensalidade_final)}</span>
                                 </span>
                               )}
                             </div>
