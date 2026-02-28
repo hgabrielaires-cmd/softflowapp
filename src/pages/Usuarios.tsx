@@ -748,20 +748,17 @@ export default function Usuarios() {
               {inviteIsTecnico && (
                 <div className="space-y-2 pl-2 border-l-2 border-primary/30">
                   <Label className="text-xs font-medium">Tipo de Atendimento</Label>
-                  <RadioGroup value={inviteTipoTecnico} onValueChange={setInviteTipoTecnico} className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5">
-                      <RadioGroupItem value="interno" id="inv-tec-interno" />
-                      <Label htmlFor="inv-tec-interno" className="text-xs cursor-pointer">Interno</Label>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <RadioGroupItem value="externo" id="inv-tec-externo" />
-                      <Label htmlFor="inv-tec-externo" className="text-xs cursor-pointer">Externo</Label>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <RadioGroupItem value="ambos" id="inv-tec-ambos" />
-                      <Label htmlFor="inv-tec-ambos" className="text-xs cursor-pointer">Ambos</Label>
-                    </div>
-                  </RadioGroup>
+                  <div className="space-y-1.5">
+                    {[{ value: "interno", label: "Interno" }, { value: "externo", label: "Externo" }, { value: "ambos", label: "Ambos" }].map((opt) => (
+                      <div key={opt.value} className="flex items-center justify-between rounded px-2 py-1">
+                        <span className="text-xs">{opt.label}</span>
+                        <Switch
+                          checked={inviteTipoTecnico === opt.value}
+                          onCheckedChange={(checked) => { if (checked) setInviteTipoTecnico(opt.value); }}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -982,20 +979,17 @@ export default function Usuarios() {
                     {editIsTecnico && (
                       <div className="space-y-2 pl-2 border-l-2 border-primary/30">
                         <Label className="text-xs font-medium">Tipo de Atendimento Técnico</Label>
-                        <RadioGroup value={editTipoTecnico} onValueChange={setEditTipoTecnico} className="flex items-center gap-4">
-                          <div className="flex items-center gap-1.5">
-                            <RadioGroupItem value="interno" id="edit-tec-interno" />
-                            <Label htmlFor="edit-tec-interno" className="text-xs cursor-pointer">Interno</Label>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <RadioGroupItem value="externo" id="edit-tec-externo" />
-                            <Label htmlFor="edit-tec-externo" className="text-xs cursor-pointer">Externo</Label>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <RadioGroupItem value="ambos" id="edit-tec-ambos" />
-                            <Label htmlFor="edit-tec-ambos" className="text-xs cursor-pointer">Ambos</Label>
-                          </div>
-                        </RadioGroup>
+                        <div className="space-y-1.5">
+                          {[{ value: "interno", label: "Interno" }, { value: "externo", label: "Externo" }, { value: "ambos", label: "Ambos" }].map((opt) => (
+                            <div key={opt.value} className="flex items-center justify-between rounded px-2 py-1">
+                              <span className="text-xs">{opt.label}</span>
+                              <Switch
+                                checked={editTipoTecnico === opt.value}
+                                onCheckedChange={(checked) => { if (checked) setEditTipoTecnico(opt.value); }}
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
