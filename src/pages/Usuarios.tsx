@@ -40,7 +40,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send, MessageCircle, Globe, Wrench } from "lucide-react";
+import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send, MessageCircle, Globe, Wrench, ShoppingCart } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -83,6 +83,7 @@ export default function Usuarios() {
   const [inviteTelefone, setInviteTelefone] = useState("");
   const [inviteIsTecnico, setInviteIsTecnico] = useState(false);
   const [inviteTipoTecnico, setInviteTipoTecnico] = useState("interno");
+  const [inviteIsVendedor, setInviteIsVendedor] = useState(false);
   const [inviting, setInviting] = useState(false);
 
   // Edit dialog
@@ -105,6 +106,7 @@ export default function Usuarios() {
   const [editPermiteEnviarEspelho, setEditPermiteEnviarEspelho] = useState(false);
   const [editIsTecnico, setEditIsTecnico] = useState(false);
   const [editTipoTecnico, setEditTipoTecnico] = useState("interno");
+  const [editIsVendedor, setEditIsVendedor] = useState(false);
   const [editActive, setEditActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -239,6 +241,7 @@ export default function Usuarios() {
         deve_trocar_senha: true,
         is_tecnico: inviteIsTecnico,
         tipo_tecnico: inviteIsTecnico ? inviteTipoTecnico : null,
+        is_vendedor: inviteIsVendedor,
       } as any).eq("user_id", data.user.id);
 
       // Insert filiais junction
@@ -261,7 +264,7 @@ export default function Usuarios() {
 
       toast.success(`Usuário ${inviteName} criado com sucesso!`);
       setOpenInvite(false);
-      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteFilialIds([]); setInviteAcessoGlobal(false); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteComissaoServ("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone(""); setInviteIsTecnico(false); setInviteTipoTecnico("interno");
+      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteFilialIds([]); setInviteAcessoGlobal(false); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteComissaoServ("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone(""); setInviteIsTecnico(false); setInviteTipoTecnico("interno"); setInviteIsVendedor(false);
       loadUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
@@ -289,6 +292,7 @@ export default function Usuarios() {
     setEditPermiteEnviarEspelho((user as any).permite_enviar_espelho_whatsapp ?? false);
     setEditIsTecnico((user as any).is_tecnico ?? false);
     setEditTipoTecnico((user as any).tipo_tecnico || "interno");
+    setEditIsVendedor((user as any).is_vendedor ?? false);
     setEditActive(user.active);
     setOpenEdit(true);
   }
@@ -318,6 +322,7 @@ export default function Usuarios() {
         permite_enviar_espelho_whatsapp: editPermiteEnviarEspelho,
         is_tecnico: editIsTecnico,
         tipo_tecnico: editIsTecnico ? editTipoTecnico : null,
+        is_vendedor: editIsVendedor,
         active: editActive,
       } as any).eq("user_id", editingUser.user_id);
 
@@ -499,9 +504,11 @@ export default function Usuarios() {
                       }
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {(user as any).comissao_implantacao_percentual != null
-                        ? `Imp: ${(user as any).comissao_implantacao_percentual}% / Mens: ${(user as any).comissao_mensalidade_percentual ?? user.comissao_percentual ?? 0}% / Serv: ${(user as any).comissao_servico_percentual ?? 5}%`
-                        : user.comissao_percentual != null ? `${user.comissao_percentual}%` : "—"
+                      {(user as any).is_vendedor
+                        ? (user as any).comissao_implantacao_percentual != null
+                          ? `Imp: ${(user as any).comissao_implantacao_percentual}% / Mens: ${(user as any).comissao_mensalidade_percentual ?? user.comissao_percentual ?? 0}% / Serv: ${(user as any).comissao_servico_percentual ?? 5}%`
+                          : user.comissao_percentual != null ? `${user.comissao_percentual}%` : "—"
+                        : <span className="text-xs text-muted-foreground">—</span>
                       }
                     </TableCell>
                     <TableCell>
@@ -677,39 +684,54 @@ export default function Usuarios() {
             </div>
             <div className="rounded-lg border border-border p-3 space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comissão</p>
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs text-muted-foreground">Recebe comissão</Label>
-                  <Switch checked={inviteRecebeComissao} onCheckedChange={setInviteRecebeComissao} />
+                <div className="space-y-0.5">
+                  <Label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+                    <ShoppingCart className="h-4 w-4 text-primary" />
+                    É Vendedor?
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Este usuário realiza vendas e pode receber comissão</p>
                 </div>
+                <Switch checked={inviteIsVendedor} onCheckedChange={setInviteIsVendedor} />
               </div>
-              {inviteRecebeComissao && (
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Comissão implantação (%)</Label>
-                    <Input
-                      type="number" min="0" max="100" step="0.01" placeholder="5"
-                      value={inviteComissaoImp}
-                      onChange={(e) => setInviteComissaoImp(e.target.value)}
-                    />
+              {inviteIsVendedor && (
+                <>
+                  <div className="border-t border-border" />
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comissão</p>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-muted-foreground">Recebe comissão</Label>
+                      <Switch checked={inviteRecebeComissao} onCheckedChange={setInviteRecebeComissao} />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>Comissão mensalidade (%)</Label>
-                    <Input
-                      type="number" min="0" max="100" step="0.01" placeholder="5"
-                      value={inviteComissaoMens}
-                      onChange={(e) => setInviteComissaoMens(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Comissão serviço (%)</Label>
-                    <Input
-                      type="number" min="0" max="100" step="0.01" placeholder="5"
-                      value={inviteComissaoServ}
-                      onChange={(e) => setInviteComissaoServ(e.target.value)}
-                    />
-                  </div>
-                </div>
+                  {inviteRecebeComissao && (
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1.5">
+                        <Label>Comissão implantação (%)</Label>
+                        <Input
+                          type="number" min="0" max="100" step="0.01" placeholder="5"
+                          value={inviteComissaoImp}
+                          onChange={(e) => setInviteComissaoImp(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Comissão mensalidade (%)</Label>
+                        <Input
+                          type="number" min="0" max="100" step="0.01" placeholder="5"
+                          value={inviteComissaoMens}
+                          onChange={(e) => setInviteComissaoMens(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Comissão serviço (%)</Label>
+                        <Input
+                          type="number" min="0" max="100" step="0.01" placeholder="5"
+                          value={inviteComissaoServ}
+                          onChange={(e) => setInviteComissaoServ(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
             <div className="rounded-lg border border-border p-3 space-y-3">
@@ -896,39 +918,54 @@ export default function Usuarios() {
                   </div>
                   <div className="rounded-lg border border-border p-3 space-y-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comissão</p>
-                      <div className="flex items-center gap-2">
-                        <Label className="text-xs text-muted-foreground">Recebe comissão</Label>
-                        <Switch checked={editRecebeComissao} onCheckedChange={setEditRecebeComissao} />
+                      <div className="space-y-0.5">
+                        <Label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+                          <ShoppingCart className="h-4 w-4 text-primary" />
+                          É Vendedor?
+                        </Label>
+                        <p className="text-xs text-muted-foreground">Este usuário realiza vendas e pode receber comissão</p>
                       </div>
+                      <Switch checked={editIsVendedor} onCheckedChange={setEditIsVendedor} />
                     </div>
-                    {editRecebeComissao && (
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="space-y-1.5">
-                          <Label>Comissão implantação (%)</Label>
-                          <Input
-                            type="number" min="0" max="100" step="0.01"
-                            value={editComissaoImp}
-                            onChange={(e) => setEditComissaoImp(e.target.value)}
-                          />
+                    {editIsVendedor && (
+                      <>
+                        <div className="border-t border-border" />
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comissão</p>
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs text-muted-foreground">Recebe comissão</Label>
+                            <Switch checked={editRecebeComissao} onCheckedChange={setEditRecebeComissao} />
+                          </div>
                         </div>
-                        <div className="space-y-1.5">
-                          <Label>Comissão mensalidade (%)</Label>
-                          <Input
-                            type="number" min="0" max="100" step="0.01"
-                            value={editComissaoMens}
-                            onChange={(e) => setEditComissaoMens(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label>Comissão serviço (%)</Label>
-                          <Input
-                            type="number" min="0" max="100" step="0.01"
-                            value={editComissaoServ}
-                            onChange={(e) => setEditComissaoServ(e.target.value)}
-                          />
-                        </div>
-                      </div>
+                        {editRecebeComissao && (
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="space-y-1.5">
+                              <Label>Comissão implantação (%)</Label>
+                              <Input
+                                type="number" min="0" max="100" step="0.01"
+                                value={editComissaoImp}
+                                onChange={(e) => setEditComissaoImp(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label>Comissão mensalidade (%)</Label>
+                              <Input
+                                type="number" min="0" max="100" step="0.01"
+                                value={editComissaoMens}
+                                onChange={(e) => setEditComissaoMens(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label>Comissão serviço (%)</Label>
+                              <Input
+                                type="number" min="0" max="100" step="0.01"
+                                value={editComissaoServ}
+                                onChange={(e) => setEditComissaoServ(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                   <div className="rounded-lg border border-border p-3 space-y-3">

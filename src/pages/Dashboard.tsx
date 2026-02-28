@@ -45,7 +45,7 @@ export default function Dashboard() {
   const firstName = profile?.full_name?.split(" ")[0] || "usuário";
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
-  const isVendedor = roles.includes("vendedor") && !isAdmin && !roles.includes("financeiro");
+  const isVendedor = !isAdmin && !roles.includes("financeiro") && (profile as any)?.is_vendedor === true;
 
   const [filialId, setFilialId] = useState<string>("");
   const [vendedorId, setVendedorId] = useState<string>("");
@@ -83,31 +83,17 @@ export default function Dashboard() {
 
   // Buscar vendedores da filial selecionada (para admin/financeiro)
   useEffect(() => {
-    if (isVendedor) return; // vendedor não precisa buscar lista
+    if (isVendedor) return;
 
     async function fetchVendedores() {
       setLoadingVendedores(true);
 
-      // Buscar user_ids com role vendedor
-      const { data: vendedorRoles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "vendedor");
-
-      if (!vendedorRoles || vendedorRoles.length === 0) {
-        setVendedores([]);
-        setLoadingVendedores(false);
-        return;
-      }
-
-      const vendedorUserIds = vendedorRoles.map(r => r.user_id);
-
-      // Buscar profiles desses vendedores filtrados pela filial
+      // Buscar profiles marcados como is_vendedor
       let query = supabase
         .from("profiles")
         .select("user_id, full_name")
         .eq("active", true)
-        .in("user_id", vendedorUserIds)
+        .eq("is_vendedor", true)
         .order("full_name");
 
       if (filialId && filialId !== "todas") {
@@ -119,20 +105,17 @@ export default function Dashboard() {
 
         const ufUserIds = (ufData || []).map((u: any) => u.user_id);
 
-        // Também incluir vendedores com filial_id direto no profile
         const { data: profileFilial } = await supabase
           .from("profiles")
           .select("user_id")
           .eq("filial_id", filialId)
           .eq("active", true)
-          .in("user_id", vendedorUserIds);
+          .eq("is_vendedor", true);
 
         const profileUserIds = (profileFilial || []).map((p: any) => p.user_id);
-
         const allFilialUserIds = [...new Set([...ufUserIds, ...profileUserIds])];
-        const filteredIds = vendedorUserIds.filter(id => allFilialUserIds.includes(id));
 
-        if (filteredIds.length === 0) {
+        if (allFilialUserIds.length === 0) {
           setVendedores([]);
           setVendedorId("todos");
           setLoadingVendedores(false);
@@ -143,7 +126,8 @@ export default function Dashboard() {
           .from("profiles")
           .select("user_id, full_name")
           .eq("active", true)
-          .in("user_id", filteredIds)
+          .eq("is_vendedor", true)
+          .in("user_id", allFilialUserIds)
           .order("full_name");
       }
 
@@ -155,6 +139,7 @@ export default function Dashboard() {
 
     if (filialId) fetchVendedores();
   }, [filialId, isVendedor]);
+
 
   // Navega mês
   function prevMes() {
