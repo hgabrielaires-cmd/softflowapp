@@ -74,6 +74,8 @@ interface PedidoRow {
   contrato_id: string | null;
   modulos_adicionais: any;
   cliente_id: string;
+  comissao_implantacao_valor: number;
+  comissao_mensalidade_valor: number;
 }
 
 interface PlanoInfo {
@@ -215,7 +217,7 @@ export default function Dashboard() {
       // Pedidos
       let pedidoQuery = supabase
         .from("pedidos")
-        .select("id, valor_total, valor_implantacao_final, valor_mensalidade_final, desconto_implantacao_valor, desconto_mensalidade_valor, desconto_implantacao_tipo, desconto_mensalidade_tipo, valor_implantacao_original, valor_mensalidade_original, financeiro_status, tipo_pedido, plano_id, contrato_id, modulos_adicionais, cliente_id")
+        .select("id, valor_total, valor_implantacao_final, valor_mensalidade_final, desconto_implantacao_valor, desconto_mensalidade_valor, desconto_implantacao_tipo, desconto_mensalidade_tipo, valor_implantacao_original, valor_mensalidade_original, financeiro_status, tipo_pedido, plano_id, contrato_id, modulos_adicionais, cliente_id, comissao_implantacao_valor, comissao_mensalidade_valor")
         .gte("created_at", start.toISOString())
         .lte("created_at", end.toISOString());
 
@@ -320,6 +322,9 @@ export default function Dashboard() {
       .map(([name, value]) => ({ name: traduzirTipo(name), value }))
       .sort((a, b) => b.value - a.value);
 
+    const comissaoImplantacao = pedidos.reduce((s, p) => s + (p.comissao_implantacao_valor || 0), 0);
+    const comissaoMensalidade = pedidos.reduce((s, p) => s + (p.comissao_mensalidade_valor || 0), 0);
+
     return {
       totalPedidos,
       vendasTotal,
@@ -334,6 +339,8 @@ export default function Dashboard() {
       pendentes,
       vendasPorPlanoArr,
       porTipoArr,
+      comissaoImplantacao,
+      comissaoMensalidade,
     };
   }, [pedidos, planos, contratosZapsign]);
 
@@ -483,7 +490,7 @@ export default function Dashboard() {
         </div>
 
         {/* KPI Cards - Row 2 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <KPICard
             label="Descontos Aplicados"
             value={loading ? "..." : fmtBRL(stats.descontosTotal)}
@@ -491,6 +498,24 @@ export default function Dashboard() {
             color="text-destructive bg-destructive/10"
             loading={loading}
           />
+          <KPICard
+            label="Comissão Prevista Implantação"
+            value={loading ? "..." : fmtBRL(stats.comissaoImplantacao)}
+            icon={DollarSign}
+            color="text-chart-1 bg-chart-1/10"
+            loading={loading}
+          />
+          <KPICard
+            label="Comissão Prevista Mensalidade"
+            value={loading ? "..." : fmtBRL(stats.comissaoMensalidade)}
+            icon={DollarSign}
+            color="text-chart-2 bg-chart-2/10"
+            loading={loading}
+          />
+        </div>
+
+        {/* KPI Cards - Row 3 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard
             label="Upsell (Mód. Adicional)"
             value={loading ? "..." : `${stats.upsellCount}`}
