@@ -499,14 +499,14 @@ export default function Dashboard() {
             loading={loading}
           />
           <KPICard
-            label="Comissão Prevista Implantação"
+            label="🪙 Comissão Prevista Implantação"
             value={loading ? "..." : fmtBRL(stats.comissaoImplantacao)}
             icon={DollarSign}
             color="text-chart-1 bg-chart-1/10"
             loading={loading}
           />
           <KPICard
-            label="Comissão Prevista Mensalidade"
+            label="🪙 Comissão Prevista Mensalidade"
             value={loading ? "..." : fmtBRL(stats.comissaoMensalidade)}
             icon={DollarSign}
             color="text-chart-2 bg-chart-2/10"
