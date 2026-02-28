@@ -113,7 +113,18 @@ export default function Dashboard() {
           .eq("is_vendedor", true);
 
         const profileUserIds = (profileFilial || []).map((p: any) => p.user_id);
-        const allFilialUserIds = [...new Set([...ufUserIds, ...profileUserIds])];
+
+        // Incluir vendedores com acesso_global (aparecem em qualquer filial)
+        const { data: globalVendedores } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("active", true)
+          .eq("is_vendedor", true)
+          .eq("acesso_global", true);
+
+        const globalUserIds = (globalVendedores || []).map((p: any) => p.user_id);
+
+        const allFilialUserIds = [...new Set([...ufUserIds, ...profileUserIds, ...globalUserIds])];
 
         if (allFilialUserIds.length === 0) {
           setVendedores([]);
