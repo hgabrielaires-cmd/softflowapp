@@ -474,14 +474,14 @@ export default function Dashboard() {
             loading={loading}
           />
           <KPICard
-            label="Valor Implantação"
+            label="💵 Valor Implantação"
             value={loading ? "..." : fmtBRL(stats.valorImplantacao)}
             icon={TrendingUp}
             color="text-chart-1 bg-chart-1/10"
             loading={loading}
           />
           <KPICard
-            label="Valor Mensal"
+            label="🔄 Valor Mensal"
             value={loading ? "..." : fmtBRL(stats.valorMensal)}
             icon={DollarSign}
             color="text-chart-3 bg-chart-3/10"
@@ -492,7 +492,7 @@ export default function Dashboard() {
         {/* KPI Cards - Row 2 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <KPICard
-            label="Descontos Aplicados"
+            label="⚠️ Descontos Aplicados"
             value={loading ? "..." : fmtBRL(stats.descontosTotal)}
             icon={Percent}
             color="text-destructive bg-destructive/10"
@@ -517,7 +517,7 @@ export default function Dashboard() {
         {/* KPI Cards - Row 3 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard
-            label="Upsell (Mód. Adicional)"
+            label="🤝 Upsell (Mód. Adicional)"
             value={loading ? "..." : `${stats.upsellCount}`}
             subtitle={loading ? undefined : fmtBRL(stats.upsellValor)}
             icon={ArrowUpRight}
@@ -525,7 +525,7 @@ export default function Dashboard() {
             loading={loading}
           />
           <KPICard
-            label="Upgrades"
+            label="⬆️ Upgrades"
             value={loading ? "..." : `${stats.upgradeCount}`}
             subtitle={loading ? undefined : fmtBRL(stats.upgradeValor)}
             icon={TrendingUp}
@@ -534,6 +534,7 @@ export default function Dashboard() {
           />
           <div className="bg-card rounded-xl p-5 shadow-card border border-border">
             <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium text-muted-foreground">✍️ Contratos</span>
               <div className="h-9 w-9 rounded-lg flex items-center justify-center text-primary bg-primary/10">
                 <FileSignature className="h-4 w-4" />
               </div>
