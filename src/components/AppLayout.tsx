@@ -48,7 +48,9 @@ const navGroups: NavGroup[] = [
     groupLabel: "Dashboard",
     groupIcon: <LayoutDashboard className="h-4 w-4" />,
     items: [
-      { icon: <LayoutDashboard className="h-4 w-4" />, label: "Dashboard Geral", to: "/dashboard" },
+      { icon: <ShoppingCart className="h-4 w-4" />, label: "Dashboard Vendas", to: "/dashboard" },
+      { icon: <DollarSign className="h-4 w-4" />, label: "Dashboard Financeiro", to: "/dashboard-financeiro" },
+      { icon: <Headphones className="h-4 w-4" />, label: "Dashboard Atendimento", to: "/dashboard-atendimento" },
     ],
   },
   {

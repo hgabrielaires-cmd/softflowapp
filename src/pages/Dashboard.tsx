@@ -177,7 +177,7 @@ export default function Dashboard() {
               Olá, {firstName} 👋
             </h1>
             <p className="text-muted-foreground text-sm mt-0.5">
-              Bem-vindo ao Softflow Desk Suite
+              Dashboard Vendas
             </p>
           </div>
         </div>

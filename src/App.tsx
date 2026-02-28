@@ -30,6 +30,8 @@ import MesasAtendimento from "./pages/MesasAtendimento";
 import JornadaImplantacao from "./pages/JornadaImplantacao";
 import PainelAtendimento from "./pages/PainelAtendimento";
 import EtapasPainel from "./pages/EtapasPainel";
+import DashboardFinanceiro from "./pages/DashboardFinanceiro";
+import DashboardAtendimento from "./pages/DashboardAtendimento";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +52,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard-financeiro"
+              element={
+                <ProtectedRoute>
+                  <DashboardFinanceiro />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard-atendimento"
+              element={
+                <ProtectedRoute>
+                  <DashboardAtendimento />
                 </ProtectedRoute>
               }
             />
