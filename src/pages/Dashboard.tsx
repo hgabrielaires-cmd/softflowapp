@@ -21,6 +21,7 @@ import {
   X,
   Eye,
   EyeOff,
+  Loader2,
 } from "lucide-react";
 import {
   Select,
@@ -797,7 +798,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="h-64 flex items-center justify-center text-muted-foreground text-sm">Carregando...</div>
+                <div className="h-64 flex items-center justify-center text-muted-foreground text-sm"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
               ) : stats.vendasPorPlanoArr.length === 0 ? (
                 <div className="h-64 flex items-center justify-center text-muted-foreground text-sm">Sem dados no período</div>
               ) : (
@@ -846,7 +847,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="h-64 flex items-center justify-center text-muted-foreground text-sm">Carregando...</div>
+                <div className="h-64 flex items-center justify-center text-muted-foreground text-sm"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
               ) : stats.porTipoArr.length === 0 ? (
                 <div className="h-64 flex items-center justify-center text-muted-foreground text-sm">Sem dados no período</div>
               ) : (
@@ -1135,7 +1136,11 @@ function KPICard({
     >
       <div className="flex items-center justify-between mb-3">
         <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${color}`}>
-          <Icon className="h-4 w-4" />
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Icon className="h-4 w-4" />
+          )}
         </div>
       </div>
       <p className={`text-2xl font-bold text-foreground transition-opacity ${loading ? "opacity-40" : ""}`}>
