@@ -706,7 +706,7 @@ export default function Usuarios() {
                   {inviteRecebeComissao && (
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1.5">
-                        <Label>Comissão implantação (%)</Label>
+                        <Label className="text-xs">Implantação (%)</Label>
                         <Input
                           type="number" min="0" max="100" step="0.01" placeholder="5"
                           value={inviteComissaoImp}
@@ -714,7 +714,7 @@ export default function Usuarios() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label>Comissão mensalidade (%)</Label>
+                        <Label className="text-xs">Mensalidade (%)</Label>
                         <Input
                           type="number" min="0" max="100" step="0.01" placeholder="5"
                           value={inviteComissaoMens}
@@ -722,7 +722,7 @@ export default function Usuarios() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label>Comissão serviço (%)</Label>
+                        <Label className="text-xs">Serviço (%)</Label>
                         <Input
                           type="number" min="0" max="100" step="0.01" placeholder="5"
                           value={inviteComissaoServ}
@@ -940,7 +940,7 @@ export default function Usuarios() {
                         {editRecebeComissao && (
                           <div className="grid grid-cols-3 gap-3">
                             <div className="space-y-1.5">
-                              <Label>Comissão implantação (%)</Label>
+                              <Label className="text-xs">Implantação (%)</Label>
                               <Input
                                 type="number" min="0" max="100" step="0.01"
                                 value={editComissaoImp}
@@ -948,7 +948,7 @@ export default function Usuarios() {
                               />
                             </div>
                             <div className="space-y-1.5">
-                              <Label>Comissão mensalidade (%)</Label>
+                              <Label className="text-xs">Mensalidade (%)</Label>
                               <Input
                                 type="number" min="0" max="100" step="0.01"
                                 value={editComissaoMens}
@@ -956,7 +956,7 @@ export default function Usuarios() {
                               />
                             </div>
                             <div className="space-y-1.5">
-                              <Label>Comissão serviço (%)</Label>
+                              <Label className="text-xs">Serviço (%)</Label>
                               <Input
                                 type="number" min="0" max="100" step="0.01"
                                 value={editComissaoServ}
