@@ -677,7 +677,7 @@ Deno.serve(async (req) => {
 </head><body>${htmlFinal}${filial?.assinatura_url && !htmlFinal.includes("filial.assinatura_html")
   ? `<div style="margin-top:40px;text-align:center;">
       <div class="assinatura-bloco">
-        <img src="${filial.assinatura_url}" style="max-height:80px;max-width:200px;display:block;margin:0 auto;" />
+        <img src="${filial.assinatura_url}" style="max-height:240px;max-width:600px;display:block;margin:0 auto;" />
         <hr style="border:none;border-top:1px solid #333;width:200px;margin:8px auto 6px;" />
         <strong style="display:block;font-size:11px;text-transform:uppercase;">${filial?.responsavel || filial?.nome || ""}</strong>
         <span style="display:block;font-size:10px;color:#555;text-transform:uppercase;">${filial?.razao_social || ""}</span>
