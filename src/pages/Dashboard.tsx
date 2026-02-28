@@ -328,24 +328,49 @@ export default function Dashboard() {
       setPlanos((planosData || []) as PlanoInfo[]);
 
       // Contratos with ZapSign and client info
-      const contratoIds = mappedPedidos
+      // Buscar contratos por AMBOS: pedidos.contrato_id e contratos.pedido_id
+      const contratoIdsFromPedidos = mappedPedidos
         .filter(p => p.contrato_id)
         .map(p => p.contrato_id!);
 
-      if (contratoIds.length > 0) {
-        const { data: contratosData } = await supabase
+      const pedidoIdsDoMes = mappedPedidos.map(p => p.id);
+
+      // Buscar contratos vinculados via pedido_id
+      let contratosViaPedidoId: any[] = [];
+      if (pedidoIdsDoMes.length > 0) {
+        const { data } = await supabase
           .from("contratos")
           .select("id, numero_exibicao, cliente_id, clientes(nome_fantasia)")
-          .in("id", contratoIds);
+          .in("pedido_id", pedidoIdsDoMes);
+        contratosViaPedidoId = data || [];
+      }
 
+      // Buscar contratos vinculados via contrato_id do pedido
+      let contratosViaContratoId: any[] = [];
+      if (contratoIdsFromPedidos.length > 0) {
+        const { data } = await supabase
+          .from("contratos")
+          .select("id, numero_exibicao, cliente_id, clientes(nome_fantasia)")
+          .in("id", contratoIdsFromPedidos);
+        contratosViaContratoId = data || [];
+      }
+
+      // Unificar sem duplicatas
+      const allContratosMap = new Map<string, any>();
+      [...contratosViaPedidoId, ...contratosViaContratoId].forEach((c: any) => {
+        allContratosMap.set(c.id, c);
+      });
+      const allContratoIds = [...allContratosMap.keys()];
+
+      if (allContratoIds.length > 0) {
         const { data: zapsignData } = await supabase
           .from("contratos_zapsign")
           .select("contrato_id, status, sign_url")
-          .in("contrato_id", contratoIds);
+          .in("contrato_id", allContratoIds);
 
         const zapsignMap = new Map((zapsignData || []).map((z: any) => [z.contrato_id, z]));
 
-        const mapped: ContratoInfo[] = (contratosData || []).map((c: any) => {
+        const mapped: ContratoInfo[] = [...allContratosMap.values()].map((c: any) => {
           const zap = zapsignMap.get(c.id);
           return {
             id: c.id,
@@ -396,7 +421,7 @@ export default function Dashboard() {
     const upgradeValor = upgradePedidos.reduce((s, p) => s + (p.valor_total || 0), 0);
 
     const assinados = contratosInfo.filter(c => c.zapsign_status === "Assinado").length;
-    const pendentes = contratosInfo.filter(c => c.zapsign_status && c.zapsign_status !== "Assinado").length;
+    const pendentes = contratosInfo.filter(c => !c.zapsign_status || c.zapsign_status !== "Assinado").length;
 
     const vendasPorPlano: Record<string, { nome: string; count: number; valor: number; clientes: string[] }> = {};
     pedidos
