@@ -460,14 +460,14 @@ export default function Dashboard() {
         {/* KPI Cards - Row 1 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard
-            label="Pedidos no Mês"
+            label="💙 Pedidos no Mês"
             value={loading ? "..." : stats.totalPedidos.toString()}
             icon={ShoppingCart}
             color="text-primary bg-primary/10"
             loading={loading}
           />
           <KPICard
-            label="Vendas Total"
+            label="💰 Vendas Total"
             value={loading ? "..." : fmtBRL(stats.vendasTotal)}
             icon={DollarSign}
             color="text-chart-2 bg-chart-2/10"
