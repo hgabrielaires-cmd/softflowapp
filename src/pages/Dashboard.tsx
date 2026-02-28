@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
-import { ROLE_LABELS, ROLE_COLORS, AppRole, Filial } from "@/lib/supabase-types";
+import { Filial } from "@/lib/supabase-types";
 import { supabase } from "@/integrations/supabase/client";
 import {
   ShoppingCart,
@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Building2,
+  UserCircle,
 } from "lucide-react";
 import {
   Select,
@@ -20,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { useUserFiliais } from "@/hooks/useUserFiliais";
 
 const MONTH_NAMES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -33,19 +35,26 @@ interface DashboardStats {
   pedidosAprovados: number;
 }
 
+interface VendedorOption {
+  user_id: string;
+  full_name: string;
+}
+
 export default function Dashboard() {
-  const { profile, roles, isAdmin } = useAuth();
+  const { profile, roles, isAdmin, user } = useAuth();
   const firstName = profile?.full_name?.split(" ")[0] || "usuário";
+  const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
-  // Verifica se pode ver todas as filiais (admin ou financeiro)
-  const canSeeAllFiliais = isAdmin || roles.includes("financeiro");
+  const isVendedor = roles.includes("vendedor") && !isAdmin && !roles.includes("financeiro");
 
-  const [filiais, setFiliais] = useState<Filial[]>([]);
   const [filialId, setFilialId] = useState<string>("");
+  const [vendedorId, setVendedorId] = useState<string>("");
+  const [vendedores, setVendedores] = useState<VendedorOption[]>([]);
+  const [loadingVendedores, setLoadingVendedores] = useState(false);
 
   // Filtro de mês/ano
   const now = new Date();
-  const [mes, setMes] = useState(now.getMonth()); // 0-11
+  const [mes, setMes] = useState(now.getMonth());
   const [ano, setAno] = useState(now.getFullYear());
 
   const [stats, setStats] = useState<DashboardStats>({
@@ -56,27 +65,96 @@ export default function Dashboard() {
   });
   const [loadingStats, setLoadingStats] = useState(true);
 
-  // Carrega filiais e define filial padrão
+  // Inicializa filial padrão
   useEffect(() => {
-    async function init() {
-      // Busca filial favorita do perfil
-      const favoritaId = (profile as any)?.filial_favorita_id || profile?.filial_id || "";
-
-      if (canSeeAllFiliais) {
-        const { data } = await supabase
-          .from("filiais")
-          .select("*")
-          .eq("ativa", true)
-          .order("nome");
-        if (data) setFiliais(data as Filial[]);
-        setFilialId(favoritaId || "todas");
-      } else {
-        // Usuário restrito: usa a filial vinculada ao perfil
-        setFilialId(favoritaId || profile?.filial_id || "");
-      }
+    if (filialPadraoId && !filialId) {
+      setFilialId(isGlobal ? (filialPadraoId || "todas") : filialPadraoId);
+    } else if (isGlobal && !filialId) {
+      setFilialId("todas");
     }
-    if (profile) init();
-  }, [profile, canSeeAllFiliais]);
+  }, [filialPadraoId, isGlobal]);
+
+  // Vendedor: auto-selecionar próprio ID
+  useEffect(() => {
+    if (isVendedor && user) {
+      setVendedorId(user.id);
+    }
+  }, [isVendedor, user]);
+
+  // Buscar vendedores da filial selecionada (para admin/financeiro)
+  useEffect(() => {
+    if (isVendedor) return; // vendedor não precisa buscar lista
+
+    async function fetchVendedores() {
+      setLoadingVendedores(true);
+
+      // Buscar user_ids com role vendedor
+      const { data: vendedorRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "vendedor");
+
+      if (!vendedorRoles || vendedorRoles.length === 0) {
+        setVendedores([]);
+        setLoadingVendedores(false);
+        return;
+      }
+
+      const vendedorUserIds = vendedorRoles.map(r => r.user_id);
+
+      // Buscar profiles desses vendedores filtrados pela filial
+      let query = supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .eq("active", true)
+        .in("user_id", vendedorUserIds)
+        .order("full_name");
+
+      if (filialId && filialId !== "todas") {
+        // Buscar vendedores vinculados à filial via usuario_filiais ou filial_id do profile
+        const { data: ufData } = await supabase
+          .from("usuario_filiais")
+          .select("user_id")
+          .eq("filial_id", filialId);
+
+        const ufUserIds = (ufData || []).map((u: any) => u.user_id);
+
+        // Também incluir vendedores com filial_id direto no profile
+        const { data: profileFilial } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("filial_id", filialId)
+          .eq("active", true)
+          .in("user_id", vendedorUserIds);
+
+        const profileUserIds = (profileFilial || []).map((p: any) => p.user_id);
+
+        const allFilialUserIds = [...new Set([...ufUserIds, ...profileUserIds])];
+        const filteredIds = vendedorUserIds.filter(id => allFilialUserIds.includes(id));
+
+        if (filteredIds.length === 0) {
+          setVendedores([]);
+          setVendedorId("todos");
+          setLoadingVendedores(false);
+          return;
+        }
+
+        query = supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .eq("active", true)
+          .in("user_id", filteredIds)
+          .order("full_name");
+      }
+
+      const { data } = await query;
+      setVendedores((data || []) as VendedorOption[]);
+      setVendedorId("todos");
+      setLoadingVendedores(false);
+    }
+
+    if (filialId) fetchVendedores();
+  }, [filialId, isVendedor]);
 
   // Navega mês
   function prevMes() {
@@ -111,6 +189,13 @@ export default function Dashboard() {
         query = query.eq("filial_id", filialId);
       }
 
+      // Filtro de vendedor
+      if (isVendedor && user) {
+        query = query.eq("vendedor_id", user.id);
+      } else if (vendedorId && vendedorId !== "todos") {
+        query = query.eq("vendedor_id", vendedorId);
+      }
+
       const { data } = await query;
 
       if (data) {
@@ -125,8 +210,8 @@ export default function Dashboard() {
       setLoadingStats(false);
     }
 
-    if (filialId !== "" || !canSeeAllFiliais) fetchStats();
-  }, [filialId, mes, ano, canSeeAllFiliais]);
+    if (filialId || isVendedor) fetchStats();
+  }, [filialId, vendedorId, mes, ano, isVendedor, user]);
 
   function fmtBRL(v: number) {
     return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -159,12 +244,7 @@ export default function Dashboard() {
     },
   ];
 
-  const filialAtual =
-    filialId === "todas"
-      ? "Todas as filiais"
-      : filiais.find(f => f.id === filialId)?.nome || profile?.filial_id
-        ? filiais.find(f => f.id === (filialId || profile?.filial_id))?.nome
-        : "—";
+  const canSeeAllFiliais = isGlobal || isAdmin || roles.includes("financeiro");
 
   return (
     <AppLayout>
@@ -183,7 +263,7 @@ export default function Dashboard() {
         </div>
 
         {/* Filtros */}
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center flex-wrap">
 
           {/* Filial */}
           <div className="flex items-center gap-2">
@@ -195,15 +275,37 @@ export default function Dashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todas">🌐 Todas as filiais</SelectItem>
-                  {filiais.map(f => (
+                  {filiaisDoUsuario.map(f => (
                     <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             ) : (
               <span className="text-sm font-medium text-foreground bg-muted px-3 py-2 rounded-lg border border-border">
-                {filialAtual || "—"}
+                {filiaisDoUsuario.find(f => f.id === filialId)?.nome || "—"}
               </span>
+            )}
+          </div>
+
+          {/* Vendedor */}
+          <div className="flex items-center gap-2">
+            <UserCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+            {isVendedor ? (
+              <span className="text-sm font-medium text-foreground bg-muted px-3 py-2 rounded-lg border border-border">
+                {profile?.full_name || "—"}
+              </span>
+            ) : (
+              <Select value={vendedorId} onValueChange={setVendedorId} disabled={loadingVendedores}>
+                <SelectTrigger className="w-52">
+                  <SelectValue placeholder="Selecionar vendedor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">👥 Todos os vendedores</SelectItem>
+                  {vendedores.map(v => (
+                    <SelectItem key={v.user_id} value={v.user_id}>{v.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </div>
 
