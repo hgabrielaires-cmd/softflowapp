@@ -861,11 +861,11 @@ export default function Dashboard() {
 
       {/* Dialog for details */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="text-lg">{dialogTitle}</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-1 -mx-6 px-6">
+          <ScrollArea className="flex-1 -mx-6 px-6 min-h-0">
             {dialogType === "contratos" ? (
               <div className="space-y-2 pb-4">
                 {contratosInfo.length === 0 ? (
