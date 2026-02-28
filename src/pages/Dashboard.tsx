@@ -1002,18 +1002,43 @@ export default function Dashboard() {
                         </div>
                         {isExpanded && (
                           <div className="px-3 pb-3 pt-0 border-t border-border/50 bg-muted/50 space-y-1">
-                            <p className="text-xs text-muted-foreground">
-                              📦 Plano: <span className="font-medium text-foreground">{planoNome}</span>
-                            </p>
-                            {modulosTexto && (
-                              <p className="text-xs text-muted-foreground">
-                                🧩 Módulos Adicionais: <span className="font-medium text-foreground">{modulosTexto}</span>
-                              </p>
-                            )}
-                            {p.tipo_pedido === "OA" && (
-                              <p className="text-xs text-muted-foreground">
-                                📋 Tipo: <span className="font-medium text-foreground">Ordem de Atendimento</span>
-                              </p>
+                            {dialogType === "upsell" ? (
+                              // Upsell: show only additional modules sold
+                              <>
+                                {Array.isArray(p.modulos_adicionais) && p.modulos_adicionais.length > 0 ? (
+                                  p.modulos_adicionais.map((m: any, i: number) => (
+                                    <div key={i} className="text-xs text-muted-foreground flex items-center gap-2">
+                                      <span>🧩 <span className="font-medium text-foreground">{m.nome || m.modulo_nome || "Módulo"}</span></span>
+                                      {(m.quantidade || m.qty) && <span>Qtd: <span className="font-medium text-foreground">{m.quantidade || m.qty}</span></span>}
+                                      {(m.valor_implantacao != null || m.valor_mensalidade != null) && (
+                                        <span>
+                                          {m.valor_implantacao != null && <>Impl: <span className="font-medium text-foreground">{fmtBRL(m.valor_implantacao)}</span> </>}
+                                          {m.valor_mensalidade != null && <>Mens: <span className="font-medium text-foreground">{fmtBRL(m.valor_mensalidade)}</span></>}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))
+                                ) : (
+                                  <p className="text-xs text-muted-foreground">Sem módulos adicionais registrados</p>
+                                )}
+                              </>
+                            ) : (
+                              // Other types: show plan + modules
+                              <>
+                                <p className="text-xs text-muted-foreground">
+                                  📦 Plano: <span className="font-medium text-foreground">{planoNome}</span>
+                                </p>
+                                {modulosTexto && (
+                                  <p className="text-xs text-muted-foreground">
+                                    🧩 Módulos Adicionais: <span className="font-medium text-foreground">{modulosTexto}</span>
+                                  </p>
+                                )}
+                                {p.tipo_pedido === "OA" && (
+                                  <p className="text-xs text-muted-foreground">
+                                    📋 Tipo: <span className="font-medium text-foreground">Ordem de Atendimento</span>
+                                  </p>
+                                )}
+                              </>
                             )}
                           </div>
                         )}
