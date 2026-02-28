@@ -660,10 +660,11 @@ export default function Usuarios() {
                 </div>
               </div>
               {!inviteAcessoGlobal && (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
                   {filiais.map((f) => (
-                    <label key={f.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent rounded px-2 py-1.5">
-                      <Checkbox
+                    <div key={f.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
+                      <span className="text-sm">{f.nome}</span>
+                      <Switch
                         checked={inviteFilialIds.includes(f.id)}
                         onCheckedChange={(checked) => {
                           if (checked) {
@@ -673,8 +674,7 @@ export default function Usuarios() {
                           }
                         }}
                       />
-                      {f.nome}
-                    </label>
+                    </div>
                   ))}
                 </div>
               )}
@@ -894,10 +894,11 @@ export default function Usuarios() {
                       </div>
                     </div>
                     {!editAcessoGlobal && (
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-2">
                         {filiais.map((f) => (
-                          <label key={f.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent rounded px-2 py-1.5">
-                            <Checkbox
+                          <div key={f.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
+                            <span className="text-sm">{f.nome}</span>
+                            <Switch
                               checked={editFilialIds.includes(f.id)}
                               onCheckedChange={(checked) => {
                                 if (checked) {
@@ -907,8 +908,7 @@ export default function Usuarios() {
                                 }
                               }}
                             />
-                            {f.nome}
-                          </label>
+                          </div>
                         ))}
                       </div>
                     )}
