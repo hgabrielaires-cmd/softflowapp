@@ -16,6 +16,9 @@ import {
   Clock,
   Percent,
   Package,
+  Copy,
+  Check,
+  X,
 } from "lucide-react";
 import {
   Select,
@@ -32,7 +35,16 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell } from "recharts";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 const MONTH_NAMES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -76,6 +88,7 @@ interface PedidoRow {
   cliente_id: string;
   comissao_implantacao_valor: number;
   comissao_mensalidade_valor: number;
+  cliente_nome: string;
 }
 
 interface PlanoInfo {
@@ -83,10 +96,15 @@ interface PlanoInfo {
   nome: string;
 }
 
-interface ContratoZapsign {
-  contrato_id: string;
-  status: string;
+interface ContratoInfo {
+  id: string;
+  numero_exibicao: string;
+  cliente_nome: string;
+  zapsign_status: string | null;
+  sign_url: string | null;
 }
+
+type DialogType = "pedidos" | "upsell" | "upgrade" | "contratos" | "plano" | "tipo" | null;
 
 export default function Dashboard() {
   const { profile, roles, isAdmin, user } = useAuth();
@@ -106,8 +124,14 @@ export default function Dashboard() {
 
   const [pedidos, setPedidos] = useState<PedidoRow[]>([]);
   const [planos, setPlanos] = useState<PlanoInfo[]>([]);
-  const [contratosZapsign, setContratosZapsign] = useState<ContratoZapsign[]>([]);
+  const [contratosInfo, setContratosInfo] = useState<ContratoInfo[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogType, setDialogType] = useState<DialogType>(null);
+  const [dialogFilter, setDialogFilter] = useState<string>("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Inicializa filial padrão
   useEffect(() => {
@@ -214,10 +238,10 @@ export default function Dashboard() {
       start.setHours(0, 0, 0, 0);
       const end = new Date(ano, mes + 1, 0, 23, 59, 59);
 
-      // Pedidos
+      // Pedidos with client name
       let pedidoQuery = supabase
         .from("pedidos")
-        .select("id, valor_total, valor_implantacao_final, valor_mensalidade_final, desconto_implantacao_valor, desconto_mensalidade_valor, desconto_implantacao_tipo, desconto_mensalidade_tipo, valor_implantacao_original, valor_mensalidade_original, financeiro_status, tipo_pedido, plano_id, contrato_id, modulos_adicionais, cliente_id, comissao_implantacao_valor, comissao_mensalidade_valor")
+        .select("id, valor_total, valor_implantacao_final, valor_mensalidade_final, desconto_implantacao_valor, desconto_mensalidade_valor, desconto_implantacao_tipo, desconto_mensalidade_tipo, valor_implantacao_original, valor_mensalidade_original, financeiro_status, tipo_pedido, plano_id, contrato_id, modulos_adicionais, cliente_id, comissao_implantacao_valor, comissao_mensalidade_valor, clientes(nome_fantasia)")
         .gte("created_at", start.toISOString())
         .lte("created_at", end.toISOString());
 
@@ -231,7 +255,11 @@ export default function Dashboard() {
       }
 
       const { data: pedidosData } = await pedidoQuery;
-      setPedidos((pedidosData || []) as PedidoRow[]);
+      const mappedPedidos = (pedidosData || []).map((p: any) => ({
+        ...p,
+        cliente_nome: p.clientes?.nome_fantasia || "Cliente",
+      })) as PedidoRow[];
+      setPedidos(mappedPedidos);
 
       // Planos
       const { data: planosData } = await supabase
@@ -239,19 +267,37 @@ export default function Dashboard() {
         .select("id, nome");
       setPlanos((planosData || []) as PlanoInfo[]);
 
-      // Contratos ZapSign do período (via contratos criados no período)
-      const contratoIds = (pedidosData || [])
-        .filter((p: any) => p.contrato_id)
-        .map((p: any) => p.contrato_id);
+      // Contratos with ZapSign and client info
+      const contratoIds = mappedPedidos
+        .filter(p => p.contrato_id)
+        .map(p => p.contrato_id!);
 
       if (contratoIds.length > 0) {
+        const { data: contratosData } = await supabase
+          .from("contratos")
+          .select("id, numero_exibicao, cliente_id, clientes(nome_fantasia)")
+          .in("id", contratoIds);
+
         const { data: zapsignData } = await supabase
           .from("contratos_zapsign")
-          .select("contrato_id, status")
+          .select("contrato_id, status, sign_url")
           .in("contrato_id", contratoIds);
-        setContratosZapsign((zapsignData || []) as ContratoZapsign[]);
+
+        const zapsignMap = new Map((zapsignData || []).map((z: any) => [z.contrato_id, z]));
+
+        const mapped: ContratoInfo[] = (contratosData || []).map((c: any) => {
+          const zap = zapsignMap.get(c.id);
+          return {
+            id: c.id,
+            numero_exibicao: c.numero_exibicao,
+            cliente_nome: c.clientes?.nome_fantasia || "Cliente",
+            zapsign_status: zap?.status || null,
+            sign_url: zap?.sign_url || null,
+          };
+        });
+        setContratosInfo(mapped);
       } else {
-        setContratosZapsign([]);
+        setContratosInfo([]);
       }
 
       setLoading(false);
@@ -262,14 +308,11 @@ export default function Dashboard() {
 
   // Computed stats
   const stats = useMemo(() => {
-    const aprovados = pedidos.filter(p => p.financeiro_status === "Aprovado");
-
     const totalPedidos = pedidos.length;
     const vendasTotal = pedidos.reduce((s, p) => s + (p.valor_total || 0), 0);
     const valorImplantacao = pedidos.reduce((s, p) => s + (p.valor_implantacao_final || 0), 0);
     const valorMensal = pedidos.reduce((s, p) => s + (p.valor_mensalidade_final || 0), 0);
 
-    // Descontos em valor real
     let descontosTotal = 0;
     pedidos.forEach(p => {
       if (p.desconto_implantacao_tipo === "R$") {
@@ -284,42 +327,47 @@ export default function Dashboard() {
       }
     });
 
-    // Upsell = Aditivo (módulo adicional para cliente existente)
     const upsellPedidos = pedidos.filter(p => p.tipo_pedido === "Aditivo");
     const upsellCount = upsellPedidos.length;
     const upsellValor = upsellPedidos.reduce((s, p) => s + (p.valor_total || 0), 0);
 
-    // Upgrades
     const upgradePedidos = pedidos.filter(p => p.tipo_pedido === "Upgrade");
     const upgradeCount = upgradePedidos.length;
     const upgradeValor = upgradePedidos.reduce((s, p) => s + (p.valor_total || 0), 0);
 
-    // Contratos
-    const assinados = contratosZapsign.filter(c => c.status === "Assinado").length;
-    const pendentes = contratosZapsign.filter(c => c.status !== "Assinado").length;
+    const assinados = contratosInfo.filter(c => c.zapsign_status === "Assinado").length;
+    const pendentes = contratosInfo.filter(c => c.zapsign_status && c.zapsign_status !== "Assinado").length;
 
-    // Vendas por plano
-    const vendasPorPlano: Record<string, { nome: string; count: number; valor: number }> = {};
+    const vendasPorPlano: Record<string, { nome: string; count: number; valor: number; clientes: string[] }> = {};
     pedidos.forEach(p => {
       const plano = planos.find(pl => pl.id === p.plano_id);
       const nome = plano?.nome || "Sem plano";
-      if (!vendasPorPlano[p.plano_id || "sem"]) {
-        vendasPorPlano[p.plano_id || "sem"] = { nome, count: 0, valor: 0 };
+      const key = p.plano_id || "sem";
+      if (!vendasPorPlano[key]) {
+        vendasPorPlano[key] = { nome, count: 0, valor: 0, clientes: [] };
       }
-      vendasPorPlano[p.plano_id || "sem"].count++;
-      vendasPorPlano[p.plano_id || "sem"].valor += p.valor_total || 0;
+      vendasPorPlano[key].count++;
+      vendasPorPlano[key].valor += p.valor_total || 0;
+      if (!vendasPorPlano[key].clientes.includes(p.cliente_nome)) {
+        vendasPorPlano[key].clientes.push(p.cliente_nome);
+      }
     });
     const vendasPorPlanoArr = Object.values(vendasPorPlano)
       .sort((a, b) => b.count - a.count);
 
-    // Vendidos por tipo (produtos/adicionais)
-    const porTipo: Record<string, number> = {};
+    const porTipo: Record<string, { count: number; clientes: string[] }> = {};
     pedidos.forEach(p => {
       const tipo = p.tipo_pedido || "Outro";
-      porTipo[tipo] = (porTipo[tipo] || 0) + 1;
+      if (!porTipo[tipo]) {
+        porTipo[tipo] = { count: 0, clientes: [] };
+      }
+      porTipo[tipo].count++;
+      if (!porTipo[tipo].clientes.includes(p.cliente_nome)) {
+        porTipo[tipo].clientes.push(p.cliente_nome);
+      }
     });
     const porTipoArr = Object.entries(porTipo)
-      .map(([name, value]) => ({ name: traduzirTipo(name), value }))
+      .map(([key, val]) => ({ name: traduzirTipo(key), originalKey: key, value: val.count, clientes: val.clientes }))
       .sort((a, b) => b.value - a.value);
 
     const comissaoImplantacao = pedidos.reduce((s, p) => s + (p.comissao_implantacao_valor || 0), 0);
@@ -342,7 +390,7 @@ export default function Dashboard() {
       comissaoImplantacao,
       comissaoMensalidade,
     };
-  }, [pedidos, planos, contratosZapsign]);
+  }, [pedidos, planos, contratosInfo]);
 
   function traduzirTipo(tipo: string) {
     const map: Record<string, string> = {
@@ -355,9 +403,70 @@ export default function Dashboard() {
     return map[tipo] || tipo;
   }
 
+  function getTipoLabel(tipo: string) {
+    const map: Record<string, { label: string; color: string }> = {
+      "Novo": { label: "Cliente Novo", color: "bg-green-100 text-green-700" },
+      "Upgrade": { label: "Upgrade", color: "bg-blue-100 text-blue-700" },
+      "Aditivo": { label: "Módulo Adicional", color: "bg-purple-100 text-purple-700" },
+      "OA": { label: "OA", color: "bg-amber-100 text-amber-700" },
+      "Serviço": { label: "Serviço", color: "bg-cyan-100 text-cyan-700" },
+    };
+    return map[tipo] || { label: tipo, color: "bg-muted text-muted-foreground" };
+  }
+
   function fmtBRL(v: number) {
     return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   }
+
+  function openDialog(type: DialogType, filter = "") {
+    setDialogType(type);
+    setDialogFilter(filter);
+    setDialogOpen(true);
+  }
+
+  async function copyToClipboard(text: string, id: string) {
+    await navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    toast.success("Link copiado!");
+    setTimeout(() => setCopiedId(null), 2000);
+  }
+
+  // Get filtered pedidos for dialog
+  const dialogPedidos = useMemo(() => {
+    if (dialogType === "pedidos") return pedidos;
+    if (dialogType === "upsell") return pedidos.filter(p => p.tipo_pedido === "Aditivo");
+    if (dialogType === "upgrade") return pedidos.filter(p => p.tipo_pedido === "Upgrade");
+    if (dialogType === "plano") {
+      const plano = planos.find(pl => pl.nome === dialogFilter);
+      return pedidos.filter(p => {
+        const pNome = planos.find(pl => pl.id === p.plano_id)?.nome || "Sem plano";
+        return pNome === dialogFilter;
+      });
+    }
+    if (dialogType === "tipo") {
+      // dialogFilter is the translated name, need original
+      const reverseMap: Record<string, string> = {
+        "Novos": "Novo",
+        "Upgrades": "Upgrade",
+        "Módulos Adicionais": "Aditivo",
+        "Ordem de Atendimento": "OA",
+        "Serviços": "Serviço",
+      };
+      const original = reverseMap[dialogFilter] || dialogFilter;
+      return pedidos.filter(p => p.tipo_pedido === original);
+    }
+    return [];
+  }, [dialogType, dialogFilter, pedidos, planos]);
+
+  const dialogTitle = useMemo(() => {
+    if (dialogType === "pedidos") return "💙 Pedidos no Mês";
+    if (dialogType === "upsell") return "🤝 Upsell (Módulo Adicional)";
+    if (dialogType === "upgrade") return "⬆️ Upgrades";
+    if (dialogType === "contratos") return "✍️ Contratos";
+    if (dialogType === "plano") return `📦 Vendas — ${dialogFilter}`;
+    if (dialogType === "tipo") return `📊 Vendas — ${dialogFilter}`;
+    return "";
+  }, [dialogType, dialogFilter]);
 
   const canSeeAllFiliais = isGlobal || isAdmin || roles.includes("financeiro");
 
@@ -465,6 +574,7 @@ export default function Dashboard() {
             icon={ShoppingCart}
             color="text-primary bg-primary/10"
             loading={loading}
+            onClick={() => openDialog("pedidos")}
           />
           <KPICard
             label="💰 Vendas Total"
@@ -523,6 +633,7 @@ export default function Dashboard() {
             icon={ArrowUpRight}
             color="text-chart-4 bg-chart-4/10"
             loading={loading}
+            onClick={() => openDialog("upsell")}
           />
           <KPICard
             label="⬆️ Upgrades"
@@ -531,8 +642,12 @@ export default function Dashboard() {
             icon={TrendingUp}
             color="text-chart-5 bg-chart-5/10"
             loading={loading}
+            onClick={() => openDialog("upgrade")}
           />
-          <div className="bg-card rounded-xl p-5 shadow-card border border-border">
+          <div
+            className="bg-card rounded-xl p-5 shadow-card border border-border cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => openDialog("contratos")}
+          >
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-medium text-muted-foreground">✍️ Contratos</span>
               <div className="h-9 w-9 rounded-lg flex items-center justify-center text-primary bg-primary/10">
@@ -573,7 +688,17 @@ export default function Dashboard() {
                 <div className="h-64 flex items-center justify-center text-muted-foreground text-sm">Sem dados no período</div>
               ) : (
                 <ChartContainer config={chartConfigPlano} className="h-64 w-full">
-                  <BarChart data={stats.vendasPorPlanoArr} layout="vertical" margin={{ left: 0, right: 16, top: 8, bottom: 8 }}>
+                  <BarChart
+                    data={stats.vendasPorPlanoArr}
+                    layout="vertical"
+                    margin={{ left: 0, right: 16, top: 8, bottom: 8 }}
+                    onClick={(data) => {
+                      if (data?.activePayload?.[0]?.payload?.nome) {
+                        openDialog("plano", data.activePayload[0].payload.nome);
+                      }
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis type="number" tickFormatter={(v) => v.toString()} />
                     <YAxis type="category" dataKey="nome" width={120} tick={{ fontSize: 12 }} />
@@ -625,6 +750,12 @@ export default function Dashboard() {
                         innerRadius={45}
                         strokeWidth={2}
                         label={({ name, value }) => `${name}: ${value}`}
+                        onClick={(data) => {
+                          if (data?.name) {
+                            openDialog("tipo", data.name);
+                          }
+                        }}
+                        style={{ cursor: "pointer" }}
                       >
                         {stats.porTipoArr.map((_, i) => (
                           <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
@@ -638,6 +769,92 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Dialog for details */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-lg">{dialogTitle}</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1 -mx-6 px-6">
+            {dialogType === "contratos" ? (
+              <div className="space-y-2 pb-4">
+                {contratosInfo.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">Nenhum contrato no período</p>
+                ) : (
+                  contratosInfo.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{c.cliente_nome}</p>
+                        <p className="text-xs text-muted-foreground">Contrato {c.numero_exibicao}</p>
+                      </div>
+                      <div className="flex items-center gap-2 ml-3">
+                        {c.zapsign_status === "Assinado" ? (
+                          <Badge variant="default" className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100">
+                            ✅ Assinado
+                          </Badge>
+                        ) : (
+                          <>
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                              ⏳ {c.zapsign_status || "Pendente"}
+                            </Badge>
+                            {c.sign_url && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  copyToClipboard(c.sign_url!, c.id);
+                                }}
+                                title="Copiar link de assinatura"
+                              >
+                                {copiedId === c.id ? (
+                                  <Check className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2 pb-4">
+                {dialogPedidos.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">Nenhum pedido encontrado</p>
+                ) : (
+                  dialogPedidos.map((p) => {
+                    const tipoInfo = getTipoLabel(p.tipo_pedido);
+                    return (
+                      <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30 gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{p.cliente_nome}</p>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-xs text-muted-foreground">
+                              Impl: <span className="font-medium text-foreground">{fmtBRL(p.valor_implantacao_final)}</span>
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              Mens: <span className="font-medium text-foreground">{fmtBRL(p.valor_mensalidade_final)}</span>
+                            </span>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className={`${tipoInfo.color} shrink-0 text-[11px]`}>
+                          {tipoInfo.label}
+                        </Badge>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
@@ -649,6 +866,7 @@ function KPICard({
   icon: Icon,
   color,
   loading,
+  onClick,
 }: {
   label: string;
   value: string;
@@ -656,9 +874,13 @@ function KPICard({
   icon: React.ComponentType<{ className?: string }>;
   color: string;
   loading: boolean;
+  onClick?: () => void;
 }) {
   return (
-    <div className="bg-card rounded-xl p-5 shadow-card border border-border">
+    <div
+      className={`bg-card rounded-xl p-5 shadow-card border border-border ${onClick ? "cursor-pointer hover:shadow-md transition-shadow" : ""}`}
+      onClick={onClick}
+    >
       <div className="flex items-center justify-between mb-3">
         <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${color}`}>
           <Icon className="h-4 w-4" />
