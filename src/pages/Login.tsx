@@ -70,7 +70,7 @@ export default function Login() {
     <div className="min-h-screen flex">
       {/* Left panel */}
       <div className="hidden lg:flex lg:w-1/2 gradient-hero flex-col items-center justify-center p-12">
-        <img src={logoSoftflowBranca} alt="Softflow" className="w-64 object-contain" />
+        <img src={logoSoftflowBranca} alt="Softflow" className="w-64 object-contain" loading="eager" fetchPriority="high" />
       </div>
 
       {/* Right panel */}
@@ -78,7 +78,7 @@ export default function Login() {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="mb-8 flex justify-center">
-            <img alt="Softflow" className="h-16 object-contain" src="/lovable-uploads/41a83057-5d6f-4fb4-9aae-97e8b980824c.png" />
+            <img alt="Softflow" className="h-16 object-contain" src="/lovable-uploads/41a83057-5d6f-4fb4-9aae-97e8b980824c.png" loading="eager" fetchPriority="high" />
           </div>
 
           <div className="mb-8">
