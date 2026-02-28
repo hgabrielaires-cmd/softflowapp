@@ -169,7 +169,7 @@ Entre em contato com o administrador para obter acesso.<br />
 
       <Dialog open={flowyDialog.open} onOpenChange={(open) => setFlowyDialog({ ...flowyDialog, open })}>
         <DialogContent className="sm:max-w-sm flex flex-col items-center gap-4 pt-8">
-          <Flowy mood="triste" size="lg" />
+          <Flowy mood="triste" size="sm" />
           <p className="text-center text-sm text-foreground font-medium">{flowyDialog.message}</p>
           <Button className="w-full" onClick={() => setFlowyDialog({ open: false, message: "" })}>
             Entendi
