@@ -88,6 +88,7 @@ interface PedidoRow {
   contrato_id: string | null;
   modulos_adicionais: any;
   cliente_id: string;
+  plano_origem_id: string | null;
   comissao_implantacao_valor: number;
   comissao_mensalidade_valor: number;
   cliente_nome: string;
@@ -261,11 +262,31 @@ export default function Dashboard() {
       }
 
       const { data: pedidosData } = await pedidoQuery;
-      const mappedPedidos = (pedidosData || []).map((p: any) => ({
+      let mappedPedidos = (pedidosData || []).map((p: any) => ({
         ...p,
         cliente_nome: p.clientes?.nome_fantasia || "Cliente",
         desconto_aprovado_por_nome: null as string | null,
+        plano_origem_id: null as string | null,
       })) as PedidoRow[];
+
+      // Fetch old plan for upgrade pedidos via contrato
+      const upgradeContratoIds = mappedPedidos
+        .filter(p => p.tipo_pedido === "Upgrade" && p.contrato_id)
+        .map(p => p.contrato_id!);
+      if (upgradeContratoIds.length > 0) {
+        const { data: upgradeContratos } = await supabase
+          .from("contratos")
+          .select("id, plano_id")
+          .in("id", upgradeContratoIds);
+        if (upgradeContratos) {
+          const contratoPlanoMap = new Map(upgradeContratos.map((c: any) => [c.id, c.plano_id]));
+          mappedPedidos.forEach(p => {
+            if (p.tipo_pedido === "Upgrade" && p.contrato_id) {
+              p.plano_origem_id = contratoPlanoMap.get(p.contrato_id) || null;
+            }
+          });
+        }
+      }
 
       // Fetch discount approvals for pedidos with discounts
       const pedidoIds = mappedPedidos
@@ -1022,6 +1043,13 @@ export default function Dashboard() {
                                   <p className="text-xs text-muted-foreground">Sem módulos adicionais registrados</p>
                                 )}
                               </>
+                            ) : dialogType === "upgrade" ? (
+                              // Upgrade: show old plan → new plan
+                              <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                                ⬆️ <span className="line-through opacity-60">{p.plano_origem_id ? getPlanoNome(p.plano_origem_id) : "—"}</span>
+                                <span>→</span>
+                                <span className="font-medium text-foreground">{planoNome}</span>
+                              </p>
                             ) : (
                               // Other types: show plan + modules
                               <>
