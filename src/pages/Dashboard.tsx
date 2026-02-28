@@ -40,14 +40,14 @@ const MONTH_NAMES = [
 ];
 
 const PIE_COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-  "#6366f1",
+  "#3b82f6",
+  "#10b981",
   "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#06b6d4",
+  "#f97316",
+  "#ec4899",
   "#14b8a6",
   "#ef4444",
 ];
@@ -559,7 +559,7 @@ export default function Dashboard() {
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Venda por Plano */}
-          <Card>
+          <Card className="shadow-md">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <Package className="h-4 w-4 text-primary" />
@@ -598,7 +598,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Vendidos por Tipo */}
-          <Card>
+          <Card className="shadow-md">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-primary" />
