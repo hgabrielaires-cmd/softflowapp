@@ -20,13 +20,51 @@ export default function Login() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast.error("Credenciais inválidas. Verifique seu e-mail e senha.");
       setLoading(false);
-    } else {
-      navigate("/dashboard");
+      return;
     }
+
+    const userId = authData.user?.id;
+    if (!userId) {
+      toast.error("Erro inesperado ao autenticar.");
+      setLoading(false);
+      return;
+    }
+
+    // Verificar se o usuário está ativo
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("active, filial_id, acesso_global")
+      .eq("user_id", userId)
+      .single();
+
+    if (profile?.active === false) {
+      toast.error("Sua conta está inativa. Entre em contato com o administrador.");
+      await supabase.auth.signOut();
+      setLoading(false);
+      return;
+    }
+
+    // Verificar se tem filial vinculada (pular se acesso_global)
+    if (!profile?.acesso_global && !profile?.filial_id) {
+      const { data: ufData } = await supabase
+        .from("usuario_filiais")
+        .select("filial_id")
+        .eq("user_id", userId)
+        .limit(1);
+
+      if (!ufData || ufData.length === 0) {
+        toast.error("Seu usuário não possui nenhuma filial vinculada. Entre em contato com o administrador.");
+        await supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
+    }
+
+    navigate("/dashboard");
   }
 
   return (
