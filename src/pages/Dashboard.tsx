@@ -106,7 +106,7 @@ interface ContratoInfo {
   sign_url: string | null;
 }
 
-type DialogType = "pedidos" | "upsell" | "upgrade" | "contratos" | "plano" | "tipo" | null;
+type DialogType = "pedidos" | "upsell" | "upgrade" | "contratos" | "descontos" | "plano" | "tipo" | null;
 
 export default function Dashboard() {
   const { profile, roles, isAdmin, user } = useAuth();
@@ -458,6 +458,11 @@ export default function Dashboard() {
     if (dialogType === "pedidos") return pedidos;
     if (dialogType === "upsell") return pedidos.filter(p => p.tipo_pedido === "Aditivo");
     if (dialogType === "upgrade") return pedidos.filter(p => p.tipo_pedido === "Upgrade");
+    if (dialogType === "descontos") return pedidos.filter(p => {
+      const hasDescImpl = (p.desconto_implantacao_valor || 0) > 0;
+      const hasDescMens = (p.desconto_mensalidade_valor || 0) > 0;
+      return hasDescImpl || hasDescMens;
+    });
     if (dialogType === "plano") {
       const plano = planos.find(pl => pl.nome === dialogFilter);
       return pedidos.filter(p => {
@@ -485,6 +490,7 @@ export default function Dashboard() {
     if (dialogType === "upsell") return "🤝 Upsell (Módulo Adicional)";
     if (dialogType === "upgrade") return "⬆️ Upgrades";
     if (dialogType === "contratos") return "✍️ Contratos";
+    if (dialogType === "descontos") return "⚠️ Descontos Aplicados";
     if (dialogType === "plano") return `📦 Vendas — ${dialogFilter}`;
     if (dialogType === "tipo") return `📊 Vendas — ${dialogFilter}`;
     return "";
@@ -629,6 +635,7 @@ export default function Dashboard() {
             icon={Percent}
             color="text-destructive bg-destructive/10"
             loading={loading}
+            onClick={() => openDialog("descontos")}
           />
           <KPICard
             label="🪙 Comissão Prevista Implantação"
@@ -843,6 +850,38 @@ export default function Dashboard() {
                       </div>
                     </div>
                   ))
+                )}
+              </div>
+            ) : dialogType === "descontos" ? (
+              <div className="space-y-2 pb-4">
+                {dialogPedidos.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">Nenhum desconto no período</p>
+                ) : (
+                  dialogPedidos.map((p) => {
+                    const descImpl = p.desconto_implantacao_tipo === "%" 
+                      ? `${p.desconto_implantacao_valor}% (${fmtBRL((p.valor_implantacao_original * (p.desconto_implantacao_valor || 0)) / 100)})`
+                      : fmtBRL(p.desconto_implantacao_valor || 0);
+                    const descMens = p.desconto_mensalidade_tipo === "%"
+                      ? `${p.desconto_mensalidade_valor}% (${fmtBRL((p.valor_mensalidade_original * (p.desconto_mensalidade_valor || 0)) / 100)})`
+                      : fmtBRL(p.desconto_mensalidade_valor || 0);
+                    return (
+                      <div key={p.id} className="p-3 rounded-lg border border-border bg-muted/30 space-y-1">
+                        <p className="text-sm font-medium text-foreground truncate">{p.cliente_nome}</p>
+                        <div className="flex flex-wrap items-center gap-3">
+                          {(p.desconto_implantacao_valor || 0) > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              Desc. Impl: <span className="font-medium text-destructive">{descImpl}</span>
+                            </span>
+                          )}
+                          {(p.desconto_mensalidade_valor || 0) > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              Desc. Mens: <span className="font-medium text-destructive">{descMens}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             ) : (
