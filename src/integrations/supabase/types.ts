@@ -1902,6 +1902,7 @@ export type Database = {
           gestor_desconto: boolean | null
           id: string
           is_tecnico: boolean
+          is_vendedor: boolean
           permite_enviar_espelho_whatsapp: boolean
           permitir_cnpj_duplicado: boolean | null
           recebe_comissao: boolean
@@ -1930,6 +1931,7 @@ export type Database = {
           gestor_desconto?: boolean | null
           id?: string
           is_tecnico?: boolean
+          is_vendedor?: boolean
           permite_enviar_espelho_whatsapp?: boolean
           permitir_cnpj_duplicado?: boolean | null
           recebe_comissao?: boolean
@@ -1958,6 +1960,7 @@ export type Database = {
           gestor_desconto?: boolean | null
           id?: string
           is_tecnico?: boolean
+          is_vendedor?: boolean
           permite_enviar_espelho_whatsapp?: boolean
           permitir_cnpj_duplicado?: boolean | null
           recebe_comissao?: boolean
