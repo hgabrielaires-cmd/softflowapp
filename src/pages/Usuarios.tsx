@@ -329,7 +329,8 @@ export default function Usuarios() {
       if (profileError) throw profileError;
 
       // Update usuario_filiais junction
-      await supabase.from("usuario_filiais").delete().eq("user_id", editingUser.user_id);
+      const { error: deleteUfError } = await supabase.from("usuario_filiais").delete().eq("user_id", editingUser.user_id);
+      if (deleteUfError) throw deleteUfError;
       if (editFilialIds.length > 0 && !editAcessoGlobal) {
         const rows = editFilialIds.map((fId) => ({ user_id: editingUser.user_id, filial_id: fId }));
         const { error: ufError } = await supabase.from("usuario_filiais").insert(rows);
