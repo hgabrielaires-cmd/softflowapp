@@ -85,16 +85,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    // Primeiro obtém a sessão atual — libera o loading imediatamente
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Obtém a sessão e aguarda profile/roles antes de liberar
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false); // libera a tela imediatamente
       if (session?.user) {
-        // busca profile e roles em background, sem bloquear a navegação
-        fetchProfile(session.user.id);
-        fetchRoles(session.user.id);
+        await Promise.all([
+          fetchProfile(session.user.id),
+          fetchRoles(session.user.id),
+        ]);
       }
+      setLoading(false);
     });
 
     // Escuta mudanças futuras
