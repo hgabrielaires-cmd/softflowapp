@@ -42,12 +42,22 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
     const body = await req.json();
     const { contrato_id, action, pdf_base64, tipo_documento } = body;
     const BROWSERLESS_API_KEY = Deno.env.get("BROWSERLESS_API_KEY");
 
-    if (!contrato_id) {
-      return new Response(JSON.stringify({ error: "contrato_id obrigatório" }), {
+    if (!contrato_id || !UUID_REGEX.test(contrato_id)) {
+      return new Response(JSON.stringify({ error: "contrato_id inválido" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validar tamanho do pdf_base64 (max 20MB em base64)
+    if (action === "upload" && pdf_base64 && pdf_base64.length > 20 * 1024 * 1024 * 1.37) {
+      return new Response(JSON.stringify({ error: "PDF excede tamanho máximo permitido" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

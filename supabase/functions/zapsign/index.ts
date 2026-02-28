@@ -65,8 +65,24 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
     const body = await req.json();
     const { action, contrato_id, doc_token } = body;
+
+    // Validar formato dos IDs
+    if (contrato_id && !UUID_REGEX.test(contrato_id)) {
+      return new Response(
+        JSON.stringify({ error: "contrato_id inválido" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (doc_token && (typeof doc_token !== "string" || doc_token.length > 200)) {
+      return new Response(
+        JSON.stringify({ error: "doc_token inválido" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // ── ACTION: send ── Enviar PDF para ZapSign
     if (action === "send") {
