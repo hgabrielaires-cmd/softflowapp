@@ -1020,15 +1020,12 @@ export default function Usuarios() {
                       </div>
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>Status</Label>
-                    <Select value={editActive ? "ativo" : "inativo"} onValueChange={(v) => setEditActive(v === "ativo")}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ativo">✅ Ativo</SelectItem>
-                        <SelectItem value="inativo">⛔ Inativo</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-medium">Status</Label>
+                      <p className="text-xs text-muted-foreground">{editActive ? "Usuário ativo no sistema" : "Usuário sem acesso ao sistema"}</p>
+                    </div>
+                    <Switch checked={editActive} onCheckedChange={setEditActive} />
                   </div>
                 </TabsContent>
 
