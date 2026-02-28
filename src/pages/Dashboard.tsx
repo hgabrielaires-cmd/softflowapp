@@ -399,7 +399,9 @@ export default function Dashboard() {
     const pendentes = contratosInfo.filter(c => c.zapsign_status && c.zapsign_status !== "Assinado").length;
 
     const vendasPorPlano: Record<string, { nome: string; count: number; valor: number; clientes: string[] }> = {};
-    pedidos.forEach(p => {
+    pedidos
+      .filter(p => p.tipo_pedido === "Novo" || p.tipo_pedido === "Upgrade")
+      .forEach(p => {
       const plano = planos.find(pl => pl.id === p.plano_id);
       const nome = plano?.nome || "Sem plano";
       const key = p.plano_id || "sem";
@@ -521,8 +523,9 @@ export default function Dashboard() {
       return hasDescImpl || hasDescMens;
     });
     if (dialogType === "plano") {
-      const plano = planos.find(pl => pl.nome === dialogFilter);
       return pedidos.filter(p => {
+        // Only count actual plan sales (Novo/Upgrade), not Aditivo/OA
+        if (p.tipo_pedido !== "Novo" && p.tipo_pedido !== "Upgrade") return false;
         const pNome = planos.find(pl => pl.id === p.plano_id)?.nome || "Sem plano";
         return pNome === dialogFilter;
       });
