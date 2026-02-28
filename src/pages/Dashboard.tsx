@@ -45,7 +45,7 @@ export default function Dashboard() {
   const firstName = profile?.full_name?.split(" ")[0] || "usuário";
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
-  const isVendedor = !isAdmin && !roles.includes("financeiro") && (profile as any)?.is_vendedor === true;
+  const isOnlyVendedor = !isAdmin && !roles.includes("financeiro") && (profile as any)?.is_vendedor === true;
 
   const [filialId, setFilialId] = useState<string>("");
   const [vendedorId, setVendedorId] = useState<string>("");
@@ -76,14 +76,14 @@ export default function Dashboard() {
 
   // Vendedor: auto-selecionar próprio ID
   useEffect(() => {
-    if (isVendedor && user) {
+    if (isOnlyVendedor && user) {
       setVendedorId(user.id);
     }
-  }, [isVendedor, user]);
+  }, [isOnlyVendedor, user]);
 
   // Buscar vendedores da filial selecionada (para admin/financeiro)
   useEffect(() => {
-    if (isVendedor) return;
+    if (isOnlyVendedor) return;
 
     async function fetchVendedores() {
       setLoadingVendedores(true);
@@ -138,7 +138,7 @@ export default function Dashboard() {
     }
 
     if (filialId) fetchVendedores();
-  }, [filialId, isVendedor]);
+  }, [filialId, isOnlyVendedor]);
 
 
   // Navega mês
@@ -175,7 +175,7 @@ export default function Dashboard() {
       }
 
       // Filtro de vendedor
-      if (isVendedor && user) {
+      if (isOnlyVendedor && user) {
         query = query.eq("vendedor_id", user.id);
       } else if (vendedorId && vendedorId !== "todos") {
         query = query.eq("vendedor_id", vendedorId);
@@ -195,8 +195,8 @@ export default function Dashboard() {
       setLoadingStats(false);
     }
 
-    if (filialId || isVendedor) fetchStats();
-  }, [filialId, vendedorId, mes, ano, isVendedor, user]);
+    if (filialId || isOnlyVendedor) fetchStats();
+  }, [filialId, vendedorId, mes, ano, isOnlyVendedor, user]);
 
   function fmtBRL(v: number) {
     return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -275,7 +275,7 @@ export default function Dashboard() {
           {/* Vendedor */}
           <div className="flex items-center gap-2">
             <UserCircle className="h-4 w-4 text-muted-foreground shrink-0" />
-            {isVendedor ? (
+            {isOnlyVendedor ? (
               <span className="text-sm font-medium text-foreground bg-muted px-3 py-2 rounded-lg border border-border">
                 {profile?.full_name || "—"}
               </span>
