@@ -46,15 +46,31 @@ serve(async (req) => {
       });
     }
 
-    // Auto-fix: if user typed https:// for a non-443 port, switch to http://
+    // Validar server_url como URL válida
     let normalizedUrl = server_url.replace(/\/+$/, "");
     try {
       const parsed = new URL(normalizedUrl);
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        throw new Error("Protocolo inválido");
+      }
       if (parsed.protocol === "https:" && parsed.port && parsed.port !== "443") {
         normalizedUrl = normalizedUrl.replace(/^https:/, "http:");
       }
-    } catch { /* keep as-is */ }
+    } catch {
+      return new Response(JSON.stringify({ error: "server_url inválida" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const baseUrl = normalizedUrl;
+
+    // Validar tamanho do texto (max 4096 chars)
+    if (text && (typeof text !== "string" || text.length > 4096)) {
+      return new Response(JSON.stringify({ error: "Texto excede tamanho máximo (4096 caracteres)" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const headers = {
       "Content-Type": "application/json",
@@ -149,6 +165,14 @@ serve(async (req) => {
         let formattedNumber = number.replace(/\D/g, "");
         if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
         if (!formattedNumber.startsWith("55")) formattedNumber = "55" + formattedNumber;
+
+        // Validar formato do telefone (10-15 dígitos)
+        if (!/^\d{10,15}$/.test(formattedNumber)) {
+          return new Response(JSON.stringify({ error: "Número de telefone inválido" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
 
         const res = await fetch(`${baseUrl}/message/sendText/${name}`, {
           method: "POST",

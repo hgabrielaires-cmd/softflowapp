@@ -46,9 +46,19 @@ serve(async (req) => {
       });
     }
 
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
     const { user_id, password } = await req.json();
-    if (!user_id || !password) {
-      return new Response(JSON.stringify({ error: "user_id and password are required" }), {
+
+    if (!user_id || !UUID_REGEX.test(user_id)) {
+      return new Response(JSON.stringify({ error: "user_id inválido" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!password || typeof password !== "string" || password.length < 6 || password.length > 72) {
+      return new Response(JSON.stringify({ error: "Senha deve ter entre 6 e 72 caracteres" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
