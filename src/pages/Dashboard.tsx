@@ -865,7 +865,7 @@ export default function Dashboard() {
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="text-lg">{dialogTitle}</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-1 -mx-6 px-6 min-h-0">
+          <div className="flex-1 -mx-6 px-6 min-h-0 overflow-y-auto">
             {dialogType === "contratos" ? (
               <div className="space-y-2 pb-4">
                 {contratosInfo.length === 0 ? (
@@ -1079,7 +1079,7 @@ export default function Dashboard() {
                 )}
               </div>
             )}
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
     </AppLayout>
