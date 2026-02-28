@@ -12,6 +12,7 @@ interface AuthContextType {
   isAdmin: boolean;
   loading: boolean;
   deveTrocarSenha: boolean;
+  semFilial: boolean;
   clearDeveTrocarSenha: () => void;
   signOut: () => Promise<void>;
 }
@@ -24,6 +25,7 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   loading: true,
   deveTrocarSenha: false,
+  semFilial: false,
   clearDeveTrocarSenha: () => {},
   signOut: async () => {},
 });
@@ -34,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [deveTrocarSenha, setDeveTrocarSenha] = useState(false);
+  const [semFilial, setSemFilial] = useState(false);
   const [loading, setLoading] = useState(true);
 
   async function fetchProfile(userId: string): Promise<Profile | null> {
@@ -53,6 +56,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Verificar se deve trocar senha
       if ((data as any).deve_trocar_senha === true) {
         setDeveTrocarSenha(true);
+      }
+      // Verificar se tem filial vinculada
+      if (!data.filial_id && !data.acesso_global) {
+        // Checar usuario_filiais
+        const { data: ufData } = await supabase
+          .from("usuario_filiais")
+          .select("filial_id")
+          .eq("user_id", userId)
+          .limit(1);
+        if (!ufData || ufData.length === 0) {
+          setSemFilial(true);
+        } else {
+          setSemFilial(false);
+        }
+      } else {
+        setSemFilial(false);
       }
     }
     return data as Profile | null;
@@ -91,8 +110,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             fetchRoles(session.user.id);
           }, 0);
         } else {
-          setProfile(null);
+        setProfile(null);
           setRoles([]);
+          setSemFilial(false);
         }
       }
     );
@@ -104,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setProfile(null);
     setRoles([]);
+    setSemFilial(false);
   }
 
   function clearDeveTrocarSenha() {
@@ -113,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = roles.includes("admin");
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, roles, isAdmin, loading, deveTrocarSenha, clearDeveTrocarSenha, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, roles, isAdmin, loading, deveTrocarSenha, semFilial, clearDeveTrocarSenha, signOut }}>
       {children}
     </AuthContext.Provider>
   );
