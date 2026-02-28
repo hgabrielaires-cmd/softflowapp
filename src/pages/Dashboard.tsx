@@ -915,11 +915,13 @@ export default function Dashboard() {
                               {(p.desconto_implantacao_valor || 0) > 0 && (
                                 <span className="text-xs text-muted-foreground">
                                   Impl: <span className="line-through opacity-60">{fmtBRL(p.valor_implantacao_original)}</span> → <span className="font-medium text-foreground">{fmtBRL(p.valor_implantacao_final)}</span>
+                                  <span className="font-medium text-destructive ml-1">(-{descImpl})</span>
                                 </span>
                               )}
                               {(p.desconto_mensalidade_valor || 0) > 0 && (
                                 <span className="text-xs text-muted-foreground">
                                   Mens: <span className="line-through opacity-60">{fmtBRL(p.valor_mensalidade_original)}</span> → <span className="font-medium text-foreground">{fmtBRL(p.valor_mensalidade_final)}</span>
+                                  <span className="font-medium text-destructive ml-1">(-{descMens})</span>
                                 </span>
                               )}
                             </div>
