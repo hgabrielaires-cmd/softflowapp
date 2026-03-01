@@ -24,7 +24,8 @@ import {
   LayoutGrid, List, Search, Clock, Building2, User, Filter,
   GripVertical, ChevronRight, FileText, Package, ArrowUpCircle,
   Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw, ArrowRight, CheckSquare,
-  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare, Info, History, Pencil, MoreHorizontal, XCircle, PauseCircle, UserPlus, Users, Ban
+  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare, Info, History, Pencil, MoreHorizontal, XCircle, PauseCircle, UserPlus, Users, Ban,
+  Heart, Reply, CornerDownRight
 } from "lucide-react";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { ChecklistItem } from "@/lib/supabase-types";
@@ -130,6 +131,8 @@ export default function PainelAtendimento() {
   const [novoComentario, setNovoComentario] = useState("");
   const mentionedUsersRef = useRef<string[]>([]);
   const [comentarios, setComentarios] = useState<any[]>([]);
+  const [curtidas, setCurtidas] = useState<Record<string, string[]>>({});
+  const [replyTo, setReplyTo] = useState<{ id: string; autorNome: string } | null>(null);
   const [tecnicosSelecionados, setTecnicosSelecionados] = useState<string[]>([]);
   const [buscaTecnico, setBuscaTecnico] = useState("");
   const [historicoOpen, setHistoricoOpen] = useState(false);
@@ -444,16 +447,18 @@ export default function PainelAtendimento() {
   useEffect(() => {
     if (!detailCard) {
       setComentarios([]);
+      setCurtidas({});
+      setReplyTo(null);
       setTecnicosSelecionados([]);
       setNovoComentario("");
       setBuscaTecnico("");
       return;
     }
     (async () => {
-      const [{ data: coms }, { data: tecs }] = await Promise.all([
+      const [{ data: coms }, { data: tecs }, { data: likes }] = await Promise.all([
         supabase
           .from("painel_comentarios")
-          .select("id, texto, criado_por, created_at")
+          .select("id, texto, criado_por, created_at, parent_id")
           .eq("card_id", detailCard.id)
           .eq("etapa_id", detailCard.etapa_id)
           .order("created_at", { ascending: true }),
@@ -461,9 +466,20 @@ export default function PainelAtendimento() {
           .from("painel_tecnicos")
           .select("tecnico_id")
           .eq("card_id", detailCard.id),
+        supabase
+          .from("painel_curtidas")
+          .select("comentario_id, user_id"),
       ]);
       setComentarios(coms || []);
       setTecnicosSelecionados((tecs || []).map((t: any) => t.tecnico_id));
+      // Build likes map: comentario_id -> [user_id, ...]
+      const likesMap: Record<string, string[]> = {};
+      (likes || []).forEach((l: any) => {
+        if (!likesMap[l.comentario_id]) likesMap[l.comentario_id] = [];
+        likesMap[l.comentario_id].push(l.user_id);
+      });
+      setCurtidas(likesMap);
+      setReplyTo(null);
     })();
   }, [detailCard?.id]);
 
@@ -2598,22 +2614,111 @@ export default function PainelAtendimento() {
                     Comentários ({comentarios.length})
                   </Label>
                   {comentarios.length > 0 && (
-                    <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                      {comentarios.map((com: any) => {
-                        const autor = responsaveis.find((r: any) => r.id === com.criado_por) ||
-                          { full_name: "Usuário" };
-                        return (
-                          <div key={com.id} className="bg-muted/50 rounded p-2 text-xs">
-                            <div className="flex items-center justify-between mb-0.5">
-                              <span className="font-medium text-foreground">{(autor as any).full_name?.split(" ")[0]}</span>
-                              <span className="text-[10px] text-muted-foreground">
-                                {new Date(com.created_at).toLocaleDateString("pt-BR")} {new Date(com.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                              </span>
+                    <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                      {(() => {
+                        const rootComments = comentarios.filter((c: any) => !c.parent_id);
+                        const getReplies = (parentId: string) => comentarios.filter((c: any) => c.parent_id === parentId);
+
+                        const handleCurtir = async (comentarioId: string, autorComentarioId: string) => {
+                          const { data: { user } } = await supabase.auth.getUser();
+                          if (!user || !detailCard) return;
+                          const { data: myProfile } = await supabase.from("profiles").select("id, full_name, user_id").eq("user_id", user.id).maybeSingle();
+                          const myProfileId = myProfile?.id || user.id;
+                          const jasCurtiu = (curtidas[comentarioId] || []).includes(user.id);
+
+                          if (jasCurtiu) {
+                            await supabase.from("painel_curtidas").delete().eq("comentario_id", comentarioId).eq("user_id", user.id);
+                            setCurtidas(prev => ({
+                              ...prev,
+                              [comentarioId]: (prev[comentarioId] || []).filter(uid => uid !== user.id)
+                            }));
+                          } else {
+                            await supabase.from("painel_curtidas").insert({ comentario_id: comentarioId, user_id: user.id });
+                            setCurtidas(prev => ({
+                              ...prev,
+                              [comentarioId]: [...(prev[comentarioId] || []), user.id]
+                            }));
+                            // Notificar autor do comentário (se não for eu mesmo)
+                            if (autorComentarioId !== myProfileId) {
+                              const autorProf = (responsaveis as any[]).find((r: any) => r.id === autorComentarioId);
+                              const clienteNome = detailCard.clientes?.nome_fantasia || "Cliente";
+                              const meuNome = myProfile?.full_name?.split(" ")[0] || "Alguém";
+                              if (autorProf?.user_id) {
+                                await supabase.from("notificacoes").insert({
+                                  titulo: `❤️ ${meuNome} curtiu seu comentário`,
+                                  mensagem: `${meuNome} curtiu seu comentário no projeto ${clienteNome}.`,
+                                  tipo: "info",
+                                  criado_por: user.id,
+                                  destinatario_user_id: autorProf.user_id,
+                                });
+                              }
+                            }
+                          }
+                        };
+
+                        const renderComment = (com: any, isReply = false) => {
+                          const autor = responsaveis.find((r: any) => r.id === com.criado_por) || { full_name: "Usuário" };
+                          const likes = curtidas[com.id] || [];
+                          const replies = getReplies(com.id);
+                          return (
+                            <div key={com.id} className={cn("rounded text-xs", isReply ? "bg-muted/30 p-1.5 ml-4 border-l-2 border-primary/20" : "bg-muted/50 p-2")}>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="font-medium text-foreground">{(autor as any).full_name?.split(" ")[0]}</span>
+                                <span className="text-[10px] text-muted-foreground">
+                                  {new Date(com.created_at).toLocaleDateString("pt-BR")} {new Date(com.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                              </div>
+                              {com.parent_id && (() => {
+                                const parentCom = comentarios.find((c: any) => c.id === com.parent_id);
+                                if (!parentCom) return null;
+                                const parentAutor = responsaveis.find((r: any) => r.id === parentCom.criado_por);
+                                return (
+                                  <p className="text-[10px] text-muted-foreground mb-0.5 flex items-center gap-0.5">
+                                    <CornerDownRight className="h-2.5 w-2.5" />
+                                    respondendo {(parentAutor as any)?.full_name?.split(" ")[0] || "Usuário"}
+                                  </p>
+                                );
+                              })()}
+                              <p className="text-foreground/80">{renderMentionText(com.texto, responsaveis as any)}</p>
+                              <div className="flex items-center gap-3 mt-1">
+                                <button
+                                  type="button"
+                                  className={cn("flex items-center gap-1 text-[10px] transition-colors", likes.length > 0 ? "text-red-500" : "text-muted-foreground hover:text-red-500")}
+                                  onClick={() => handleCurtir(com.id, com.criado_por)}
+                                >
+                                  <Heart className={cn("h-3 w-3", likes.length > 0 && "fill-red-500")} />
+                                  {likes.length > 0 && <span>{likes.length}</span>}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                                  onClick={() => setReplyTo({ id: com.id, autorNome: (autor as any).full_name?.split(" ")[0] || "Usuário" })}
+                                >
+                                  <Reply className="h-3 w-3" />
+                                  Responder
+                                </button>
+                              </div>
+                              {/* Render replies inline */}
+                              {!isReply && replies.length > 0 && (
+                                <div className="mt-1.5 space-y-1">
+                                  {replies.map((r: any) => renderComment(r, true))}
+                                </div>
+                              )}
                             </div>
-                            <p className="text-foreground/80">{renderMentionText(com.texto, responsaveis as any)}</p>
-                          </div>
-                        );
-                      })}
+                          );
+                        };
+
+                        return rootComments.map((com: any) => renderComment(com));
+                      })()}
+                    </div>
+                  )}
+                  {replyTo && (
+                    <div className="flex items-center gap-2 text-xs bg-primary/5 border border-primary/20 rounded px-2 py-1">
+                      <CornerDownRight className="h-3 w-3 text-primary" />
+                      <span className="text-muted-foreground">Respondendo <strong className="text-foreground">{replyTo.autorNome}</strong></span>
+                      <button type="button" className="ml-auto text-muted-foreground hover:text-foreground" onClick={() => setReplyTo(null)}>
+                        <XCircle className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   )}
                   <div className="flex gap-2">
@@ -2621,7 +2726,7 @@ export default function PainelAtendimento() {
                       value={novoComentario}
                       onChange={setNovoComentario}
                       users={responsaveis as any}
-                      placeholder="Digite um comentário... Use @nome para mencionar"
+                      placeholder={replyTo ? `Responder ${replyTo.autorNome}...` : "Digite um comentário... Use @nome para mencionar"}
                       onMentionsChange={(ids) => { mentionedUsersRef.current = ids; }}
                     />
                     <Button
@@ -2634,25 +2739,47 @@ export default function PainelAtendimento() {
                         const { data: myProfile } = await supabase.from("profiles").select("id, full_name, telefone").eq("user_id", user.id).maybeSingle();
                         const { data: novo, error } = await supabase
                           .from("painel_comentarios")
-                          .insert({ card_id: detailCard.id, texto: novoComentario.trim(), criado_por: myProfile?.id || user.id, etapa_id: detailCard.etapa_id })
-                          .select("id, texto, criado_por, created_at")
+                          .insert({
+                            card_id: detailCard.id,
+                            texto: novoComentario.trim(),
+                            criado_por: myProfile?.id || user.id,
+                            etapa_id: detailCard.etapa_id,
+                            parent_id: replyTo?.id || null,
+                          })
+                          .select("id, texto, criado_por, created_at, parent_id")
                           .single();
                         if (!error && novo) {
                           setComentarios((prev) => [...prev, novo]);
+                          const clienteNome = detailCard.clientes?.nome_fantasia || "Cliente";
+                          const autorNome = myProfile?.full_name?.split(" ")[0] || "Alguém";
+
+                          // Notify parent comment author about reply
+                          if (replyTo) {
+                            const parentCom = comentarios.find((c: any) => c.id === replyTo.id);
+                            if (parentCom && parentCom.criado_por !== (myProfile?.id || user.id)) {
+                              const parentProf = (responsaveis as any[]).find((r: any) => r.id === parentCom.criado_por);
+                              if (parentProf?.user_id) {
+                                await supabase.from("notificacoes").insert({
+                                  titulo: `💬 ${autorNome} respondeu seu comentário`,
+                                  mensagem: `${autorNome} respondeu seu comentário no projeto ${clienteNome}: "${novoComentario.trim().slice(0, 100)}${novoComentario.trim().length > 100 ? "..." : ""}"`,
+                                  tipo: "info",
+                                  criado_por: user.id,
+                                  destinatario_user_id: parentProf.user_id,
+                                });
+                              }
+                            }
+                          }
+
                           // Save mentions and notify
                           const mentioned = mentionedUsersRef.current;
                           if (mentioned.length > 0) {
-                            const clienteNome = detailCard.clientes?.nome_fantasia || "Cliente";
-                            const autorNome = myProfile?.full_name?.split(" ")[0] || "Alguém";
                             for (const profileId of mentioned) {
-                              // Save mention record
                               await supabase.from("painel_mencoes").insert({
                                 comentario_id: novo.id,
                                 card_id: detailCard.id,
                                 mencionado_user_id: profileId,
                                 mencionado_por: myProfile?.id || user.id,
                               });
-                              // Internal notification
                               const prof = (responsaveis as any[]).find((r: any) => r.id === profileId);
                               await supabase.from("notificacoes").insert({
                                 titulo: `💬 ${autorNome} mencionou você`,
@@ -2661,7 +2788,6 @@ export default function PainelAtendimento() {
                                 criado_por: user.id,
                                 destinatario_user_id: prof?.user_id || profileId,
                               });
-                              // WhatsApp notification (if user has phone and Evolution API is configured)
                               if (prof?.telefone) {
                                 try {
                                   const { data: intConfig } = await supabase.from("integracoes_config").select("*").eq("nome", "evolution_api").eq("ativo", true).maybeSingle();
@@ -2682,14 +2808,15 @@ export default function PainelAtendimento() {
                             }
                           }
                           setNovoComentario("");
+                          setReplyTo(null);
                           mentionedUsersRef.current = [];
-                          toast.success("Comentário adicionado!");
+                          toast.success(replyTo ? "Resposta adicionada!" : "Comentário adicionado!");
                         } else {
                           toast.error("Erro ao adicionar comentário.");
                         }
                       }}
                     >
-                      Incluir
+                      {replyTo ? "Responder" : "Incluir"}
                     </Button>
                   </div>
                 </div>
