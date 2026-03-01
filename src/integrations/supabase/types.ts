@@ -1327,6 +1327,7 @@ export type Database = {
           criado_por: string
           etapa_id: string | null
           id: string
+          parent_id: string | null
           texto: string
         }
         Insert: {
@@ -1335,6 +1336,7 @@ export type Database = {
           criado_por: string
           etapa_id?: string | null
           id?: string
+          parent_id?: string | null
           texto: string
         }
         Update: {
@@ -1343,6 +1345,7 @@ export type Database = {
           criado_por?: string
           etapa_id?: string | null
           id?: string
+          parent_id?: string | null
           texto?: string
         }
         Relationships: [
@@ -1358,6 +1361,42 @@ export type Database = {
             columns: ["etapa_id"]
             isOneToOne: false
             referencedRelation: "painel_etapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_comentarios_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "painel_comentarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      painel_curtidas: {
+        Row: {
+          comentario_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comentario_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comentario_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "painel_curtidas_comentario_id_fkey"
+            columns: ["comentario_id"]
+            isOneToOne: false
+            referencedRelation: "painel_comentarios"
             referencedColumns: ["id"]
           },
         ]
