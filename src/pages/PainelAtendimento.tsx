@@ -612,21 +612,38 @@ export default function PainelAtendimento() {
     mutationFn: async (cardId: string) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
-      // Ao iniciar, o usuário se torna responsável pelo card
       const { data: prof } = await supabase
         .from("profiles")
         .select("id")
         .eq("user_id", user.id)
         .maybeSingle();
+      const now = new Date();
       const { error } = await supabase
         .from("painel_atendimento")
         .update({
-          iniciado_em: new Date().toISOString(),
+          iniciado_em: now.toISOString(),
           iniciado_por: user.id,
           responsavel_id: prof?.id || null,
         })
         .eq("id", cardId);
       if (error) throw error;
+
+      // Save start delay in history record
+      const { data: histOpen } = await supabase
+        .from("painel_historico_etapas")
+        .select("id, entrada_em")
+        .eq("card_id", cardId)
+        .is("saida_em", null)
+        .order("entrada_em", { ascending: false })
+        .limit(1);
+      if (histOpen && histOpen.length > 0) {
+        const entradaMs = new Date(histOpen[0].entrada_em).getTime();
+        const atrasoInicioHoras = Math.round(((now.getTime() - entradaMs) / (1000 * 60 * 60)) * 100) / 100;
+        await supabase
+          .from("painel_historico_etapas")
+          .update({ atraso_inicio_horas: atrasoInicioHoras } as any)
+          .eq("id", histOpen[0].id);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
@@ -830,7 +847,7 @@ export default function PainelAtendimento() {
       // 1. Get completed stage history (saida_em IS NOT NULL)
       const { data: historico } = await supabase
         .from("painel_historico_etapas")
-        .select("id, etapa_id, etapa_nome, entrada_em, saida_em, sla_previsto_horas, tempo_real_horas, sla_cumprido")
+        .select("id, etapa_id, etapa_nome, entrada_em, saida_em, sla_previsto_horas, tempo_real_horas, sla_cumprido, atraso_inicio_horas")
         .eq("card_id", card.id)
         .not("saida_em", "is", null)
         .order("entrada_em", { ascending: true });
@@ -936,6 +953,7 @@ export default function PainelAtendimento() {
           sla_previsto_horas: (h as any).sla_previsto_horas,
           tempo_real_horas: (h as any).tempo_real_horas,
           sla_cumprido: (h as any).sla_cumprido,
+          atraso_inicio_horas: (h as any).atraso_inicio_horas,
           atividades,
           progressoMap,
           comentarios: stageComments,
@@ -2694,6 +2712,15 @@ export default function PainelAtendimento() {
                             SLA Excedido
                           </Badge>
                         )}
+                      </div>
+                    )}
+                    {/* Atraso de Início */}
+                    {stage.atraso_inicio_horas != null && stage.atraso_inicio_horas > 0 && (
+                      <div className="flex items-center gap-2 mt-2 text-[11px]">
+                        <Badge className="text-[9px] px-1.5 py-0 gap-0.5 bg-orange-100 text-orange-700 border-orange-200" variant="outline">
+                          <Clock className="h-2.5 w-2.5" />
+                          Início demorou {formatSLA(stage.atraso_inicio_horas)}
+                        </Badge>
                       </div>
                     )}
                   </div>
