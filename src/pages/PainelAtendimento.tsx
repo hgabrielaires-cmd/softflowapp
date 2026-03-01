@@ -145,6 +145,9 @@ export default function PainelAtendimento() {
   const [apontamentoUsuarios, setApontamentoUsuarios] = useState<string[]>([]);
   const [apontando, setApontando] = useState(false);
   const [buscaApontamento, setBuscaApontamento] = useState("");
+  const [retomarOpen, setRetomarOpen] = useState(false);
+  const [retomarComentario, setRetomarComentario] = useState("");
+  const [retomando, setRetomando] = useState(false);
   // Auto-refresh atrasado status every 60s
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60_000);
@@ -1197,64 +1200,75 @@ export default function PainelAtendimento() {
   }
 
   // ─── Despausar (ao iniciar etapa novamente) ─────────────────────────────
-  async function handleDespausar(cardId: string) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data: prof } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", user.id)
-      .maybeSingle();
+  async function handleDespausar() {
+    if (!detailCard || !retomarComentario.trim()) return;
+    setRetomando(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-    const card = cards.find(c => c.id === cardId) || detailCard;
-    const etapaOrigemId = (card as any)?.etapa_origem_id;
+      const cardId = detailCard.id;
+      const etapaOrigemId = detailCard.etapa_origem_id;
 
-    // If card came from another stage, move it back there
-    let targetEtapaId = card?.etapa_id;
-    if (etapaOrigemId) {
-      targetEtapaId = etapaOrigemId;
-      // Register exit from Standby
-      const sla = card ? getSlaEtapaForCard(card) : null;
-      await registrarSaidaEtapa(cardId, card?.etapa_id || "", sla);
-      // Register entry back to origin
-      const etapaOrigem = etapas.find(e => e.id === etapaOrigemId);
-      if (etapaOrigem) {
-        await registrarEntradaEtapa(cardId, etapaOrigemId, etapaOrigem.nome);
+      // If card came from another stage, move it back there
+      let targetEtapaId = detailCard.etapa_id;
+      if (etapaOrigemId) {
+        targetEtapaId = etapaOrigemId;
+        // Register exit from Standby
+        const sla = getSlaEtapaForCard(detailCard);
+        await registrarSaidaEtapa(cardId, detailCard.etapa_id, sla);
+        // Register entry back to origin (new entry = fresh SLA)
+        const etapaOrigem = etapas.find(e => e.id === etapaOrigemId);
+        if (etapaOrigem) {
+          await registrarEntradaEtapa(cardId, etapaOrigemId, etapaOrigem.nome);
+        }
       }
-    }
 
-    const { error } = await supabase
-      .from("painel_atendimento")
-      .update({
-        pausado: false,
-        pausado_em: null,
-        pausado_por: null,
-        pausado_motivo: null,
-        iniciado_em: new Date().toISOString(),
-        iniciado_por: user.id,
-        responsavel_id: prof?.id || null,
-        status_projeto: "ativo",
-        etapa_origem_id: null,
-        etapa_id: targetEtapaId,
-      } as any)
-      .eq("id", cardId);
-    if (error) {
-      toast.error("Erro ao retomar projeto.");
-      return;
-    }
+      const now = new Date().toISOString();
 
-    // Add comment about resuming
-    if (card) {
+      // Add return comment responding to pause/refuse
+      const statusLabel = detailCard.status_projeto === "recusado" ? "Recusa" : "Pausa";
       await supabase.from("painel_comentarios").insert({
         card_id: cardId,
-        etapa_id: targetEtapaId || card.etapa_id,
+        etapa_id: targetEtapaId || detailCard.etapa_id,
         criado_por: user.id,
-        texto: "▶️ Projeto retomado.",
+        texto: `▶️ Projeto retomado (resposta à ${statusLabel}): ${retomarComentario.trim()}`,
       });
-    }
 
-    queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
-    toast.success("Projeto retomado! Você é o responsável.");
+      // Update card: reset SLA timers (updated_at will reset via trigger, set iniciado_em = null so it behaves as new entry)
+      const { error } = await supabase
+        .from("painel_atendimento")
+        .update({
+          pausado: false,
+          pausado_em: null,
+          pausado_por: null,
+          pausado_motivo: null,
+          iniciado_em: null,
+          iniciado_por: null,
+          responsavel_id: prof?.id || null,
+          status_projeto: "ativo",
+          etapa_origem_id: null,
+          etapa_id: targetEtapaId,
+          updated_at: now,
+        } as any)
+        .eq("id", cardId);
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+      toast.success("Projeto retomado!");
+      setRetomarOpen(false);
+      setRetomarComentario("");
+      setDetailCard(null);
+    } catch (err: any) {
+      toast.error("Erro ao retomar projeto: " + (err.message || ""));
+    } finally {
+      setRetomando(false);
+    }
   }
 
 
@@ -1917,8 +1931,7 @@ export default function PainelAtendimento() {
                       className="bg-primary hover:bg-primary/90 text-primary-foreground"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDespausar(detailCard.id);
-                        setDetailCard({ ...detailCard, pausado: false, pausado_em: null, pausado_por: null, pausado_motivo: null, iniciado_em: new Date().toISOString(), status_projeto: "ativo", etapa_origem_id: null } as any);
+                        setRetomarOpen(true);
                       }}
                     >
                       <Play className="h-4 w-4 mr-1" />
@@ -3145,6 +3158,56 @@ export default function PainelAtendimento() {
               disabled={apontamentoUsuarios.length === 0 || apontando}
             >
               {apontando ? "Salvando..." : "Confirmar Apontamento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Retomar Projeto Dialog */}
+      <Dialog open={retomarOpen} onOpenChange={(open) => { if (!open) { setRetomarOpen(false); setRetomarComentario(""); } }}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Play className="h-5 w-5 text-primary" />
+              Retomar Projeto
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {detailCard?.pausado_motivo && (
+              <div className="rounded-md border p-3 bg-muted/30 space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">
+                  {detailCard.status_projeto === "recusado" ? "❌ Motivo da Recusa:" : "⏸️ Motivo da Pausa:"}
+                </p>
+                <p className="text-sm">{detailCard.pausado_motivo}</p>
+                {detailCard.pausado_em && (
+                  <p className="text-[10px] text-muted-foreground">
+                    {new Date(detailCard.pausado_em).toLocaleDateString("pt-BR")} às{" "}
+                    {new Date(detailCard.pausado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                )}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Resposta / Comentário de retorno <span className="text-destructive">*</span></Label>
+              <Textarea
+                placeholder="Descreva a resolução ou resposta ao motivo da pausa/recusa..."
+                value={retomarComentario}
+                onChange={(e) => setRetomarComentario(e.target.value)}
+                rows={4}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              O card voltará para a etapa de origem com prazo reiniciado (como novo card).
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setRetomarOpen(false); setRetomarComentario(""); }}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleDespausar}
+              disabled={!retomarComentario.trim() || retomando}
+            >
+              {retomando ? "Retomando..." : "Confirmar Retomada"}
             </Button>
           </DialogFooter>
         </DialogContent>
