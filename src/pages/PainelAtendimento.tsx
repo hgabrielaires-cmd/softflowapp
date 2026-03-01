@@ -1727,7 +1727,7 @@ export default function PainelAtendimento() {
             ) : null;
           })()}
 
-          {/* Footer */}
+           {/* Footer */}
           <div className="flex items-center justify-between pt-1 border-t border-border/40">
             <div className="flex items-center gap-1.5 flex-wrap">
               {card.pausado ? (
@@ -1742,14 +1742,21 @@ export default function PainelAtendimento() {
                     return parts.length > 0 ? parts.join(", ") : "—";
                   })()}
                 </Badge>
-              ) : card.responsavel_id ? (
+              ) : (
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0 gap-1">
                   <User className="h-2.5 w-2.5" />
-                  {card.profiles?.full_name?.split(" ")[0] || "—"}
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
-                  Sem responsável
+                  {(() => {
+                    const respNome = card.profiles?.full_name?.split(" ")[0] || "";
+                    const apontados = cardApontamentosMap[card.id] || [];
+                    if (respNome && apontados.length > 0) {
+                      return `${respNome}, ${apontados.join(", ")}`;
+                    } else if (respNome) {
+                      return respNome;
+                    } else if (apontados.length > 0) {
+                      return apontados.join(", ");
+                    }
+                    return "Sem responsável";
+                  })()}
                 </Badge>
               )}
             </div>
@@ -2650,7 +2657,46 @@ export default function PainelAtendimento() {
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+               <div className="flex items-center gap-2">
+                {(podePausarProjeto || podeRecusarProjeto || podeGerenciarApontamento) && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-1.5">
+                        <MoreHorizontal className="h-4 w-4" />
+                        Ações
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      {podeGerenciarApontamento && detailCard.pausado && (
+                        <DropdownMenuItem
+                          className="gap-2"
+                          onClick={() => { setApontamentoCardId(detailCard.id); setApontamentoOpen(true); }}
+                        >
+                          <UserPlus className="h-4 w-4" />
+                          Gerenciar Apontamento
+                        </DropdownMenuItem>
+                      )}
+                      {podePausarProjeto && !detailCard.pausado && (
+                        <DropdownMenuItem
+                          className="gap-2 text-amber-600 focus:text-amber-600"
+                          onClick={() => setPausarOpen(true)}
+                        >
+                          <PauseCircle className="h-4 w-4" />
+                          Pausar Projeto
+                        </DropdownMenuItem>
+                      )}
+                      {podeRecusarProjeto && !detailCard.pausado && (
+                        <DropdownMenuItem
+                          className="gap-2 text-destructive focus:text-destructive"
+                          onClick={() => setRecusarOpen(true)}
+                        >
+                          <XCircle className="h-4 w-4" />
+                          Recusar Projeto
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -2968,38 +3014,6 @@ export default function PainelAtendimento() {
               )}
 
             </div>
-          )}
-          {detalhesData && (podePausarProjeto || podeRecusarProjeto) && (
-            <DialogFooter className="border-t pt-3">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-1.5">
-                    <MoreHorizontal className="h-4 w-4" />
-                    Ações
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {podePausarProjeto && !detailCard?.pausado && (
-                    <DropdownMenuItem
-                      className="gap-2 text-amber-600 focus:text-amber-600"
-                      onClick={() => setPausarOpen(true)}
-                    >
-                      <PauseCircle className="h-4 w-4" />
-                      Pausar Projeto
-                    </DropdownMenuItem>
-                  )}
-                  {podeRecusarProjeto && (
-                    <DropdownMenuItem
-                      className="gap-2 text-destructive focus:text-destructive"
-                      onClick={() => setRecusarOpen(true)}
-                    >
-                      <XCircle className="h-4 w-4" />
-                      Recusar Projeto
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </DialogFooter>
           )}
         </DialogContent>
       </Dialog>
