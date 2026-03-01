@@ -1256,8 +1256,17 @@ export default function PainelAtendimento() {
       const card = cards.find(c => c.id === apontamentoCardId) || detailCard;
       const clienteNome = card?.clientes?.nome_fantasia || "Cliente";
 
+      // Filter out users already appointed to this card
+      const existingApontados = (cardApontamentosDetalhado[apontamentoCardId] || []).map(a => a.usuario_id);
+      const novosUsuarios = apontamentoUsuarios.filter(uid => !existingApontados.includes(uid));
+      if (novosUsuarios.length === 0) {
+        toast.info("Todos os usuários selecionados já estão apontados.");
+        setApontando(false);
+        return;
+      }
+
       // Insert apontamentos
-      const inserts = apontamentoUsuarios.map(uid => ({
+      const inserts = novosUsuarios.map(uid => ({
         card_id: apontamentoCardId,
         usuario_id: uid,
         apontado_por: user.id,
@@ -1267,9 +1276,8 @@ export default function PainelAtendimento() {
       if (error) throw error;
 
       // Send notification to each assigned user
-      for (const uid of apontamentoUsuarios) {
+      for (const uid of novosUsuarios) {
         const prof = responsaveis.find((r: any) => r.id === uid);
-        const profName = (prof as any)?.full_name || "Usuário";
         await supabase.from("notificacoes").insert({
           titulo: "📌 Apontamento de Resolução",
           mensagem: `Você foi designado(a) para resolver uma pendência do projeto ${clienteNome}. Motivo: ${card?.pausado_motivo || "Não informado"}`,
@@ -1280,7 +1288,7 @@ export default function PainelAtendimento() {
       }
 
       // Add comment
-      const nomes = apontamentoUsuarios.map(uid => {
+      const nomes = novosUsuarios.map(uid => {
         const p = responsaveis.find((r: any) => r.id === uid);
         return (p as any)?.full_name?.split(" ")[0] || "Usuário";
       });
@@ -1292,7 +1300,8 @@ export default function PainelAtendimento() {
       });
 
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
-      toast.success(`${apontamentoUsuarios.length} usuário(s) designado(s)!`);
+      queryClient.invalidateQueries({ queryKey: ["card_apontamentos"] });
+      toast.success(`${novosUsuarios.length} usuário(s) designado(s)!`);
       setApontamentoOpen(false);
       setApontamentoUsuarios([]);
       setApontamentoCardId(null);
@@ -3362,9 +3371,38 @@ export default function PainelAtendimento() {
                 onChange={(e) => setBuscaApontamento(e.target.value)}
               />
             </div>
+            {/* Already appointed users */}
+            {apontamentoCardId && (cardApontamentosDetalhado[apontamentoCardId] || []).length > 0 && (
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Já apontados</Label>
+                <div className="space-y-1 border rounded-md p-2 bg-muted/20">
+                  {(cardApontamentosDetalhado[apontamentoCardId] || []).map((ap) => (
+                    <div key={ap.id} className="flex items-center justify-between p-2 rounded-md text-sm">
+                      <span className="text-foreground">{ap.nome}</span>
+                      {podeGerenciarApontamento && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-destructive hover:text-destructive"
+                          onClick={() => handleRemoverApontamento(ap.id, apontamentoCardId!)}
+                        >
+                          <XCircle className="h-3.5 w-3.5 mr-1" />
+                          Remover
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="max-h-48 overflow-y-auto space-y-1 border rounded-md p-2">
               {responsaveis
-                .filter((r: any) => r.full_name?.toLowerCase().includes(buscaApontamento.toLowerCase()))
+                .filter((r: any) => {
+                  const jaApontado = apontamentoCardId
+                    ? (cardApontamentosDetalhado[apontamentoCardId] || []).some(a => a.usuario_id === r.id)
+                    : false;
+                  return !jaApontado && r.full_name?.toLowerCase().includes(buscaApontamento.toLowerCase());
+                })
                 .map((r: any) => (
                   <label
                     key={r.id}
