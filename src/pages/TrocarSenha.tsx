@@ -22,8 +22,24 @@ export default function TrocarSenha() {
       toast.error("As senhas não coincidem");
       return;
     }
-    if (newPassword.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres");
+    if (newPassword.length < 8) {
+      toast.error("A senha deve ter pelo menos 8 caracteres");
+      return;
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      toast.error("A senha deve conter pelo menos uma letra maiúscula");
+      return;
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      toast.error("A senha deve conter pelo menos uma letra minúscula");
+      return;
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      toast.error("A senha deve conter pelo menos um número");
+      return;
+    }
+    if (!/[!@#$%&*()_+\-=\[\]{};':"|,.<>\/?]/.test(newPassword)) {
+      toast.error("A senha deve conter pelo menos um caractere especial");
       return;
     }
     setSaving(true);
@@ -58,8 +74,15 @@ export default function TrocarSenha() {
             Troca de Senha Obrigatória
           </h1>
           <p className="text-sm text-muted-foreground">
-            Por segurança, você precisa criar uma nova senha antes de continuar.
+           Por segurança, você precisa criar uma nova senha antes de continuar.
           </p>
+          <ul className="text-xs text-muted-foreground text-left list-disc list-inside space-y-0.5">
+            <li>Mínimo 8 caracteres</li>
+            <li>Pelo menos 1 letra maiúscula</li>
+            <li>Pelo menos 1 letra minúscula</li>
+            <li>Pelo menos 1 número</li>
+            <li>Pelo menos 1 caractere especial (!@#$%&*)</li>
+          </ul>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -67,7 +90,7 @@ export default function TrocarSenha() {
             <Label>Nova senha</Label>
             <Input
               type="password"
-              placeholder="Mínimo 6 caracteres"
+              placeholder="Mínimo 8 caracteres"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               required
