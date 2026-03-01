@@ -56,6 +56,20 @@ interface UserWithRoles extends Profile {
 
 const ALL_ROLES: AppRole[] = ["admin", "financeiro", "vendedor", "tecnico"];
 
+function gerarSenhaSegura(): string {
+  const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lower = "abcdefghijklmnopqrstuvwxyz";
+  const digits = "0123456789";
+  const special = "!@#$%&*";
+  const all = upper + lower + digits + special;
+  // Garantir pelo menos 1 de cada tipo
+  const pick = (s: string) => s[Math.floor(Math.random() * s.length)];
+  const mandatory = [pick(upper), pick(lower), pick(digits), pick(special)];
+  const rest = Array.from({ length: 4 }, () => pick(all));
+  // Embaralhar
+  return [...mandatory, ...rest].sort(() => Math.random() - 0.5).join("");
+}
+
 export default function Usuarios() {
   const { isAdmin } = useAuth();
   const [users, setUsers] = useState<UserWithRoles[]>([]);
@@ -191,8 +205,8 @@ export default function Usuarios() {
     e.preventDefault();
     setInviting(true);
 
-    // Gerar senha numérica de 8 dígitos
-    const senhaTemporaria = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join("");
+    // Gerar senha segura: 8 caracteres com maiúscula, minúscula, número e especial
+    const senhaTemporaria = gerarSenhaSegura();
 
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -383,8 +397,8 @@ export default function Usuarios() {
     try {
       toast.loading("Reenviando boas-vindas...", { id: "reenviar" });
 
-      // Gerar nova senha de 8 dígitos
-      const novaSenha = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join("");
+      // Gerar senha segura: 8 caracteres com maiúscula, minúscula, número e especial
+      const novaSenha = gerarSenhaSegura();
 
       // Atualizar senha via edge function (usa service role)
       const { error: pwError } = await supabase.functions.invoke("admin-update-password", {
