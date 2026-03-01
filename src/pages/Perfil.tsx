@@ -11,7 +11,7 @@ import { Loader2, User, Building2, Shield, Star, KeyRound, Camera } from "lucide
 import { UserAvatar } from "@/components/UserAvatar";
 
 export default function Perfil() {
-  const { profile, roles } = useAuth();
+  const { profile, roles, refreshProfile } = useAuth();
   const [name, setName] = useState(profile?.full_name || "");
   const [saving, setSaving] = useState(false);
   const [filiais, setFiliais] = useState<Filial[]>([]);
@@ -99,6 +99,7 @@ export default function Perfil() {
       if (updateError) throw updateError;
 
       setAvatarUrl(publicUrl);
+      await refreshProfile();
       toast.success("Foto atualizada com sucesso!");
     } catch (err: any) {
       toast.error(err.message || "Erro ao enviar foto");
