@@ -2667,13 +2667,13 @@ export default function PainelAtendimento() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
-                      {podeGerenciarApontamento && detailCard.pausado && (
+                      {podeGerenciarApontamento && (
                         <DropdownMenuItem
                           className="gap-2"
                           onClick={() => { setApontamentoCardId(detailCard.id); setApontamentoOpen(true); }}
                         >
                           <UserPlus className="h-4 w-4" />
-                          Gerenciar Apontamento
+                          Apontamento
                         </DropdownMenuItem>
                       )}
                       {podePausarProjeto && !detailCard.pausado && (
