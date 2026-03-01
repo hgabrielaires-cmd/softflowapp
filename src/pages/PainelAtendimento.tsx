@@ -409,7 +409,24 @@ export default function PainelAtendimento() {
     },
   });
 
-  // Fetch comentarios and tecnicos when card opens
+  // Fetch apontamentos per card (to show names on card)
+  const { data: cardApontamentosMap = {} } = useQuery({
+    queryKey: ["card_apontamentos", cards.map(c => c.id).join(",")],
+    enabled: cards.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("painel_apontamentos")
+        .select("card_id, usuario_id, profiles:usuario_id(full_name)");
+      const map: Record<string, string[]> = {};
+      (data || []).forEach((r: any) => {
+        if (!map[r.card_id]) map[r.card_id] = [];
+        const nome = r.profiles?.full_name?.split(" ")[0] || "Usuário";
+        if (!map[r.card_id].includes(nome)) map[r.card_id].push(nome);
+      });
+      return map;
+    },
+  });
+
   useEffect(() => {
     if (!detailCard) {
       setComentarios([]);
@@ -1068,10 +1085,47 @@ export default function PainelAtendimento() {
         .eq("id", detailCard.id);
       if (error) throw error;
 
+      // Execute apontamento if users selected
+      if (apontamentoUsuarios.length > 0) {
+        const clienteNome = detailCard.clientes?.nome_fantasia || "Cliente";
+        const inserts = apontamentoUsuarios.map(uid => ({
+          card_id: detailCard.id,
+          usuario_id: uid,
+          apontado_por: user.id,
+          motivo: pausarMotivo.trim(),
+        }));
+        await supabase.from("painel_apontamentos").insert(inserts as any);
+
+        for (const uid of apontamentoUsuarios) {
+          const prof = responsaveis.find((r: any) => r.id === uid);
+          await supabase.from("notificacoes").insert({
+            titulo: "📌 Apontamento - Projeto Pausado",
+            mensagem: `Você foi designado(a) para resolver uma pendência do projeto ${clienteNome}. Motivo: ${pausarMotivo.trim()}`,
+            tipo: "alerta",
+            criado_por: user.id,
+            destinatario_user_id: (prof as any)?.user_id || uid,
+          } as any);
+        }
+
+        const nomes = apontamentoUsuarios.map(uid => {
+          const p = responsaveis.find((r: any) => r.id === uid);
+          return (p as any)?.full_name?.split(" ")[0] || "Usuário";
+        });
+        await supabase.from("painel_comentarios").insert({
+          card_id: detailCard.id,
+          etapa_id: standbyEtapa.id,
+          criado_por: user.id,
+          texto: `📌 Apontamento: ${nomes.join(", ")} designado(s) para resolução.`,
+        });
+      }
+
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+      queryClient.invalidateQueries({ queryKey: ["card_apontamentos"] });
       toast.success("Projeto pausado e movido para Standby!");
       setPausarOpen(false);
       setPausarMotivo("");
+      setApontamentoUsuarios([]);
+      setBuscaApontamento("");
       setDetailCard(null);
     } catch (err: any) {
       toast.error("Erro ao pausar projeto: " + (err.message || ""));
@@ -1128,10 +1182,47 @@ export default function PainelAtendimento() {
         .eq("id", detailCard.id);
       if (error) throw error;
 
+      // Execute apontamento if users selected
+      if (apontamentoUsuarios.length > 0) {
+        const clienteNome = detailCard.clientes?.nome_fantasia || "Cliente";
+        const inserts = apontamentoUsuarios.map(uid => ({
+          card_id: detailCard.id,
+          usuario_id: uid,
+          apontado_por: user.id,
+          motivo: recusarMotivo.trim(),
+        }));
+        await supabase.from("painel_apontamentos").insert(inserts as any);
+
+        for (const uid of apontamentoUsuarios) {
+          const prof = responsaveis.find((r: any) => r.id === uid);
+          await supabase.from("notificacoes").insert({
+            titulo: "📌 Apontamento - Projeto Recusado",
+            mensagem: `Você foi designado(a) para resolver uma pendência do projeto ${clienteNome}. Motivo: ${recusarMotivo.trim()}`,
+            tipo: "alerta",
+            criado_por: user.id,
+            destinatario_user_id: (prof as any)?.user_id || uid,
+          } as any);
+        }
+
+        const nomes = apontamentoUsuarios.map(uid => {
+          const p = responsaveis.find((r: any) => r.id === uid);
+          return (p as any)?.full_name?.split(" ")[0] || "Usuário";
+        });
+        await supabase.from("painel_comentarios").insert({
+          card_id: detailCard.id,
+          etapa_id: standbyEtapa.id,
+          criado_por: user.id,
+          texto: `📌 Apontamento: ${nomes.join(", ")} designado(s) para resolução.`,
+        });
+      }
+
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+      queryClient.invalidateQueries({ queryKey: ["card_apontamentos"] });
       toast.success("Projeto recusado e movido para Standby!");
       setRecusarOpen(false);
       setRecusarMotivo("");
+      setApontamentoUsuarios([]);
+      setBuscaApontamento("");
       setDetailCard(null);
     } catch (err: any) {
       toast.error("Erro ao recusar projeto: " + (err.message || ""));
@@ -1612,8 +1703,20 @@ export default function PainelAtendimento() {
 
           {/* Footer */}
           <div className="flex items-center justify-between pt-1 border-t border-border/40">
-            <div className="flex items-center gap-1.5">
-              {card.responsavel_id ? (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {card.pausado ? (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 gap-1">
+                  <User className="h-2.5 w-2.5" />
+                  {(() => {
+                    // Show: who paused/refused, apontados
+                    const pausadoPorProf = responsaveis.find((r: any) => r.id === card.pausado_por || r.user_id === card.pausado_por);
+                    const pausadoPorNome = (pausadoPorProf as any)?.full_name?.split(" ")[0] || "";
+                    const apontados = cardApontamentosMap[card.id] || [];
+                    const parts = [pausadoPorNome, ...apontados].filter(Boolean);
+                    return parts.length > 0 ? parts.join(", ") : "—";
+                  })()}
+                </Badge>
+              ) : card.responsavel_id ? (
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0 gap-1">
                   <User className="h-2.5 w-2.5" />
                   {card.profiles?.full_name?.split(" ")[0] || "—"}
@@ -1855,23 +1958,9 @@ export default function PainelAtendimento() {
                 {/* Recusado banner */}
                 {(detailCard as any).status_projeto === "recusado" && (
                   <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-red-700">
-                        <Ban className="h-4 w-4" />
-                        <span className="text-sm font-semibold">Projeto Recusado</span>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5 text-xs"
-                        onClick={() => {
-                          setApontamentoCardId(detailCard.id);
-                          setApontamentoOpen(true);
-                        }}
-                      >
-                        <UserPlus className="h-3.5 w-3.5" />
-                        Apontamento
-                      </Button>
+                    <div className="flex items-center gap-2 text-red-700">
+                      <Ban className="h-4 w-4" />
+                      <span className="text-sm font-semibold">Projeto Recusado</span>
                     </div>
                     {detailCard.pausado_motivo && (
                       <p className="text-xs text-red-600">Motivo: {detailCard.pausado_motivo}</p>
@@ -1886,28 +1975,20 @@ export default function PainelAtendimento() {
                         })()}
                       </p>
                     )}
+                    {cardApontamentosMap[detailCard.id]?.length > 0 && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <UserPlus className="h-3 w-3" />
+                        Apontados: {cardApontamentosMap[detailCard.id].join(", ")}
+                      </p>
+                    )}
                   </div>
                 )}
                 {/* Pausado banner */}
                 {detailCard.pausado && (detailCard as any).status_projeto !== "recusado" && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-amber-700">
-                        <PauseCircle className="h-4 w-4" />
-                        <span className="text-sm font-semibold">Projeto Pausado</span>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5 text-xs"
-                        onClick={() => {
-                          setApontamentoCardId(detailCard.id);
-                          setApontamentoOpen(true);
-                        }}
-                      >
-                        <UserPlus className="h-3.5 w-3.5" />
-                        Apontamento
-                      </Button>
+                    <div className="flex items-center gap-2 text-amber-700">
+                      <PauseCircle className="h-4 w-4" />
+                      <span className="text-sm font-semibold">Projeto Pausado</span>
                     </div>
                     {detailCard.pausado_motivo && (
                       <p className="text-xs text-amber-600">Motivo: {detailCard.pausado_motivo}</p>
@@ -1920,6 +2001,12 @@ export default function PainelAtendimento() {
                           const autor = responsaveis.find((r: any) => r.id === detailCard.pausado_por);
                           return autor ? ` por ${(autor as any).full_name?.split(" ")[0]}` : "";
                         })()}
+                      </p>
+                    )}
+                    {cardApontamentosMap[detailCard.id]?.length > 0 && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <UserPlus className="h-3 w-3" />
+                        Apontados: {cardApontamentosMap[detailCard.id].join(", ")}
                       </p>
                     )}
                   </div>
@@ -3028,7 +3115,7 @@ export default function PainelAtendimento() {
       </Dialog>
 
       {/* Pausar Dialog */}
-      <Dialog open={pausarOpen} onOpenChange={(open) => { if (!open) { setPausarOpen(false); setPausarMotivo(""); } }}>
+      <Dialog open={pausarOpen} onOpenChange={(open) => { if (!open) { setPausarOpen(false); setPausarMotivo(""); setApontamentoUsuarios([]); setBuscaApontamento(""); } }}>
         <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-600">
@@ -3046,12 +3133,47 @@ export default function PainelAtendimento() {
                 rows={3}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              O projeto será movido para a etapa Standby. Use o botão "Apontamento" para designar responsáveis pela resolução.
-            </p>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <UserPlus className="h-3.5 w-3.5" />
+                Apontar responsável pela resolução
+              </Label>
+              <Input
+                placeholder="Pesquisar por nome..."
+                value={buscaApontamento}
+                onChange={(e) => setBuscaApontamento(e.target.value)}
+              />
+              <div className="max-h-36 overflow-y-auto space-y-1 border rounded-md p-2">
+                {responsaveis
+                  .filter((r: any) => r.full_name?.toLowerCase().includes(buscaApontamento.toLowerCase()))
+                  .map((r: any) => (
+                    <label
+                      key={r.id}
+                      className={cn(
+                        "flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-muted/50 transition-colors text-sm",
+                        apontamentoUsuarios.includes(r.id) && "bg-primary/10"
+                      )}
+                    >
+                      <Checkbox
+                        checked={apontamentoUsuarios.includes(r.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) setApontamentoUsuarios(prev => [...prev, r.id]);
+                          else setApontamentoUsuarios(prev => prev.filter(id => id !== r.id));
+                        }}
+                      />
+                      <span>{r.full_name}</span>
+                    </label>
+                  ))}
+              </div>
+              {apontamentoUsuarios.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {apontamentoUsuarios.length} usuário(s) selecionado(s) — receberão notificação.
+                </p>
+              )}
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setPausarOpen(false); setPausarMotivo(""); }}>
+            <Button variant="outline" onClick={() => { setPausarOpen(false); setPausarMotivo(""); setApontamentoUsuarios([]); setBuscaApontamento(""); }}>
               Cancelar
             </Button>
             <Button
@@ -3066,7 +3188,7 @@ export default function PainelAtendimento() {
       </Dialog>
 
       {/* Recusar Dialog */}
-      <Dialog open={recusarOpen} onOpenChange={(open) => { if (!open) { setRecusarOpen(false); setRecusarMotivo(""); } }}>
+      <Dialog open={recusarOpen} onOpenChange={(open) => { if (!open) { setRecusarOpen(false); setRecusarMotivo(""); setApontamentoUsuarios([]); setBuscaApontamento(""); } }}>
         <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
@@ -3084,12 +3206,47 @@ export default function PainelAtendimento() {
                 rows={3}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              O projeto será movido para a etapa Standby como "Recusado". Utilize o botão "Apontamento" para designar responsáveis pela resolução.
-            </p>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <UserPlus className="h-3.5 w-3.5" />
+                Apontar responsável pela resolução
+              </Label>
+              <Input
+                placeholder="Pesquisar por nome..."
+                value={buscaApontamento}
+                onChange={(e) => setBuscaApontamento(e.target.value)}
+              />
+              <div className="max-h-36 overflow-y-auto space-y-1 border rounded-md p-2">
+                {responsaveis
+                  .filter((r: any) => r.full_name?.toLowerCase().includes(buscaApontamento.toLowerCase()))
+                  .map((r: any) => (
+                    <label
+                      key={r.id}
+                      className={cn(
+                        "flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-muted/50 transition-colors text-sm",
+                        apontamentoUsuarios.includes(r.id) && "bg-primary/10"
+                      )}
+                    >
+                      <Checkbox
+                        checked={apontamentoUsuarios.includes(r.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) setApontamentoUsuarios(prev => [...prev, r.id]);
+                          else setApontamentoUsuarios(prev => prev.filter(id => id !== r.id));
+                        }}
+                      />
+                      <span>{r.full_name}</span>
+                    </label>
+                  ))}
+              </div>
+              {apontamentoUsuarios.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {apontamentoUsuarios.length} usuário(s) selecionado(s) — receberão notificação.
+                </p>
+              )}
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setRecusarOpen(false); setRecusarMotivo(""); }}>
+            <Button variant="outline" onClick={() => { setRecusarOpen(false); setRecusarMotivo(""); setApontamentoUsuarios([]); setBuscaApontamento(""); }}>
               Cancelar
             </Button>
             <Button
