@@ -61,7 +61,11 @@ export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disa
 
   async function handleSelectDates(dates: Date[] | undefined) {
     if (!dates) return;
-    setSelectedDates(dates);
+    // Filter out past dates (before today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const filtered = dates.filter(d => d >= today);
+    setSelectedDates(filtered);
   }
 
   async function confirmarDatas() {
@@ -185,6 +189,7 @@ export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disa
               selected={selectedDates}
               onSelect={handleSelectDates}
               locale={ptBR}
+              disabled={{ before: new Date() }}
               className={cn("pointer-events-auto")}
             />
             <div className="flex justify-end gap-2">
