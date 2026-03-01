@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -279,6 +279,7 @@ function Sidebar({ collapsed, profile, roles, initials, onNavigate, onSignOut, o
           <DropdownMenuTrigger asChild>
             <button className={cn("flex items-center gap-3 rounded-lg p-2 w-full hover:bg-sidebar-accent transition-colors", collapsed && "w-auto justify-center")}>
               <Avatar className="h-8 w-8 flex-shrink-0">
+                {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name} />}
                 <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-xs font-bold">{initials}</AvatarFallback>
               </Avatar>
               {!collapsed && (
@@ -641,6 +642,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 rounded-full hover:bg-accent transition-colors p-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <Avatar className="h-8 w-8">
+                  {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name} />}
                   <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">{initials}</AvatarFallback>
                 </Avatar>
               </button>

@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { AgendamentoChecklist } from "@/components/AgendamentoChecklist";
 import { PedidoComentarios } from "@/components/PedidoComentarios";
 import { MentionInput, renderMentionText } from "@/components/MentionInput";
+import { UserAvatar } from "@/components/UserAvatar";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -2664,7 +2665,10 @@ export default function PainelAtendimento() {
                           return (
                             <div key={com.id} className={cn("rounded text-xs", isReply ? "bg-muted/30 p-1.5 ml-4 border-l-2 border-primary/20" : "bg-muted/50 p-2")}>
                               <div className="flex items-center justify-between mb-0.5">
-                                <span className="font-medium text-foreground">{(autor as any).full_name?.split(" ")[0]}</span>
+                                <div className="flex items-center gap-1.5">
+                                  <UserAvatar avatarUrl={(autor as any).avatar_url} fullName={(autor as any).full_name} size="xs" />
+                                  <span className="font-medium text-foreground">{(autor as any).full_name?.split(" ")[0]}</span>
+                                </div>
                                 <span className="text-[10px] text-muted-foreground">
                                   {new Date(com.created_at).toLocaleDateString("pt-BR")} {new Date(com.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                                 </span>
@@ -2709,12 +2713,8 @@ export default function PainelAtendimento() {
                                       >
                                         <div className="flex -space-x-1.5">
                                           {visibleUsers.map((u: any, i: number) => (
-                                            <div key={i} className="h-4 w-4 rounded-full border border-background overflow-hidden bg-muted flex items-center justify-center">
-                                              {u.avatar ? (
-                                                <img src={u.avatar} alt={u.name} className="h-full w-full object-cover" />
-                                              ) : (
-                                                <span className="text-[6px] font-medium text-muted-foreground">{u.name?.charAt(0)?.toUpperCase()}</span>
-                                              )}
+                                            <div key={i} className="h-4 w-4 rounded-full border border-background overflow-hidden">
+                                              <UserAvatar avatarUrl={u.avatar} fullName={u.name} size="xs" />
                                             </div>
                                           ))}
                                         </div>
@@ -2725,13 +2725,7 @@ export default function PainelAtendimento() {
                                           <p className="text-[10px] font-semibold text-foreground mb-1">Curtido por</p>
                                           {likedUsers.map((u: any, i: number) => (
                                             <div key={i} className="flex items-center gap-1.5">
-                                              <div className="h-5 w-5 rounded-full overflow-hidden bg-muted flex items-center justify-center shrink-0">
-                                                {u.avatar ? (
-                                                  <img src={u.avatar} alt={u.name} className="h-full w-full object-cover" />
-                                                ) : (
-                                                  <span className="text-[7px] font-medium text-muted-foreground">{u.name?.charAt(0)?.toUpperCase()}</span>
-                                                )}
-                                              </div>
+                                              <UserAvatar avatarUrl={u.avatar} fullName={u.name} size="sm" />
                                               <span className="text-[10px] text-foreground truncate">{u.name}</span>
                                             </div>
                                           ))}
