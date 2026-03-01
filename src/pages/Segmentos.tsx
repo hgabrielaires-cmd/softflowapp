@@ -35,7 +35,7 @@ export default function Segmentos() {
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
   const [novoSegmento, setNovoSegmento] = useState("");
-  const [filialSelecionada, setFilialSelecionada] = useState<string>("");
+  const [filialSelecionada, setFilialSelecionada] = useState<string>("todas");
   const [filtroFilial, setFiltroFilial] = useState<string>("todas");
   const [saving, setSaving] = useState(false);
   const [busca, setBusca] = useState("");
@@ -46,7 +46,6 @@ export default function Segmentos() {
     const { data } = await supabase.from("filiais").select("id, nome").eq("ativa", true).order("nome");
     if (data) {
       setFiliais(data);
-      if (data.length > 0 && !filialSelecionada) setFilialSelecionada(data[0].id);
     }
   }
 
@@ -67,9 +66,18 @@ export default function Segmentos() {
     if (!novoSegmento.trim()) return;
     if (!filialSelecionada) { toast.error("Selecione uma filial"); return; }
     setSaving(true);
-    const { error } = await supabase.from("segmentos").insert({ nome: novoSegmento.trim(), filial_id: filialSelecionada });
-    if (error) toast.error("Erro ao adicionar segmento");
-    else { toast.success("Segmento adicionado"); setNovoSegmento(""); loadSegmentos(); }
+
+    if (filialSelecionada === "todas") {
+      const inserts = filiais.map(f => ({ nome: novoSegmento.trim(), filial_id: f.id }));
+      const { error } = await supabase.from("segmentos").insert(inserts);
+      if (error) toast.error("Erro ao adicionar segmento");
+      else { toast.success(`Segmento adicionado em ${filiais.length} filiais`); setNovoSegmento(""); loadSegmentos(); }
+    } else {
+      const { error } = await supabase.from("segmentos").insert({ nome: novoSegmento.trim(), filial_id: filialSelecionada });
+      if (error) toast.error("Erro ao adicionar segmento");
+      else { toast.success("Segmento adicionado"); setNovoSegmento(""); loadSegmentos(); }
+    }
+
     setSaving(false);
   }
 
@@ -111,6 +119,7 @@ export default function Segmentos() {
                   <SelectValue placeholder="Selecione a filial" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="todas">Todas as filiais</SelectItem>
                   {filiais.map(f => (
                     <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
                   ))}
