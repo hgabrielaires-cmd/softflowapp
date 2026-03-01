@@ -34,8 +34,9 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Building2, Phone, Mail, FileText, ArrowUpCircle, ArrowDownCircle, Package, Loader2, MapPin, AlertCircle, Users, Star, Trash2 } from "lucide-react";
+import { Plus, Search, Pencil, Building2, Phone, Mail, FileText, ArrowUpCircle, ArrowDownCircle, Package, Loader2, MapPin, AlertCircle, Users, Star, Trash2, Upload } from "lucide-react";
 import { ClientePlanViewer } from "@/components/ClientePlanViewer";
+import { ImportClientesDialog } from "@/components/ImportClientesDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -135,6 +136,28 @@ export default function Clientes() {
   const [showContatoInlineForm, setShowContatoInlineForm] = useState(false);
   const [editingInlineIdx, setEditingInlineIdx] = useState<number | null>(null);
   const [inlineContatoForm, setInlineContatoForm] = useState(emptyContatoForm);
+
+  // Importação
+  const [importOpen, setImportOpen] = useState(false);
+  const [podeImportar, setPodeImportar] = useState(false);
+
+  useEffect(() => {
+    if (!profile?.user_id) return;
+    (async () => {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", profile.user_id);
+      const userRoles = (roles || []).map((r: any) => r.role);
+      const { data: perms } = await supabase
+        .from("role_permissions")
+        .select("permissao, ativo")
+        .in("role", userRoles)
+        .eq("permissao", "acao.importar_clientes")
+        .eq("ativo", true);
+      setPodeImportar((perms || []).length > 0);
+    })();
+  }, [profile?.user_id]);
 
   async function handleCepBlur() {
     const cep = form.cep.replace(/\D/g, "");
@@ -560,11 +583,18 @@ export default function Clientes() {
             <h1 className="text-2xl font-bold text-foreground">Clientes</h1>
             <p className="text-muted-foreground text-sm mt-1">Gestão de clientes cadastrados</p>
           </div>
-          {canEdit && (
-            <Button onClick={openCreate} className="gap-2">
-              <Plus className="h-4 w-4" /> Novo cliente
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {podeImportar && (
+              <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-2">
+                <Upload className="h-4 w-4" /> Importação
+              </Button>
+            )}
+            {canEdit && (
+              <Button onClick={openCreate} className="gap-2">
+                <Plus className="h-4 w-4" /> Novo cliente
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Search */}
@@ -1237,6 +1267,13 @@ export default function Clientes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ImportClientesDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        filialId={filialPadraoId || profile?.filial_id || ""}
+        onSuccess={fetchData}
+      />
     </AppLayout>
   );
 }
