@@ -180,6 +180,42 @@ export default function Contratos() {
   const [linkedMessageTemplate, setLinkedMessageTemplate] = useState<{ conteudo: string } | null>(null);
   const [syncingStatuses, setSyncingStatuses] = useState(false);
 
+  // ── Cadastro Retroativo ──
+  const [openRetroativo, setOpenRetroativo] = useState(false);
+  const [retroClientes, setRetroClientes] = useState<{ id: string; nome_fantasia: string }[]>([]);
+  const [retroPlanos, setRetroPlanos] = useState<{ id: string; nome: string }[]>([]);
+  const [retroForm, setRetroForm] = useState({ cliente_id: "", plano_id: "", tipo: "Base", status: "Ativo" });
+  const [retroSaving, setRetroSaving] = useState(false);
+
+  async function openRetroativoDialog() {
+    setRetroForm({ cliente_id: "", plano_id: "", tipo: "Base", status: "Ativo" });
+    setOpenRetroativo(true);
+    const [{ data: cData }, { data: pData }] = await Promise.all([
+      supabase.from("clientes").select("id, nome_fantasia").eq("ativo", true).order("nome_fantasia"),
+      supabase.from("planos").select("id, nome").eq("ativo", true).order("nome"),
+    ]);
+    setRetroClientes((cData || []) as { id: string; nome_fantasia: string }[]);
+    setRetroPlanos((pData || []) as { id: string; nome: string }[]);
+  }
+
+  async function handleSalvarRetroativo() {
+    if (!retroForm.cliente_id) { toast.error("Selecione um cliente"); return; }
+    setRetroSaving(true);
+    const insertData: any = {
+      cliente_id: retroForm.cliente_id,
+      tipo: retroForm.tipo,
+      status: retroForm.status,
+      status_geracao: "Manual",
+    };
+    if (retroForm.plano_id) insertData.plano_id = retroForm.plano_id;
+    const { error } = await supabase.from("contratos").insert(insertData);
+    setRetroSaving(false);
+    if (error) { toast.error("Erro ao cadastrar contrato: " + error.message); return; }
+    toast.success("Contrato retroativo cadastrado com sucesso!");
+    setOpenRetroativo(false);
+    loadData();
+  }
+
   // ── ZapSign + WhatsApp animated popup state ──
   const [openZapsignPopup, setOpenZapsignPopup] = useState(false);
   const [zapsignPopupStep, setZapsignPopupStep] = useState<"gerando" | "zapsign" | "whatsapp" | "done" | "erro">("zapsign");
@@ -999,7 +1035,13 @@ Estou à disposição.`;
             <h1 className="text-2xl font-bold text-foreground">Contratos</h1>
             <p className="text-sm text-muted-foreground">Gestão e visualização de contratos ativos</p>
           </div>
-          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
+            {canManage && (
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={openRetroativoDialog}>
+                <FilePen className="h-4 w-4" />
+                Cadastrar Retroativo
+              </Button>
+            )}
             <Button
               variant="outline"
               size="icon"
@@ -1755,6 +1797,81 @@ Estou à disposição.`;
                 </Button>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Dialog Cadastro Retroativo */}
+      <Dialog open={openRetroativo} onOpenChange={setOpenRetroativo}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cadastrar Contrato Retroativo</DialogTitle>
+            <DialogDescription>
+              Registre um contrato existente sem gerar documento, ZapSign ou WhatsApp.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Cliente *</label>
+              <Select value={retroForm.cliente_id} onValueChange={(v) => setRetroForm(f => ({ ...f, cliente_id: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {retroClientes.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Plano</label>
+              <Select value={retroForm.plano_id || "_none"} onValueChange={(v) => setRetroForm(f => ({ ...f, plano_id: v === "_none" ? "" : v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o plano (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">Nenhum</SelectItem>
+                  {retroPlanos.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tipo</label>
+                <Select value={retroForm.tipo} onValueChange={(v) => setRetroForm(f => ({ ...f, tipo: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Base">Base</SelectItem>
+                    <SelectItem value="Aditivo">Aditivo</SelectItem>
+                    <SelectItem value="OA">OA</SelectItem>
+                    <SelectItem value="Cancelamento">Cancelamento</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <Select value={retroForm.status} onValueChange={(v) => setRetroForm(f => ({ ...f, status: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Ativo">Ativo</SelectItem>
+                    <SelectItem value="Encerrado">Encerrado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setOpenRetroativo(false)}>Cancelar</Button>
+              <Button onClick={handleSalvarRetroativo} disabled={retroSaving}>
+                {retroSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                Cadastrar
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
