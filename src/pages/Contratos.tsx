@@ -220,6 +220,9 @@ export default function Contratos() {
   const [retroForm, setRetroForm] = useState({
     cliente_id: "", plano_id: "", tipo: "Base", status: "Ativo",
     observacoes: "", segmento_id: "",
+    data_lancamento: "",
+    vendedor_id: "",
+    filial_id: "",
     // Descontos
     desconto_implantacao_tipo: "R$" as "R$" | "%",
     desconto_implantacao_valor: "0",
@@ -233,6 +236,7 @@ export default function Contratos() {
     pagamento_mensalidade_forma: "",
     pagamento_mensalidade_observacao: "",
   });
+  const [retroVendedores, setRetroVendedores] = useState<{ id: string; user_id: string; full_name: string; filial_id: string | null }[]>([]);
   const [retroSegmentos, setRetroSegmentos] = useState<{ id: string; nome: string }[]>([]);
   const [retroModulosSelecionados, setRetroModulosSelecionados] = useState<{ modulo_id: string; nome: string; quantidade: number; valor_implantacao_modulo: number; valor_mensalidade_modulo: number }[]>([]);
   const [retroSaving, setRetroSaving] = useState(false);
@@ -276,32 +280,41 @@ export default function Contratos() {
   const retroValorTotal = retroValorImpFinal + retroValorMensFinal;
 
   async function openRetroativoDialog() {
-    setRetroForm({ cliente_id: "", plano_id: "", tipo: "Base", status: "Ativo", observacoes: "", segmento_id: "", desconto_implantacao_tipo: "R$", desconto_implantacao_valor: "0", desconto_mensalidade_tipo: "R$", desconto_mensalidade_valor: "0", motivo_desconto: "", pagamento_implantacao_forma: "", pagamento_implantacao_parcelas: "", pagamento_implantacao_observacao: "", pagamento_mensalidade_forma: "", pagamento_mensalidade_observacao: "" });
+    setRetroForm({ cliente_id: "", plano_id: "", tipo: "Base", status: "Ativo", observacoes: "", segmento_id: "", data_lancamento: "", vendedor_id: "", filial_id: "", desconto_implantacao_tipo: "R$", desconto_implantacao_valor: "0", desconto_mensalidade_tipo: "R$", desconto_mensalidade_valor: "0", motivo_desconto: "", pagamento_implantacao_forma: "", pagamento_implantacao_parcelas: "", pagamento_implantacao_observacao: "", pagamento_mensalidade_forma: "", pagamento_mensalidade_observacao: "" });
     setRetroModulosSelecionados([]);
     setRetroDescontoAtivo(false);
     setRetroClienteSearch("");
     setOpenRetroativo(true);
-    const [{ data: cData }, { data: pData }, { data: mData }] = await Promise.all([
+    const [{ data: cData }, { data: pData }, { data: mData }, { data: vData }] = await Promise.all([
       supabase.from("clientes").select("id, nome_fantasia, filial_id, cnpj_cpf, razao_social").eq("ativo", true).order("nome_fantasia"),
       supabase.from("planos").select("id, nome, valor_implantacao_padrao, valor_mensalidade_padrao").eq("ativo", true).order("nome"),
       supabase.from("modulos").select("id, nome, valor_implantacao_modulo, valor_mensalidade_modulo").eq("ativo", true).order("nome"),
+      supabase.from("profiles").select("id, user_id, full_name, filial_id").eq("active", true).order("full_name"),
     ]);
     setRetroClientes((cData || []) as any[]);
     setRetroPlanos((pData || []) as any[]);
     setRetroModulos((mData || []) as any[]);
+    setRetroVendedores((vData || []) as any[]);
   }
 
-  // Load segmentos when client changes
+  // Auto-fill filial when client changes
+  useEffect(() => {
+    if (!retroForm.cliente_id) return;
+    const clienteSel = retroClientes.find(c => c.id === retroForm.cliente_id);
+    if (clienteSel?.filial_id) {
+      setRetroForm(f => ({ ...f, filial_id: f.filial_id || clienteSel.filial_id || "" }));
+    }
+  }, [retroForm.cliente_id, retroClientes]);
+
+  // Load segmentos when filial changes
   useEffect(() => {
     async function loadRetroSegmentos() {
-      if (!retroForm.cliente_id) { setRetroSegmentos([]); return; }
-      const clienteSel = retroClientes.find(c => c.id === retroForm.cliente_id);
-      if (!clienteSel?.filial_id) { setRetroSegmentos([]); return; }
-      const { data } = await supabase.from("segmentos").select("id, nome").eq("filial_id", clienteSel.filial_id).eq("ativo", true).order("nome");
+      if (!retroForm.filial_id) { setRetroSegmentos([]); return; }
+      const { data } = await supabase.from("segmentos").select("id, nome").eq("filial_id", retroForm.filial_id).eq("ativo", true).order("nome");
       setRetroSegmentos((data || []) as any);
     }
     loadRetroSegmentos();
-  }, [retroForm.cliente_id, retroClientes]);
+  }, [retroForm.filial_id]);
 
   function handleRetroAddModulo(moduloId: string) {
     const mod = retroModulos.find(m => m.id === moduloId);
@@ -396,17 +409,19 @@ export default function Contratos() {
   async function handleSalvarRetroativo() {
     if (!retroForm.cliente_id) { toast.error("Selecione um cliente"); return; }
     if (!retroForm.segmento_id) { toast.error("Selecione um segmento"); return; }
+    if (!retroForm.data_lancamento) { toast.error("Informe a data de lançamento"); return; }
+    if (!retroForm.vendedor_id) { toast.error("Selecione o vendedor"); return; }
+    if (!retroForm.filial_id) { toast.error("Selecione a filial"); return; }
     setRetroSaving(true);
 
-    const clienteSel = retroClientes.find(c => c.id === retroForm.cliente_id);
-    const filialId = clienteSel?.filial_id;
-    if (!filialId) { toast.error("Cliente não possui filial vinculada"); setRetroSaving(false); return; }
+    const filialId = retroForm.filial_id;
+    const dataLancamento = new Date(retroForm.data_lancamento + "T12:00:00").toISOString();
 
     const pedidoInsert: any = {
       cliente_id: retroForm.cliente_id,
       plano_id: retroForm.plano_id || null,
       filial_id: filialId,
-      vendedor_id: profile?.user_id || profile?.id,
+      vendedor_id: retroForm.vendedor_id,
       status_pedido: "Contrato Retroativo",
       financeiro_status: "Aprovado",
       tipo_pedido: retroForm.tipo === "Base" ? "Novo" : retroForm.tipo === "Aditivo" ? "Módulo Adicional" : retroForm.tipo,
@@ -433,6 +448,7 @@ export default function Contratos() {
       pagamento_mensalidade_forma: retroForm.pagamento_mensalidade_forma || null,
       pagamento_mensalidade_observacao: retroForm.pagamento_mensalidade_observacao.trim() || null,
       segmento_id: retroForm.segmento_id || null,
+      created_at: dataLancamento,
     };
 
     const { data: pedidoData, error: pedidoError } = await supabase.from("pedidos").insert(pedidoInsert).select("id").single();
@@ -445,6 +461,7 @@ export default function Contratos() {
       status_geracao: "Manual",
       pedido_id: pedidoData.id,
       segmento_id: retroForm.segmento_id || null,
+      created_at: dataLancamento,
     };
     if (retroForm.plano_id) insertData.plano_id = retroForm.plano_id;
 
@@ -2119,6 +2136,38 @@ Estou à disposição.`;
                   {retroClientes.find(c => c.id === retroForm.cliente_id)?.nome_fantasia} selecionado
                 </p>
               )}
+            </div>
+
+            {/* ── Data de Lançamento + Vendedor + Filial ── */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label>Data de Lançamento *</Label>
+                <Input type="date" value={retroForm.data_lancamento} onChange={(e) => setRetroForm(f => ({ ...f, data_lancamento: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Vendedor *</Label>
+                <Select value={retroForm.vendedor_id || "_none"} onValueChange={(v) => setRetroForm(f => ({ ...f, vendedor_id: v === "_none" ? "" : v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none" disabled>Selecione...</SelectItem>
+                    {retroVendedores.map(v => (
+                      <SelectItem key={v.user_id} value={v.user_id}>{v.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Filial *</Label>
+                <Select value={retroForm.filial_id || "_none"} onValueChange={(v) => setRetroForm(f => ({ ...f, filial_id: v === "_none" ? "" : v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none" disabled>Selecione...</SelectItem>
+                    {filiais.filter(f => f.ativa).map(f => (
+                      <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* ── Plano ── */}
