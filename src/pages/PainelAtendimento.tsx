@@ -964,24 +964,13 @@ export default function PainelAtendimento() {
           }
         }
 
-        // Get comments for this stage (by etapa_id or by date range)
+        // Get comments for this stage by date range (avoids duplicates across pause/resume cycles)
         let stageComments: any[] = [];
-        const { data: comsByEtapa } = await supabase
-          .from("painel_comentarios")
-          .select("id, texto, criado_por, created_at")
-          .eq("card_id", card.id)
-          .eq("etapa_id", h.etapa_id)
-          .order("created_at", { ascending: true });
-
-        if (comsByEtapa && comsByEtapa.length > 0) {
-          stageComments = comsByEtapa;
-        } else if (h.entrada_em && h.saida_em) {
-          // Fallback: match by date range for old comments without etapa_id
+        if (h.entrada_em && h.saida_em) {
           const { data: comsByDate } = await supabase
             .from("painel_comentarios")
             .select("id, texto, criado_por, created_at")
             .eq("card_id", card.id)
-            .is("etapa_id", null)
             .gte("created_at", h.entrada_em)
             .lte("created_at", h.saida_em)
             .order("created_at", { ascending: true });
@@ -3178,7 +3167,7 @@ export default function PainelAtendimento() {
                           </p>
                           <div className="space-y-1.5">
                             {stage.comentarios.map((com: any) => {
-                              const autor = responsaveis.find((r: any) => r.id === com.criado_por) || { full_name: "Usuário" };
+                              const autor = responsaveis.find((r: any) => r.user_id === com.criado_por || r.id === com.criado_por) || { full_name: "Usuário" };
                               return (
                                 <div key={com.id} className="bg-muted/50 rounded p-2 text-xs">
                                   <div className="flex items-center justify-between mb-0.5">
