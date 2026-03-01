@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
@@ -112,6 +112,7 @@ export default function PainelAtendimento() {
   const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais } = useUserFiliais();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"kanban" | "lista">("kanban");
   const [search, setSearch] = useState("");
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
@@ -119,6 +120,7 @@ export default function PainelAtendimento() {
   const [filtroResponsavel, setFiltroResponsavel] = useState<string>("todos");
   const [filtroEtapa, setFiltroEtapa] = useState<string>("todos");
   const [detailCard, setDetailCard] = useState<PainelCard | null>(null);
+  const [openedFrom, setOpenedFrom] = useState<string | null>(null);
   const [detalhesOpen, setDetalhesOpen] = useState(false);
   const [detalhesData, setDetalhesData] = useState<any>(null);
   const [detalhesLoading, setDetalhesLoading] = useState(false);
@@ -450,12 +452,17 @@ export default function PainelAtendimento() {
 
   // Auto-open card from query param
   useEffect(() => {
-    const cardParam = searchParams.get("card");
+   const cardParam = searchParams.get("card");
+    const fromParam = searchParams.get("from");
     if (cardParam && cards.length > 0 && !detailCard) {
       const found = cards.find((c: any) => c.id === cardParam);
       if (found) {
         setDetailCard(found);
+        if (fromParam) {
+          setOpenedFrom(fromParam);
+        }
         searchParams.delete("card");
+        searchParams.delete("from");
         setSearchParams(searchParams, { replace: true });
       }
     }
@@ -2009,7 +2016,7 @@ export default function PainelAtendimento() {
       </div>
 
       {/* Detail Dialog */}
-      <Dialog open={!!detailCard} onOpenChange={(open) => { if (!open) { setDetailCard(null); setConfigEditMode(false); } }}>
+      <Dialog open={!!detailCard} onOpenChange={(open) => { if (!open) { setDetailCard(null); setConfigEditMode(false); if (openedFrom === "agenda") { navigate("/agenda"); } setOpenedFrom(null); } }}>
         <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
