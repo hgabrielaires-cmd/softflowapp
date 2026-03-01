@@ -3409,6 +3409,10 @@ export default function PainelAtendimento() {
                   <p className="text-[10px] text-muted-foreground">
                     {new Date(detailCard.pausado_em).toLocaleDateString("pt-BR")} às{" "}
                     {new Date(detailCard.pausado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                    {detailCard.pausado_por && (() => {
+                      const autor = responsaveis.find((r: any) => r.id === detailCard.pausado_por);
+                      return autor ? ` por ${(autor as any).full_name?.split(" ")[0]}` : "";
+                    })()}
                   </p>
                 )}
               </div>
