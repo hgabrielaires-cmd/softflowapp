@@ -1080,6 +1080,48 @@ export type Database = {
           },
         ]
       }
+      painel_apontamentos: {
+        Row: {
+          apontado_por: string
+          card_id: string
+          created_at: string
+          id: string
+          motivo: string | null
+          usuario_id: string
+        }
+        Insert: {
+          apontado_por: string
+          card_id: string
+          created_at?: string
+          id?: string
+          motivo?: string | null
+          usuario_id: string
+        }
+        Update: {
+          apontado_por?: string
+          card_id?: string
+          created_at?: string
+          id?: string
+          motivo?: string | null
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "painel_apontamentos_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "painel_atendimento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_apontamentos_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       painel_atendimento: {
         Row: {
           aponta_tecnico_agenda: boolean
@@ -1088,6 +1130,7 @@ export type Database = {
           contrato_id: string
           created_at: string
           etapa_id: string
+          etapa_origem_id: string | null
           filial_id: string
           id: string
           iniciado_em: string | null
@@ -1102,6 +1145,7 @@ export type Database = {
           plano_id: string | null
           responsavel_id: string | null
           sla_horas: number
+          status_projeto: string
           tipo_atendimento_local: string | null
           tipo_operacao: string
           updated_at: string
@@ -1113,6 +1157,7 @@ export type Database = {
           contrato_id: string
           created_at?: string
           etapa_id: string
+          etapa_origem_id?: string | null
           filial_id: string
           id?: string
           iniciado_em?: string | null
@@ -1127,6 +1172,7 @@ export type Database = {
           plano_id?: string | null
           responsavel_id?: string | null
           sla_horas?: number
+          status_projeto?: string
           tipo_atendimento_local?: string | null
           tipo_operacao: string
           updated_at?: string
@@ -1138,6 +1184,7 @@ export type Database = {
           contrato_id?: string
           created_at?: string
           etapa_id?: string
+          etapa_origem_id?: string | null
           filial_id?: string
           id?: string
           iniciado_em?: string | null
@@ -1152,6 +1199,7 @@ export type Database = {
           plano_id?: string | null
           responsavel_id?: string | null
           sla_horas?: number
+          status_projeto?: string
           tipo_atendimento_local?: string | null
           tipo_operacao?: string
           updated_at?: string

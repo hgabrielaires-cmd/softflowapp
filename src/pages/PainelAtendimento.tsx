@@ -24,7 +24,7 @@ import {
   LayoutGrid, List, Search, Clock, Building2, User, Filter,
   GripVertical, ChevronRight, FileText, Package, ArrowUpCircle,
   Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw, ArrowRight, CheckSquare,
-  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare, Info, History, Pencil, MoreHorizontal, XCircle, PauseCircle
+  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare, Info, History, Pencil, MoreHorizontal, XCircle, PauseCircle, UserPlus, Users, Ban
 } from "lucide-react";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { ChecklistItem } from "@/lib/supabase-types";
@@ -67,6 +67,8 @@ interface PainelCard {
   pausado_em: string | null;
   pausado_por: string | null;
   pausado_motivo: string | null;
+  status_projeto: string;
+  etapa_origem_id: string | null;
   created_at: string;
   updated_at: string;
   // Joins
@@ -135,6 +137,14 @@ export default function PainelAtendimento() {
   const [pausarOpen, setPausarOpen] = useState(false);
   const [pausarMotivo, setPausarMotivo] = useState("");
   const [pausando, setPausando] = useState(false);
+  const [recusarOpen, setRecusarOpen] = useState(false);
+  const [recusarMotivo, setRecusarMotivo] = useState("");
+  const [recusando, setRecusando] = useState(false);
+  const [apontamentoOpen, setApontamentoOpen] = useState(false);
+  const [apontamentoCardId, setApontamentoCardId] = useState<string | null>(null);
+  const [apontamentoUsuarios, setApontamentoUsuarios] = useState<string[]>([]);
+  const [apontando, setApontando] = useState(false);
+  const [buscaApontamento, setBuscaApontamento] = useState("");
   // Auto-refresh atrasado status every 60s
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60_000);
@@ -211,7 +221,7 @@ export default function PainelAtendimento() {
   const { data: responsaveis = [] } = useQuery({
     queryKey: ["profiles_painel"],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, full_name").eq("active", true).order("full_name");
+      const { data } = await supabase.from("profiles").select("id, full_name, user_id").eq("active", true).order("full_name");
       return data || [];
     },
   });
@@ -1008,22 +1018,20 @@ export default function PainelAtendimento() {
   }
 
   // ─── Pausar Projeto ─────────────────────────────────────────────────────
-  async function handlePausarProjeto() {
+   async function handlePausarProjeto() {
     if (!detailCard || !pausarMotivo.trim()) return;
     setPausando(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
 
-      // Get filial params for congelar behavior
-      const { data: params } = await supabase
-        .from("filial_parametros")
-        .select("congelar_acao, congelar_etapa_id")
-        .eq("filial_id", detailCard.filial_id)
-        .maybeSingle();
-
-      const congelarAcao = params?.congelar_acao || "manter";
-      const congelarEtapaId = params?.congelar_etapa_id;
+      // Find Standby etapa
+      const standbyEtapa = etapas.find(e => e.nome.toLowerCase() === "standby");
+      if (!standbyEtapa) {
+        toast.error("Etapa 'Standby' não encontrada. Crie-a primeiro no painel de etapas.");
+        setPausando(false);
+        return;
+      }
 
       // Register history exit from current stage
       const sla = getSlaEtapaForCard(detailCard);
@@ -1037,18 +1045,10 @@ export default function PainelAtendimento() {
         texto: `⏸️ Projeto pausado: ${pausarMotivo.trim()}`,
       });
 
-      let novaEtapaId = detailCard.etapa_id;
+      // Register entry into Standby
+      await registrarEntradaEtapa(detailCard.id, standbyEtapa.id, standbyEtapa.nome);
 
-      // If configured to move to another stage
-      if (congelarAcao === "mover" && congelarEtapaId) {
-        novaEtapaId = congelarEtapaId;
-        const etapaDestino = etapas.find(e => e.id === congelarEtapaId);
-        if (etapaDestino) {
-          await registrarEntradaEtapa(detailCard.id, congelarEtapaId, etapaDestino.nome);
-        }
-      }
-
-      // Update card: mark as paused, reset iniciado_em
+      // Update card: mark as paused, move to Standby
       const { error } = await supabase
         .from("painel_atendimento")
         .update({
@@ -1058,13 +1058,15 @@ export default function PainelAtendimento() {
           pausado_motivo: pausarMotivo.trim(),
           iniciado_em: null,
           iniciado_por: null,
-          etapa_id: novaEtapaId,
-        })
+          etapa_id: standbyEtapa.id,
+          status_projeto: "pausado",
+          etapa_origem_id: detailCard.etapa_id,
+        } as any)
         .eq("id", detailCard.id);
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
-      toast.success("Projeto pausado com sucesso!");
+      toast.success("Projeto pausado e movido para Standby!");
       setPausarOpen(false);
       setPausarMotivo("");
       setDetailCard(null);
@@ -1072,6 +1074,125 @@ export default function PainelAtendimento() {
       toast.error("Erro ao pausar projeto: " + (err.message || ""));
     } finally {
       setPausando(false);
+    }
+  }
+
+  // ─── Recusar Projeto ─────────────────────────────────────────────────────
+  async function handleRecusarProjeto() {
+    if (!detailCard || !recusarMotivo.trim()) return;
+    setRecusando(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      // Find Standby etapa
+      const standbyEtapa = etapas.find(e => e.nome.toLowerCase() === "standby");
+      if (!standbyEtapa) {
+        toast.error("Etapa 'Standby' não encontrada. Crie-a primeiro no painel de etapas.");
+        setRecusando(false);
+        return;
+      }
+
+      // Register history exit from current stage
+      const sla = getSlaEtapaForCard(detailCard);
+      await registrarSaidaEtapa(detailCard.id, detailCard.etapa_id, sla);
+
+      // Add refuse comment
+      await supabase.from("painel_comentarios").insert({
+        card_id: detailCard.id,
+        etapa_id: detailCard.etapa_id,
+        criado_por: user.id,
+        texto: `❌ Projeto recusado: ${recusarMotivo.trim()}`,
+      });
+
+      // Register entry into Standby
+      await registrarEntradaEtapa(detailCard.id, standbyEtapa.id, standbyEtapa.nome);
+
+      // Update card
+      const { error } = await supabase
+        .from("painel_atendimento")
+        .update({
+          pausado: true,
+          pausado_em: new Date().toISOString(),
+          pausado_por: user.id,
+          pausado_motivo: recusarMotivo.trim(),
+          iniciado_em: null,
+          iniciado_por: null,
+          etapa_id: standbyEtapa.id,
+          status_projeto: "recusado",
+          etapa_origem_id: detailCard.etapa_id,
+        } as any)
+        .eq("id", detailCard.id);
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+      toast.success("Projeto recusado e movido para Standby!");
+      setRecusarOpen(false);
+      setRecusarMotivo("");
+      setDetailCard(null);
+    } catch (err: any) {
+      toast.error("Erro ao recusar projeto: " + (err.message || ""));
+    } finally {
+      setRecusando(false);
+    }
+  }
+
+  // ─── Apontamento ─────────────────────────────────────────────────────────
+  async function handleApontamento() {
+    if (!apontamentoCardId || apontamentoUsuarios.length === 0) return;
+    setApontando(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      const card = cards.find(c => c.id === apontamentoCardId) || detailCard;
+      const clienteNome = card?.clientes?.nome_fantasia || "Cliente";
+
+      // Insert apontamentos
+      const inserts = apontamentoUsuarios.map(uid => ({
+        card_id: apontamentoCardId,
+        usuario_id: uid,
+        apontado_por: user.id,
+        motivo: card?.pausado_motivo || null,
+      }));
+      const { error } = await supabase.from("painel_apontamentos").insert(inserts as any);
+      if (error) throw error;
+
+      // Send notification to each assigned user
+      for (const uid of apontamentoUsuarios) {
+        const prof = responsaveis.find((r: any) => r.id === uid);
+        const profName = (prof as any)?.full_name || "Usuário";
+        await supabase.from("notificacoes").insert({
+          titulo: "📌 Apontamento de Resolução",
+          mensagem: `Você foi designado(a) para resolver uma pendência do projeto ${clienteNome}. Motivo: ${card?.pausado_motivo || "Não informado"}`,
+          tipo: "alerta",
+          criado_por: user.id,
+          destinatario_user_id: (prof as any)?.user_id || uid,
+        } as any);
+      }
+
+      // Add comment
+      const nomes = apontamentoUsuarios.map(uid => {
+        const p = responsaveis.find((r: any) => r.id === uid);
+        return (p as any)?.full_name?.split(" ")[0] || "Usuário";
+      });
+      await supabase.from("painel_comentarios").insert({
+        card_id: apontamentoCardId,
+        etapa_id: card?.etapa_id || null,
+        criado_por: user.id,
+        texto: `📌 Apontamento: ${nomes.join(", ")} designado(s) para resolução.`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+      toast.success(`${apontamentoUsuarios.length} usuário(s) designado(s)!`);
+      setApontamentoOpen(false);
+      setApontamentoUsuarios([]);
+      setApontamentoCardId(null);
+      setBuscaApontamento("");
+    } catch (err: any) {
+      toast.error("Erro ao realizar apontamento: " + (err.message || ""));
+    } finally {
+      setApontando(false);
     }
   }
 
@@ -1085,6 +1206,23 @@ export default function PainelAtendimento() {
       .eq("user_id", user.id)
       .maybeSingle();
 
+    const card = cards.find(c => c.id === cardId) || detailCard;
+    const etapaOrigemId = (card as any)?.etapa_origem_id;
+
+    // If card came from another stage, move it back there
+    let targetEtapaId = card?.etapa_id;
+    if (etapaOrigemId) {
+      targetEtapaId = etapaOrigemId;
+      // Register exit from Standby
+      const sla = card ? getSlaEtapaForCard(card) : null;
+      await registrarSaidaEtapa(cardId, card?.etapa_id || "", sla);
+      // Register entry back to origin
+      const etapaOrigem = etapas.find(e => e.id === etapaOrigemId);
+      if (etapaOrigem) {
+        await registrarEntradaEtapa(cardId, etapaOrigemId, etapaOrigem.nome);
+      }
+    }
+
     const { error } = await supabase
       .from("painel_atendimento")
       .update({
@@ -1095,7 +1233,10 @@ export default function PainelAtendimento() {
         iniciado_em: new Date().toISOString(),
         iniciado_por: user.id,
         responsavel_id: prof?.id || null,
-      })
+        status_projeto: "ativo",
+        etapa_origem_id: null,
+        etapa_id: targetEtapaId,
+      } as any)
       .eq("id", cardId);
     if (error) {
       toast.error("Erro ao retomar projeto.");
@@ -1103,11 +1244,10 @@ export default function PainelAtendimento() {
     }
 
     // Add comment about resuming
-    const card = cards.find(c => c.id === cardId) || detailCard;
     if (card) {
       await supabase.from("painel_comentarios").insert({
         card_id: cardId,
-        etapa_id: card.etapa_id,
+        etapa_id: targetEtapaId || card.etapa_id,
         criado_por: user.id,
         texto: "▶️ Projeto retomado.",
       });
@@ -1389,7 +1529,13 @@ export default function PainelAtendimento() {
 
           {/* Status tags */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            {card.pausado && (
+            {(card as any).status_projeto === "recusado" && (
+              <Badge className="text-[10px] px-1.5 py-0 gap-1 bg-red-100 text-red-700 border-red-200" variant="outline">
+                <Ban className="h-2.5 w-2.5" />
+                Recusado
+              </Badge>
+            )}
+            {card.pausado && (card as any).status_projeto !== "recusado" && (
               <Badge className="text-[10px] px-1.5 py-0 gap-1 bg-amber-100 text-amber-700 border-amber-200" variant="outline">
                 <PauseCircle className="h-2.5 w-2.5" />
                 Pausado
@@ -1692,12 +1838,62 @@ export default function PainelAtendimento() {
             <div className="space-y-4 overflow-y-auto flex-1 pr-1">
               {/* Botão Iniciar / Em Andamento / Pausado + Progresso do Projeto - no topo */}
               <div className="space-y-2">
+                {/* Recusado banner */}
+                {(detailCard as any).status_projeto === "recusado" && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-red-700">
+                        <Ban className="h-4 w-4" />
+                        <span className="text-sm font-semibold">Projeto Recusado</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 text-xs"
+                        onClick={() => {
+                          setApontamentoCardId(detailCard.id);
+                          setApontamentoOpen(true);
+                        }}
+                      >
+                        <UserPlus className="h-3.5 w-3.5" />
+                        Apontamento
+                      </Button>
+                    </div>
+                    {detailCard.pausado_motivo && (
+                      <p className="text-xs text-red-600">Motivo: {detailCard.pausado_motivo}</p>
+                    )}
+                    {detailCard.pausado_em && (
+                      <p className="text-[10px] text-muted-foreground">
+                        Recusado em {new Date(detailCard.pausado_em).toLocaleDateString("pt-BR")} às{" "}
+                        {new Date(detailCard.pausado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                        {detailCard.pausado_por && (() => {
+                          const autor = responsaveis.find((r: any) => r.id === detailCard.pausado_por);
+                          return autor ? ` por ${(autor as any).full_name?.split(" ")[0]}` : "";
+                        })()}
+                      </p>
+                    )}
+                  </div>
+                )}
                 {/* Pausado banner */}
-                {detailCard.pausado && (
+                {detailCard.pausado && (detailCard as any).status_projeto !== "recusado" && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
-                    <div className="flex items-center gap-2 text-amber-700">
-                      <PauseCircle className="h-4 w-4" />
-                      <span className="text-sm font-semibold">Projeto Pausado</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-amber-700">
+                        <PauseCircle className="h-4 w-4" />
+                        <span className="text-sm font-semibold">Projeto Pausado</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 text-xs"
+                        onClick={() => {
+                          setApontamentoCardId(detailCard.id);
+                          setApontamentoOpen(true);
+                        }}
+                      >
+                        <UserPlus className="h-3.5 w-3.5" />
+                        Apontamento
+                      </Button>
                     </div>
                     {detailCard.pausado_motivo && (
                       <p className="text-xs text-amber-600">Motivo: {detailCard.pausado_motivo}</p>
@@ -1722,7 +1918,7 @@ export default function PainelAtendimento() {
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDespausar(detailCard.id);
-                        setDetailCard({ ...detailCard, pausado: false, pausado_em: null, pausado_por: null, pausado_motivo: null, iniciado_em: new Date().toISOString() });
+                        setDetailCard({ ...detailCard, pausado: false, pausado_em: null, pausado_por: null, pausado_motivo: null, iniciado_em: new Date().toISOString(), status_projeto: "ativo", etapa_origem_id: null } as any);
                       }}
                     >
                       <Play className="h-4 w-4 mr-1" />
@@ -2625,7 +2821,7 @@ export default function PainelAtendimento() {
                   {podeRecusarProjeto && (
                     <DropdownMenuItem
                       className="gap-2 text-destructive focus:text-destructive"
-                      onClick={() => toast.info("Funcionalidade em desenvolvimento")}
+                      onClick={() => setRecusarOpen(true)}
                     >
                       <XCircle className="h-4 w-4" />
                       Recusar Projeto
@@ -2838,7 +3034,7 @@ export default function PainelAtendimento() {
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              O projeto será congelado e o botão "Iniciar Etapa" ficará disponível para retomá-lo posteriormente.
+              O projeto será movido para a etapa Standby. Use o botão "Apontamento" para designar responsáveis pela resolução.
             </p>
           </div>
           <DialogFooter>
@@ -2851,6 +3047,104 @@ export default function PainelAtendimento() {
               disabled={!pausarMotivo.trim() || pausando}
             >
               {pausando ? "Pausando..." : "Confirmar Pausa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Recusar Dialog */}
+      <Dialog open={recusarOpen} onOpenChange={(open) => { if (!open) { setRecusarOpen(false); setRecusarMotivo(""); } }}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <XCircle className="h-5 w-5" />
+              Recusar Projeto
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Motivo da recusa *</Label>
+              <Textarea
+                placeholder="Descreva o motivo para recusar o projeto..."
+                value={recusarMotivo}
+                onChange={(e) => setRecusarMotivo(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              O projeto será movido para a etapa Standby como "Recusado". Utilize o botão "Apontamento" para designar responsáveis pela resolução.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setRecusarOpen(false); setRecusarMotivo(""); }}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRecusarProjeto}
+              disabled={!recusarMotivo.trim() || recusando}
+            >
+              {recusando ? "Recusando..." : "Confirmar Recusa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Apontamento Dialog */}
+      <Dialog open={apontamentoOpen} onOpenChange={(open) => { if (!open) { setApontamentoOpen(false); setApontamentoUsuarios([]); setApontamentoCardId(null); setBuscaApontamento(""); } }}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Apontamento de Resolução
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Buscar usuário</Label>
+              <Input
+                placeholder="Pesquisar por nome..."
+                value={buscaApontamento}
+                onChange={(e) => setBuscaApontamento(e.target.value)}
+              />
+            </div>
+            <div className="max-h-48 overflow-y-auto space-y-1 border rounded-md p-2">
+              {responsaveis
+                .filter((r: any) => r.full_name?.toLowerCase().includes(buscaApontamento.toLowerCase()))
+                .map((r: any) => (
+                  <label
+                    key={r.id}
+                    className={cn(
+                      "flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-muted/50 transition-colors text-sm",
+                      apontamentoUsuarios.includes(r.id) && "bg-primary/10"
+                    )}
+                  >
+                    <Checkbox
+                      checked={apontamentoUsuarios.includes(r.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) setApontamentoUsuarios(prev => [...prev, r.id]);
+                        else setApontamentoUsuarios(prev => prev.filter(id => id !== r.id));
+                      }}
+                    />
+                    <span>{r.full_name}</span>
+                  </label>
+                ))}
+            </div>
+            {apontamentoUsuarios.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {apontamentoUsuarios.length} usuário(s) selecionado(s). Cada um receberá uma notificação no sistema.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setApontamentoOpen(false); setApontamentoUsuarios([]); setBuscaApontamento(""); }}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleApontamento}
+              disabled={apontamentoUsuarios.length === 0 || apontando}
+            >
+              {apontando ? "Salvando..." : "Confirmar Apontamento"}
             </Button>
           </DialogFooter>
         </DialogContent>
