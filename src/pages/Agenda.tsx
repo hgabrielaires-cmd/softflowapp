@@ -12,6 +12,7 @@ import { CalendarDays, Clock, User, Building2, Filter, MapPin } from "lucide-rea
 import { format, parseISO, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { UserAvatar } from "@/components/UserAvatar";
 
 interface Agendamento {
   id: string;
@@ -32,7 +33,7 @@ interface AgendamentoComDetalhes extends Agendamento {
   filial_id: string;
   filial_nome: string;
   atividade_nome: string;
-  tecnicos: { id: string; full_name: string }[];
+  tecnicos: { id: string; full_name: string; avatar_url: string | null }[];
   tipo_atendimento: string | null;
 }
 
@@ -87,7 +88,7 @@ export default function Agenda() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("painel_tecnicos")
-        .select("card_id, tecnico_id, profiles:tecnico_id(id, full_name)");
+        .select("card_id, tecnico_id, profiles:tecnico_id(id, full_name, avatar_url)");
       if (error) throw error;
       return data as any[];
     },
@@ -109,7 +110,7 @@ export default function Agenda() {
 
   // Mapa de técnicos por card
   const tecnicosPorCard = useMemo(() => {
-    const map: Record<string, { id: string; full_name: string }[]> = {};
+    const map: Record<string, { id: string; full_name: string; avatar_url: string | null }[]> = {};
     painelTecnicos.forEach((pt: any) => {
       if (!map[pt.card_id]) map[pt.card_id] = [];
       if (pt.profiles) map[pt.card_id].push(pt.profiles);
@@ -329,10 +330,10 @@ export default function Agenda() {
                               Contrato: {ag.contrato_numero} · {ag.atividade_nome}
                             </p>
                             {ag.tecnicos.length > 0 && (
-                              <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                                <User className="h-3 w-3 text-muted-foreground" />
+                              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                                 {ag.tecnicos.map((t) => (
-                                  <Badge key={t.id} variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
+                                  <Badge key={t.id} variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20 flex items-center gap-1">
+                                    <UserAvatar avatarUrl={t.avatar_url} fullName={t.full_name} size="xs" />
                                     {t.full_name}
                                   </Badge>
                                 ))}
