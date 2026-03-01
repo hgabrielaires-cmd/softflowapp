@@ -157,6 +157,21 @@ export default function Contratos() {
   const canManage = isAdmin || isFinanceiro;
   const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais } = useUserFiliais();
 
+  // Permissões do usuário
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  useEffect(() => {
+    async function loadPerms() {
+      if (!profile?.user_id) return;
+      const { data: userRoles } = await supabase.from("user_roles").select("role").eq("user_id", profile.user_id);
+      if (!userRoles || userRoles.length === 0) return;
+      const roleNames = userRoles.map(r => r.role);
+      const { data } = await supabase.from("role_permissions").select("permissao, ativo").in("role", roleNames).eq("ativo", true);
+      setUserPermissions((data || []).map(p => p.permissao));
+    }
+    loadPerms();
+  }, [profile?.user_id]);
+  const podeCadastroRetroativo = userPermissions.includes("acao.cadastro_retroativo");
+
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [filialParametros, setFilialParametros] = useState<Record<string, any>>({});
@@ -1099,7 +1114,7 @@ Estou à disposição.`;
             <p className="text-sm text-muted-foreground">Gestão e visualização de contratos ativos</p>
           </div>
             <div className="flex items-center gap-3">
-            {canManage && (
+            {podeCadastroRetroativo && (
               <Button variant="outline" size="sm" className="gap-1.5" onClick={openRetroativoDialog}>
                 <FilePen className="h-4 w-4" />
                 Cadastrar Retroativo
