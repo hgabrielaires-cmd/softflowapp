@@ -176,6 +176,7 @@ export type Database = {
           pdf_url: string | null
           pedido_id: string | null
           plano_id: string | null
+          segmento_id: string | null
           status: string
           status_geracao: string | null
           tipo: string
@@ -191,6 +192,7 @@ export type Database = {
           pdf_url?: string | null
           pedido_id?: string | null
           plano_id?: string | null
+          segmento_id?: string | null
           status?: string
           status_geracao?: string | null
           tipo?: string
@@ -206,6 +208,7 @@ export type Database = {
           pdf_url?: string | null
           pedido_id?: string | null
           plano_id?: string | null
+          segmento_id?: string | null
           status?: string
           status_geracao?: string | null
           tipo?: string
@@ -231,6 +234,13 @@ export type Database = {
             columns: ["plano_id"]
             isOneToOne: false
             referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_segmento_id_fkey"
+            columns: ["segmento_id"]
+            isOneToOne: false
+            referencedRelation: "segmentos"
             referencedColumns: ["id"]
           },
         ]
@@ -1784,6 +1794,7 @@ export type Database = {
           pagamento_mensalidade_observacao: string | null
           pagamento_mensalidade_parcelas: number | null
           plano_id: string
+          segmento_id: string | null
           servicos_pedido: Json | null
           status_pedido: string
           tipo_atendimento: string | null
@@ -1835,6 +1846,7 @@ export type Database = {
           pagamento_mensalidade_observacao?: string | null
           pagamento_mensalidade_parcelas?: number | null
           plano_id: string
+          segmento_id?: string | null
           servicos_pedido?: Json | null
           status_pedido?: string
           tipo_atendimento?: string | null
@@ -1886,6 +1898,7 @@ export type Database = {
           pagamento_mensalidade_observacao?: string | null
           pagamento_mensalidade_parcelas?: number | null
           plano_id?: string
+          segmento_id?: string | null
           servicos_pedido?: Json | null
           status_pedido?: string
           tipo_atendimento?: string | null
@@ -1920,6 +1933,13 @@ export type Database = {
             columns: ["plano_id"]
             isOneToOne: false
             referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_segmento_id_fkey"
+            columns: ["segmento_id"]
+            isOneToOne: false
+            referencedRelation: "segmentos"
             referencedColumns: ["id"]
           },
         ]
@@ -2147,6 +2167,38 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      segmentos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          filial_id: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          filial_id?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          filial_id?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "segmentos_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       servicos: {
         Row: {

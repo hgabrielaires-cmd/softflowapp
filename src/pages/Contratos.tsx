@@ -216,7 +216,7 @@ export default function Contratos() {
   const [retroModulos, setRetroModulos] = useState<{ id: string; nome: string; valor_implantacao_modulo: number | null; valor_mensalidade_modulo: number | null }[]>([]);
   const [retroForm, setRetroForm] = useState({
     cliente_id: "", plano_id: "", tipo: "Base", status: "Ativo",
-    observacoes: "",
+    observacoes: "", segmento_id: "",
     // Descontos
     desconto_implantacao_tipo: "R$" as "R$" | "%",
     desconto_implantacao_valor: "0",
@@ -230,6 +230,7 @@ export default function Contratos() {
     pagamento_mensalidade_forma: "",
     pagamento_mensalidade_observacao: "",
   });
+  const [retroSegmentos, setRetroSegmentos] = useState<{ id: string; nome: string }[]>([]);
   const [retroModulosSelecionados, setRetroModulosSelecionados] = useState<{ modulo_id: string; nome: string; quantidade: number; valor_implantacao_modulo: number; valor_mensalidade_modulo: number }[]>([]);
   const [retroSaving, setRetroSaving] = useState(false);
   const [retroDescontoAtivo, setRetroDescontoAtivo] = useState(false);
@@ -272,7 +273,7 @@ export default function Contratos() {
   const retroValorTotal = retroValorImpFinal + retroValorMensFinal;
 
   async function openRetroativoDialog() {
-    setRetroForm({ cliente_id: "", plano_id: "", tipo: "Base", status: "Ativo", observacoes: "", desconto_implantacao_tipo: "R$", desconto_implantacao_valor: "0", desconto_mensalidade_tipo: "R$", desconto_mensalidade_valor: "0", motivo_desconto: "", pagamento_implantacao_forma: "", pagamento_implantacao_parcelas: "", pagamento_implantacao_observacao: "", pagamento_mensalidade_forma: "", pagamento_mensalidade_observacao: "" });
+    setRetroForm({ cliente_id: "", plano_id: "", tipo: "Base", status: "Ativo", observacoes: "", segmento_id: "", desconto_implantacao_tipo: "R$", desconto_implantacao_valor: "0", desconto_mensalidade_tipo: "R$", desconto_mensalidade_valor: "0", motivo_desconto: "", pagamento_implantacao_forma: "", pagamento_implantacao_parcelas: "", pagamento_implantacao_observacao: "", pagamento_mensalidade_forma: "", pagamento_mensalidade_observacao: "" });
     setRetroModulosSelecionados([]);
     setRetroDescontoAtivo(false);
     setRetroClienteSearch("");
@@ -286,6 +287,18 @@ export default function Contratos() {
     setRetroPlanos((pData || []) as any[]);
     setRetroModulos((mData || []) as any[]);
   }
+
+  // Load segmentos when client changes
+  useEffect(() => {
+    async function loadRetroSegmentos() {
+      if (!retroForm.cliente_id) { setRetroSegmentos([]); return; }
+      const clienteSel = retroClientes.find(c => c.id === retroForm.cliente_id);
+      if (!clienteSel?.filial_id) { setRetroSegmentos([]); return; }
+      const { data } = await supabase.from("segmentos").select("id, nome").eq("filial_id", clienteSel.filial_id).eq("ativo", true).order("nome");
+      setRetroSegmentos((data || []) as any);
+    }
+    loadRetroSegmentos();
+  }, [retroForm.cliente_id, retroClientes]);
 
   function handleRetroAddModulo(moduloId: string) {
     const mod = retroModulos.find(m => m.id === moduloId);
@@ -379,6 +392,7 @@ export default function Contratos() {
 
   async function handleSalvarRetroativo() {
     if (!retroForm.cliente_id) { toast.error("Selecione um cliente"); return; }
+    if (!retroForm.segmento_id) { toast.error("Selecione um segmento"); return; }
     setRetroSaving(true);
 
     const clienteSel = retroClientes.find(c => c.id === retroForm.cliente_id);
@@ -415,6 +429,7 @@ export default function Contratos() {
       pagamento_implantacao_observacao: retroForm.pagamento_implantacao_observacao.trim() || null,
       pagamento_mensalidade_forma: retroForm.pagamento_mensalidade_forma || null,
       pagamento_mensalidade_observacao: retroForm.pagamento_mensalidade_observacao.trim() || null,
+      segmento_id: retroForm.segmento_id || null,
     };
 
     const { data: pedidoData, error: pedidoError } = await supabase.from("pedidos").insert(pedidoInsert).select("id").single();
@@ -426,6 +441,7 @@ export default function Contratos() {
       status: retroForm.status,
       status_geracao: "Manual",
       pedido_id: pedidoData.id,
+      segmento_id: retroForm.segmento_id || null,
     };
     if (retroForm.plano_id) insertData.plano_id = retroForm.plano_id;
 
@@ -2131,6 +2147,23 @@ Estou à disposição.`;
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* ── Segmento ── */}
+            <div className="space-y-1.5">
+              <Label>Segmento *</Label>
+              <Select value={retroForm.segmento_id || "_none"} onValueChange={(v) => setRetroForm(f => ({ ...f, segmento_id: v === "_none" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione o segmento" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none" disabled>Selecione...</SelectItem>
+                  {retroSegmentos.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {retroForm.cliente_id && retroSegmentos.length === 0 && (
+                <p className="text-xs text-amber-600">Nenhum segmento cadastrado para a filial deste cliente. Cadastre em Filiais → CRM.</p>
+              )}
             </div>
 
             {/* ── Módulos Adicionais ── */}
