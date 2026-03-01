@@ -267,6 +267,7 @@ export default function PainelAtendimento() {
   const podeEditarConfigProjeto = userPermissions.includes("acao.editar_config_projeto");
   const podePausarProjeto = userPermissions.includes("acao.pausar_projeto");
   const podeRecusarProjeto = userPermissions.includes("acao.recusar_projeto");
+  const podeGerenciarApontamento = userPermissions.includes("acao.gerenciar_apontamento");
 
   // Precompute SLA da Etapa per card (jornada-based) + total checklist items per jornada
   const { data: jornadaSlaMap = {} } = useQuery({
@@ -409,23 +410,34 @@ export default function PainelAtendimento() {
     },
   });
 
-  // Fetch apontamentos per card (to show names on card)
-  const { data: cardApontamentosMap = {} } = useQuery({
+  // Fetch apontamentos per card (to show names + ids on card)
+  const { data: cardApontamentosRaw = [] } = useQuery({
     queryKey: ["card_apontamentos", cards.map(c => c.id).join(",")],
     enabled: cards.length > 0,
     queryFn: async () => {
       const { data } = await supabase
         .from("painel_apontamentos")
-        .select("card_id, usuario_id, profiles:usuario_id(full_name)");
-      const map: Record<string, string[]> = {};
-      (data || []).forEach((r: any) => {
-        if (!map[r.card_id]) map[r.card_id] = [];
-        const nome = r.profiles?.full_name?.split(" ")[0] || "Usuário";
-        if (!map[r.card_id].includes(nome)) map[r.card_id].push(nome);
-      });
-      return map;
+        .select("id, card_id, usuario_id, profiles:usuario_id(full_name)");
+      return (data || []) as any[];
     },
   });
+  const cardApontamentosMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    cardApontamentosRaw.forEach((r: any) => {
+      if (!map[r.card_id]) map[r.card_id] = [];
+      const nome = r.profiles?.full_name?.split(" ")[0] || "Usuário";
+      if (!map[r.card_id].includes(nome)) map[r.card_id].push(nome);
+    });
+    return map;
+  }, [cardApontamentosRaw]);
+  const cardApontamentosDetalhado = useMemo(() => {
+    const map: Record<string, { id: string; usuario_id: string; nome: string }[]> = {};
+    cardApontamentosRaw.forEach((r: any) => {
+      if (!map[r.card_id]) map[r.card_id] = [];
+      map[r.card_id].push({ id: r.id, usuario_id: r.usuario_id, nome: r.profiles?.full_name || "Usuário" });
+    });
+    return map;
+  }, [cardApontamentosRaw]);
 
   useEffect(() => {
     if (!detailCard) {
@@ -1057,12 +1069,13 @@ export default function PainelAtendimento() {
       const sla = getSlaEtapaForCard(detailCard);
       await registrarSaidaEtapa(detailCard.id, detailCard.etapa_id, sla);
 
-      // Add pause comment to history
+      // Add pause comment to history (with user name)
+      const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
       await supabase.from("painel_comentarios").insert({
         card_id: detailCard.id,
         etapa_id: detailCard.etapa_id,
         criado_por: user.id,
-        texto: `⏸️ Projeto pausado: ${pausarMotivo.trim()}`,
+        texto: `⏸️ Projeto pausado por ${autorNome}: ${pausarMotivo.trim()}`,
       });
 
       // Register entry into Standby
@@ -1154,12 +1167,13 @@ export default function PainelAtendimento() {
       const sla = getSlaEtapaForCard(detailCard);
       await registrarSaidaEtapa(detailCard.id, detailCard.etapa_id, sla);
 
-      // Add refuse comment
+      // Add refuse comment (with user name)
+      const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
       await supabase.from("painel_comentarios").insert({
         card_id: detailCard.id,
         etapa_id: detailCard.etapa_id,
         criado_por: user.id,
-        texto: `❌ Projeto recusado: ${recusarMotivo.trim()}`,
+        texto: `❌ Projeto recusado por ${autorNome}: ${recusarMotivo.trim()}`,
       });
 
       // Register entry into Standby
@@ -1287,6 +1301,18 @@ export default function PainelAtendimento() {
       toast.error("Erro ao realizar apontamento: " + (err.message || ""));
     } finally {
       setApontando(false);
+    }
+  }
+
+  // ─── Remover Apontamento ─────────────────────────────────────────────────
+  async function handleRemoverApontamento(apontamentoId: string, cardId: string) {
+    try {
+      const { error } = await supabase.from("painel_apontamentos").delete().eq("id", apontamentoId);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["card_apontamentos"] });
+      toast.success("Apontamento removido!");
+    } catch (err: any) {
+      toast.error("Erro ao remover apontamento: " + (err.message || ""));
     }
   }
 
@@ -1975,11 +2001,33 @@ export default function PainelAtendimento() {
                         })()}
                       </p>
                     )}
-                    {cardApontamentosMap[detailCard.id]?.length > 0 && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <UserPlus className="h-3 w-3" />
-                        Apontados: {cardApontamentosMap[detailCard.id].join(", ")}
-                      </p>
+                    {cardApontamentosDetalhado[detailCard.id]?.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <UserPlus className="h-3 w-3" />
+                          Apontados:
+                        </p>
+                        {cardApontamentosDetalhado[detailCard.id].map((ap) => (
+                          <div key={ap.id} className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">{ap.nome}</span>
+                            {podeGerenciarApontamento && (
+                              <Button variant="ghost" size="sm" className="h-5 px-1 text-destructive hover:text-destructive" onClick={() => handleRemoverApontamento(ap.id, detailCard.id)}>
+                                <XCircle className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                        {podeGerenciarApontamento && (
+                          <Button variant="ghost" size="sm" className="h-6 text-xs gap-1 mt-1" onClick={() => { setApontamentoCardId(detailCard.id); setApontamentoOpen(true); }}>
+                            <UserPlus className="h-3 w-3" /> Adicionar
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    {(!cardApontamentosDetalhado[detailCard.id] || cardApontamentosDetalhado[detailCard.id].length === 0) && podeGerenciarApontamento && (
+                      <Button variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={() => { setApontamentoCardId(detailCard.id); setApontamentoOpen(true); }}>
+                        <UserPlus className="h-3 w-3" /> Apontar responsável
+                      </Button>
                     )}
                   </div>
                 )}
@@ -2003,11 +2051,33 @@ export default function PainelAtendimento() {
                         })()}
                       </p>
                     )}
-                    {cardApontamentosMap[detailCard.id]?.length > 0 && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <UserPlus className="h-3 w-3" />
-                        Apontados: {cardApontamentosMap[detailCard.id].join(", ")}
-                      </p>
+                    {cardApontamentosDetalhado[detailCard.id]?.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <UserPlus className="h-3 w-3" />
+                          Apontados:
+                        </p>
+                        {cardApontamentosDetalhado[detailCard.id].map((ap) => (
+                          <div key={ap.id} className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">{ap.nome}</span>
+                            {podeGerenciarApontamento && (
+                              <Button variant="ghost" size="sm" className="h-5 px-1 text-destructive hover:text-destructive" onClick={() => handleRemoverApontamento(ap.id, detailCard.id)}>
+                                <XCircle className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                        {podeGerenciarApontamento && (
+                          <Button variant="ghost" size="sm" className="h-6 text-xs gap-1 mt-1" onClick={() => { setApontamentoCardId(detailCard.id); setApontamentoOpen(true); }}>
+                            <UserPlus className="h-3 w-3" /> Adicionar
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    {(!cardApontamentosDetalhado[detailCard.id] || cardApontamentosDetalhado[detailCard.id].length === 0) && podeGerenciarApontamento && (
+                      <Button variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={() => { setApontamentoCardId(detailCard.id); setApontamentoOpen(true); }}>
+                        <UserPlus className="h-3 w-3" /> Apontar responsável
+                      </Button>
                     )}
                   </div>
                 )}

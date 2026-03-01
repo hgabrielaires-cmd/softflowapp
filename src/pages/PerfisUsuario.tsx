@@ -37,6 +37,7 @@ const PERMISSION_LABELS: Record<string, { label: string; description: string; ic
   "acao.editar_config_projeto": { label: "Editar Config. Projeto", description: "Permite editar técnico e tipo de atendimento após etapa de agendamento", icon: <Settings className="h-4 w-4" />, group: "Ações" },
   "acao.pausar_projeto": { label: "Pausar Projeto", description: "Permite pausar projetos no painel de atendimento", icon: <Settings className="h-4 w-4" />, group: "Ações" },
   "acao.recusar_projeto": { label: "Recusar Projeto", description: "Permite recusar projetos no painel de atendimento", icon: <Settings className="h-4 w-4" />, group: "Ações" },
+  "acao.gerenciar_apontamento": { label: "Gerenciar Apontamento", description: "Permite trocar ou remover apontamentos de usuários", icon: <Users className="h-4 w-4" />, group: "Ações" },
 };
 
 const ROLES: AppRole[] = ["admin", "financeiro", "vendedor", "operacional", "tecnico"];
