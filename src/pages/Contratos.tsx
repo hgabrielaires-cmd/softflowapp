@@ -1,9 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Filial } from "@/lib/supabase-types";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PedidoComentarios } from "@/components/PedidoComentarios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,7 +68,17 @@ import {
   RefreshCw,
   ClipboardCopy,
   ExternalLink,
-  MinusCircle
+  MinusCircle,
+  UserPlus,
+  Search,
+  Plus,
+  MapPin,
+  AlertCircle,
+  Star,
+  Pencil,
+  Trash2,
+  Users,
+  Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -197,20 +211,75 @@ export default function Contratos() {
 
   // ── Cadastro Retroativo ──
   const [openRetroativo, setOpenRetroativo] = useState(false);
-  const [retroClientes, setRetroClientes] = useState<{ id: string; nome_fantasia: string; filial_id: string | null }[]>([]);
-  const [retroPlanos, setRetroPlanos] = useState<{ id: string; nome: string }[]>([]);
+  const [retroClientes, setRetroClientes] = useState<{ id: string; nome_fantasia: string; filial_id: string | null; cnpj_cpf: string; razao_social: string | null }[]>([]);
+  const [retroPlanos, setRetroPlanos] = useState<{ id: string; nome: string; valor_implantacao_padrao: number | null; valor_mensalidade_padrao: number | null }[]>([]);
   const [retroModulos, setRetroModulos] = useState<{ id: string; nome: string; valor_implantacao_modulo: number | null; valor_mensalidade_modulo: number | null }[]>([]);
-  const [retroForm, setRetroForm] = useState({ cliente_id: "", plano_id: "", tipo: "Base", status: "Ativo" });
+  const [retroForm, setRetroForm] = useState({
+    cliente_id: "", plano_id: "", tipo: "Base", status: "Ativo",
+    observacoes: "",
+    // Descontos
+    desconto_implantacao_tipo: "R$" as "R$" | "%",
+    desconto_implantacao_valor: "0",
+    desconto_mensalidade_tipo: "R$" as "R$" | "%",
+    desconto_mensalidade_valor: "0",
+    motivo_desconto: "",
+    // Pagamento
+    pagamento_implantacao_forma: "",
+    pagamento_implantacao_parcelas: "",
+    pagamento_implantacao_observacao: "",
+    pagamento_mensalidade_forma: "",
+    pagamento_mensalidade_observacao: "",
+  });
   const [retroModulosSelecionados, setRetroModulosSelecionados] = useState<{ modulo_id: string; nome: string; quantidade: number; valor_implantacao_modulo: number; valor_mensalidade_modulo: number }[]>([]);
   const [retroSaving, setRetroSaving] = useState(false);
+  const [retroDescontoAtivo, setRetroDescontoAtivo] = useState(false);
+  const [retroClienteSearch, setRetroClienteSearch] = useState("");
+  const [retroClienteSearchFocused, setRetroClienteSearchFocused] = useState(false);
+
+  // Novo cliente inline no retroativo
+  const UF_LIST = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+  const emptyRetroClienteForm = { nome_fantasia: "", razao_social: "", cnpj_cpf: "", contato_nome: "", telefone: "", email: "", cidade: "", uf: "", cep: "", logradouro: "", numero: "", complemento: "", bairro: "" };
+  const [openRetroClienteDialog, setOpenRetroClienteDialog] = useState(false);
+  const [retroClienteForm, setRetroClienteForm] = useState(emptyRetroClienteForm);
+  const [retroSavingCliente, setRetroSavingCliente] = useState(false);
+  const [retroLoadingCep, setRetroLoadingCep] = useState(false);
+  const [retroLoadingCnpj, setRetroLoadingCnpj] = useState(false);
+  const [retroCepError, setRetroCepError] = useState("");
+  const [retroCnpjError, setRetroCnpjError] = useState("");
+  const [retroClienteContatos, setRetroClienteContatos] = useState<{ nome: string; cargo: string; telefone: string; email: string; decisor: boolean; ativo: boolean }[]>([]);
+  const [retroShowContatoForm, setRetroShowContatoForm] = useState(false);
+  const [retroEditingContatoIdx, setRetroEditingContatoIdx] = useState<number | null>(null);
+  const [retroInlineContatoForm, setRetroInlineContatoForm] = useState({ nome: "", cargo: "", telefone: "", email: "", decisor: false, ativo: true });
+
+  // Retroativo computed values
+  const retroPlanoSel = retroPlanos.find(p => p.id === retroForm.plano_id);
+  const retroTotalModImp = retroModulosSelecionados.reduce((a, m) => a + m.valor_implantacao_modulo * m.quantidade, 0);
+  const retroTotalModMens = retroModulosSelecionados.reduce((a, m) => a + m.valor_mensalidade_modulo * m.quantidade, 0);
+  const retroValorImpOriginal = (retroPlanoSel?.valor_implantacao_padrao ?? 0) + retroTotalModImp;
+  const retroValorMensOriginal = (retroPlanoSel?.valor_mensalidade_padrao ?? 0) + retroTotalModMens;
+
+  function applyRetroDesconto(original: number, tipo: "R$" | "%", valor: number) {
+    const raw = tipo === "%" ? original - (original * valor / 100) : original - valor;
+    return Math.max(0, raw);
+  }
+
+  const retroValorImpFinal = retroDescontoAtivo
+    ? applyRetroDesconto(retroValorImpOriginal, retroForm.desconto_implantacao_tipo, parseFloat(retroForm.desconto_implantacao_valor) || 0)
+    : retroValorImpOriginal;
+  const retroValorMensFinal = retroDescontoAtivo
+    ? applyRetroDesconto(retroValorMensOriginal, retroForm.desconto_mensalidade_tipo, parseFloat(retroForm.desconto_mensalidade_valor) || 0)
+    : retroValorMensOriginal;
+  const retroValorTotal = retroValorImpFinal + retroValorMensFinal;
 
   async function openRetroativoDialog() {
-    setRetroForm({ cliente_id: "", plano_id: "", tipo: "Base", status: "Ativo" });
+    setRetroForm({ cliente_id: "", plano_id: "", tipo: "Base", status: "Ativo", observacoes: "", desconto_implantacao_tipo: "R$", desconto_implantacao_valor: "0", desconto_mensalidade_tipo: "R$", desconto_mensalidade_valor: "0", motivo_desconto: "", pagamento_implantacao_forma: "", pagamento_implantacao_parcelas: "", pagamento_implantacao_observacao: "", pagamento_mensalidade_forma: "", pagamento_mensalidade_observacao: "" });
     setRetroModulosSelecionados([]);
+    setRetroDescontoAtivo(false);
+    setRetroClienteSearch("");
     setOpenRetroativo(true);
     const [{ data: cData }, { data: pData }, { data: mData }] = await Promise.all([
-      supabase.from("clientes").select("id, nome_fantasia, filial_id").eq("ativo", true).order("nome_fantasia"),
-      supabase.from("planos").select("id, nome").eq("ativo", true).order("nome"),
+      supabase.from("clientes").select("id, nome_fantasia, filial_id, cnpj_cpf, razao_social").eq("ativo", true).order("nome_fantasia"),
+      supabase.from("planos").select("id, nome, valor_implantacao_padrao, valor_mensalidade_padrao").eq("ativo", true).order("nome"),
       supabase.from("modulos").select("id, nome, valor_implantacao_modulo, valor_mensalidade_modulo").eq("ativo", true).order("nome"),
     ]);
     setRetroClientes((cData || []) as any[]);
@@ -231,17 +300,91 @@ export default function Contratos() {
     }]);
   }
 
+  async function handleRetroCepBlur() {
+    const raw = retroClienteForm.cep.replace(/\D/g, "");
+    if (raw.length !== 8) return;
+    setRetroLoadingCep(true);
+    setRetroCepError("");
+    try {
+      const resp = await fetch(`https://viacep.com.br/ws/${raw}/json/`);
+      const data = await resp.json();
+      if (data.erro) { setRetroCepError("CEP não encontrado"); } else {
+        setRetroClienteForm(f => ({ ...f, logradouro: data.logradouro || f.logradouro, bairro: data.bairro || f.bairro, cidade: data.localidade || f.cidade, uf: data.uf || f.uf }));
+      }
+    } catch { setRetroCepError("Erro ao consultar CEP"); }
+    finally { setRetroLoadingCep(false); }
+  }
+
+  async function handleRetroCnpjBlur() {
+    const raw = retroClienteForm.cnpj_cpf.replace(/\D/g, "");
+    if (raw.length !== 14) return;
+    setRetroLoadingCnpj(true);
+    setRetroCnpjError("");
+    try {
+      const resp = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${raw}`);
+      if (!resp.ok) { setRetroCnpjError("CNPJ não encontrado"); return; }
+      const data = await resp.json();
+      const logradouroApi = [data.descricao_tipo_de_logradouro, data.logradouro].filter(Boolean).join(" ");
+      setRetroClienteForm(f => ({
+        ...f,
+        nome_fantasia: f.nome_fantasia || data.nome_fantasia || data.razao_social || "",
+        razao_social: f.razao_social || data.razao_social || "",
+        cidade: f.cidade || data.municipio || "",
+        uf: f.uf || data.uf || "",
+        logradouro: f.logradouro || logradouroApi,
+        bairro: f.bairro || data.bairro || "",
+        cep: f.cep || (data.cep ? data.cep.replace(/\D/g, "") : ""),
+      }));
+    } catch { setRetroCnpjError("CNPJ não encontrado"); }
+    finally { setRetroLoadingCnpj(false); }
+  }
+
+  async function handleRetroSaveCliente(e: React.FormEvent) {
+    e.preventDefault();
+    if (!retroClienteForm.nome_fantasia.trim() || !retroClienteForm.cnpj_cpf.trim()) { toast.error("Nome fantasia e CNPJ/CPF são obrigatórios"); return; }
+    if (retroClienteContatos.length === 0) { toast.error("Cadastre pelo menos um contato"); return; }
+    setRetroSavingCliente(true);
+    const filial_id = profile?.filial_id || null;
+    const { data, error } = await supabase.from("clientes").insert({
+      nome_fantasia: retroClienteForm.nome_fantasia.trim(),
+      razao_social: retroClienteForm.razao_social.trim() || null,
+      cnpj_cpf: retroClienteForm.cnpj_cpf.trim(),
+      contato_nome: retroClienteContatos[0]?.nome || null,
+      telefone: retroClienteContatos[0]?.telefone || null,
+      email: retroClienteContatos[0]?.email || null,
+      cidade: retroClienteForm.cidade.trim() || null,
+      uf: retroClienteForm.uf || null,
+      cep: retroClienteForm.cep.trim() || null,
+      logradouro: retroClienteForm.logradouro.trim() || null,
+      numero: retroClienteForm.numero.trim() || null,
+      complemento: retroClienteForm.complemento.trim() || null,
+      bairro: retroClienteForm.bairro.trim() || null,
+      filial_id,
+      ativo: true,
+    }).select("id, nome_fantasia, filial_id, cnpj_cpf, razao_social").single();
+    if (error) { toast.error("Erro ao cadastrar cliente: " + error.message); setRetroSavingCliente(false); return; }
+    for (const ct of retroClienteContatos) {
+      await supabase.from("cliente_contatos").insert({ cliente_id: data.id, nome: ct.nome, cargo: ct.cargo || null, telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo });
+    }
+    setRetroClientes(prev => [...prev, data as any].sort((a, b) => a.nome_fantasia.localeCompare(b.nome_fantasia)));
+    setRetroForm(f => ({ ...f, cliente_id: data.id }));
+    setRetroClienteSearch("");
+    toast.success("Cliente cadastrado e selecionado!");
+    setRetroClienteForm(emptyRetroClienteForm);
+    setRetroClienteContatos([]);
+    setRetroShowContatoForm(false);
+    setOpenRetroClienteDialog(false);
+    setRetroSavingCliente(false);
+  }
+
   async function handleSalvarRetroativo() {
     if (!retroForm.cliente_id) { toast.error("Selecione um cliente"); return; }
     setRetroSaving(true);
 
-    // Buscar filial_id do cliente selecionado
     const clienteSel = retroClientes.find(c => c.id === retroForm.cliente_id);
     const filialId = clienteSel?.filial_id;
-
     if (!filialId) { toast.error("Cliente não possui filial vinculada"); setRetroSaving(false); return; }
 
-    // 1. Criar pedido retroativo para armazenar módulos
     const pedidoInsert: any = {
       cliente_id: retroForm.cliente_id,
       plano_id: retroForm.plano_id || null,
@@ -250,33 +393,33 @@ export default function Contratos() {
       status_pedido: "Contrato Retroativo",
       financeiro_status: "Aprovado",
       tipo_pedido: retroForm.tipo === "Base" ? "Novo" : retroForm.tipo === "Aditivo" ? "Módulo Adicional" : retroForm.tipo,
-      valor_implantacao: 0,
-      valor_implantacao_original: 0,
-      valor_implantacao_final: 0,
-      valor_mensalidade: 0,
-      valor_mensalidade_original: 0,
-      valor_mensalidade_final: 0,
-      valor_total: 0,
+      valor_implantacao: retroValorImpOriginal,
+      valor_implantacao_original: retroValorImpOriginal,
+      valor_implantacao_final: retroValorImpFinal,
+      valor_mensalidade: retroValorMensOriginal,
+      valor_mensalidade_original: retroValorMensOriginal,
+      valor_mensalidade_final: retroValorMensFinal,
+      valor_total: retroValorTotal,
       comissao_percentual: 0,
       comissao_valor: 0,
       modulos_adicionais: retroModulosSelecionados.length > 0 ? retroModulosSelecionados : null,
-      observacoes: "Cadastro retroativo",
+      observacoes: retroForm.observacoes.trim() || "Cadastro retroativo",
       contrato_liberado: true,
+      desconto_implantacao_tipo: retroDescontoAtivo ? retroForm.desconto_implantacao_tipo : "R$",
+      desconto_implantacao_valor: retroDescontoAtivo ? parseFloat(retroForm.desconto_implantacao_valor) || 0 : 0,
+      desconto_mensalidade_tipo: retroDescontoAtivo ? retroForm.desconto_mensalidade_tipo : "R$",
+      desconto_mensalidade_valor: retroDescontoAtivo ? parseFloat(retroForm.desconto_mensalidade_valor) || 0 : 0,
+      motivo_desconto: retroDescontoAtivo ? retroForm.motivo_desconto.trim() || null : null,
+      pagamento_implantacao_forma: retroForm.pagamento_implantacao_forma || null,
+      pagamento_implantacao_parcelas: retroForm.pagamento_implantacao_parcelas ? parseInt(retroForm.pagamento_implantacao_parcelas) : null,
+      pagamento_implantacao_observacao: retroForm.pagamento_implantacao_observacao.trim() || null,
+      pagamento_mensalidade_forma: retroForm.pagamento_mensalidade_forma || null,
+      pagamento_mensalidade_observacao: retroForm.pagamento_mensalidade_observacao.trim() || null,
     };
 
-    const { data: pedidoData, error: pedidoError } = await supabase
-      .from("pedidos")
-      .insert(pedidoInsert)
-      .select("id")
-      .single();
+    const { data: pedidoData, error: pedidoError } = await supabase.from("pedidos").insert(pedidoInsert).select("id").single();
+    if (pedidoError) { toast.error("Erro ao criar pedido retroativo: " + pedidoError.message); setRetroSaving(false); return; }
 
-    if (pedidoError) {
-      toast.error("Erro ao criar pedido retroativo: " + pedidoError.message);
-      setRetroSaving(false);
-      return;
-    }
-
-    // 2. Criar contrato vinculado ao pedido
     const insertData: any = {
       cliente_id: retroForm.cliente_id,
       tipo: retroForm.tipo,
@@ -1880,48 +2023,96 @@ Estou à disposição.`;
       </Dialog>
       {/* Dialog Cadastro Retroativo */}
       <Dialog open={openRetroativo} onOpenChange={setOpenRetroativo}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl flex flex-col h-[90vh] p-0 gap-0 overflow-hidden" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader className="px-6 py-4 border-b border-border shrink-0">
             <DialogTitle>Cadastrar Contrato Retroativo</DialogTitle>
             <DialogDescription>
               Registre um contrato existente sem gerar documento, ZapSign ou WhatsApp.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Cliente *</label>
-              <Select value={retroForm.cliente_id} onValueChange={(v) => setRetroForm(f => ({ ...f, cliente_id: v }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {retroClientes.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
+
+            {/* ── Cliente ── */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label>Cliente *</Label>
+                <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1 text-primary hover:text-primary"
+                  onClick={() => { setRetroClienteForm(emptyRetroClienteForm); setRetroClienteContatos([]); setOpenRetroClienteDialog(true); }}>
+                  <UserPlus className="h-3.5 w-3.5" /> Novo cliente
+                </Button>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  className="pl-9 pr-8"
+                  placeholder={retroForm.cliente_id ? retroClientes.find(c => c.id === retroForm.cliente_id)?.nome_fantasia || "Cliente selecionado" : "Buscar cliente pelo nome ou CNPJ..."}
+                  value={retroClienteSearch}
+                  autoComplete="off"
+                  onFocus={() => setRetroClienteSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setRetroClienteSearchFocused(false), 300)}
+                  onChange={(e) => {
+                    setRetroClienteSearch(e.target.value);
+                    if (!e.target.value && retroForm.cliente_id) setRetroForm(f => ({ ...f, cliente_id: "" }));
+                  }}
+                />
+                {retroForm.cliente_id && (
+                  <button type="button" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => { setRetroForm(f => ({ ...f, cliente_id: "" })); setRetroClienteSearch(""); }}>
+                    <XCircle className="h-4 w-4" />
+                  </button>
+                )}
+                {retroClienteSearchFocused && retroClienteSearch.trim() && !retroForm.cliente_id && (() => {
+                  const q = retroClienteSearch.trim().toLowerCase();
+                  const qNum = q.replace(/\D/g, "");
+                  const filtered = retroClientes.filter(c =>
+                    c.nome_fantasia.toLowerCase().includes(q) ||
+                    (c.razao_social || "").toLowerCase().includes(q) ||
+                    (qNum.length > 0 && (c.cnpj_cpf || "").replace(/\D/g, "").includes(qNum))
+                  );
+                  return (
+                    <div className="absolute z-[9999] top-full mt-1 left-0 right-0 bg-background border border-border rounded-md shadow-xl max-h-52 overflow-y-auto">
+                      {filtered.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum cliente encontrado</div>
+                      ) : filtered.slice(0, 20).map(c => (
+                        <button key={c.id} type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors border-b border-border last:border-0"
+                          onMouseDown={(e) => { e.preventDefault(); setRetroForm(f => ({ ...f, cliente_id: c.id })); setRetroClienteSearch(""); setRetroClienteSearchFocused(false); }}>
+                          <div className="font-medium text-foreground">{c.nome_fantasia}</div>
+                          {c.cnpj_cpf && <div className="text-xs text-muted-foreground font-mono">{c.cnpj_cpf}</div>}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+              {retroForm.cliente_id && (
+                <p className="text-xs text-emerald-600 flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  {retroClientes.find(c => c.id === retroForm.cliente_id)?.nome_fantasia} selecionado
+                </p>
+              )}
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Plano</label>
+
+            {/* ── Plano ── */}
+            <div className="space-y-1.5">
+              <Label>Plano</Label>
               <Select value={retroForm.plano_id || "_none"} onValueChange={(v) => setRetroForm(f => ({ ...f, plano_id: v === "_none" ? "" : v }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o plano (opcional)" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Selecione o plano (opcional)" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_none">Nenhum</SelectItem>
-                  {retroPlanos.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                  {retroPlanos.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.nome} {p.valor_mensalidade_padrao ? `— ${fmtBRL(p.valor_mensalidade_padrao)}/mês` : ""}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
+            {/* ── Tipo + Status ── */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Tipo</label>
+              <div className="space-y-1.5">
+                <Label>Tipo</Label>
                 <Select value={retroForm.tipo} onValueChange={(v) => setRetroForm(f => ({ ...f, tipo: v }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Base">Base</SelectItem>
                     <SelectItem value="Aditivo">Aditivo</SelectItem>
@@ -1930,12 +2121,10 @@ Estou à disposição.`;
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
                 <Select value={retroForm.status} onValueChange={(v) => setRetroForm(f => ({ ...f, status: v }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Ativo">Ativo</SelectItem>
                     <SelectItem value="Encerrado">Encerrado</SelectItem>
@@ -1944,59 +2133,346 @@ Estou à disposição.`;
               </div>
             </div>
 
-            {/* Módulos Adicionais */}
+            {/* ── Módulos Adicionais ── */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Módulos Adicionais</label>
+              <Label>Módulos Adicionais</Label>
               <Select value="" onValueChange={handleRetroAddModulo}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Adicionar módulo..." />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Adicionar módulo..." /></SelectTrigger>
                 <SelectContent>
-                  {retroModulos
-                    .filter(m => !retroModulosSelecionados.find(s => s.modulo_id === m.id))
-                    .map((m) => (
-                      <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
-                    ))}
+                  {retroModulos.filter(m => !retroModulosSelecionados.find(s => s.modulo_id === m.id)).map(m => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.nome}
+                      {(m.valor_implantacao_modulo || m.valor_mensalidade_modulo) && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {m.valor_implantacao_modulo ? `Impl: ${fmtBRL(m.valor_implantacao_modulo)}` : ""}
+                          {m.valor_implantacao_modulo && m.valor_mensalidade_modulo ? " · " : ""}
+                          {m.valor_mensalidade_modulo ? `Mens: ${fmtBRL(m.valor_mensalidade_modulo)}` : ""}
+                        </span>
+                      )}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {retroModulosSelecionados.length > 0 && (
-                <div className="space-y-1.5 mt-2">
+                <div className="rounded-lg border border-border divide-y divide-border">
                   {retroModulosSelecionados.map((mod, idx) => (
-                    <div key={mod.modulo_id} className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-1.5 text-sm">
-                      <span className="flex-1 truncate">{mod.nome}</span>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={mod.quantidade}
-                        onChange={(e) => {
-                          const qty = parseInt(e.target.value) || 1;
-                          setRetroModulosSelecionados(prev => prev.map((m, i) => i === idx ? { ...m, quantidade: qty } : m));
-                        }}
-                        className="w-16 h-7 text-xs text-center"
-                      />
-                      <span className="text-xs text-muted-foreground">un.</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => setRetroModulosSelecionados(prev => prev.filter((_, i) => i !== idx))}
-                      >
-                        <XCircle className="h-3.5 w-3.5" />
-                      </Button>
+                    <div key={mod.modulo_id} className="flex items-center gap-3 px-4 py-2.5">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{mod.nome}</p>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          {mod.valor_implantacao_modulo > 0 && `Impl: ${fmtBRL(mod.valor_implantacao_modulo)}`}
+                          {mod.valor_implantacao_modulo > 0 && mod.valor_mensalidade_modulo > 0 && " · "}
+                          {mod.valor_mensalidade_modulo > 0 && `Mens: ${fmtBRL(mod.valor_mensalidade_modulo)}`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input type="number" min={1} value={mod.quantidade}
+                          onChange={(e) => { const qty = parseInt(e.target.value) || 1; setRetroModulosSelecionados(prev => prev.map((m, i) => i === idx ? { ...m, quantidade: qty } : m)); }}
+                          className="w-16 h-7 text-xs text-center" />
+                        <div className="text-right text-xs font-mono text-foreground">
+                          {mod.valor_implantacao_modulo > 0 && <div>Impl: {fmtBRL(mod.valor_implantacao_modulo * mod.quantidade)}</div>}
+                          {mod.valor_mensalidade_modulo > 0 && <div>Mens: {fmtBRL(mod.valor_mensalidade_modulo * mod.quantidade)}</div>}
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => setRetroModulosSelecionados(prev => prev.filter((_, i) => i !== idx))}>
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setOpenRetroativo(false)}>Cancelar</Button>
-              <Button onClick={handleSalvarRetroativo} disabled={retroSaving}>
-                {retroSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                Cadastrar
-              </Button>
+            {/* ── Precificação ── */}
+            {(retroForm.plano_id || retroModulosSelecionados.length > 0) && (
+              <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Tag className="h-4 w-4 text-muted-foreground" /> Precificação
+                  </p>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <span className="text-xs text-muted-foreground">Aplicar desconto</span>
+                    <Switch checked={retroDescontoAtivo} onCheckedChange={(v) => {
+                      setRetroDescontoAtivo(v);
+                      if (!v) setRetroForm(f => ({ ...f, desconto_implantacao_valor: "0", desconto_mensalidade_valor: "0" }));
+                    }} />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Implantação</Label>
+                    <Input readOnly value={fmtBRL(retroDescontoAtivo ? retroValorImpOriginal : retroValorImpFinal)} className="bg-background font-mono text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Mensalidade</Label>
+                    <Input readOnly value={fmtBRL(retroDescontoAtivo ? retroValorMensOriginal : retroValorMensFinal)} className="bg-background font-mono text-sm" />
+                  </div>
+                </div>
+
+                {retroDescontoAtivo && (
+                  <div className="space-y-3 border-t border-border pt-3">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Descontos</p>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Desconto — Implantação</Label>
+                      <div className="flex gap-2">
+                        <Select value={retroForm.desconto_implantacao_tipo} onValueChange={(v) => setRetroForm(f => ({ ...f, desconto_implantacao_tipo: v as "R$" | "%" }))}>
+                          <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+                          <SelectContent><SelectItem value="R$">R$</SelectItem><SelectItem value="%">%</SelectItem></SelectContent>
+                        </Select>
+                        <Input type="number" min="0" step="0.01" value={retroForm.desconto_implantacao_valor} onChange={(e) => setRetroForm(f => ({ ...f, desconto_implantacao_valor: e.target.value }))} className="flex-1" placeholder="0" />
+                        <Input readOnly value={fmtBRL(retroValorImpFinal)} className="w-36 bg-background font-mono text-sm text-primary font-semibold" />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Desconto — Mensalidade</Label>
+                      <div className="flex gap-2">
+                        <Select value={retroForm.desconto_mensalidade_tipo} onValueChange={(v) => setRetroForm(f => ({ ...f, desconto_mensalidade_tipo: v as "R$" | "%" }))}>
+                          <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+                          <SelectContent><SelectItem value="R$">R$</SelectItem><SelectItem value="%">%</SelectItem></SelectContent>
+                        </Select>
+                        <Input type="number" min="0" step="0.01" value={retroForm.desconto_mensalidade_valor} onChange={(e) => setRetroForm(f => ({ ...f, desconto_mensalidade_valor: e.target.value }))} className="flex-1" placeholder="0" />
+                        <Input readOnly value={fmtBRL(retroValorMensFinal)} className="w-36 bg-background font-mono text-sm text-primary font-semibold" />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Motivo do desconto</Label>
+                      <Textarea placeholder="Informe o motivo do desconto..." value={retroForm.motivo_desconto} onChange={(e) => setRetroForm(f => ({ ...f, motivo_desconto: e.target.value }))} rows={2} />
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-2 border-t border-border">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Valor total</Label>
+                    <Input readOnly value={fmtBRL(retroValorTotal)} className="bg-background font-mono font-bold text-foreground" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Forma de Pagamento ── */}
+            <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-4">
+              <p className="text-sm font-semibold text-foreground">Forma de Pagamento</p>
+              <div className="space-y-3 border-t border-border pt-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Mensalidade</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Forma de pagamento</Label>
+                    <Select value={retroForm.pagamento_mensalidade_forma} onValueChange={(v) => setRetroForm(f => ({ ...f, pagamento_mensalidade_forma: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Boleto">Boleto</SelectItem>
+                        <SelectItem value="PIX">PIX</SelectItem>
+                        <SelectItem value="Cartão">Cartão</SelectItem>
+                        <SelectItem value="Transferência">Transferência</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Observação</Label>
+                    <Input placeholder="Ex: Vencimento todo dia 10" value={retroForm.pagamento_mensalidade_observacao} onChange={(e) => setRetroForm(f => ({ ...f, pagamento_mensalidade_observacao: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-3 border-t border-border pt-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Implantação</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Forma de pagamento</Label>
+                    <Select value={retroForm.pagamento_implantacao_forma} onValueChange={(v) => setRetroForm(f => ({ ...f, pagamento_implantacao_forma: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Boleto">Boleto</SelectItem>
+                        <SelectItem value="PIX">PIX</SelectItem>
+                        <SelectItem value="Cartão">Cartão</SelectItem>
+                        <SelectItem value="Transferência">Transferência</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Parcelas</Label>
+                    <Input type="number" min="1" placeholder="Nº de parcelas" value={retroForm.pagamento_implantacao_parcelas} onChange={(e) => setRetroForm(f => ({ ...f, pagamento_implantacao_parcelas: e.target.value }))} />
+                  </div>
+                  <div className="col-span-2 space-y-1.5">
+                    <Label className="text-xs">Observação</Label>
+                    <Input placeholder="Ex: À vista no ato da implantação" value={retroForm.pagamento_implantacao_observacao} onChange={(e) => setRetroForm(f => ({ ...f, pagamento_implantacao_observacao: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Observações ── */}
+            <div className="space-y-1.5">
+              <Label>Observações</Label>
+              <Textarea placeholder="Observações adicionais..." value={retroForm.observacoes} onChange={(e) => setRetroForm(f => ({ ...f, observacoes: e.target.value }))} rows={3} />
             </div>
           </div>
+
+          {/* Footer fixo */}
+          <div className="px-6 py-4 border-t border-border shrink-0 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setOpenRetroativo(false)}>Cancelar</Button>
+            <Button onClick={handleSalvarRetroativo} disabled={retroSaving}>
+              {retroSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Cadastrar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog Novo Cliente (dentro do retroativo) ── */}
+      <Dialog open={openRetroClienteDialog} onOpenChange={(open) => { setOpenRetroClienteDialog(open); if (!open) { setRetroClienteContatos([]); setRetroShowContatoForm(false); } }}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><UserPlus className="h-4 w-4" /> Cadastrar Novo Cliente</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleRetroSaveCliente} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2 space-y-1.5">
+                <Label>CNPJ / CPF *</Label>
+                <div className="relative">
+                  <Input placeholder="00.000.000/0000-00" value={retroClienteForm.cnpj_cpf}
+                    onChange={(e) => { setRetroCnpjError(""); setRetroClienteForm(f => ({ ...f, cnpj_cpf: e.target.value })); }}
+                    onBlur={handleRetroCnpjBlur} required autoFocus
+                    className={retroCnpjError ? "border-destructive pr-9" : "pr-9"} />
+                  {retroLoadingCnpj && <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+                </div>
+                {retroCnpjError && <p className="flex items-center gap-1 text-xs text-destructive"><AlertCircle className="h-3 w-3" />{retroCnpjError}</p>}
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label>Nome Fantasia *</Label>
+                <Input placeholder="Nome fantasia..." value={retroClienteForm.nome_fantasia} onChange={(e) => setRetroClienteForm(f => ({ ...f, nome_fantasia: e.target.value }))} required />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label>Razão Social</Label>
+                <Input placeholder="Razão social..." value={retroClienteForm.razao_social} onChange={(e) => setRetroClienteForm(f => ({ ...f, razao_social: e.target.value }))} />
+              </div>
+
+              <div className="col-span-2 pt-1">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                  <MapPin className="h-3 w-3" /> Endereço
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>CEP</Label>
+                <div className="relative">
+                  <Input placeholder="00000-000" value={retroClienteForm.cep}
+                    onChange={(e) => { setRetroCepError(""); setRetroClienteForm(f => ({ ...f, cep: e.target.value })); }}
+                    onBlur={handleRetroCepBlur} maxLength={9}
+                    className={retroCepError ? "border-destructive pr-9" : "pr-9"} />
+                  {retroLoadingCep && <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+                </div>
+                {retroCepError && <p className="flex items-center gap-1 text-xs text-destructive"><AlertCircle className="h-3 w-3" />{retroCepError}</p>}
+              </div>
+              <div className="space-y-1.5"><Label>Logradouro</Label><Input placeholder="Rua / Avenida..." value={retroClienteForm.logradouro} onChange={(e) => setRetroClienteForm(f => ({ ...f, logradouro: e.target.value }))} /></div>
+              <div className="space-y-1.5"><Label>Número</Label><Input placeholder="Ex: 123" value={retroClienteForm.numero} onChange={(e) => setRetroClienteForm(f => ({ ...f, numero: e.target.value }))} /></div>
+              <div className="space-y-1.5"><Label>Complemento</Label><Input placeholder="Apto, Sala..." value={retroClienteForm.complemento} onChange={(e) => setRetroClienteForm(f => ({ ...f, complemento: e.target.value }))} /></div>
+              <div className="space-y-1.5"><Label>Bairro</Label><Input placeholder="Bairro" value={retroClienteForm.bairro} onChange={(e) => setRetroClienteForm(f => ({ ...f, bairro: e.target.value }))} /></div>
+              <div className="space-y-1.5"><Label>Cidade</Label><Input placeholder="Cidade" value={retroClienteForm.cidade} onChange={(e) => setRetroClienteForm(f => ({ ...f, cidade: e.target.value }))} /></div>
+              <div className="space-y-1.5">
+                <Label>UF</Label>
+                <Select value={retroClienteForm.uf} onValueChange={(v) => setRetroClienteForm(f => ({ ...f, uf: v }))}>
+                  <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
+                  <SelectContent>{UF_LIST.map(uf => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+
+              {/* ── Contatos ── */}
+              <div className="col-span-2 pt-2">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                    <Users className="h-3.5 w-3.5" /> Contatos <span className="text-destructive">*</span>
+                    <span className="text-xs font-normal normal-case">(obrigatório ao menos 1)</span>
+                  </div>
+                  {!retroShowContatoForm && (
+                    <Button type="button" size="sm" variant="outline" className="gap-1.5 h-7 text-xs"
+                      onClick={() => { setRetroEditingContatoIdx(null); setRetroInlineContatoForm({ nome: "", cargo: "", telefone: "", email: "", decisor: false, ativo: true }); setRetroShowContatoForm(true); }}>
+                      <Plus className="h-3 w-3" /> Adicionar contato
+                    </Button>
+                  )}
+                </div>
+
+                {retroClienteContatos.length > 0 && (
+                  <div className="rounded-lg border border-border divide-y divide-border mb-2">
+                    {retroClienteContatos.map((ct, idx) => (
+                      <div key={idx} className="flex items-center gap-3 px-3 py-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-medium truncate">{ct.nome}</p>
+                            {ct.decisor && <span className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium shrink-0"><Star className="h-2.5 w-2.5 fill-current" /> Decisor</span>}
+                          </div>
+                          <div className="flex gap-2 mt-0.5">
+                            {ct.cargo && <span className="text-xs text-muted-foreground">{ct.cargo}</span>}
+                            {ct.telefone && <span className="text-xs text-muted-foreground">{ct.telefone}</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <Button type="button" variant="ghost" size="icon" className={`h-6 w-6 ${ct.decisor ? "text-primary" : "text-muted-foreground"}`}
+                            onClick={() => setRetroClienteContatos(prev => prev.map((c, i) => ({ ...c, decisor: i === idx ? !c.decisor : (ct.decisor ? c.decisor : false) })))}>
+                            <Star className={`h-3 w-3 ${ct.decisor ? "fill-current" : ""}`} />
+                          </Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6"
+                            onClick={() => { setRetroEditingContatoIdx(idx); setRetroInlineContatoForm({ ...ct }); setRetroShowContatoForm(true); }}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
+                            onClick={() => setRetroClienteContatos(prev => prev.filter((_, i) => i !== idx))}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {retroClienteContatos.length === 0 && !retroShowContatoForm && (
+                  <div className="rounded-lg border border-dashed border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-muted-foreground text-center mb-2">
+                    <Users className="h-4 w-4 mx-auto mb-1" /> Nenhum contato cadastrado. Adicione pelo menos um contato.
+                  </div>
+                )}
+
+                {retroShowContatoForm && (
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+                    <p className="text-xs font-medium text-foreground">{retroEditingContatoIdx !== null ? "Editar contato" : "Novo contato"}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="col-span-2 space-y-1"><Label className="text-xs">Nome *</Label><Input className="h-8 text-sm" value={retroInlineContatoForm.nome} onChange={(e) => setRetroInlineContatoForm(f => ({ ...f, nome: e.target.value }))} placeholder="Nome completo" /></div>
+                      <div className="space-y-1"><Label className="text-xs">Cargo</Label><Input className="h-8 text-sm" value={retroInlineContatoForm.cargo} onChange={(e) => setRetroInlineContatoForm(f => ({ ...f, cargo: e.target.value }))} placeholder="Cargo / função" /></div>
+                      <div className="space-y-1"><Label className="text-xs">Telefone</Label><Input className="h-8 text-sm" value={retroInlineContatoForm.telefone} onChange={(e) => setRetroInlineContatoForm(f => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" /></div>
+                      <div className="col-span-2 space-y-1"><Label className="text-xs">E-mail</Label><Input className="h-8 text-sm" type="email" value={retroInlineContatoForm.email} onChange={(e) => setRetroInlineContatoForm(f => ({ ...f, email: e.target.value }))} placeholder="email@empresa.com" /></div>
+                      <div className="col-span-2 flex items-center gap-3">
+                        <Checkbox id="retro-cli-decisor" checked={retroInlineContatoForm.decisor} onCheckedChange={(v) => setRetroInlineContatoForm(f => ({ ...f, decisor: !!v }))} />
+                        <Label htmlFor="retro-cli-decisor" className="text-xs cursor-pointer">Decisor (tomador de decisão)</Label>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setRetroShowContatoForm(false); setRetroEditingContatoIdx(null); }}>Cancelar</Button>
+                      <Button type="button" size="sm" className="h-7 text-xs" onClick={() => {
+                        if (!retroInlineContatoForm.nome.trim()) { toast.error("Nome do contato é obrigatório"); return; }
+                        if (retroEditingContatoIdx !== null) {
+                          setRetroClienteContatos(prev => prev.map((c, i) => i === retroEditingContatoIdx ? { ...retroInlineContatoForm } : c));
+                        } else {
+                          setRetroClienteContatos(prev => [...(retroInlineContatoForm.decisor ? prev.map(c => ({ ...c, decisor: false })) : prev), { ...retroInlineContatoForm }]);
+                        }
+                        setRetroShowContatoForm(false);
+                        setRetroEditingContatoIdx(null);
+                        setRetroInlineContatoForm({ nome: "", cargo: "", telefone: "", email: "", decisor: false, ativo: true });
+                      }}>
+                        {retroEditingContatoIdx !== null ? "Salvar" : "Adicionar"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setOpenRetroClienteDialog(false)}>Cancelar</Button>
+              <Button type="submit" disabled={retroSavingCliente || retroLoadingCep || retroLoadingCnpj}>
+                {retroLoadingCep || retroLoadingCnpj ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Consultando...</> :
+                 retroSavingCliente ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Salvando...</> : "Cadastrar cliente"}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </AppLayout>
