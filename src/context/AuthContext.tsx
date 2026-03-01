@@ -14,6 +14,7 @@ interface AuthContextType {
   deveTrocarSenha: boolean;
   semFilial: boolean;
   clearDeveTrocarSenha: () => void;
+  refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -27,6 +28,7 @@ const AuthContext = createContext<AuthContextType>({
   deveTrocarSenha: false,
   semFilial: false,
   clearDeveTrocarSenha: () => {},
+  refreshProfile: async () => {},
   signOut: async () => {},
 });
 
@@ -120,6 +122,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  async function refreshProfile() {
+    if (user) {
+      await fetchProfile(user.id);
+    }
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
     setProfile(null);
@@ -134,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = roles.includes("admin");
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, roles, isAdmin, loading, deveTrocarSenha, semFilial, clearDeveTrocarSenha, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, roles, isAdmin, loading, deveTrocarSenha, semFilial, clearDeveTrocarSenha, refreshProfile, signOut }}>
       {children}
     </AuthContext.Provider>
   );
