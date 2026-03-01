@@ -37,6 +37,7 @@ import { toast } from "sonner";
 import { Plus, Search, Pencil, Building2, Phone, Mail, FileText, ArrowUpCircle, ArrowDownCircle, Package, Loader2, MapPin, AlertCircle, Users, Star, Trash2, Upload } from "lucide-react";
 import { ClientePlanViewer } from "@/components/ClientePlanViewer";
 import { ImportClientesDialog } from "@/components/ImportClientesDialog";
+import { TablePagination } from "@/components/TablePagination";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -111,6 +112,8 @@ export default function Clientes() {
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 25;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Cliente | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -260,8 +263,9 @@ export default function Clientes() {
         (c.telefone || "").includes(searchTerm)
       )
     : clientesFiltradosPorFilial;
-  
-  console.log("[SEARCH DEBUG]", { search, searchTerm, totalClientes: clientes.length, filteredCount: filtered.length });
+
+  // Reset page when search changes
+  useEffect(() => { setCurrentPage(1); }, [search]);
 
   function openCreate() {
     setEditing(null);
@@ -638,7 +642,7 @@ export default function Clientes() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((c) => (
+                filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((c) => (
                   <TableRow key={c.id}>
                     <TableCell>
                       <div>
@@ -701,6 +705,13 @@ export default function Clientes() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(filtered.length / ITEMS_PER_PAGE)}
+            totalItems={filtered.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
 

@@ -51,6 +51,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { TablePagination } from "@/components/TablePagination";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -270,6 +271,8 @@ export default function Pedidos() {
   const [filterVendedor, setFilterVendedor] = useState("all");
   const [filterDe, setFilterDe] = useState("");
   const [filterAte, setFilterAte] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 25;
 
   // Dialog pedido
   const [openDialog, setOpenDialog] = useState(false);
@@ -1253,6 +1256,9 @@ export default function Pedidos() {
     return true;
   });
 
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [search, filterFilial, filterStatus, filterVendedor, filterDe, filterAte]);
+
   const canCreate = isAdmin || isVendedor;
   // A RLS já restringe os clientes por filial para vendedores, não filtrar novamente
   const clientesDisponiveis = clientes;
@@ -1350,7 +1356,7 @@ export default function Pedidos() {
                   <TableRow>
                     <TableCell colSpan={12} className="text-center py-12 text-muted-foreground">Nenhum pedido encontrado</TableCell>
                   </TableRow>
-                ) : filtered.map((pedido) => {
+                ) : filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((pedido) => {
                   const finStatus = pedido.financeiro_status as string || "Aguardando";
                   const finMotivo = pedido.financeiro_motivo as string | null;
                   const contratoLiberado = pedido.contrato_liberado as boolean;
@@ -1510,6 +1516,13 @@ export default function Pedidos() {
                 })}
               </TableBody>
             </Table>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(filtered.length / ITEMS_PER_PAGE)}
+              totalItems={filtered.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={setCurrentPage}
+            />
           </div>
           {!loading && (
             <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground">
