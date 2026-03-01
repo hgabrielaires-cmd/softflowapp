@@ -182,32 +182,95 @@ export default function Contratos() {
 
   // ── Cadastro Retroativo ──
   const [openRetroativo, setOpenRetroativo] = useState(false);
-  const [retroClientes, setRetroClientes] = useState<{ id: string; nome_fantasia: string }[]>([]);
+  const [retroClientes, setRetroClientes] = useState<{ id: string; nome_fantasia: string; filial_id: string | null }[]>([]);
   const [retroPlanos, setRetroPlanos] = useState<{ id: string; nome: string }[]>([]);
+  const [retroModulos, setRetroModulos] = useState<{ id: string; nome: string; valor_implantacao_modulo: number | null; valor_mensalidade_modulo: number | null }[]>([]);
   const [retroForm, setRetroForm] = useState({ cliente_id: "", plano_id: "", tipo: "Base", status: "Ativo" });
+  const [retroModulosSelecionados, setRetroModulosSelecionados] = useState<{ modulo_id: string; nome: string; quantidade: number; valor_implantacao_modulo: number; valor_mensalidade_modulo: number }[]>([]);
   const [retroSaving, setRetroSaving] = useState(false);
 
   async function openRetroativoDialog() {
     setRetroForm({ cliente_id: "", plano_id: "", tipo: "Base", status: "Ativo" });
+    setRetroModulosSelecionados([]);
     setOpenRetroativo(true);
-    const [{ data: cData }, { data: pData }] = await Promise.all([
-      supabase.from("clientes").select("id, nome_fantasia").eq("ativo", true).order("nome_fantasia"),
+    const [{ data: cData }, { data: pData }, { data: mData }] = await Promise.all([
+      supabase.from("clientes").select("id, nome_fantasia, filial_id").eq("ativo", true).order("nome_fantasia"),
       supabase.from("planos").select("id, nome").eq("ativo", true).order("nome"),
+      supabase.from("modulos").select("id, nome, valor_implantacao_modulo, valor_mensalidade_modulo").eq("ativo", true).order("nome"),
     ]);
-    setRetroClientes((cData || []) as { id: string; nome_fantasia: string }[]);
-    setRetroPlanos((pData || []) as { id: string; nome: string }[]);
+    setRetroClientes((cData || []) as any[]);
+    setRetroPlanos((pData || []) as any[]);
+    setRetroModulos((mData || []) as any[]);
+  }
+
+  function handleRetroAddModulo(moduloId: string) {
+    const mod = retroModulos.find(m => m.id === moduloId);
+    if (!mod) return;
+    if (retroModulosSelecionados.find(m => m.modulo_id === moduloId)) return;
+    setRetroModulosSelecionados(prev => [...prev, {
+      modulo_id: mod.id,
+      nome: mod.nome,
+      quantidade: 1,
+      valor_implantacao_modulo: mod.valor_implantacao_modulo || 0,
+      valor_mensalidade_modulo: mod.valor_mensalidade_modulo || 0,
+    }]);
   }
 
   async function handleSalvarRetroativo() {
     if (!retroForm.cliente_id) { toast.error("Selecione um cliente"); return; }
     setRetroSaving(true);
+
+    // Buscar filial_id do cliente selecionado
+    const clienteSel = retroClientes.find(c => c.id === retroForm.cliente_id);
+    const filialId = clienteSel?.filial_id;
+
+    if (!filialId) { toast.error("Cliente não possui filial vinculada"); setRetroSaving(false); return; }
+
+    // 1. Criar pedido retroativo para armazenar módulos
+    const pedidoInsert: any = {
+      cliente_id: retroForm.cliente_id,
+      plano_id: retroForm.plano_id || null,
+      filial_id: filialId,
+      vendedor_id: profile?.user_id || profile?.id,
+      status_pedido: "Contrato Retroativo",
+      financeiro_status: "Aprovado",
+      tipo_pedido: retroForm.tipo === "Base" ? "Novo" : retroForm.tipo === "Aditivo" ? "Módulo Adicional" : retroForm.tipo,
+      valor_implantacao: 0,
+      valor_implantacao_original: 0,
+      valor_implantacao_final: 0,
+      valor_mensalidade: 0,
+      valor_mensalidade_original: 0,
+      valor_mensalidade_final: 0,
+      valor_total: 0,
+      comissao_percentual: 0,
+      comissao_valor: 0,
+      modulos_adicionais: retroModulosSelecionados.length > 0 ? retroModulosSelecionados : null,
+      observacoes: "Cadastro retroativo",
+      contrato_liberado: true,
+    };
+
+    const { data: pedidoData, error: pedidoError } = await supabase
+      .from("pedidos")
+      .insert(pedidoInsert)
+      .select("id")
+      .single();
+
+    if (pedidoError) {
+      toast.error("Erro ao criar pedido retroativo: " + pedidoError.message);
+      setRetroSaving(false);
+      return;
+    }
+
+    // 2. Criar contrato vinculado ao pedido
     const insertData: any = {
       cliente_id: retroForm.cliente_id,
       tipo: retroForm.tipo,
       status: retroForm.status,
       status_geracao: "Manual",
+      pedido_id: pedidoData.id,
     };
     if (retroForm.plano_id) insertData.plano_id = retroForm.plano_id;
+
     const { error } = await supabase.from("contratos").insert(insertData);
     setRetroSaving(false);
     if (error) { toast.error("Erro ao cadastrar contrato: " + error.message); return; }
@@ -1802,7 +1865,7 @@ Estou à disposição.`;
       </Dialog>
       {/* Dialog Cadastro Retroativo */}
       <Dialog open={openRetroativo} onOpenChange={setOpenRetroativo}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Cadastrar Contrato Retroativo</DialogTitle>
             <DialogDescription>
@@ -1865,6 +1928,52 @@ Estou à disposição.`;
                 </Select>
               </div>
             </div>
+
+            {/* Módulos Adicionais */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Módulos Adicionais</label>
+              <Select value="" onValueChange={handleRetroAddModulo}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Adicionar módulo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {retroModulos
+                    .filter(m => !retroModulosSelecionados.find(s => s.modulo_id === m.id))
+                    .map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {retroModulosSelecionados.length > 0 && (
+                <div className="space-y-1.5 mt-2">
+                  {retroModulosSelecionados.map((mod, idx) => (
+                    <div key={mod.modulo_id} className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-1.5 text-sm">
+                      <span className="flex-1 truncate">{mod.nome}</span>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={mod.quantidade}
+                        onChange={(e) => {
+                          const qty = parseInt(e.target.value) || 1;
+                          setRetroModulosSelecionados(prev => prev.map((m, i) => i === idx ? { ...m, quantidade: qty } : m));
+                        }}
+                        className="w-16 h-7 text-xs text-center"
+                      />
+                      <span className="text-xs text-muted-foreground">un.</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setRetroModulosSelecionados(prev => prev.filter((_, i) => i !== idx))}
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={() => setOpenRetroativo(false)}>Cancelar</Button>
               <Button onClick={handleSalvarRetroativo} disabled={retroSaving}>
