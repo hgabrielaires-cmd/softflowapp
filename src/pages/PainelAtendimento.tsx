@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
@@ -110,6 +111,7 @@ export default function PainelAtendimento() {
   const { profile, roles } = useAuth();
   const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais } = useUserFiliais();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<"kanban" | "lista">("kanban");
   const [search, setSearch] = useState("");
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
@@ -445,6 +447,19 @@ export default function PainelAtendimento() {
     });
     return map;
   }, [cardApontamentosRaw]);
+
+  // Auto-open card from query param
+  useEffect(() => {
+    const cardParam = searchParams.get("card");
+    if (cardParam && cards.length > 0 && !detailCard) {
+      const found = cards.find((c: any) => c.id === cardParam);
+      if (found) {
+        setDetailCard(found);
+        searchParams.delete("card");
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [cards, searchParams]);
 
   useEffect(() => {
     if (!detailCard) {
