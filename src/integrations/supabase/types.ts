@@ -1469,6 +1469,7 @@ export type Database = {
       }
       painel_historico_etapas: {
         Row: {
+          atraso_inicio_horas: number | null
           card_id: string
           created_at: string
           entrada_em: string
@@ -1482,6 +1483,7 @@ export type Database = {
           usuario_id: string | null
         }
         Insert: {
+          atraso_inicio_horas?: number | null
           card_id: string
           created_at?: string
           entrada_em?: string
@@ -1495,6 +1497,7 @@ export type Database = {
           usuario_id?: string | null
         }
         Update: {
+          atraso_inicio_horas?: number | null
           card_id?: string
           created_at?: string
           entrada_em?: string
