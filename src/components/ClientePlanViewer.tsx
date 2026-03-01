@@ -321,29 +321,10 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
 
       const mensagem = buildEspelhoMessage(nome, template?.conteudo || undefined);
 
-      // Load WhatsApp config
-      const { data: config } = await supabase
-        .from("integracoes_config")
-        .select("server_url, token, ativo")
-        .eq("nome", "whatsapp")
-        .single();
-
-      if (!config?.ativo || !config?.server_url || !config?.token) {
-        toast.error("WhatsApp não configurado ou desativado.");
-        setSendingWhatsapp(false);
-        return;
-      }
-
-      const numLimpo = telefone.replace(/\D/g, "");
-      const numFinal = numLimpo.startsWith("55") ? numLimpo : `55${numLimpo}`;
-
       const { data: result, error } = await supabase.functions.invoke("evolution-api", {
         body: {
           action: "send_text",
-          server_url: config.server_url,
-          api_key: config.token,
-          instance_name: "Softflow_WhatsApp",
-          number: numFinal,
+          number: telefone,
           text: mensagem,
         },
       });

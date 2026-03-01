@@ -7,6 +7,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -39,22 +41,61 @@ serve(async (req) => {
 
     const { action, server_url, api_key, instance_name, number, text } = await req.json();
 
-    if (!server_url || !api_key) {
-      return new Response(JSON.stringify({ error: "server_url e api_key são obrigatórios" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // For send_text, read credentials from DB using service role (secure)
+    // For config actions (create_instance, connect, etc.), accept from request body (admin setup)
+    let baseUrl: string;
+    let apiKey: string;
+
+    if (action === "send_text") {
+      // Read WhatsApp config from DB using service role key
+      const serviceClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+
+      const { data: config, error: configError } = await serviceClient
+        .from("integracoes_config")
+        .select("server_url, token, ativo")
+        .eq("nome", "whatsapp")
+        .maybeSingle();
+
+      if (configError || !config) {
+        return new Response(JSON.stringify({ error: "Configuração WhatsApp não encontrada" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!config.ativo || !config.server_url || !config.token) {
+        return new Response(JSON.stringify({ error: "Integração WhatsApp não está ativa ou configurada" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      baseUrl = config.server_url;
+      apiKey = config.token;
+    } else {
+      // Config actions require credentials from request (admin is setting them up)
+      if (!server_url || !api_key) {
+        return new Response(JSON.stringify({ error: "server_url e api_key são obrigatórios" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      baseUrl = server_url;
+      apiKey = api_key;
     }
 
-    // Validar server_url como URL válida
-    let normalizedUrl = server_url.replace(/\/+$/, "");
+    // Normalize URL
+    baseUrl = baseUrl.replace(/\/+$/, "");
     try {
-      const parsed = new URL(normalizedUrl);
+      const parsed = new URL(baseUrl);
       if (!["http:", "https:"].includes(parsed.protocol)) {
         throw new Error("Protocolo inválido");
       }
       if (parsed.protocol === "https:" && parsed.port && parsed.port !== "443") {
-        normalizedUrl = normalizedUrl.replace(/^https:/, "http:");
+        baseUrl = baseUrl.replace(/^https:/, "http:");
       }
     } catch {
       return new Response(JSON.stringify({ error: "server_url inválida" }), {
@@ -62,9 +103,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const baseUrl = normalizedUrl;
 
-    // Validar tamanho do texto (max 4096 chars)
+    // Validate text size
     if (text && (typeof text !== "string" || text.length > 4096)) {
       return new Response(JSON.stringify({ error: "Texto excede tamanho máximo (4096 caracteres)" }), {
         status: 400,
@@ -74,7 +114,7 @@ serve(async (req) => {
 
     const headers = {
       "Content-Type": "application/json",
-      apikey: api_key,
+      apikey: apiKey,
     };
 
     let result: any;
@@ -161,12 +201,10 @@ serve(async (req) => {
           });
         }
         const name = instance_name || "Softflow_WhatsApp";
-        // Format number: remove non-digits, ensure country code
         let formattedNumber = number.replace(/\D/g, "");
         if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
         if (!formattedNumber.startsWith("55")) formattedNumber = "55" + formattedNumber;
 
-        // Validar formato do telefone (10-15 dígitos)
         if (!/^\d{10,15}$/.test(formattedNumber)) {
           return new Response(JSON.stringify({ error: "Número de telefone inválido" }), {
             status: 400,

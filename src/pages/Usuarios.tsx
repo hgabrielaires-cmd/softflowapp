@@ -175,23 +175,9 @@ export default function Usuarios() {
       .replace(/\{usuario\.senha\}/g, senha)
       .replace(/\{link_sistema\}/g, linkSistema);
 
-    // Buscar config da integração WhatsApp
-    const { data: config } = await supabase
-      .from("integracoes_config")
-      .select("*")
-      .eq("nome", "whatsapp")
-      .single();
-
-    if (!config || !config.ativo || !config.server_url || !config.token) {
-      throw new Error("Integração WhatsApp não configurada");
-    }
-
     const { error } = await supabase.functions.invoke("evolution-api", {
       body: {
         action: "send_text",
-        server_url: config.server_url,
-        api_key: config.token,
-        instance_name: "Softflow_WhatsApp",
         number: telefone,
         text: mensagem,
       },
