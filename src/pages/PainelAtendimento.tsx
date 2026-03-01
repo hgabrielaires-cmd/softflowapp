@@ -424,7 +424,7 @@ export default function PainelAtendimento() {
     queryFn: async () => {
       const { data } = await supabase
         .from("painel_apontamentos")
-        .select("id, card_id, usuario_id, profiles:usuario_id(full_name)");
+        .select("id, card_id, usuario_id, profiles:usuario_id(full_name, avatar_url)");
       return (data || []) as any[];
     },
   });
@@ -438,10 +438,10 @@ export default function PainelAtendimento() {
     return map;
   }, [cardApontamentosRaw]);
   const cardApontamentosDetalhado = useMemo(() => {
-    const map: Record<string, { id: string; usuario_id: string; nome: string }[]> = {};
+    const map: Record<string, { id: string; usuario_id: string; nome: string; avatar_url: string | null }[]> = {};
     cardApontamentosRaw.forEach((r: any) => {
       if (!map[r.card_id]) map[r.card_id] = [];
-      map[r.card_id].push({ id: r.id, usuario_id: r.usuario_id, nome: r.profiles?.full_name || "Usuário" });
+      map[r.card_id].push({ id: r.id, usuario_id: r.usuario_id, nome: r.profiles?.full_name || "Usuário", avatar_url: r.profiles?.avatar_url || null });
     });
     return map;
   }, [cardApontamentosRaw]);
@@ -2034,7 +2034,10 @@ export default function PainelAtendimento() {
                         </p>
                         {cardApontamentosDetalhado[detailCard.id].map((ap) => (
                           <div key={ap.id} className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">{ap.nome}</span>
+                            <div className="flex items-center gap-1.5">
+                              <UserAvatar avatarUrl={ap.avatar_url} fullName={ap.nome} size="xs" />
+                              <span className="text-muted-foreground">{ap.nome}</span>
+                            </div>
                             {podeGerenciarApontamento && (
                               <Button variant="ghost" size="sm" className="h-5 px-1 text-destructive hover:text-destructive" onClick={() => handleRemoverApontamento(ap.id, detailCard.id)}>
                                 <XCircle className="h-3 w-3" />
@@ -2084,7 +2087,10 @@ export default function PainelAtendimento() {
                         </p>
                         {cardApontamentosDetalhado[detailCard.id].map((ap) => (
                           <div key={ap.id} className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">{ap.nome}</span>
+                            <div className="flex items-center gap-1.5">
+                              <UserAvatar avatarUrl={ap.avatar_url} fullName={ap.nome} size="xs" />
+                              <span className="text-muted-foreground">{ap.nome}</span>
+                            </div>
                             {podeGerenciarApontamento && (
                               <Button variant="ghost" size="sm" className="h-5 px-1 text-destructive hover:text-destructive" onClick={() => handleRemoverApontamento(ap.id, detailCard.id)}>
                                 <XCircle className="h-3 w-3" />
@@ -2233,8 +2239,9 @@ export default function PainelAtendimento() {
                     {cardApontamentosDetalhado[detailCard.id]?.length > 0 && (
                       <div className="mt-1 space-y-0.5">
                         {cardApontamentosDetalhado[detailCard.id].map((ap) => (
-                          <p key={ap.id} className="font-medium flex items-center gap-1 text-sm">
-                            <UserPlus className="h-3 w-3" />{ap.nome} <span className="text-muted-foreground text-xs font-normal">(apontado)</span>
+                          <p key={ap.id} className="font-medium flex items-center gap-1.5 text-sm">
+                            <UserAvatar avatarUrl={ap.avatar_url} fullName={ap.nome} size="xs" />
+                            {ap.nome} <span className="text-muted-foreground text-xs font-normal">(apontado)</span>
                           </p>
                         ))}
                       </div>
