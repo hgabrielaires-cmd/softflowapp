@@ -2204,10 +2204,21 @@ export default function PainelAtendimento() {
                     })()}
                   </div>
                 )}
-                {detailCard.profiles?.full_name && (
+                {(detailCard.profiles?.full_name || (cardApontamentosDetalhado[detailCard.id]?.length > 0)) && (
                   <div>
                     <p className="text-muted-foreground">Responsável</p>
-                    <p className="font-medium flex items-center gap-1"><User className="h-3 w-3" />{detailCard.profiles.full_name}</p>
+                    {detailCard.profiles?.full_name && (
+                      <p className="font-medium flex items-center gap-1"><User className="h-3 w-3" />{detailCard.profiles.full_name} <span className="text-muted-foreground text-xs font-normal">(iniciou)</span></p>
+                    )}
+                    {cardApontamentosDetalhado[detailCard.id]?.length > 0 && (
+                      <div className="mt-1 space-y-0.5">
+                        {cardApontamentosDetalhado[detailCard.id].map((ap) => (
+                          <p key={ap.id} className="font-medium flex items-center gap-1 text-sm">
+                            <UserPlus className="h-3 w-3" />{ap.nome} <span className="text-muted-foreground text-xs font-normal">(apontado)</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
                 {detailCard.tipo_atendimento_local && (
