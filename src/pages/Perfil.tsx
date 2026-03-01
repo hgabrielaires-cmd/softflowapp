@@ -43,6 +43,27 @@ export default function Perfil() {
     }
   }, [profile?.user_id]);
 
+  function compressImage(file: File, maxSize = 200, quality = 0.8): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let { width, height } = img;
+        if (width > maxSize || height > maxSize) {
+          if (width > height) { height = Math.round((height * maxSize) / width); width = maxSize; }
+          else { width = Math.round((width * maxSize) / height); height = maxSize; }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Falha ao comprimir")), "image/webp", quality);
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !profile) return;
@@ -51,19 +72,19 @@ export default function Perfil() {
       toast.error("Selecione uma imagem válida");
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("A imagem deve ter no máximo 2MB");
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 5MB");
       return;
     }
 
     setUploadingAvatar(true);
     try {
-      const ext = file.name.split(".").pop();
-      const filePath = `${profile.user_id}/avatar.${ext}`;
+      const compressed = await compressImage(file, 200, 0.75);
+      const filePath = `${profile.user_id}/avatar.webp`;
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, compressed, { upsert: true, contentType: "image/webp" });
 
       if (uploadError) throw uploadError;
 
