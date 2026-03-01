@@ -2666,7 +2666,7 @@ export default function PainelAtendimento() {
                         };
 
                         const renderComment = (com: any, isReply = false) => {
-                          const autor = responsaveis.find((r: any) => r.id === com.criado_por) || { full_name: "Usuário" };
+                          const autor = responsaveis.find((r: any) => r.id === com.criado_por) || responsaveis.find((r: any) => r.user_id === com.criado_por) || { full_name: "Usuário", avatar_url: null };
                           const likes = curtidas[com.id] || [];
                           const replies = getReplies(com.id);
                           return (
