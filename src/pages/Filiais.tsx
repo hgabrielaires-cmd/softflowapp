@@ -31,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Building2, Loader2, Upload, X, Image, Search, Settings, Tag, Trash2 } from "lucide-react";
+import { Plus, Pencil, Building2, Loader2, Upload, X, Image, Search, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
@@ -68,11 +68,6 @@ export default function Filiais() {
   const [etapas, setEtapas] = useState<{ id: string; nome: string; ordem: number }[]>([]);
   const [activeTab, setActiveTab] = useState("geral");
 
-  // CRM - Segmentos
-  const [segmentos, setSegmentos] = useState<{ id: string; nome: string; ativo: boolean; created_at: string }[]>([]);
-  const [loadingSegmentos, setLoadingSegmentos] = useState(false);
-  const [novoSegmento, setNovoSegmento] = useState("");
-  const [savingSegmento, setSavingSegmento] = useState(false);
 
   // Parâmetros da filial
   const [parcelasMaximasCartao, setParcelasMaximasCartao] = useState(12);
@@ -97,32 +92,6 @@ export default function Filiais() {
     if (data) setEtapas(data);
   }
 
-  async function loadSegmentos(filialId: string) {
-    setLoadingSegmentos(true);
-    const { data } = await supabase.from("segmentos").select("*").eq("filial_id", filialId).order("nome");
-    if (data) setSegmentos(data as any);
-    setLoadingSegmentos(false);
-  }
-
-  async function handleAddSegmento(filialId: string) {
-    if (!novoSegmento.trim()) return;
-    setSavingSegmento(true);
-    const { error } = await supabase.from("segmentos").insert({ nome: novoSegmento.trim(), filial_id: filialId });
-    if (error) toast.error("Erro ao adicionar segmento");
-    else { toast.success("Segmento adicionado"); setNovoSegmento(""); loadSegmentos(filialId); }
-    setSavingSegmento(false);
-  }
-
-  async function toggleSegmento(seg: { id: string; ativo: boolean }, filialId: string) {
-    await supabase.from("segmentos").update({ ativo: !seg.ativo }).eq("id", seg.id);
-    loadSegmentos(filialId);
-  }
-
-  async function deleteSegmento(segId: string, filialId: string) {
-    const { error } = await supabase.from("segmentos").delete().eq("id", segId);
-    if (error) toast.error("Erro ao remover segmento");
-    else { toast.success("Segmento removido"); loadSegmentos(filialId); }
-  }
 
   useEffect(() => { loadFiliais(); loadEtapas(); }, []);
 
@@ -134,8 +103,6 @@ export default function Filiais() {
     setAssinaturaFile(null); setAssinaturaPreview(null); setRemoveAssinatura(false);
     setEtapaInicialId(null);
     setActiveTab("geral");
-    setSegmentos([]);
-    setNovoSegmento("");
     setParcelasMaximasCartao(12);
     setPixDescontoPercentual(0);
     setRegrasPadraoImplantacao("");
@@ -188,7 +155,6 @@ export default function Filiais() {
     setCongelarAcao("manter");
     setCongelarEtapaId(null);
     loadParametros(filial.id);
-    loadSegmentos(filial.id);
     setOpenDialog(true);
   }
 
@@ -436,7 +402,7 @@ export default function Filiais() {
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="geral" className="gap-1.5">
                   <Building2 className="h-3.5 w-3.5" />
                   Geral
@@ -444,10 +410,6 @@ export default function Filiais() {
                 <TabsTrigger value="parametros" className="gap-1.5">
                   <Settings className="h-3.5 w-3.5" />
                   Parâmetros
-                </TabsTrigger>
-                <TabsTrigger value="crm" className="gap-1.5">
-                  <Tag className="h-3.5 w-3.5" />
-                  CRM
                 </TabsTrigger>
               </TabsList>
 
@@ -702,65 +664,6 @@ export default function Filiais() {
                       </div>
                     )}
                   </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="crm" className="space-y-4 mt-4">
-                <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    <Tag className="h-4 w-4 text-primary" />
-                    Segmentos
-                  </h3>
-                  <p className="text-xs text-muted-foreground">Cadastre os segmentos de mercado dos clientes desta filial. Serão utilizados no CRM e no cadastro de contratos.</p>
-
-                  {editing && (
-                    <>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Nome do segmento..."
-                          value={novoSegmento}
-                          onChange={(e) => setNovoSegmento(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddSegmento(editing.id); } }}
-                        />
-                        <Button type="button" size="sm" className="gap-1.5 shrink-0" disabled={!novoSegmento.trim() || savingSegmento}
-                          onClick={() => handleAddSegmento(editing.id)}>
-                          {savingSegmento ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                          Adicionar
-                        </Button>
-                      </div>
-
-                      {loadingSegmentos ? (
-                        <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-                      ) : segmentos.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">Nenhum segmento cadastrado</p>
-                      ) : (
-                        <div className="divide-y divide-border rounded-lg border border-border">
-                          {segmentos.map((seg) => (
-                            <div key={seg.id} className="flex items-center justify-between px-3 py-2">
-                              <div className="flex items-center gap-2">
-                                <Badge variant={seg.ativo ? "default" : "secondary"} className="text-xs">
-                                  {seg.nome}
-                                </Badge>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <Switch checked={seg.ativo} onCheckedChange={() => toggleSegmento(seg, editing.id)} />
-                                <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
-                                  onClick={() => deleteSegmento(seg.id, editing.id)}>
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {!editing && (
-                    <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400 rounded-lg px-3 py-2">
-                      Salve a filial primeiro para gerenciar os segmentos.
-                    </p>
-                  )}
                 </div>
               </TabsContent>
             </Tabs>

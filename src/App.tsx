@@ -32,6 +32,7 @@ import PainelAtendimento from "./pages/PainelAtendimento";
 import EtapasPainel from "./pages/EtapasPainel";
 import DashboardFinanceiro from "./pages/DashboardFinanceiro";
 import DashboardAtendimento from "./pages/DashboardAtendimento";
+import Segmentos from "./pages/Segmentos";
 
 const queryClient = new QueryClient();
 
@@ -260,6 +261,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <PainelAtendimento />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/segmentos"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <Segmentos />
                 </ProtectedRoute>
               }
             />
