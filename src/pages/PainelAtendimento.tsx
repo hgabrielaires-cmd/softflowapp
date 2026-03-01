@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
@@ -31,6 +31,7 @@ import type { ChecklistItem } from "@/lib/supabase-types";
 import { cn } from "@/lib/utils";
 import { AgendamentoChecklist } from "@/components/AgendamentoChecklist";
 import { PedidoComentarios } from "@/components/PedidoComentarios";
+import { MentionInput, renderMentionText } from "@/components/MentionInput";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -127,6 +128,7 @@ export default function PainelAtendimento() {
   const [finalizando, setFinalizando] = useState(false);
   const [, setTick] = useState(0); // force re-render for atrasado checks
   const [novoComentario, setNovoComentario] = useState("");
+  const mentionedUsersRef = useRef<string[]>([]);
   const [comentarios, setComentarios] = useState<any[]>([]);
   const [tecnicosSelecionados, setTecnicosSelecionados] = useState<string[]>([]);
   const [buscaTecnico, setBuscaTecnico] = useState("");
@@ -224,7 +226,7 @@ export default function PainelAtendimento() {
   const { data: responsaveis = [] } = useQuery({
     queryKey: ["profiles_painel"],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, full_name, user_id").eq("active", true).order("full_name");
+      const { data } = await supabase.from("profiles").select("id, full_name, user_id, telefone").eq("active", true).order("full_name");
       return data || [];
     },
   });
@@ -2608,18 +2610,19 @@ export default function PainelAtendimento() {
                                 {new Date(com.created_at).toLocaleDateString("pt-BR")} {new Date(com.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                               </span>
                             </div>
-                            <p className="text-foreground/80">{com.texto}</p>
+                            <p className="text-foreground/80">{renderMentionText(com.texto, responsaveis as any)}</p>
                           </div>
                         );
                       })}
                     </div>
                   )}
                   <div className="flex gap-2">
-                    <Textarea
-                      className="text-xs min-h-[50px] resize-none flex-1"
-                      placeholder="Digite um comentário..."
+                    <MentionInput
                       value={novoComentario}
-                      onChange={(e) => setNovoComentario(e.target.value)}
+                      onChange={setNovoComentario}
+                      users={responsaveis as any}
+                      placeholder="Digite um comentário... Use @nome para mencionar"
+                      onMentionsChange={(ids) => { mentionedUsersRef.current = ids; }}
                     />
                     <Button
                       size="sm"
@@ -2628,7 +2631,7 @@ export default function PainelAtendimento() {
                       onClick={async () => {
                         const { data: { user } } = await supabase.auth.getUser();
                         if (!user || !detailCard) return;
-                        const { data: myProfile } = await supabase.from("profiles").select("id").eq("user_id", user.id).maybeSingle();
+                        const { data: myProfile } = await supabase.from("profiles").select("id, full_name, telefone").eq("user_id", user.id).maybeSingle();
                         const { data: novo, error } = await supabase
                           .from("painel_comentarios")
                           .insert({ card_id: detailCard.id, texto: novoComentario.trim(), criado_por: myProfile?.id || user.id, etapa_id: detailCard.etapa_id })
@@ -2636,7 +2639,50 @@ export default function PainelAtendimento() {
                           .single();
                         if (!error && novo) {
                           setComentarios((prev) => [...prev, novo]);
+                          // Save mentions and notify
+                          const mentioned = mentionedUsersRef.current;
+                          if (mentioned.length > 0) {
+                            const clienteNome = detailCard.clientes?.nome_fantasia || "Cliente";
+                            const autorNome = myProfile?.full_name?.split(" ")[0] || "Alguém";
+                            for (const profileId of mentioned) {
+                              // Save mention record
+                              await supabase.from("painel_mencoes").insert({
+                                comentario_id: novo.id,
+                                card_id: detailCard.id,
+                                mencionado_user_id: profileId,
+                                mencionado_por: myProfile?.id || user.id,
+                              });
+                              // Internal notification
+                              const prof = (responsaveis as any[]).find((r: any) => r.id === profileId);
+                              await supabase.from("notificacoes").insert({
+                                titulo: `💬 ${autorNome} mencionou você`,
+                                mensagem: `Você foi mencionado em um comentário no projeto ${clienteNome}: "${novoComentario.trim().slice(0, 100)}${novoComentario.trim().length > 100 ? "..." : ""}"`,
+                                tipo: "info",
+                                criado_por: user.id,
+                                destinatario_user_id: prof?.user_id || profileId,
+                              });
+                              // WhatsApp notification (if user has phone and Evolution API is configured)
+                              if (prof?.telefone) {
+                                try {
+                                  const { data: intConfig } = await supabase.from("integracoes_config").select("*").eq("nome", "evolution_api").eq("ativo", true).maybeSingle();
+                                  if (intConfig?.server_url && intConfig?.token) {
+                                    await supabase.functions.invoke("evolution-api", {
+                                      body: {
+                                        action: "send_message",
+                                        server_url: intConfig.server_url,
+                                        api_key: intConfig.token,
+                                        instance_name: "Softflow_WhatsApp",
+                                        phone: prof.telefone,
+                                        message: `💬 *Menção em comentário*\n\n${autorNome} mencionou você no projeto *${clienteNome}*:\n\n"${novoComentario.trim().slice(0, 200)}${novoComentario.trim().length > 200 ? "..." : ""}"`,
+                                      },
+                                    });
+                                  }
+                                } catch { /* WhatsApp is best-effort */ }
+                              }
+                            }
+                          }
                           setNovoComentario("");
+                          mentionedUsersRef.current = [];
                           toast.success("Comentário adicionado!");
                         } else {
                           toast.error("Erro ao adicionar comentário.");
@@ -3187,7 +3233,7 @@ export default function PainelAtendimento() {
                                       {new Date(com.created_at).toLocaleDateString("pt-BR")} {new Date(com.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                                     </span>
                                   </div>
-                                  <p className="text-foreground/80">{com.texto}</p>
+                                  <p className="text-foreground/80">{renderMentionText(com.texto, responsaveis as any)}</p>
                                 </div>
                               );
                             })}

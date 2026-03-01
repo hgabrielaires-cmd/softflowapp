@@ -1575,6 +1575,51 @@ export type Database = {
           },
         ]
       }
+      painel_mencoes: {
+        Row: {
+          card_id: string
+          comentario_id: string
+          created_at: string
+          id: string
+          lido: boolean
+          mencionado_por: string
+          mencionado_user_id: string
+        }
+        Insert: {
+          card_id: string
+          comentario_id: string
+          created_at?: string
+          id?: string
+          lido?: boolean
+          mencionado_por: string
+          mencionado_user_id: string
+        }
+        Update: {
+          card_id?: string
+          comentario_id?: string
+          created_at?: string
+          id?: string
+          lido?: boolean
+          mencionado_por?: string
+          mencionado_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "painel_mencoes_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "painel_atendimento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_mencoes_comentario_id_fkey"
+            columns: ["comentario_id"]
+            isOneToOne: false
+            referencedRelation: "painel_comentarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       painel_tecnicos: {
         Row: {
           card_id: string
