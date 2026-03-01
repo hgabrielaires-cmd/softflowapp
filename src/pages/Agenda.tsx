@@ -400,7 +400,7 @@ export default function Agenda() {
                               variant="outline"
                               size="sm"
                               className="h-7 text-xs gap-1"
-                              onClick={() => navigate(`/fila-agendamento?card=${ag.card_id}`)}
+                              onClick={() => navigate(`/fila-agendamento?card=${ag.card_id}&from=agenda`)}
                             >
                               <ExternalLink className="h-3 w-3" />
                               Abrir Card
