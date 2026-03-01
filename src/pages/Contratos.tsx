@@ -83,6 +83,7 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { TablePagination } from "@/components/TablePagination";
 
 interface ModuloAdicionadoItem {
   modulo_id: string;
@@ -194,6 +195,8 @@ export default function Contratos() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDe, setFilterDe] = useState("");
   const [filterAte, setFilterAte] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 25;
 
   const [selected, setSelected] = useState<Contrato | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
@@ -659,6 +662,8 @@ export default function Contratos() {
 
   const ativos = filtered.filter((c) => c.status === "Ativo").length;
 
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [filterFilial, filterStatus, filterDe, filterAte]);
   async function handleEncerrar() {
     if (!selected) return;
     setProcessando(true);
@@ -1394,7 +1399,7 @@ Estou à disposição.`;
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((contrato) => (
+                filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((contrato) => (
                   <TableRow key={contrato.id}>
                     <TableCell className="font-mono font-semibold text-sm">
                       {contrato.numero_exibicao || `#${contrato.numero_registro}`}
@@ -1513,6 +1518,13 @@ Estou à disposição.`;
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(filtered.length / ITEMS_PER_PAGE)}
+            totalItems={filtered.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
 

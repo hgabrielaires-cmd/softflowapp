@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { TablePagination } from "@/components/TablePagination";
 
 const UF_LIST = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
@@ -89,6 +90,8 @@ export default function Fornecedores() {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 25;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Fornecedor | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -275,6 +278,9 @@ export default function Fornecedores() {
     );
   });
 
+  // Reset page when search changes
+  useEffect(() => { setCurrentPage(1); }, [search]);
+
   return (
     <AppLayout>
       <div className="space-y-5">
@@ -334,7 +340,7 @@ export default function Fornecedores() {
                     {search ? "Nenhum fornecedor encontrado" : "Nenhum fornecedor cadastrado"}
                   </TableCell>
                 </TableRow>
-              ) : filtered.map((f) => (
+              ) : filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((f) => (
                 <TableRow key={f.id}>
                   <TableCell>
                     <div>
@@ -410,6 +416,13 @@ export default function Fornecedores() {
               ))}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(filtered.length / ITEMS_PER_PAGE)}
+            totalItems={filtered.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
 
