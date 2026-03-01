@@ -7,8 +7,10 @@ import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarDays, Clock, User, Building2, Filter, MapPin } from "lucide-react";
+import { CalendarDays, Clock, User, Building2, Filter, MapPin, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { format, parseISO, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -35,10 +37,15 @@ interface AgendamentoComDetalhes extends Agendamento {
   atividade_nome: string;
   tecnicos: { id: string; full_name: string; avatar_url: string | null }[];
   tipo_atendimento: string | null;
+  status_projeto: string;
+  pausado: boolean;
+  iniciado_em: string | null;
+  sla_horas: number;
 }
 
 export default function Agenda() {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [filtroFilial, setFiltroFilial] = useState<string>("todas");
@@ -64,7 +71,7 @@ export default function Agenda() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("painel_atendimento")
-        .select("id, cliente_id, contrato_id, filial_id, tipo_atendimento_local, clientes(nome_fantasia), contratos(numero_exibicao), filiais(nome)");
+        .select("id, cliente_id, contrato_id, filial_id, tipo_atendimento_local, status_projeto, pausado, iniciado_em, sla_horas, clientes(nome_fantasia), contratos(numero_exibicao), filiais(nome)");
       if (error) throw error;
       return data as any[];
     },
@@ -131,6 +138,10 @@ export default function Agenda() {
         atividade_nome: atividadesMap[ag.atividade_id] || "—",
         tecnicos: tecnicosPorCard[ag.card_id] || [],
         tipo_atendimento: card?.tipo_atendimento_local || null,
+        status_projeto: card?.status_projeto || "ativo",
+        pausado: card?.pausado || false,
+        iniciado_em: card?.iniciado_em || null,
+        sla_horas: card?.sla_horas || 0,
       };
     });
   }, [agendamentos, cardsMap, atividadesMap, tecnicosPorCard]);
@@ -306,11 +317,25 @@ export default function Agenda() {
                       .filter((v, i, arr) => arr.indexOf(v) === i)
                       .sort();
 
+                    const getStatusInfo = () => {
+                      if (ag.status_projeto === "recusado") return { label: "Recusado", color: "bg-destructive/10 text-destructive border-destructive/20" };
+                      if (ag.pausado) return { label: "Pausado", color: "bg-yellow-100 text-yellow-700 border-yellow-200" };
+                      if (ag.iniciado_em && ag.sla_horas > 0) {
+                        const inicio = new Date(ag.iniciado_em).getTime();
+                        const agora = Date.now();
+                        const horasDecorridas = (agora - inicio) / (1000 * 60 * 60);
+                        if (horasDecorridas > ag.sla_horas) return { label: "SLA Atrasado", color: "bg-destructive/10 text-destructive border-destructive/20" };
+                      }
+                      if (ag.iniciado_em) return { label: "Em Andamento", color: "bg-green-100 text-green-700 border-green-200" };
+                      return { label: "Aguardando", color: "bg-muted text-muted-foreground border-border" };
+                    };
+                    const statusInfo = getStatusInfo();
+
                     return (
                       <div key={ag.id} className="border rounded-lg p-3 hover:bg-accent/50 transition-colors">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                               {ag.hora_inicio && (
                                 <Badge variant="outline" className="text-xs font-mono shrink-0">
                                   <Clock className="h-3 w-3 mr-1" />
@@ -324,6 +349,9 @@ export default function Agenda() {
                                   {ag.tipo_atendimento}
                                 </Badge>
                               )}
+                              <Badge variant="outline" className={cn("text-xs", statusInfo.color)}>
+                                {statusInfo.label}
+                              </Badge>
                             </div>
                             <p className="font-medium text-sm text-foreground truncate">{ag.cliente_nome}</p>
                             <p className="text-xs text-muted-foreground">
@@ -363,10 +391,21 @@ export default function Agenda() {
                               </div>
                             )}
                           </div>
-                          <Badge variant="outline" className="text-xs shrink-0">
-                            <Building2 className="h-3 w-3 mr-1" />
-                            {ag.filial_nome}
-                          </Badge>
+                          <div className="flex flex-col items-end gap-2 shrink-0">
+                            <Badge variant="outline" className="text-xs">
+                              <Building2 className="h-3 w-3 mr-1" />
+                              {ag.filial_nome}
+                            </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1"
+                              onClick={() => navigate(`/fila-agendamento?card=${ag.card_id}`)}
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              Abrir Card
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     );
