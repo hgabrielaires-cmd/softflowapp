@@ -509,19 +509,7 @@ export default function Contratos() {
         const signUrl = zData.signers?.[0]?.sign_url || "";
         const mensagem = gerarTermoAceite(updatedContrato, signUrl, msgTemplate || undefined, contatosLocais);
 
-        // Buscar config WhatsApp
-        const { data: config } = await supabase
-          .from("integracoes_config")
-          .select("server_url, token, ativo")
-          .eq("nome", "whatsapp")
-          .single();
-
-        if (!config?.ativo || !config?.server_url || !config?.token) {
-          setZapsignPopupStep("done");
-          setEnviandoZapsign(false);
-          toast.info("ZapSign enviado! WhatsApp não está configurado.");
-          return;
-        }
+        // Verificar se decisor tem telefone
 
         const decisorContato = contatosLocais.find(c => c.decisor) || contatosLocais[0];
         if (!decisorContato?.telefone) {
@@ -534,8 +522,6 @@ export default function Contratos() {
         const { error: whatsError } = await supabase.functions.invoke("evolution-api", {
           body: {
             action: "send_text",
-            server_url: config.server_url,
-            api_key: config.token,
             number: decisorContato.telefone,
             text: mensagem,
           },
@@ -737,24 +723,9 @@ export default function Contratos() {
 
     setEnviandoWhatsapp(true);
     try {
-      // Buscar config da integração WhatsApp
-      const { data: config } = await supabase
-        .from("integracoes_config")
-        .select("server_url, token, ativo")
-        .eq("nome", "whatsapp")
-        .single();
-
-      if (!config?.ativo || !config?.server_url || !config?.token) {
-        toast.error("Integração WhatsApp não está configurada ou ativa");
-        setEnviandoWhatsapp(false);
-        return;
-      }
-
       const { data, error } = await supabase.functions.invoke("evolution-api", {
         body: {
           action: "send_text",
-          server_url: config.server_url,
-          api_key: config.token,
           number: decisor.telefone,
           text: mensagem,
         },
@@ -795,24 +766,9 @@ export default function Contratos() {
 
       const mensagem = gerarTermoAceite(contrato, signUrl, undefined, (contatos || []) as any);
 
-      // Buscar config WhatsApp
-      const { data: config } = await supabase
-        .from("integracoes_config")
-        .select("server_url, token, ativo")
-        .eq("nome", "whatsapp")
-        .single();
-
-      if (!config?.ativo || !config?.server_url || !config?.token) {
-        toast.error("Integração WhatsApp não está configurada ou ativa");
-        setReenviandoWhatsapp(false);
-        return;
-      }
-
       const { error } = await supabase.functions.invoke("evolution-api", {
         body: {
           action: "send_text",
-          server_url: config.server_url,
-          api_key: config.token,
           number: decisor.telefone,
           text: mensagem,
         },
