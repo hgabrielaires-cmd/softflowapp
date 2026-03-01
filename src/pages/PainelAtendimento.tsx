@@ -133,6 +133,7 @@ export default function PainelAtendimento() {
   const [comentarios, setComentarios] = useState<any[]>([]);
   const [curtidas, setCurtidas] = useState<Record<string, string[]>>({});
   const [replyTo, setReplyTo] = useState<{ id: string; autorNome: string } | null>(null);
+  const [likesPopoverOpen, setLikesPopoverOpen] = useState<string | null>(null);
   const [tecnicosSelecionados, setTecnicosSelecionados] = useState<string[]>([]);
   const [buscaTecnico, setBuscaTecnico] = useState("");
   const [historicoOpen, setHistoricoOpen] = useState(false);
@@ -229,7 +230,7 @@ export default function PainelAtendimento() {
   const { data: responsaveis = [] } = useQuery({
     queryKey: ["profiles_painel"],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, full_name, user_id, telefone").eq("active", true).order("full_name");
+      const { data } = await supabase.from("profiles").select("id, full_name, user_id, telefone, avatar_url").eq("active", true).order("full_name");
       return data || [];
     },
   });
@@ -2683,12 +2684,63 @@ export default function PainelAtendimento() {
                               <div className="flex items-center gap-3 mt-1">
                                 <button
                                   type="button"
-                                  className={cn("flex items-center gap-1 text-[10px] transition-colors", likes.length > 0 ? "text-red-500" : "text-muted-foreground hover:text-red-500")}
+                                  className={cn("flex items-center gap-1 text-[10px] transition-colors", likes.some((uid: string) => uid === profile?.user_id) ? "text-red-500" : "text-muted-foreground hover:text-red-500")}
                                   onClick={() => handleCurtir(com.id, com.criado_por)}
                                 >
-                                  <Heart className={cn("h-3 w-3", likes.length > 0 && "fill-red-500")} />
+                                  <Heart className={cn("h-3 w-3", likes.some((uid: string) => uid === profile?.user_id) && "fill-red-500")} />
                                   {likes.length > 0 && <span>{likes.length}</span>}
                                 </button>
+                                {/* Instagram-style liked-by avatars */}
+                                {likes.length > 0 && (() => {
+                                  const likedUsers = likes.map((uid: string) => {
+                                    const prof = (responsaveis as any[]).find((r: any) => r.user_id === uid);
+                                    return prof ? { name: prof.full_name, avatar: prof.avatar_url } : { name: "Usuário", avatar: null };
+                                  });
+                                  const showMax = 3;
+                                  const visibleUsers = likedUsers.slice(0, showMax);
+                                  const remaining = likedUsers.length - showMax;
+                                  const isOpen = likesPopoverOpen === com.id;
+                                  return (
+                                    <div className="relative">
+                                      <button
+                                        type="button"
+                                        className="flex items-center gap-1"
+                                        onClick={() => setLikesPopoverOpen(isOpen ? null : com.id)}
+                                      >
+                                        <div className="flex -space-x-1.5">
+                                          {visibleUsers.map((u: any, i: number) => (
+                                            <div key={i} className="h-4 w-4 rounded-full border border-background overflow-hidden bg-muted flex items-center justify-center">
+                                              {u.avatar ? (
+                                                <img src={u.avatar} alt={u.name} className="h-full w-full object-cover" />
+                                              ) : (
+                                                <span className="text-[6px] font-medium text-muted-foreground">{u.name?.charAt(0)?.toUpperCase()}</span>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                        {remaining > 0 && <span className="text-[9px] text-muted-foreground">+{remaining}</span>}
+                                      </button>
+                                      {isOpen && (
+                                        <div className="absolute z-50 left-0 top-6 bg-popover border rounded-md shadow-md p-2 min-w-[140px] space-y-1.5">
+                                          <p className="text-[10px] font-semibold text-foreground mb-1">Curtido por</p>
+                                          {likedUsers.map((u: any, i: number) => (
+                                            <div key={i} className="flex items-center gap-1.5">
+                                              <div className="h-5 w-5 rounded-full overflow-hidden bg-muted flex items-center justify-center shrink-0">
+                                                {u.avatar ? (
+                                                  <img src={u.avatar} alt={u.name} className="h-full w-full object-cover" />
+                                                ) : (
+                                                  <span className="text-[7px] font-medium text-muted-foreground">{u.name?.charAt(0)?.toUpperCase()}</span>
+                                                )}
+                                              </div>
+                                              <span className="text-[10px] text-foreground truncate">{u.name}</span>
+                                            </div>
+                                          ))}
+                                          <button type="button" className="text-[9px] text-muted-foreground hover:text-foreground mt-1" onClick={() => setLikesPopoverOpen(null)}>Fechar</button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                                 <button
                                   type="button"
                                   className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
