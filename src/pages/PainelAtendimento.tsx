@@ -144,7 +144,7 @@ export default function PainelAtendimento() {
   const [replyTo, setReplyTo] = useState<{ id: string; autorNome: string } | null>(null);
   const [likesPopoverOpen, setLikesPopoverOpen] = useState<string | null>(null);
   const [tecnicosSelecionados, setTecnicosSelecionados] = useState<string[]>([]);
-  const [buscaTecnico, setBuscaTecnico] = useState("");
+  const [buscaTecnico, setBuscaTecnico] = useState<string | null>(null);
   const [historicoOpen, setHistoricoOpen] = useState(false);
   const [historicoData, setHistoricoData] = useState<any[]>([]);
   const [historicoLoading, setHistoricoLoading] = useState(false);
@@ -2541,7 +2541,7 @@ export default function PainelAtendimento() {
                 {/* Lista de Técnicos (multi-select) - só aparece quando toggle ON */}
                 {detailCard.aponta_tecnico_agenda && (() => {
                   const tecnicosFiltrados = tecnicos.filter((tec: any) =>
-                    tec.full_name.toLowerCase().includes(buscaTecnico.toLowerCase())
+                    tec.full_name.toLowerCase().includes((buscaTecnico || "").toLowerCase())
                   );
                   const tecnicosSelecionadosData = tecnicos.filter((tec: any) => tecnicosSelecionados.includes(tec.id));
                   return (
@@ -2583,43 +2583,58 @@ export default function PainelAtendimento() {
                       {/* Busca e lista - só quando não está locked */}
                       {!configLocked && (
                         <>
-                        <div className="relative">
-                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                          <Input
-                            placeholder="Buscar técnico..."
-                            value={buscaTecnico}
-                            onChange={(e) => setBuscaTecnico(e.target.value)}
-                            className="h-8 pl-7 text-xs"
-                          />
-                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1.5 w-full"
+                          onClick={() => setBuscaTecnico(buscaTecnico === null ? "" : null as any)}
+                        >
+                          <Search className="h-3 w-3" />
+                          Buscar técnico
+                        </Button>
+                        {buscaTecnico !== null && (
+                          <>
+                          <div className="relative">
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                            <Input
+                              placeholder="Buscar técnico..."
+                              value={buscaTecnico || ""}
+                              onChange={(e) => setBuscaTecnico(e.target.value)}
+                              className="h-8 pl-7 text-xs"
+                              autoFocus
+                            />
+                          </div>
 
-                        <div className="space-y-0.5 max-h-28 overflow-y-auto rounded-md border bg-muted/30 p-1.5">
-                          {tecnicos.length === 0 ? (
-                            <p className="text-[10px] text-muted-foreground italic py-2 text-center">Nenhum técnico cadastrado</p>
-                          ) : tecnicosFiltrados.filter((tec: any) => !tecnicosSelecionados.includes(tec.id)).length === 0 ? (
-                            <p className="text-[10px] text-muted-foreground italic py-2 text-center">{buscaTecnico ? "Nenhum resultado" : "Todos selecionados"}</p>
-                          ) : (
-                            tecnicosFiltrados
-                              .filter((tec: any) => !tecnicosSelecionados.includes(tec.id))
-                              .map((tec: any) => (
-                                <button
-                                  key={tec.id}
-                                  type="button"
-                                  className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-accent transition-colors text-left"
-                                  onClick={async () => {
-                                    setTecnicosSelecionados((prev) => [...prev, tec.id]);
-                                    await supabase.from("painel_tecnicos").insert({ card_id: detailCard.id, tecnico_id: tec.id });
-                                  }}
-                                >
-                                  <User className="h-3 w-3 text-muted-foreground shrink-0" />
-                                  <span>{tec.full_name}</span>
-                                  {tec.tipo_tecnico && (
-                                    <span className="text-[10px] text-muted-foreground ml-auto">({tec.tipo_tecnico})</span>
-                                  )}
-                                </button>
-                              ))
-                          )}
-                        </div>
+                          <div className="space-y-0.5 max-h-28 overflow-y-auto rounded-md border bg-muted/30 p-1.5">
+                            {tecnicos.length === 0 ? (
+                              <p className="text-[10px] text-muted-foreground italic py-2 text-center">Nenhum técnico cadastrado</p>
+                            ) : tecnicosFiltrados.filter((tec: any) => !tecnicosSelecionados.includes(tec.id)).length === 0 ? (
+                              <p className="text-[10px] text-muted-foreground italic py-2 text-center">{buscaTecnico ? "Nenhum resultado" : "Todos selecionados"}</p>
+                            ) : (
+                              tecnicosFiltrados
+                                .filter((tec: any) => !tecnicosSelecionados.includes(tec.id))
+                                .map((tec: any) => (
+                                  <button
+                                    key={tec.id}
+                                    type="button"
+                                    className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-accent transition-colors text-left"
+                                    onClick={async () => {
+                                      setTecnicosSelecionados((prev) => [...prev, tec.id]);
+                                      await supabase.from("painel_tecnicos").insert({ card_id: detailCard.id, tecnico_id: tec.id });
+                                      setBuscaTecnico(null as any);
+                                    }}
+                                  >
+                                    <User className="h-3 w-3 text-muted-foreground shrink-0" />
+                                    <span>{tec.full_name}</span>
+                                    {tec.tipo_tecnico && (
+                                      <span className="text-[10px] text-muted-foreground ml-auto">({tec.tipo_tecnico})</span>
+                                    )}
+                                  </button>
+                                ))
+                            )}
+                          </div>
+                          </>
+                        )}
                         </>
                       )}
                     </div>
