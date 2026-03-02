@@ -940,6 +940,7 @@ export type Database = {
           destinatario_user_id: string | null
           id: string
           mensagem: string
+          metadata: Json | null
           tipo: string
           titulo: string
           updated_at: string
@@ -951,6 +952,7 @@ export type Database = {
           destinatario_user_id?: string | null
           id?: string
           mensagem: string
+          metadata?: Json | null
           tipo?: string
           titulo: string
           updated_at?: string
@@ -962,6 +964,7 @@ export type Database = {
           destinatario_user_id?: string | null
           id?: string
           mensagem?: string
+          metadata?: Json | null
           tipo?: string
           titulo?: string
           updated_at?: string

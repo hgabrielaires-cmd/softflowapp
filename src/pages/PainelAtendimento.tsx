@@ -1179,6 +1179,7 @@ export default function PainelAtendimento() {
             tipo: "alerta",
             criado_por: user.id,
             destinatario_user_id: (prof as any)?.user_id || uid,
+            metadata: { card_id: detailCard.id },
           } as any);
         }
 
@@ -1277,6 +1278,7 @@ export default function PainelAtendimento() {
             tipo: "alerta",
             criado_por: user.id,
             destinatario_user_id: (prof as any)?.user_id || uid,
+            metadata: { card_id: detailCard.id },
           } as any);
         }
 
@@ -1346,6 +1348,7 @@ export default function PainelAtendimento() {
           tipo: "alerta",
           criado_por: user.id,
           destinatario_user_id: (prof as any)?.user_id || uid,
+          metadata: { card_id: card?.id || detailCard?.id },
         } as any);
       }
 
@@ -2888,6 +2891,7 @@ export default function PainelAtendimento() {
                                   tipo: "info",
                                   criado_por: user.id,
                                   destinatario_user_id: autorProf.user_id,
+                                  metadata: { card_id: detailCard.id, comentario_id: comentarioId },
                                 });
                               }
                             }
@@ -3047,6 +3051,7 @@ export default function PainelAtendimento() {
                                   tipo: "info",
                                   criado_por: user.id,
                                   destinatario_user_id: parentProf.user_id,
+                                  metadata: { card_id: detailCard.id, comentario_id: novo.id },
                                 });
                               }
                             }
@@ -3069,6 +3074,7 @@ export default function PainelAtendimento() {
                                 tipo: "info",
                                 criado_por: user.id,
                                 destinatario_user_id: prof?.user_id || profileId,
+                                metadata: { card_id: detailCard.id, comentario_id: novo.id },
                               });
                               if (prof?.telefone) {
                                 try {

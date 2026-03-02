@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, LogOut, Bell, User, Menu,
   UserCheck, BookOpen, Headphones, Ticket, FileText, TrendingUp, TrendingDown,
   BarChart3, Plug, ListOrdered, Inbox, Percent, Check, X,
-  Info, AlertTriangle, Zap, Globe, Wrench, Trash2, Eye,
+  Info, AlertTriangle, Zap, Globe, Wrench, Trash2, Eye, Heart, MessageSquare, Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -333,6 +333,7 @@ interface Notificacao {
   mensagem: string;
   tipo: string;
   created_at: string;
+  metadata?: { card_id?: string; comentario_id?: string } | null;
 }
 
 const TIPO_ICON: Record<string, ReactNode> = {
@@ -342,6 +343,7 @@ const TIPO_ICON: Record<string, ReactNode> = {
 };
 
 function NotificationBell({ profile, roles }: { profile: Profile | null; roles: AppRole[] }) {
+  const navigate = useNavigate();
   const [solicitacoes, setSolicitacoes] = useState<SolicitacaoDesconto[]>([]);
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
   const [lidasIds, setLidasIds] = useState<Set<string>>(new Set());
@@ -350,6 +352,8 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
   const [motivoReprova, setMotivoReprova] = useState<Record<string, string>>({});
   const [selectedNotif, setSelectedNotif] = useState<Notificacao | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
 
   const isAdmin = roles.includes("admin");
   const isGestor = isAdmin || (profile as any)?.gestor_desconto === true;
@@ -420,6 +424,11 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
 
   useEffect(() => {
     if (profile) { loadSolicitacoes(); loadNotificacoes(); }
+    // Auto-refresh every 60 seconds
+    const interval = setInterval(() => {
+      if (profile) { loadSolicitacoes(); loadNotificacoes(); }
+    }, 60000);
+    return () => clearInterval(interval);
   }, [profile]);
 
   async function handleAprovar(sol: SolicitacaoDesconto) {
@@ -568,7 +577,7 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     </DropdownMenu>
 
     {/* Dialog de mensagem completa */}
-    <Dialog open={!!selectedNotif} onOpenChange={(v) => { if (!v) setSelectedNotif(null); }}>
+    <Dialog open={!!selectedNotif} onOpenChange={(v) => { if (!v) { setSelectedNotif(null); setReplyText(""); } }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
@@ -579,24 +588,125 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
         <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
           {selectedNotif?.mensagem}
         </div>
+
+        {/* Reply area — only for comment-related notifications (with card_id + comentario_id) */}
+        {selectedNotif?.metadata?.card_id && selectedNotif?.metadata?.comentario_id && (
+          <div className="space-y-2 border-t border-border pt-3 mt-1">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Escreva uma resposta..."
+                className="flex-1 text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && replyText.trim()) {
+                    e.preventDefault();
+                    handleNotifReply();
+                  }
+                }}
+              />
+              <Button
+                size="sm"
+                className="gap-1"
+                disabled={!replyText.trim() || sendingReply}
+                onClick={handleNotifReply}
+              >
+                <Send className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={() => handleNotifLike()}
+              >
+                <Heart className="h-3.5 w-3.5" /> Curtir
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mt-2">
           <p className="text-xs text-muted-foreground">
             {selectedNotif?.created_at && new Date(selectedNotif.created_at).toLocaleString("pt-BR")}
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 text-destructive hover:text-destructive"
-            onClick={() => selectedNotif && deletarNotificacao(selectedNotif.id)}
-            disabled={deletingId === selectedNotif?.id}
-          >
-            <Trash2 className="h-3.5 w-3.5" /> Excluir
-          </Button>
+          <div className="flex items-center gap-2">
+            {selectedNotif?.metadata?.card_id && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  const cardId = selectedNotif.metadata?.card_id;
+                  setSelectedNotif(null);
+                  setOpen(false);
+                  navigate(`/painel-atendimento?card=${cardId}`);
+                }}
+              >
+                <Eye className="h-3.5 w-3.5" /> Visualizar
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-destructive hover:text-destructive"
+              onClick={() => selectedNotif && deletarNotificacao(selectedNotif.id)}
+              disabled={deletingId === selectedNotif?.id}
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Excluir
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
     </>
   );
+
+  async function handleNotifReply() {
+    if (!selectedNotif?.metadata?.card_id || !selectedNotif?.metadata?.comentario_id || !replyText.trim() || !profile) return;
+    setSendingReply(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase.from("painel_comentarios").insert({
+        card_id: selectedNotif.metadata.card_id,
+        parent_id: selectedNotif.metadata.comentario_id,
+        criado_por: user.id,
+        texto: replyText.trim(),
+      });
+      toast.success("Resposta enviada!");
+      setReplyText("");
+    } catch {
+      toast.error("Erro ao enviar resposta");
+    } finally {
+      setSendingReply(false);
+    }
+  }
+
+  async function handleNotifLike() {
+    if (!selectedNotif?.metadata?.comentario_id || !profile) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: existing } = await supabase
+        .from("painel_curtidas")
+        .select("id")
+        .eq("comentario_id", selectedNotif.metadata.comentario_id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (existing) {
+        await supabase.from("painel_curtidas").delete().eq("id", existing.id);
+        toast.success("Curtida removida");
+      } else {
+        await supabase.from("painel_curtidas").insert({ comentario_id: selectedNotif.metadata.comentario_id, user_id: user.id });
+        toast.success("Comentário curtido!");
+      }
+    } catch {
+      toast.error("Erro ao curtir");
+    }
+  }
 }
 
 // ─── AppLayout ────────────────────────────────────────────────────────────────
