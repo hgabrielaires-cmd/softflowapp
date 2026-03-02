@@ -1759,6 +1759,35 @@ export type Database = {
           },
         ]
       }
+      pedido_curtidas: {
+        Row: {
+          comentario_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comentario_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comentario_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedido_curtidas_comentario_id_fkey"
+            columns: ["comentario_id"]
+            isOneToOne: false
+            referencedRelation: "pedido_comentarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pedidos: {
         Row: {
           cliente_id: string
