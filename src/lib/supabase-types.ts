@@ -89,6 +89,7 @@ export interface Cliente {
   id: string;
   nome_fantasia: string;
   razao_social: string | null;
+  apelido: string | null;
   cnpj_cpf: string;
   contato_nome: string | null;
   telefone: string | null;

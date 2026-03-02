@@ -49,6 +49,7 @@ const UF_LIST = [
 const emptyForm = {
   nome_fantasia: "",
   razao_social: "",
+  apelido: "",
   cnpj_cpf: "",
   inscricao_estadual: "",
   ie_isento: false,
@@ -257,6 +258,7 @@ export default function Clientes() {
     ? clientesFiltradosPorFilial.filter((c) =>
         c.nome_fantasia.toLowerCase().includes(searchTerm) ||
         (c.razao_social || "").toLowerCase().includes(searchTerm) ||
+        ((c as any).apelido || "").toLowerCase().includes(searchTerm) ||
         (searchDigits.length > 0 && (c.cnpj_cpf || "").replace(/\D/g, "").includes(searchDigits)) ||
         (c.cnpj_cpf || "").toLowerCase().includes(searchTerm) ||
         (c.contato_nome || "").toLowerCase().includes(searchTerm) ||
@@ -286,6 +288,7 @@ export default function Clientes() {
     setForm({
       nome_fantasia: c.nome_fantasia,
       razao_social: c.razao_social || "",
+      apelido: (c as any).apelido || "",
       cnpj_cpf: c.cnpj_cpf,
       inscricao_estadual: ieIsento ? "" : ((c as any).inscricao_estadual || ""),
       ie_isento: ieIsento,
@@ -497,6 +500,7 @@ export default function Clientes() {
     const payload = {
       nome_fantasia: form.nome_fantasia.trim(),
       razao_social: form.razao_social.trim() || null,
+      apelido: form.apelido.trim() || null,
       cnpj_cpf: form.cnpj_cpf.trim(),
       inscricao_estadual: form.ie_isento ? "ISENTO" : (form.inscricao_estadual.trim() || null),
       contato_nome: formContatos[0]?.nome || form.contato_nome.trim() || null,
@@ -620,6 +624,7 @@ export default function Clientes() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome fantasia</TableHead>
+                <TableHead>Apelido</TableHead>
                 <TableHead>CNPJ / CPF</TableHead>
                 <TableHead>Contato</TableHead>
                 <TableHead>Filial</TableHead>
@@ -631,13 +636,13 @@ export default function Clientes() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                   <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
                     Nenhum cliente encontrado
                   </TableCell>
                 </TableRow>
@@ -652,6 +657,7 @@ export default function Clientes() {
                         )}
                       </div>
                     </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{(c as any).apelido || "—"}</TableCell>
                     <TableCell className="font-mono text-sm">{c.cnpj_cpf}</TableCell>
                     <TableCell>
                       <div className="space-y-0.5">
@@ -770,6 +776,13 @@ export default function Clientes() {
             <div className="col-span-2 space-y-1.5">
               <Label>Razão social</Label>
               <Input value={form.razao_social} onChange={(e) => setForm((f) => ({ ...f, razao_social: e.target.value }))} placeholder="Razão social (opcional)" />
+            </div>
+
+            {/* Apelido */}
+            <div className="col-span-2 space-y-1.5">
+              <Label>Apelido</Label>
+              <Input value={form.apelido} onChange={(e) => setForm((f) => ({ ...f, apelido: e.target.value }))} placeholder="Ex: Bar do João Loja 01 Centro" />
+              <p className="text-xs text-muted-foreground">Identificação interna da loja/unidade</p>
             </div>
 
             {/* Inscrição estadual */}
