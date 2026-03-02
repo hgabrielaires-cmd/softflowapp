@@ -81,7 +81,7 @@ interface PainelCard {
   created_at: string;
   updated_at: string;
   // Joins
-  clientes?: { nome_fantasia: string } | null;
+  clientes?: { nome_fantasia: string; apelido?: string | null } | null;
   filiais?: { nome: string } | null;
   planos?: { nome: string; descricao: string | null } | null;
   contratos?: { numero_exibicao: string } | null;
@@ -231,7 +231,7 @@ export default function PainelAtendimento() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("painel_atendimento")
-        .select("*, clientes(nome_fantasia), filiais(nome), planos(nome, descricao), contratos(numero_exibicao), profiles(full_name)")
+        .select("*, clientes(nome_fantasia, apelido), filiais(nome), planos(nome, descricao), contratos(numero_exibicao), profiles(full_name)")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data as PainelCard[];
@@ -2062,9 +2062,14 @@ export default function PainelAtendimento() {
       <Dialog open={!!detailCard} onOpenChange={(open) => { if (!open) { setDetailCard(null); setConfigEditMode(false); if (openedFrom === "agenda") { navigate("/agenda"); } setOpenedFrom(null); } }}>
         <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {detailCard && TIPO_ICONS[detailCard.tipo_operacao]}
-              {detailCard?.clientes?.nome_fantasia || "Detalhes"}
+            <DialogTitle className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-2">
+                {detailCard && TIPO_ICONS[detailCard.tipo_operacao]}
+                {detailCard?.clientes?.nome_fantasia || "Detalhes"}
+              </div>
+              {detailCard?.clientes?.apelido && (
+                <span className="text-xs font-normal text-muted-foreground">{detailCard.clientes.apelido}</span>
+              )}
             </DialogTitle>
           </DialogHeader>
           {detailCard && (
@@ -2242,6 +2247,26 @@ export default function PainelAtendimento() {
                     <Progress value={calcProgress(detailCard)} className="h-2 flex-1" />
                     <span className="text-sm font-medium">{calcProgress(detailCard)}%</span>
                   </div>
+                  {(() => {
+                    const etapaAtual = etapas.find(e => e.id === detailCard.etapa_id);
+                    if (!etapaAtual) return null;
+                    return (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-xs text-muted-foreground">Etapa:</span>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-medium border"
+                          style={{
+                            backgroundColor: etapaAtual.cor ? `${etapaAtual.cor}20` : undefined,
+                            color: etapaAtual.cor || undefined,
+                            borderColor: etapaAtual.cor ? `${etapaAtual.cor}60` : undefined,
+                          }}
+                        >
+                          {etapaAtual.nome}
+                        </Badge>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
