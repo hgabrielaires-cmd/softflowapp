@@ -371,7 +371,23 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
 
   async function loadNotificacoes() {
     if (!profile?.user_id) return;
-    const { data } = await supabase.from("notificacoes").select("*").order("created_at", { ascending: false }).limit(20);
+    // Fetch user roles for role-based notifications
+    const { data: userRolesData } = await supabase.from("user_roles").select("role").eq("user_id", profile.user_id);
+    const myRoles = (userRolesData || []).map((r: any) => r.role as string);
+
+    // Build query filtering only notifications meant for this user
+    let query = supabase.from("notificacoes").select("*").order("created_at", { ascending: false }).limit(50);
+
+    // Filter: destinatario_user_id = me OR destinatario_role in my roles OR both null (broadcast)
+    const orFilters = [`destinatario_user_id.eq.${profile.user_id}`];
+    if (myRoles.length > 0) {
+      orFilters.push(`destinatario_role.in.(${myRoles.join(",")})`);
+    }
+    // Broadcast (both null) - use and() inside or()
+    orFilters.push(`and(destinatario_user_id.is.null,destinatario_role.is.null)`);
+    query = query.or(orFilters.join(","));
+
+    const { data } = await query;
     setNotificacoes((data || []) as Notificacao[]);
     const { data: lidas } = await supabase.from("notificacoes_lidas").select("notificacao_id").eq("user_id", profile.user_id);
     setLidasIds(new Set((lidas || []).map((l: any) => l.notificacao_id)));
