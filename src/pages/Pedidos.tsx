@@ -1216,6 +1216,11 @@ export default function Pedidos() {
       email: clienteContatos[0]?.email || clienteForm.email.trim() || null,
       cidade: clienteForm.cidade.trim() || null,
       uf: clienteForm.uf || null,
+      logradouro: clienteForm.logradouro?.trim() || null,
+      bairro: clienteForm.bairro?.trim() || null,
+      cep: clienteForm.cep?.trim()?.replace(/\D/g, "") || null,
+      numero: clienteForm.numero?.trim() || null,
+      complemento: clienteForm.complemento?.trim() || null,
       filial_id,
       ativo: true,
     }).select().single();
