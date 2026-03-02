@@ -2339,7 +2339,7 @@ export default function PainelAtendimento() {
                           <Progress value={checklistPercent} className="h-1.5 w-20" />
                         )}
                         <span className="text-[10px] font-semibold text-muted-foreground">{checklistPercent}%</span>
-                        {podeEditarChecklist && !isCongelado && (
+                        {podeEditarChecklist && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -2395,7 +2395,7 @@ export default function PainelAtendimento() {
                                       <div className="pl-1">
                                         <Checkbox
                                           checked={prog.concluido}
-                                          disabled={isCongelado || !checklistEditMode}
+                                          disabled={!checklistEditMode}
                                           onCheckedChange={() => saveChecklistItem(atividade.id, cIdx, { concluido: !prog.concluido })}
                                           className="h-4 w-4"
                                         />
@@ -2408,7 +2408,7 @@ export default function PainelAtendimento() {
                                           size="sm"
                                           variant={prog.valor_texto === 'sim' ? 'default' : 'outline'}
                                           className={cn("h-7 text-[11px] px-3", prog.valor_texto === 'sim' && "bg-emerald-600 hover:bg-emerald-700")}
-                                          disabled={isCongelado || !checklistEditMode}
+                                          disabled={!checklistEditMode}
                                           onClick={() => saveChecklistItem(atividade.id, cIdx, { concluido: true, valor_texto: 'sim' })}
                                         >
                                           <ThumbsUp className="h-3 w-3 mr-1" /> Sim
@@ -2417,7 +2417,7 @@ export default function PainelAtendimento() {
                                           size="sm"
                                           variant={prog.valor_texto === 'nao' ? 'default' : 'outline'}
                                           className={cn("h-7 text-[11px] px-3", prog.valor_texto === 'nao' && "bg-red-600 hover:bg-red-700")}
-                                          disabled={isCongelado || !checklistEditMode}
+                                          disabled={!checklistEditMode}
                                           onClick={() => saveChecklistItem(atividade.id, cIdx, { concluido: true, valor_texto: 'nao' })}
                                         >
                                           <ThumbsDown className="h-3 w-3 mr-1" /> Não
@@ -2430,7 +2430,7 @@ export default function PainelAtendimento() {
                                         cardId={detailCard.id}
                                         atividadeId={atividade.id}
                                         checklistIndex={cIdx}
-                                        disabled={isCongelado || !checklistEditMode}
+                                        disabled={!checklistEditMode}
                                         onUpdate={(has) => {
                                           setChecklistProgresso((p) => ({
                                             ...p,
@@ -2445,7 +2445,7 @@ export default function PainelAtendimento() {
                                         <Input
                                           className="h-7 text-xs"
                                           placeholder="Digite aqui..."
-                                          disabled={isCongelado || !checklistEditMode}
+                                           disabled={!checklistEditMode}
                                           value={prog.valor_texto || ''}
                                           onChange={(e) => {
                                             const val = e.target.value;
@@ -2464,7 +2464,7 @@ export default function PainelAtendimento() {
                                           type="number"
                                           className="h-7 text-xs w-28"
                                           placeholder="Qtd"
-                                          disabled={isCongelado || !checklistEditMode}
+                                           disabled={!checklistEditMode}
                                           value={prog.valor_texto || ''}
                                           onChange={(e) => {
                                             const val = e.target.value;
@@ -2483,7 +2483,7 @@ export default function PainelAtendimento() {
                                           size="sm"
                                           variant={prog.concluido ? 'default' : 'outline'}
                                           className="h-7 text-[11px]"
-                                          disabled={isCongelado || !checklistEditMode}
+                                          disabled={!checklistEditMode}
                                           onClick={() => saveChecklistItem(atividade.id, cIdx, { concluido: !prog.concluido })}
                                         >
                                           <Paperclip className="h-3 w-3 mr-1" />
