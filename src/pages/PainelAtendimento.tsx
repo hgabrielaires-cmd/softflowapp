@@ -486,10 +486,15 @@ export default function PainelAtendimento() {
       setBuscaTecnico(null);
       setCardAgendamentos([]);
       setChecklistEditMode(false);
+      setSlaEtapaJornada(null);
+      setSlaProjeto(null);
+      setChecklistEtapa([]);
+      setChecklistProgresso({});
       return;
     }
     (async () => {
-      const [{ data: coms }, { data: tecs }, { data: likes }] = await Promise.all([
+      // Run ALL card detail queries in parallel
+      const [{ data: coms }, { data: tecs }, { data: likes }, { data: agData }] = await Promise.all([
         supabase
           .from("painel_comentarios")
           .select("id, texto, criado_por, created_at, parent_id")
@@ -503,10 +508,14 @@ export default function PainelAtendimento() {
         supabase
           .from("painel_curtidas")
           .select("comentario_id, user_id"),
+        supabase
+          .from("painel_agendamentos")
+          .select("*, jornada_atividades(nome)")
+          .eq("card_id", detailCard.id)
+          .order("data"),
       ]);
       setComentarios(coms || []);
       setTecnicosSelecionados((tecs || []).map((t: any) => t.tecnico_id));
-      // Build likes map: comentario_id -> [user_id, ...]
       const likesMap: Record<string, string[]> = {};
       (likes || []).forEach((l: any) => {
         if (!likesMap[l.comentario_id]) likesMap[l.comentario_id] = [];
@@ -514,13 +523,6 @@ export default function PainelAtendimento() {
       });
       setCurtidas(likesMap);
       setReplyTo(null);
-
-      // Load all agendamentos for this card
-      const { data: agData } = await supabase
-        .from("painel_agendamentos")
-        .select("*, jornada_atividades(nome)")
-        .eq("card_id", detailCard.id)
-        .order("data");
       setCardAgendamentos(agData || []);
     })();
   }, [detailCard?.id]);
@@ -576,9 +578,6 @@ export default function PainelAtendimento() {
   // Fetch SLA da Etapa + Checklist from jornada linked to the card's plano
   useEffect(() => {
     if (!detailCard || !detailCard.plano_id) {
-      setSlaEtapaJornada(null);
-      setSlaProjeto(null);
-      setChecklistEtapa([]);
       return;
     }
     (async () => {
@@ -601,77 +600,78 @@ export default function PainelAtendimento() {
         resolvedJornadaId = jornada[0].id;
       }
 
-      // Fetch ALL jornada_etapas for SLA do Projeto (total hours)
-      const { data: todasEtapasJornada } = await supabase
-        .from("jornada_etapas")
-        .select("id")
-        .eq("jornada_id", resolvedJornadaId);
+      const etapaAtual = etapas.find((e) => e.id === detailCard.etapa_id);
 
+      // Run jornada_etapas + checklist progress + jornada_etapa da etapa atual ALL in parallel
+      const [{ data: todasEtapasJornada }, { data: progresso }, jornadaEtapaResult] = await Promise.all([
+        supabase.from("jornada_etapas").select("id").eq("jornada_id", resolvedJornadaId),
+        supabase.from("painel_checklist_progresso")
+          .select("atividade_id, checklist_index, concluido, valor_texto, valor_data, concluido_por, concluido_em")
+          .eq("card_id", detailCard.id),
+        etapaAtual
+          ? supabase.from("jornada_etapas").select("id").eq("jornada_id", resolvedJornadaId).eq("nome", etapaAtual.nome).limit(1)
+          : Promise.resolve({ data: null }),
+      ]);
+
+      // SLA do Projeto
       if (todasEtapasJornada && todasEtapasJornada.length > 0) {
         const etapaIds = todasEtapasJornada.map((e) => e.id);
         const { data: todasAtividades } = await supabase
           .from("jornada_atividades")
           .select("horas_estimadas")
           .in("etapa_id", etapaIds);
-        const totalProjeto = (todasAtividades || []).reduce((acc, a) => acc + (a.horas_estimadas || 0), 0);
-        setSlaProjeto(totalProjeto);
+        setSlaProjeto((todasAtividades || []).reduce((acc, a) => acc + (a.horas_estimadas || 0), 0));
       } else {
         setSlaProjeto(null);
       }
 
-      // Find jornada_etapa matching current painel_etapa name for SLA da Etapa
-      const etapaAtual = etapas.find((e) => e.id === detailCard.etapa_id);
-      if (!etapaAtual) { setSlaEtapaJornada(null); setChecklistEtapa([]); return; }
+      // Checklist progress map (build while activities load)
+      const userIds = [...new Set((progresso || []).map((p: any) => p.concluido_por).filter(Boolean))];
+      const profileMapPromise = userIds.length > 0
+        ? supabase.from("profiles").select("user_id, full_name").in("user_id", userIds)
+        : Promise.resolve({ data: [] });
 
-      const { data: jornadaEtapa } = await supabase
-        .from("jornada_etapas")
-        .select("id")
-        .eq("jornada_id", resolvedJornadaId)
-        .eq("nome", etapaAtual.nome)
-        .limit(1);
-
-      if (!jornadaEtapa || jornadaEtapa.length === 0) {
+      const jornadaEtapa = jornadaEtapaResult?.data;
+      if (!etapaAtual || !jornadaEtapa || jornadaEtapa.length === 0) {
         setSlaEtapaJornada(null);
         setChecklistEtapa([]);
+        // Still resolve profiles
+        const { data: profiles } = await profileMapPromise;
+        const profileMap: Record<string, string> = {};
+        (profiles || []).forEach((p: any) => { profileMap[p.user_id] = p.full_name; });
+        const progressoMap: Record<string, any> = {};
+        (progresso || []).forEach((p: any) => {
+          progressoMap[`${p.atividade_id}_${p.checklist_index}`] = {
+            concluido: p.concluido, valor_texto: p.valor_texto || undefined, valor_data: p.valor_data || undefined,
+            concluido_por: p.concluido_por || undefined, concluido_em: p.concluido_em || undefined,
+            concluido_por_nome: p.concluido_por ? profileMap[p.concluido_por] : undefined,
+          };
+        });
+        setChecklistProgresso(progressoMap);
         return;
       }
 
-      // Fetch activities for SLA da Etapa + checklist
-      const { data: atividades } = await supabase
-        .from("jornada_atividades")
-        .select("id, nome, horas_estimadas, checklist")
-        .eq("etapa_id", jornadaEtapa[0].id)
-        .order("ordem");
+      // Fetch activities + profiles in parallel
+      const [{ data: atividades }, { data: profiles }] = await Promise.all([
+        supabase.from("jornada_atividades")
+          .select("id, nome, horas_estimadas, checklist")
+          .eq("etapa_id", jornadaEtapa[0].id)
+          .order("ordem"),
+        profileMapPromise,
+      ]);
 
       const totalEtapa = (atividades || []).reduce((acc, a) => acc + (a.horas_estimadas || 0), 0);
       setSlaEtapaJornada(totalEtapa);
       setChecklistEtapa(atividades || []);
 
-      // Fetch existing progress for this card
-      const { data: progresso } = await supabase
-        .from("painel_checklist_progresso")
-        .select("atividade_id, checklist_index, concluido, valor_texto, valor_data, concluido_por, concluido_em")
-        .eq("card_id", detailCard.id);
-
-      // Fetch profile names for concluido_por
-      const userIds = [...new Set((progresso || []).map((p: any) => p.concluido_por).filter(Boolean))];
-      let profileMap: Record<string, string> = {};
-      if (userIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, full_name")
-          .in("user_id", userIds);
-        (profiles || []).forEach((p: any) => { profileMap[p.user_id] = p.full_name; });
-      }
+      const profileMap: Record<string, string> = {};
+      (profiles || []).forEach((p: any) => { profileMap[p.user_id] = p.full_name; });
 
       const progressoMap: Record<string, { concluido: boolean; valor_texto?: string; valor_data?: string; concluido_por?: string; concluido_em?: string; concluido_por_nome?: string }> = {};
       (progresso || []).forEach((p: any) => {
         progressoMap[`${p.atividade_id}_${p.checklist_index}`] = {
-          concluido: p.concluido,
-          valor_texto: p.valor_texto || undefined,
-          valor_data: p.valor_data || undefined,
-          concluido_por: p.concluido_por || undefined,
-          concluido_em: p.concluido_em || undefined,
+          concluido: p.concluido, valor_texto: p.valor_texto || undefined, valor_data: p.valor_data || undefined,
+          concluido_por: p.concluido_por || undefined, concluido_em: p.concluido_em || undefined,
           concluido_por_nome: p.concluido_por ? profileMap[p.concluido_por] : undefined,
         };
       });
