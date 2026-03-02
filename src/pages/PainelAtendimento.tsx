@@ -529,37 +529,45 @@ export default function PainelAtendimento() {
     })();
   }, [detailCard?.id]);
 
-  // ─── Sync contratos assinados ───────────────────────────────────────────
-  const syncContratosAssinados = useCallback(async () => {
+  // ─── Atualizar Painel (full refresh) ─────────────────────────────────────
+  const atualizarPainel = useCallback(async () => {
     setSyncing(true);
     try {
+      // Sync contratos assinados first
       const cardContratoIds = cards
         .filter((c) => c.contrato_id)
         .map((c) => c.contrato_id);
 
-      if (cardContratoIds.length === 0) {
-        setSyncing(false);
-        return;
-      }
+      if (cardContratoIds.length > 0) {
+        const { data: zapsignRecords } = await supabase
+          .from("contratos_zapsign")
+          .select("contrato_id, status")
+          .in("contrato_id", cardContratoIds)
+          .in("status", ["Enviado", "Pendente"]);
 
-      const { data: zapsignRecords } = await supabase
-        .from("contratos_zapsign")
-        .select("contrato_id, status")
-        .in("contrato_id", cardContratoIds)
-        .in("status", ["Enviado", "Pendente"]);
-
-      if (zapsignRecords && zapsignRecords.length > 0) {
-        for (const rec of zapsignRecords) {
-          try {
-            await supabase.functions.invoke("zapsign", {
-              body: { action: "status", contrato_id: rec.contrato_id },
-            });
-          } catch {
-            // ignore
+        if (zapsignRecords && zapsignRecords.length > 0) {
+          for (const rec of zapsignRecords) {
+            try {
+              await supabase.functions.invoke("zapsign", {
+                body: { action: "status", contrato_id: rec.contrato_id },
+              });
+            } catch {
+              // ignore
+            }
           }
         }
-        queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
       }
+
+      // Invalidate ALL panel-related queries
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] }),
+        queryClient.invalidateQueries({ queryKey: ["painel_etapas"] }),
+        queryClient.invalidateQueries({ queryKey: ["card_apontamentos"] }),
+        queryClient.invalidateQueries({ queryKey: ["profiles_painel"] }),
+        queryClient.invalidateQueries({ queryKey: ["tecnicos_painel"] }),
+        queryClient.invalidateQueries({ queryKey: ["jornada_sla_map"] }),
+      ]);
+
       toast.success("Painel atualizado!");
     } catch {
       // silent
@@ -573,9 +581,9 @@ export default function PainelAtendimento() {
   useEffect(() => {
     if (cards.length > 0 && !hasSynced) {
       setHasSynced(true);
-      syncContratosAssinados();
+      atualizarPainel();
     }
-  }, [cards.length, hasSynced, syncContratosAssinados]);
+  }, [cards.length, hasSynced, atualizarPainel]);
 
   // Fetch SLA da Etapa + Checklist from jornada linked to the card's plano
   useEffect(() => {
@@ -1627,11 +1635,15 @@ export default function PainelAtendimento() {
           !c.contratos?.numero_exibicao?.toLowerCase().includes(search.toLowerCase())) return false;
       if (filtroTipo !== "todos" && c.tipo_operacao !== filtroTipo) return false;
       if (filtroFilial !== "todos" && filtroFilial !== "_init_" && c.filial_id !== filtroFilial) return false;
-      if (filtroResponsavel !== "todos" && c.responsavel_id !== filtroResponsavel) return false;
+      if (filtroResponsavel !== "todos") {
+        const isResponsavel = c.responsavel_id === filtroResponsavel;
+        const isApontado = (cardApontamentosDetalhado[c.id] || []).some(a => a.usuario_id === filtroResponsavel);
+        if (!isResponsavel && !isApontado) return false;
+      }
       if (filtroEtapa !== "todos" && c.etapa_id !== filtroEtapa) return false;
       return true;
     });
-  }, [cards, search, filtroTipo, filtroFilial, filtroResponsavel, filtroEtapa]);
+  }, [cards, search, filtroTipo, filtroFilial, filtroResponsavel, filtroEtapa, cardApontamentosDetalhado]);
 
   // ─── Drag & Drop ─────────────────────────────────────────────────────────
 
@@ -1876,9 +1888,9 @@ export default function PainelAtendimento() {
               variant="outline"
               size="icon"
               className="h-9 w-9"
-              onClick={() => syncContratosAssinados()}
+              onClick={() => atualizarPainel()}
               disabled={syncing}
-              title="Atualizar status dos contratos"
+              title="Atualizar painel"
             >
               <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
             </Button>
