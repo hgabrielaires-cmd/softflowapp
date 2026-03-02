@@ -62,12 +62,24 @@ function gerarSenhaSegura(): string {
   const digits = "0123456789";
   const special = "!@#$%&*";
   const all = upper + lower + digits + special;
-  // Garantir pelo menos 1 de cada tipo
-  const pick = (s: string) => s[Math.floor(Math.random() * s.length)];
-  const mandatory = [pick(upper), pick(lower), pick(digits), pick(special)];
-  const rest = Array.from({ length: 4 }, () => pick(all));
-  // Embaralhar
-  return [...mandatory, ...rest].sort(() => Math.random() - 0.5).join("");
+  // Usar crypto para aleatoriedade forte (evita HIBP)
+  const securePick = (s: string) => {
+    const arr = new Uint32Array(1);
+    crypto.getRandomValues(arr);
+    return s[arr[0] % s.length];
+  };
+  // Garantir pelo menos 1 de cada tipo + 8 extras = 12 caracteres
+  const mandatory = [securePick(upper), securePick(lower), securePick(digits), securePick(special)];
+  const rest = Array.from({ length: 8 }, () => securePick(all));
+  // Embaralhar com crypto
+  const combined = [...mandatory, ...rest];
+  for (let i = combined.length - 1; i > 0; i--) {
+    const arr = new Uint32Array(1);
+    crypto.getRandomValues(arr);
+    const j = arr[0] % (i + 1);
+    [combined[i], combined[j]] = [combined[j], combined[i]];
+  }
+  return combined.join("");
 }
 
 export default function Usuarios() {
