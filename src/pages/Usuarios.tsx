@@ -40,7 +40,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send, MessageCircle, Globe, Wrench, ShoppingCart } from "lucide-react";
+import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send, MessageCircle, Globe, Wrench, ShoppingCart, Headphones } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -52,6 +52,12 @@ interface UserWithRoles extends Profile {
   filial_nome?: string;
   acesso_global: boolean;
   filiais_vinculadas?: { id: string; nome: string }[];
+  mesas_vinculadas?: { id: string; nome: string }[];
+}
+
+interface MesaOption {
+  id: string;
+  nome: string;
 }
 
 const ALL_ROLES: AppRole[] = ["admin", "financeiro", "vendedor", "tecnico"];
@@ -84,6 +90,7 @@ export default function Usuarios() {
   const { isAdmin } = useAuth();
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
+  const [mesasDisponiveis, setMesasDisponiveis] = useState<MesaOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   
@@ -108,6 +115,7 @@ export default function Usuarios() {
   const [inviteIsTecnico, setInviteIsTecnico] = useState(false);
   const [inviteTipoTecnico, setInviteTipoTecnico] = useState("interno");
   const [inviteIsVendedor, setInviteIsVendedor] = useState(false);
+  const [inviteMesaIds, setInviteMesaIds] = useState<string[]>([]);
   const [inviting, setInviting] = useState(false);
 
   // Edit dialog
@@ -131,14 +139,19 @@ export default function Usuarios() {
   const [editIsTecnico, setEditIsTecnico] = useState(false);
   const [editTipoTecnico, setEditTipoTecnico] = useState("interno");
   const [editIsVendedor, setEditIsVendedor] = useState(false);
+  const [editMesaIds, setEditMesaIds] = useState<string[]>([]);
   const [editActive, setEditActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
   async function loadFiliais() {
-    const { data } = await supabase.from("filiais").select("*").eq("ativa", true).order("nome");
-    if (data) setFiliais(data as Filial[]);
+    const [{ data: fData }, { data: mData }] = await Promise.all([
+      supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
+      supabase.from("mesas_atendimento").select("id, nome").eq("ativo", true).order("nome"),
+    ]);
+    if (fData) setFiliais(fData as Filial[]);
+    if (mData) setMesasDisponiveis(mData as MesaOption[]);
   }
 
   async function loadUsers() {
@@ -150,8 +163,11 @@ export default function Usuarios() {
 
     if (error) { toast.error("Erro ao carregar usuários"); setLoading(false); return; }
 
-    const { data: roleData } = await supabase.from("user_roles").select("*");
-    const { data: ufData } = await supabase.from("usuario_filiais").select("user_id, filial_id");
+    const [{ data: roleData }, { data: ufData }, { data: umData }] = await Promise.all([
+      supabase.from("user_roles").select("*"),
+      supabase.from("usuario_filiais").select("user_id, filial_id"),
+      supabase.from("usuario_mesas").select("user_id, mesa_id"),
+    ]);
 
     const enriched: UserWithRoles[] = (profiles || []).map((p: any) => {
       const userFiliais = (ufData || []).filter((uf) => uf.user_id === p.user_id);
@@ -160,12 +176,19 @@ export default function Usuarios() {
         return f ? { id: f.id, nome: f.nome } : null;
       }).filter(Boolean) as { id: string; nome: string }[];
 
+      const userMesas = (umData || []).filter((um: any) => um.user_id === p.user_id);
+      const mesasVinculadas = userMesas.map((um: any) => {
+        const m = mesasDisponiveis.find((md) => md.id === um.mesa_id);
+        return m ? { id: m.id, nome: m.nome } : null;
+      }).filter(Boolean) as { id: string; nome: string }[];
+
       return {
         ...p,
         filial_nome: p.filiais?.nome || p.filial || null,
         roles: (roleData || []).filter((r) => r.user_id === p.user_id).map((r) => r.role as AppRole),
         acesso_global: p.acesso_global || false,
         filiais_vinculadas: filiaisVinculadas,
+        mesas_vinculadas: mesasVinculadas,
       };
     });
 
@@ -260,6 +283,12 @@ export default function Usuarios() {
         await supabase.from("usuario_filiais").insert(rows);
       }
 
+      // Insert mesas junction
+      if (inviteMesaIds.length > 0) {
+        const mesaRows = inviteMesaIds.map((mId) => ({ user_id: data.user.id, mesa_id: mId }));
+        await supabase.from("usuario_mesas").insert(mesaRows);
+      }
+
       await supabase.from("user_roles").insert({ user_id: data.user.id, role: inviteRole });
 
       // Enviar WhatsApp de boas-vindas se o telefone foi informado
@@ -274,7 +303,7 @@ export default function Usuarios() {
 
       toast.success(`Usuário ${inviteName} criado com sucesso!`);
       setOpenInvite(false);
-      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteFilialIds([]); setInviteAcessoGlobal(false); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteComissaoServ("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone(""); setInviteIsTecnico(false); setInviteTipoTecnico("interno"); setInviteIsVendedor(false);
+      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteFilialIds([]); setInviteAcessoGlobal(false); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteComissaoServ("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone(""); setInviteIsTecnico(false); setInviteTipoTecnico("interno"); setInviteIsVendedor(false); setInviteMesaIds([]);
       loadUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
@@ -303,6 +332,7 @@ export default function Usuarios() {
     setEditIsTecnico((user as any).is_tecnico ?? false);
     setEditTipoTecnico((user as any).tipo_tecnico || "interno");
     setEditIsVendedor((user as any).is_vendedor ?? false);
+    setEditMesaIds((user.mesas_vinculadas || []).map((m) => m.id));
     setEditActive(user.active);
     setOpenEdit(true);
   }
@@ -345,6 +375,13 @@ export default function Usuarios() {
         const rows = editFilialIds.map((fId) => ({ user_id: editingUser.user_id, filial_id: fId }));
         const { error: ufError } = await supabase.from("usuario_filiais").insert(rows);
         if (ufError) throw ufError;
+      }
+
+      // Update usuario_mesas junction
+      await supabase.from("usuario_mesas").delete().eq("user_id", editingUser.user_id);
+      if (editMesaIds.length > 0) {
+        const mesaRows = editMesaIds.map((mId) => ({ user_id: editingUser.user_id, mesa_id: mId }));
+        await supabase.from("usuario_mesas").insert(mesaRows);
       }
 
       const { data: existingRole } = await supabase
@@ -774,6 +811,27 @@ export default function Usuarios() {
               )}
             </div>
             <div className="rounded-lg border border-border p-3 space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <Headphones className="h-3.5 w-3.5" />
+                Mesas de Atendimento
+              </p>
+              <div className="space-y-2">
+                {mesasDisponiveis.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
+                    <span className="text-sm">{m.nome}</span>
+                    <Switch
+                      checked={inviteMesaIds.includes(m.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) setInviteMesaIds((prev) => [...prev, m.id]);
+                        else setInviteMesaIds((prev) => prev.filter((id) => id !== m.id));
+                      }}
+                    />
+                  </div>
+                ))}
+                {mesasDisponiveis.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma mesa cadastrada.</p>}
+              </div>
+            </div>
+            <div className="rounded-lg border border-border p-3 space-y-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Limite de Desconto</p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -1003,6 +1061,27 @@ export default function Usuarios() {
                         </div>
                       </div>
                     )}
+                  </div>
+                  <div className="rounded-lg border border-border p-3 space-y-3">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                      <Headphones className="h-3.5 w-3.5" />
+                      Mesas de Atendimento
+                    </p>
+                    <div className="space-y-2">
+                      {mesasDisponiveis.map((m) => (
+                        <div key={m.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
+                          <span className="text-sm">{m.nome}</span>
+                          <Switch
+                            checked={editMesaIds.includes(m.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) setEditMesaIds((prev) => [...prev, m.id]);
+                              else setEditMesaIds((prev) => prev.filter((id) => id !== m.id));
+                            }}
+                          />
+                        </div>
+                      ))}
+                      {mesasDisponiveis.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma mesa cadastrada.</p>}
+                    </div>
                   </div>
                   <div className="rounded-lg border border-border p-3 space-y-3">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Limite de Desconto</p>

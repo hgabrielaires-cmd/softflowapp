@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Eye, GripVertical, Download, Calendar, Paperclip, Hash, ToggleLeft, Type, CheckSquare } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Eye, GripVertical, Download, Calendar, Paperclip, Hash, ToggleLeft, Type, CheckSquare, ArrowUp, ArrowDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Jornada, JornadaEtapa, JornadaAtividade, MesaAtendimento, ChecklistItem, ChecklistItemTipo, Filial } from "@/lib/supabase-types";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
@@ -28,6 +28,7 @@ interface LocalAtividade {
   horas_estimadas: number;
   checklist: ChecklistItem[];
   tipo_responsabilidade: string;
+  mesa_atendimento_id: string;
   ordem: number;
 }
 
@@ -66,7 +67,7 @@ export default function JornadaImplantacao() {
   const [atividadeDialogOpen, setAtividadeDialogOpen] = useState(false);
   const [currentEtapaTempId, setCurrentEtapaTempId] = useState("");
   const [editingAtividade, setEditingAtividade] = useState<LocalAtividade | null>(null);
-  const [atividadeForm, setAtividadeForm] = useState({ nome: "", descricao: "", horas_estimadas: 0, checklist: [] as ChecklistItem[], tipo_responsabilidade: "Interna" });
+  const [atividadeForm, setAtividadeForm] = useState({ nome: "", descricao: "", horas_estimadas: 0, checklist: [] as ChecklistItem[], tipo_responsabilidade: "Interna", mesa_atendimento_id: "" });
   const [horasText, setHorasText] = useState("0:00");
   const [expandedEtapas, setExpandedEtapas] = useState<Set<string>>(new Set());
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -213,6 +214,7 @@ export default function JornadaImplantacao() {
             horas_estimadas: a.horas_estimadas,
             checklist: a.checklist as any,
             tipo_responsabilidade: a.tipo_responsabilidade,
+            mesa_atendimento_id: a.mesa_atendimento_id || null,
             ordem: a.ordem,
           }));
           const { error: atErr } = await supabase.from("jornada_atividades").insert(atividades);
@@ -288,6 +290,7 @@ export default function JornadaImplantacao() {
           horas_estimadas: a.horas_estimadas,
           checklist: Array.isArray(a.checklist) ? a.checklist : [],
           tipo_responsabilidade: a.tipo_responsabilidade,
+          mesa_atendimento_id: a.mesa_atendimento_id || "",
           ordem: a.ordem,
         })),
       });
@@ -325,6 +328,7 @@ export default function JornadaImplantacao() {
           horas_estimadas: a.horas_estimadas,
           checklist: Array.isArray(a.checklist) ? a.checklist : [],
           tipo_responsabilidade: a.tipo_responsabilidade,
+          mesa_atendimento_id: a.mesa_atendimento_id || "",
           ordem: a.ordem,
         })),
         mesa_atendimento: (e as any).mesas_atendimento ? { nome: (e as any).mesas_atendimento.nome } : null,
@@ -411,7 +415,9 @@ export default function JornadaImplantacao() {
   function openNewAtividade(etapaTempId: string) {
     setCurrentEtapaTempId(etapaTempId);
     setEditingAtividade(null);
-    setAtividadeForm({ nome: "", descricao: "", horas_estimadas: 0, checklist: [], tipo_responsabilidade: "Interna" });
+    const etapa = etapas.find(e => e.tempId === etapaTempId);
+    setAtividadeForm({ nome: "", descricao: "", horas_estimadas: 0, checklist: [], tipo_responsabilidade: "Interna", mesa_atendimento_id: etapa?.mesa_atendimento_id || "" });
+    setHorasText("0:00");
     setHorasText("0:00");
     setAtividadeDialogOpen(true);
   }
@@ -425,6 +431,7 @@ export default function JornadaImplantacao() {
       horas_estimadas: atividade.horas_estimadas,
       checklist: [...atividade.checklist],
       tipo_responsabilidade: atividade.tipo_responsabilidade,
+      mesa_atendimento_id: atividade.mesa_atendimento_id || "",
     });
     const h = Math.floor(atividade.horas_estimadas);
     const m = Math.round((atividade.horas_estimadas - h) * 60);
@@ -466,6 +473,16 @@ export default function JornadaImplantacao() {
     setAtividadeForm((prev) => ({ ...prev, checklist: prev.checklist.filter((_, i) => i !== index) }));
   }
 
+  function moveChecklistItem(index: number, direction: "up" | "down") {
+    setAtividadeForm((prev) => {
+      const list = [...prev.checklist];
+      const target = direction === "up" ? index - 1 : index + 1;
+      if (target < 0 || target >= list.length) return prev;
+      [list[index], list[target]] = [list[target], list[index]];
+      return { ...prev, checklist: list };
+    });
+  }
+
   // ─── Toggle expanded etapa ─────────────────────────────────────────────────
 
   function toggleExpanded(tempId: string) {
@@ -498,6 +515,7 @@ export default function JornadaImplantacao() {
         horas_estimadas: a.horas_estimadas,
         checklist: Array.isArray(a.checklist) ? a.checklist : [],
         tipo_responsabilidade: a.tipo_responsabilidade,
+        mesa_atendimento_id: a.mesa_atendimento_id || "",
         ordem: a.ordem,
       }));
 
@@ -897,6 +915,21 @@ export default function JornadaImplantacao() {
               </Select>
             </div>
             <div>
+              <label className="text-sm font-medium">Mesa de Atendimento</label>
+              <Select value={atividadeForm.mesa_atendimento_id || "none"} onValueChange={(v) => setAtividadeForm((p) => ({ ...p, mesa_atendimento_id: v === "none" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="Herdar da etapa" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Herdar da etapa</SelectItem>
+                  {mesas.map((m) => <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {!atividadeForm.mesa_atendimento_id && (() => {
+                const etapa = etapas.find(e => e.tempId === currentEtapaTempId);
+                const mesaNome = etapa?.mesa_atendimento_id ? mesas.find(m => m.id === etapa.mesa_atendimento_id)?.nome : null;
+                return mesaNome ? <p className="text-xs text-muted-foreground mt-1">Herdará: {mesaNome}</p> : null;
+              })()}
+            </div>
+            <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-medium">Checklist</label>
                 <Button size="sm" variant="outline" className="h-7 text-xs" onClick={addChecklistItem}><Plus className="h-3 w-3 mr-1" />Adicionar Item</Button>
@@ -907,6 +940,10 @@ export default function JornadaImplantacao() {
                 <div className="space-y-2">
                   {atividadeForm.checklist.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-2">
+                      <div className="flex flex-col gap-0.5">
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => moveChecklistItem(idx, "up")} disabled={idx === 0}><ArrowUp className="h-3 w-3" /></Button>
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => moveChecklistItem(idx, "down")} disabled={idx === atividadeForm.checklist.length - 1}><ArrowDown className="h-3 w-3" /></Button>
+                      </div>
                       <Select value={item.tipo || "check"} onValueChange={(v) => updateChecklistTipo(idx, v as ChecklistItemTipo)}>
                         <SelectTrigger className="w-[140px] h-8 text-xs">
                           <SelectValue />
