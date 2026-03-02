@@ -22,8 +22,8 @@ export default function TrocarSenha() {
       toast.error("As senhas não coincidem");
       return;
     }
-    if (newPassword.length < 68) {
-      toast.error("A senha deve ter pelo menos 68 caracteres");
+    if (newPassword.length < 8) {
+      toast.error("A senha deve ter pelo menos 8 caracteres");
       return;
     }
     if (!/[A-Z]/.test(newPassword)) {
