@@ -20,7 +20,11 @@ import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   LayoutGrid, List, Search, Clock, Building2, User, Filter,
   GripVertical, ChevronRight, FileText, Package, ArrowUpCircle,
@@ -2660,9 +2664,34 @@ export default function PainelAtendimento() {
                       {cardAgendamentos.map((ag: any) => (
                         <div key={ag.id} className="flex items-center gap-2 bg-muted/50 rounded px-2 py-1.5 text-xs">
                           <CalendarDays className="h-3 w-3 text-primary shrink-0" />
-                          <span className="font-medium min-w-[70px]">
-                            {new Date(ag.data + "T12:00:00").toLocaleDateString("pt-BR")}
-                          </span>
+                          {configLocked ? (
+                            <span className="font-medium min-w-[70px]">
+                              {new Date(ag.data + "T12:00:00").toLocaleDateString("pt-BR")}
+                            </span>
+                          ) : (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-6 text-[11px] px-2 min-w-[80px] font-medium">
+                                  {new Date(ag.data + "T12:00:00").toLocaleDateString("pt-BR")}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={new Date(ag.data + "T12:00:00")}
+                                  onSelect={async (date) => {
+                                    if (!date) return;
+                                    const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                                    await supabase.from("painel_agendamentos").update({ data: formatted }).eq("id", ag.id);
+                                    setCardAgendamentos(prev => prev.map(a => a.id === ag.id ? { ...a, data: formatted } : a));
+                                    toast.success("Data atualizada!");
+                                  }}
+                                  locale={ptBR}
+                                  className={cn("p-3 pointer-events-auto")}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          )}
                           <div className="flex items-center gap-1">
                             <Clock className="h-2.5 w-2.5 text-muted-foreground" />
                             <Input
