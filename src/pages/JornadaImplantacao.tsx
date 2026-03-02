@@ -1134,7 +1134,7 @@ export default function JornadaImplantacao() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => { setConfirmCloseOpen(false); closeDialog(); }}>Não</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setConfirmCloseOpen(false); saveMutation.mutate(); }}>Sim, salvar</AlertDialogAction>
+            <AlertDialogAction onClick={() => { setConfirmCloseOpen(false); skipConfirmRef.current = true; setDialogOpen(false); saveMutation.mutate(); }}>Sim, salvar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
