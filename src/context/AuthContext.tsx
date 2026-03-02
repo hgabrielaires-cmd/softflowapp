@@ -59,18 +59,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if ((data as any).deve_trocar_senha === true) {
         setDeveTrocarSenha(true);
       }
-      // Verificar se tem filial vinculada (filial_id OU usuario_filiais)
-      if (!data.filial_id) {
-        const { data: ufData } = await supabase
-          .from("usuario_filiais")
-          .select("filial_id")
-          .eq("user_id", userId)
-          .limit(1);
-        if (!ufData || ufData.length === 0) {
-          setSemFilial(true);
-        } else {
-          setSemFilial(false);
-        }
+      // Verificar se tem filial vinculada via usuario_filiais (fonte única de verdade)
+      const { data: ufData } = await supabase
+        .from("usuario_filiais")
+        .select("filial_id")
+        .eq("user_id", userId)
+        .limit(1);
+      if (!ufData || ufData.length === 0) {
+        setSemFilial(true);
       } else {
         setSemFilial(false);
       }

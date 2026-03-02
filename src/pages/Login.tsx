@@ -47,8 +47,8 @@ export default function Login() {
       return;
     }
 
-    // Verificar se tem filial vinculada (pular se acesso_global)
-    if (!profile?.acesso_global && !profile?.filial_id) {
+    // Verificar se tem filial vinculada via usuario_filiais (fonte única de verdade)
+    if (!profile?.acesso_global) {
       const { data: ufData } = await supabase
         .from("usuario_filiais")
         .select("filial_id")
