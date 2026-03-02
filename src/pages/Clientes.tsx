@@ -53,6 +53,7 @@ const emptyForm = {
   cnpj_cpf: "",
   inscricao_estadual: "",
   ie_isento: false,
+  responsavel_nome: "",
   contato_nome: "",
   telefone: "",
   email: "",
@@ -292,6 +293,7 @@ export default function Clientes() {
       cnpj_cpf: c.cnpj_cpf,
       inscricao_estadual: ieIsento ? "" : ((c as any).inscricao_estadual || ""),
       ie_isento: ieIsento,
+      responsavel_nome: (c as any).responsavel_nome || "",
       contato_nome: c.contato_nome || "",
       telefone: c.telefone || "",
       email: c.email || "",
@@ -460,6 +462,10 @@ export default function Clientes() {
       toast.error("Nome fantasia, Razão social e CNPJ/CPF são obrigatórios");
       return;
     }
+    if (!form.responsavel_nome.trim()) {
+      toast.error("Nome completo do responsável é obrigatório");
+      return;
+    }
     // Validar inscrição estadual
     if (!form.ie_isento && !form.inscricao_estadual.trim()) {
       toast.error("Inscrição Estadual é obrigatória. Se não possuir, marque 'Isento de IE'.");
@@ -510,6 +516,7 @@ export default function Clientes() {
       apelido: form.apelido.trim() || null,
       cnpj_cpf: form.cnpj_cpf.trim(),
       inscricao_estadual: form.ie_isento ? "ISENTO" : (form.inscricao_estadual.trim() || null),
+      responsavel_nome: form.responsavel_nome.trim() || null,
       contato_nome: formContatos[0]?.nome || form.contato_nome.trim() || null,
       telefone: formContatos[0]?.telefone || form.telefone.trim() || null,
       email: formContatos[0]?.email || form.email.trim() || null,
@@ -893,6 +900,12 @@ export default function Clientes() {
                 <Label>Cliente ativo</Label>
               </div>
             )}
+
+            {/* ── Responsável ── */}
+            <div className="col-span-2 space-y-1.5">
+              <Label>Nome completo do responsável *</Label>
+              <Input value={form.responsavel_nome} onChange={(e) => setForm((f) => ({ ...f, responsavel_nome: e.target.value }))} placeholder="Nome completo do responsável pela empresa" />
+            </div>
 
             {/* ── Seção Contatos ── */}
             <div className="col-span-2 pt-2">
