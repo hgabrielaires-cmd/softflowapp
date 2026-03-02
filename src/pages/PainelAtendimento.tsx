@@ -25,7 +25,7 @@ import {
   LayoutGrid, List, Search, Clock, Building2, User, Filter,
   GripVertical, ChevronRight, FileText, Package, ArrowUpCircle,
   Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw, ArrowRight, CheckSquare,
-  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare, Info, History, Pencil, MoreHorizontal, XCircle, PauseCircle, UserPlus, Users, Ban,
+  CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare, Info, History, Pencil, MoreHorizontal, XCircle, PauseCircle, UserPlus, Users, Ban, X,
   Heart, Reply, CornerDownRight
 } from "lucide-react";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
@@ -145,6 +145,7 @@ export default function PainelAtendimento() {
   const [historicoData, setHistoricoData] = useState<any[]>([]);
   const [historicoLoading, setHistoricoLoading] = useState(false);
   const [configEditMode, setConfigEditMode] = useState(false);
+  const [cardAgendamentos, setCardAgendamentos] = useState<any[]>([]);
   const [pausarOpen, setPausarOpen] = useState(false);
   const [pausarMotivo, setPausarMotivo] = useState("");
   const [pausando, setPausando] = useState(false);
@@ -476,6 +477,7 @@ export default function PainelAtendimento() {
       setTecnicosSelecionados([]);
       setNovoComentario("");
       setBuscaTecnico("");
+      setCardAgendamentos([]);
       return;
     }
     (async () => {
@@ -504,6 +506,14 @@ export default function PainelAtendimento() {
       });
       setCurtidas(likesMap);
       setReplyTo(null);
+
+      // Load all agendamentos for this card
+      const { data: agData } = await supabase
+        .from("painel_agendamentos")
+        .select("*, jornada_atividades(nome)")
+        .eq("card_id", detailCard.id)
+        .order("data");
+      setCardAgendamentos(agData || []);
     })();
   }, [detailCard?.id]);
 
@@ -2466,7 +2476,7 @@ export default function PainelAtendimento() {
                 );
               })()}
 
-              {/* Controles do Projeto (persistem entre etapas) */}
+              {/* Detalhes do Agendamento (persistem entre etapas) */}
               {(() => {
                 const etapaAtual = etapas.find(e => e.id === detailCard.etapa_id);
                 const isEtapaAgendamento = etapaAtual?.ordem === 1; // Agendamento é ordem 1
@@ -2475,7 +2485,7 @@ export default function PainelAtendimento() {
                 return (
               <div className="rounded-lg border border-border bg-card p-3 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Configurações do Projeto</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Detalhes do Agendamento</p>
                   {!isEtapaAgendamento && (
                     <Button
                       variant="ghost"
@@ -2484,7 +2494,7 @@ export default function PainelAtendimento() {
                       onClick={() => {
                         if (!configEditMode) {
                           if (!podeEditarConfigProjeto) {
-                            toast.error("Você não tem permissão para editar configurações do projeto");
+                            toast.error("Você não tem permissão para editar detalhes do agendamento");
                             return;
                           }
                           setConfigEditMode(true);
@@ -2492,7 +2502,7 @@ export default function PainelAtendimento() {
                           setConfigEditMode(false);
                         }
                       }}
-                      title={configLocked ? "Editar configurações" : "Bloquear configurações"}
+                      title={configLocked ? "Editar detalhes" : "Bloquear edição"}
                     >
                       <Pencil className={cn("h-3.5 w-3.5", configEditMode ? "text-primary" : "text-muted-foreground")} />
                     </Button>
@@ -2637,6 +2647,72 @@ export default function PainelAtendimento() {
                   </RadioGroup>
                   )}
                 </div>
+
+
+                {/* Agendamentos do Card */}
+                {cardAgendamentos.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium flex items-center gap-1.5">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      Agendamentos ({cardAgendamentos.length})
+                    </Label>
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                      {cardAgendamentos.map((ag: any) => (
+                        <div key={ag.id} className="flex items-center gap-2 bg-muted/50 rounded px-2 py-1.5 text-xs">
+                          <CalendarDays className="h-3 w-3 text-primary shrink-0" />
+                          <span className="font-medium min-w-[70px]">
+                            {new Date(ag.data + "T12:00:00").toLocaleDateString("pt-BR")}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-2.5 w-2.5 text-muted-foreground" />
+                            <Input
+                              type="time"
+                              className="h-6 w-[75px] text-[11px] px-1"
+                              value={ag.hora_inicio || ""}
+                              disabled={configLocked}
+                              onChange={async (e) => {
+                                const val = e.target.value || null;
+                                await supabase.from("painel_agendamentos").update({ hora_inicio: val }).eq("id", ag.id);
+                                setCardAgendamentos(prev => prev.map(a => a.id === ag.id ? { ...a, hora_inicio: val } : a));
+                              }}
+                            />
+                            <span className="text-muted-foreground">-</span>
+                            <Input
+                              type="time"
+                              className="h-6 w-[75px] text-[11px] px-1"
+                              value={ag.hora_fim || ""}
+                              disabled={configLocked}
+                              onChange={async (e) => {
+                                const val = e.target.value || null;
+                                await supabase.from("painel_agendamentos").update({ hora_fim: val }).eq("id", ag.id);
+                                setCardAgendamentos(prev => prev.map(a => a.id === ag.id ? { ...a, hora_fim: val } : a));
+                              }}
+                            />
+                          </div>
+                          {ag.jornada_atividades?.nome && (
+                            <span className="text-[10px] text-muted-foreground truncate max-w-[120px]" title={ag.jornada_atividades.nome}>
+                              {ag.jornada_atividades.nome}
+                            </span>
+                          )}
+                          {!configLocked && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 shrink-0 ml-auto"
+                              onClick={async () => {
+                                await supabase.from("painel_agendamentos").delete().eq("id", ag.id);
+                                setCardAgendamentos(prev => prev.filter(a => a.id !== ag.id));
+                                toast.success("Agendamento removido!");
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Comentários (thread) */}
                 <div className="space-y-2">
