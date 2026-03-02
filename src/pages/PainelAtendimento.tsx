@@ -833,7 +833,7 @@ export default function PainelAtendimento() {
       let clienteInfo: any = null;
       const { data: cli } = await supabase
         .from("clientes")
-        .select("nome_fantasia, razao_social, cnpj_cpf, telefone, email, cidade, uf, logradouro, numero, bairro, complemento, cep")
+        .select("nome_fantasia, razao_social, cnpj_cpf, telefone, email, cidade, uf, logradouro, numero, bairro, complemento, cep, apelido")
         .eq("id", card.cliente_id)
         .single();
       clienteInfo = cli;
@@ -3096,6 +3096,12 @@ export default function PainelAtendimento() {
                       <span className="text-muted-foreground">CNPJ/CPF:</span>{" "}
                       <span className="font-medium text-foreground">{detalhesData.clienteInfo.cnpj_cpf}</span>
                     </div>
+                    {detalhesData.clienteInfo.apelido && (
+                      <div>
+                        <span className="text-muted-foreground">Apelido:</span>{" "}
+                        <span className="font-medium text-foreground">{detalhesData.clienteInfo.apelido}</span>
+                      </div>
+                    )}
                     <div>
                       <span className="text-muted-foreground">Telefone:</span>{" "}
                       <span className="font-medium text-foreground">{detalhesData.clienteInfo.telefone || "—"}</span>
@@ -3104,19 +3110,20 @@ export default function PainelAtendimento() {
                       <span className="text-muted-foreground">E-mail:</span>{" "}
                       <span className="font-medium text-foreground">{detalhesData.clienteInfo.email || "—"}</span>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Cidade/UF:</span>{" "}
-                      <span className="font-medium text-foreground">{[detalhesData.clienteInfo.cidade, detalhesData.clienteInfo.uf].filter(Boolean).join("/") || "—"}</span>
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Endereço:</span>{" "}
+                      <span className="font-medium text-foreground">
+                        {[
+                          detalhesData.clienteInfo.logradouro,
+                          detalhesData.clienteInfo.numero ? `nº ${detalhesData.clienteInfo.numero}` : null,
+                          detalhesData.clienteInfo.complemento,
+                          detalhesData.clienteInfo.bairro,
+                          detalhesData.clienteInfo.cidade,
+                          detalhesData.clienteInfo.uf,
+                        ].filter(Boolean).join(", ") || "—"}
+                        {detalhesData.clienteInfo.cep ? ` — CEP: ${detalhesData.clienteInfo.cep}` : ""}
+                      </span>
                     </div>
-                    {detalhesData.clienteInfo.logradouro && (
-                      <div className="col-span-2">
-                        <span className="text-muted-foreground">Endereço:</span>{" "}
-                        <span className="font-medium text-foreground">
-                          {[detalhesData.clienteInfo.logradouro, detalhesData.clienteInfo.numero, detalhesData.clienteInfo.bairro, detalhesData.clienteInfo.complemento].filter(Boolean).join(", ")}
-                          {detalhesData.clienteInfo.cep ? ` - CEP: ${detalhesData.clienteInfo.cep}` : ""}
-                        </span>
-                      </div>
-                    )}
                   </div>
 
                   {/* Contatos */}
