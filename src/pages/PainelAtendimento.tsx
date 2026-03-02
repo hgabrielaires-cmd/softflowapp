@@ -499,9 +499,8 @@ export default function PainelAtendimento() {
       const [{ data: coms }, { data: tecs }, { data: likes }, { data: agData }] = await Promise.all([
         supabase
           .from("painel_comentarios")
-          .select("id, texto, criado_por, created_at, parent_id")
+          .select("id, texto, criado_por, created_at, parent_id, etapa_id")
           .eq("card_id", detailCard.id)
-          .eq("etapa_id", detailCard.etapa_id)
           .order("created_at", { ascending: true }),
         supabase
           .from("painel_tecnicos")
