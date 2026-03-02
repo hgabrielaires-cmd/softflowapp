@@ -80,6 +80,7 @@ export type Database = {
           nome_fantasia: string
           numero: string | null
           razao_social: string | null
+          responsavel_nome: string | null
           telefone: string | null
           uf: string | null
         }
@@ -101,6 +102,7 @@ export type Database = {
           nome_fantasia: string
           numero?: string | null
           razao_social?: string | null
+          responsavel_nome?: string | null
           telefone?: string | null
           uf?: string | null
         }
@@ -122,6 +124,7 @@ export type Database = {
           nome_fantasia?: string
           numero?: string | null
           razao_social?: string | null
+          responsavel_nome?: string | null
           telefone?: string | null
           uf?: string | null
         }

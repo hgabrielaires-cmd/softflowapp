@@ -59,8 +59,10 @@ const UF_LIST = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG
 
 const emptyClienteForm = {
   nome_fantasia: "", razao_social: "", apelido: "", cnpj_cpf: "",
+  responsavel_nome: "",
   contato_nome: "", telefone: "", email: "", cidade: "", uf: "",
   cep: "", logradouro: "", numero: "", complemento: "", bairro: "",
+  inscricao_estadual: "", ie_isento: false,
 };
 
 const STATUS_OPTIONS = ["Aguardando Financeiro", "Aprovado Financeiro", "Reprovado Financeiro", "Aguardando Aprovação de Desconto", "Desconto Aprovado", "Cancelado"] as const;
@@ -1200,8 +1202,21 @@ export default function Pedidos() {
       toast.error("Nome fantasia, Razão social e CNPJ/CPF são obrigatórios");
       return;
     }
+    if (!clienteForm.ie_isento && !clienteForm.inscricao_estadual.trim()) {
+      toast.error("Inscrição Estadual é obrigatória. Se não possuir, marque 'Isento de IE'.");
+      return;
+    }
+    if (!clienteForm.responsavel_nome.trim()) {
+      toast.error("Nome completo do responsável é obrigatório");
+      return;
+    }
     if (clienteContatos.length === 0) {
       toast.error("Cadastre pelo menos um contato antes de salvar");
+      return;
+    }
+    const contatoInvalido = clienteContatos.find((c) => !c.email?.trim() || !c.cargo?.trim());
+    if (contatoInvalido) {
+      toast.error("Todos os contatos devem ter E-mail e Cargo preenchidos");
       return;
     }
     setSavingCliente(true);
@@ -1211,6 +1226,8 @@ export default function Pedidos() {
       razao_social: clienteForm.razao_social.trim(),
       apelido: clienteForm.apelido.trim() || null,
       cnpj_cpf: clienteForm.cnpj_cpf.trim(),
+      inscricao_estadual: clienteForm.ie_isento ? "ISENTO" : (clienteForm.inscricao_estadual.trim() || null),
+      responsavel_nome: clienteForm.responsavel_nome.trim() || null,
       contato_nome: clienteContatos[0]?.nome || clienteForm.contato_nome.trim() || null,
       telefone: clienteContatos[0]?.telefone || clienteForm.telefone.trim() || null,
       email: clienteContatos[0]?.email || clienteForm.email.trim() || null,
@@ -2454,6 +2471,30 @@ export default function Pedidos() {
                 <p className="text-xs text-muted-foreground">Identificação interna da loja/unidade</p>
               </div>
 
+              {/* Inscrição Estadual */}
+              <div className="space-y-1.5">
+                <Label>Inscrição estadual *</Label>
+                <Input
+                  value={clienteForm.inscricao_estadual}
+                  onChange={(e) => setClienteForm((f) => ({ ...f, inscricao_estadual: e.target.value }))}
+                  placeholder="000.000.000.000"
+                  disabled={clienteForm.ie_isento}
+                />
+              </div>
+              <div className="flex items-center gap-2 h-10">
+                <Switch
+                  checked={clienteForm.ie_isento}
+                  onCheckedChange={(v) => setClienteForm((f) => ({ ...f, ie_isento: v, inscricao_estadual: v ? "" : f.inscricao_estadual }))}
+                />
+                <Label className="cursor-pointer select-none">Isento de IE</Label>
+              </div>
+
+              {/* Responsável */}
+              <div className="col-span-2 space-y-1.5">
+                <Label>Nome completo do responsável *</Label>
+                <Input value={clienteForm.responsavel_nome} onChange={(e) => setClienteForm((f) => ({ ...f, responsavel_nome: e.target.value }))} placeholder="Nome completo do responsável pela empresa" />
+              </div>
+
               {/* Separador endereço */}
               <div className="col-span-2 pt-1">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
@@ -2580,7 +2621,7 @@ export default function Pedidos() {
                         <Input className="h-8 text-sm" value={inlineContatoClienteForm.nome} onChange={(e) => setInlineContatoClienteForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Nome completo" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Cargo</Label>
+                        <Label className="text-xs">Cargo *</Label>
                         <Input className="h-8 text-sm" value={inlineContatoClienteForm.cargo} onChange={(e) => setInlineContatoClienteForm((f) => ({ ...f, cargo: e.target.value }))} placeholder="Cargo / função" />
                       </div>
                       <div className="space-y-1">
@@ -2588,7 +2629,7 @@ export default function Pedidos() {
                         <Input className="h-8 text-sm" value={inlineContatoClienteForm.telefone} onChange={(e) => setInlineContatoClienteForm((f) => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
                       </div>
                       <div className="col-span-2 space-y-1">
-                        <Label className="text-xs">E-mail</Label>
+                        <Label className="text-xs">E-mail *</Label>
                         <Input className="h-8 text-sm" type="email" value={inlineContatoClienteForm.email} onChange={(e) => setInlineContatoClienteForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@empresa.com" />
                       </div>
                       <div className="col-span-2 flex items-center gap-3">
@@ -2600,6 +2641,8 @@ export default function Pedidos() {
                       <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setShowContatoClienteForm(false); setEditingContatoClienteIdx(null); }}>Cancelar</Button>
                       <Button type="button" size="sm" className="h-7 text-xs" onClick={() => {
                         if (!inlineContatoClienteForm.nome.trim()) { toast.error("Nome do contato é obrigatório"); return; }
+                        if (!inlineContatoClienteForm.email?.trim()) { toast.error("E-mail do contato é obrigatório"); return; }
+                        if (!inlineContatoClienteForm.cargo?.trim()) { toast.error("Cargo do contato é obrigatório"); return; }
                         if (editingContatoClienteIdx !== null) {
                           setClienteContatos((prev) => prev.map((c, i) => i === editingContatoClienteIdx ? { ...inlineContatoClienteForm } : c));
                         } else {
