@@ -192,7 +192,8 @@ export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disa
               disabled={{ before: new Date() }}
               className={cn("pointer-events-auto")}
               classNames={{
-                day_selected: "bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white focus:bg-emerald-600 focus:text-white",
+                day_selected: "!bg-emerald-600 !text-white hover:!bg-emerald-700 hover:!text-white focus:!bg-emerald-600 focus:!text-white",
+                cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-emerald-100 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
               }}
             />
             <div className="flex justify-end gap-2">
