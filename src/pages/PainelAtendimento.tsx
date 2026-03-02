@@ -2714,6 +2714,14 @@ export default function PainelAtendimento() {
                   </div>
                 )}
 
+              </div>
+                );
+              })()}
+
+              {/* Comunicação */}
+              <div className="rounded-lg border border-border bg-card p-3 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comunicação</p>
+
                 {/* Comentários (thread) */}
                 <div className="space-y-2">
                   <Label className="text-xs font-medium flex items-center gap-1.5">
@@ -2972,8 +2980,6 @@ export default function PainelAtendimento() {
                   </div>
                 </div>
               </div>
-                );
-              })()}
 
               <div className="text-xs text-muted-foreground pt-2 border-t">
                 Criado em {new Date(detailCard.created_at).toLocaleDateString("pt-BR")} às{" "}
