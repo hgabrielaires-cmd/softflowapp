@@ -460,12 +460,19 @@ export default function Clientes() {
       toast.error("Nome fantasia, Razão social e CNPJ/CPF são obrigatórios");
       return;
     }
-    if (formContatos.filter((c) => c.ativo !== false).length === 0 && formContatos.length === 0) {
+    // Validar inscrição estadual
+    if (!form.ie_isento && !form.inscricao_estadual.trim()) {
+      toast.error("Inscrição Estadual é obrigatória. Se não possuir, marque 'Isento de IE'.");
+      return;
+    }
+    // Validar contatos: pelo menos 1, e cada um com email e cargo
+    if (formContatos.length === 0) {
       toast.error("Cadastre pelo menos um contato antes de salvar");
       return;
     }
-    if (formContatos.length === 0) {
-      toast.error("Cadastre pelo menos um contato antes de salvar");
+    const contatoInvalido = formContatos.find((c) => !c.email?.trim() || !c.cargo?.trim());
+    if (contatoInvalido) {
+      toast.error("Todos os contatos devem ter E-mail e Cargo preenchidos");
       return;
     }
     setSaving(true);
@@ -787,7 +794,7 @@ export default function Clientes() {
 
             {/* Inscrição estadual */}
             <div className="space-y-1.5">
-              <Label>Inscrição estadual</Label>
+              <Label>Inscrição estadual *</Label>
               <Input
                 value={form.inscricao_estadual}
                 onChange={(e) => setForm((f) => ({ ...f, inscricao_estadual: e.target.value }))}
@@ -962,7 +969,7 @@ export default function Clientes() {
                       <Input className="h-8 text-sm" value={inlineContatoForm.nome} onChange={(e) => setInlineContatoForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Nome completo" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Cargo</Label>
+                      <Label className="text-xs">Cargo *</Label>
                       <Input className="h-8 text-sm" value={inlineContatoForm.cargo} onChange={(e) => setInlineContatoForm((f) => ({ ...f, cargo: e.target.value }))} placeholder="Cargo / função" />
                     </div>
                     <div className="space-y-1">
@@ -970,7 +977,7 @@ export default function Clientes() {
                       <Input className="h-8 text-sm" value={inlineContatoForm.telefone} onChange={(e) => setInlineContatoForm((f) => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
                     </div>
                     <div className="col-span-2 space-y-1">
-                      <Label className="text-xs">E-mail</Label>
+                      <Label className="text-xs">E-mail *</Label>
                       <Input className="h-8 text-sm" type="email" value={inlineContatoForm.email} onChange={(e) => setInlineContatoForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@empresa.com" />
                     </div>
                     <div className="col-span-2 flex items-center gap-3">
@@ -982,6 +989,8 @@ export default function Clientes() {
                     <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setShowContatoInlineForm(false); setEditingInlineIdx(null); }}>Cancelar</Button>
                     <Button type="button" size="sm" className="h-7 text-xs" onClick={() => {
                       if (!inlineContatoForm.nome.trim()) { toast.error("Nome do contato é obrigatório"); return; }
+                      if (!inlineContatoForm.email?.trim()) { toast.error("E-mail do contato é obrigatório"); return; }
+                      if (!inlineContatoForm.cargo?.trim()) { toast.error("Cargo do contato é obrigatório"); return; }
                       if (editingInlineIdx !== null) {
                         setFormContatos((prev) => prev.map((c, i) => i === editingInlineIdx ? { ...c, ...inlineContatoForm, _id: c._id } : c));
                       } else {
