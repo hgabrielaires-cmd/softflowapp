@@ -456,8 +456,8 @@ export default function Clientes() {
 
   async function handleSave() {
     if (isQuerying) return;
-    if (!form.nome_fantasia.trim() || !form.cnpj_cpf.trim()) {
-      toast.error("Nome fantasia e CNPJ/CPF são obrigatórios");
+    if (!form.nome_fantasia.trim() || !form.cnpj_cpf.trim() || !form.razao_social.trim()) {
+      toast.error("Nome fantasia, Razão social e CNPJ/CPF são obrigatórios");
       return;
     }
     if (formContatos.filter((c) => c.ativo !== false).length === 0 && formContatos.length === 0) {
@@ -499,7 +499,7 @@ export default function Clientes() {
 
     const payload = {
       nome_fantasia: form.nome_fantasia.trim(),
-      razao_social: form.razao_social.trim() || null,
+      razao_social: form.razao_social.trim(),
       apelido: form.apelido.trim() || null,
       cnpj_cpf: form.cnpj_cpf.trim(),
       inscricao_estadual: form.ie_isento ? "ISENTO" : (form.inscricao_estadual.trim() || null),
@@ -774,8 +774,8 @@ export default function Clientes() {
 
             {/* Razao social */}
             <div className="col-span-2 space-y-1.5">
-              <Label>Razão social</Label>
-              <Input value={form.razao_social} onChange={(e) => setForm((f) => ({ ...f, razao_social: e.target.value }))} placeholder="Razão social (opcional)" />
+              <Label>Razão social *</Label>
+              <Input value={form.razao_social} onChange={(e) => setForm((f) => ({ ...f, razao_social: e.target.value }))} placeholder="Razão social" />
             </div>
 
             {/* Apelido */}

@@ -58,7 +58,7 @@ import { TablePagination } from "@/components/TablePagination";
 const UF_LIST = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
 const emptyClienteForm = {
-  nome_fantasia: "", razao_social: "", cnpj_cpf: "",
+  nome_fantasia: "", razao_social: "", apelido: "", cnpj_cpf: "",
   contato_nome: "", telefone: "", email: "", cidade: "", uf: "",
   cep: "", logradouro: "", numero: "", complemento: "", bairro: "",
 };
@@ -1196,8 +1196,8 @@ export default function Pedidos() {
 
   async function handleSaveCliente(e: React.FormEvent) {
     e.preventDefault();
-    if (!clienteForm.nome_fantasia.trim() || !clienteForm.cnpj_cpf.trim()) {
-      toast.error("Nome fantasia e CNPJ/CPF são obrigatórios");
+    if (!clienteForm.nome_fantasia.trim() || !clienteForm.cnpj_cpf.trim() || !clienteForm.razao_social.trim()) {
+      toast.error("Nome fantasia, Razão social e CNPJ/CPF são obrigatórios");
       return;
     }
     if (clienteContatos.length === 0) {
@@ -1208,7 +1208,8 @@ export default function Pedidos() {
     const filial_id = profile?.filial_id || (isAdmin ? form.filial_id || null : null);
     const { data, error } = await supabase.from("clientes").insert({
       nome_fantasia: clienteForm.nome_fantasia.trim(),
-      razao_social: clienteForm.razao_social.trim() || null,
+      razao_social: clienteForm.razao_social.trim(),
+      apelido: clienteForm.apelido.trim() || null,
       cnpj_cpf: clienteForm.cnpj_cpf.trim(),
       contato_nome: clienteContatos[0]?.nome || clienteForm.contato_nome.trim() || null,
       telefone: clienteContatos[0]?.telefone || clienteForm.telefone.trim() || null,
@@ -2439,8 +2440,13 @@ export default function Pedidos() {
                 <Input placeholder="Nome fantasia..." value={clienteForm.nome_fantasia} onChange={(e) => setClienteForm((f) => ({ ...f, nome_fantasia: e.target.value }))} required />
               </div>
               <div className="col-span-2 space-y-1.5">
-                <Label>Razão Social</Label>
-                <Input placeholder="Razão social..." value={clienteForm.razao_social} onChange={(e) => setClienteForm((f) => ({ ...f, razao_social: e.target.value }))} />
+                <Label>Razão Social *</Label>
+                <Input placeholder="Razão social..." value={clienteForm.razao_social} onChange={(e) => setClienteForm((f) => ({ ...f, razao_social: e.target.value }))} required />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label>Apelido</Label>
+                <Input placeholder="Ex: Bar do João Loja 01 Centro" value={clienteForm.apelido} onChange={(e) => setClienteForm((f) => ({ ...f, apelido: e.target.value }))} />
+                <p className="text-xs text-muted-foreground">Identificação interna da loja/unidade</p>
               </div>
 
               {/* Separador endereço */}
