@@ -483,8 +483,9 @@ export default function PainelAtendimento() {
       setReplyTo(null);
       setTecnicosSelecionados([]);
       setNovoComentario("");
-      setBuscaTecnico("");
+      setBuscaTecnico(null);
       setCardAgendamentos([]);
+      setChecklistEditMode(false);
       return;
     }
     (async () => {
