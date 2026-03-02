@@ -190,7 +190,7 @@ export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disa
               onSelect={handleSelectDates}
               locale={ptBR}
               disabled={{ before: new Date() }}
-              className={cn("pointer-events-auto")}
+              className={cn("pointer-events-auto [&_.rdp-day_selected]:bg-emerald-600 [&_.rdp-day_selected]:text-white [&_.rdp-day_selected:hover]:bg-emerald-700 [&_.day_selected]:bg-emerald-600 [&_.day_selected]:text-white [&_[aria-selected=true]]:bg-emerald-600 [&_[aria-selected=true]]:text-white [&_[aria-selected=true]:hover]:bg-emerald-700")}
             />
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setPopoverOpen(false)}>
