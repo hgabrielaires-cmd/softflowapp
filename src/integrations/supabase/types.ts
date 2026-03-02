@@ -63,6 +63,7 @@ export type Database = {
       }
       clientes: {
         Row: {
+          apelido: string | null
           ativo: boolean
           bairro: string | null
           cep: string | null
@@ -83,6 +84,7 @@ export type Database = {
           uf: string | null
         }
         Insert: {
+          apelido?: string | null
           ativo?: boolean
           bairro?: string | null
           cep?: string | null
@@ -103,6 +105,7 @@ export type Database = {
           uf?: string | null
         }
         Update: {
+          apelido?: string | null
           ativo?: boolean
           bairro?: string | null
           cep?: string | null
