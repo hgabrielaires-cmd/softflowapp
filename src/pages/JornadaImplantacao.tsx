@@ -76,6 +76,7 @@ export default function JornadaImplantacao() {
   const [viewEtapas, setViewEtapas] = useState<LocalEtapa[]>([]);
   const [viewExpandedEtapas, setViewExpandedEtapas] = useState<Set<string>>(new Set());
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
+  const skipConfirmRef = useRef(false);
   const dragEtapaItem = useRef<number | null>(null);
   const dragEtapaOverItem = useRef<number | null>(null);
   const dragAtivItem = useRef<{ etapaTempId: string; index: number } | null>(null);
@@ -227,6 +228,7 @@ export default function JornadaImplantacao() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jornadas"] });
       toast.success(editing ? "Jornada atualizada!" : "Jornada criada!");
+      skipConfirmRef.current = true;
       closeDialog();
     },
     onError: (e) => { console.error(e); toast.error("Erro ao salvar jornada."); },
@@ -625,7 +627,12 @@ export default function JornadaImplantacao() {
       {/* ─── Main Dialog ──────────────────────────────────────────────────────── */}
       <Dialog open={dialogOpen} onOpenChange={(open) => {
         if (!open) {
-          setConfirmCloseOpen(true);
+          if (skipConfirmRef.current) {
+            skipConfirmRef.current = false;
+            setDialogOpen(false);
+          } else {
+            setConfirmCloseOpen(true);
+          }
         }
       }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
