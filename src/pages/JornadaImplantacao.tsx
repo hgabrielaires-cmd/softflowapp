@@ -271,20 +271,19 @@ export default function JornadaImplantacao() {
       vinculo_id: jornada.vinculo_id,
     });
 
-    // Load etapas and atividades
-    const { data: etapasData } = await supabase.from("jornada_etapas").select("*").eq("jornada_id", jornada.id).order("ordem");
-    const localEtapas: LocalEtapa[] = [];
-    for (const e of etapasData || []) {
-      const { data: ativData } = await supabase.from("jornada_atividades").select("*").eq("etapa_id", e.id).order("ordem");
-      localEtapas.push({
-        tempId: crypto.randomUUID(),
-        id: e.id,
-        nome: e.nome,
-        descricao: e.descricao || "",
-        mesa_atendimento_id: e.mesa_atendimento_id || "",
-        permite_clonar: (e as any).permite_clonar || false,
-        ordem: e.ordem,
-        atividades: (ativData || []).map((a: any) => ({
+    // Load etapas with atividades in a single query
+    const { data: etapasData } = await supabase.from("jornada_etapas").select("*, jornada_atividades(*)").eq("jornada_id", jornada.id).order("ordem");
+    const localEtapas: LocalEtapa[] = (etapasData || []).map((e: any) => ({
+      tempId: crypto.randomUUID(),
+      id: e.id,
+      nome: e.nome,
+      descricao: e.descricao || "",
+      mesa_atendimento_id: e.mesa_atendimento_id || "",
+      permite_clonar: e.permite_clonar || false,
+      ordem: e.ordem,
+      atividades: (e.jornada_atividades || [])
+        .sort((a: any, b: any) => a.ordem - b.ordem)
+        .map((a: any) => ({
           tempId: crypto.randomUUID(),
           id: a.id,
           nome: a.nome,
@@ -295,8 +294,7 @@ export default function JornadaImplantacao() {
           mesa_atendimento_id: a.mesa_atendimento_id || "",
           ordem: a.ordem,
         })),
-      });
-    }
+    }));
     setEtapas(localEtapas);
     setDialogOpen(true);
   }
@@ -310,19 +308,18 @@ export default function JornadaImplantacao() {
 
   async function openView(jornada: Jornada) {
     setViewJornada(jornada);
-    const { data: etapasData } = await supabase.from("jornada_etapas").select("*, mesas_atendimento(nome)").eq("jornada_id", jornada.id).order("ordem");
-    const localEtapas: LocalEtapa[] = [];
-    for (const e of etapasData || []) {
-      const { data: ativData } = await supabase.from("jornada_atividades").select("*").eq("etapa_id", e.id).order("ordem");
-      localEtapas.push({
-        tempId: crypto.randomUUID(),
-        id: e.id,
-        nome: e.nome,
-        descricao: e.descricao || "",
-        mesa_atendimento_id: e.mesa_atendimento_id || "",
-        permite_clonar: (e as any).permite_clonar || false,
-        ordem: e.ordem,
-        atividades: (ativData || []).map((a: any) => ({
+    const { data: etapasData } = await supabase.from("jornada_etapas").select("*, mesas_atendimento(nome), jornada_atividades(*)").eq("jornada_id", jornada.id).order("ordem");
+    const localEtapas: LocalEtapa[] = (etapasData || []).map((e: any) => ({
+      tempId: crypto.randomUUID(),
+      id: e.id,
+      nome: e.nome,
+      descricao: e.descricao || "",
+      mesa_atendimento_id: e.mesa_atendimento_id || "",
+      permite_clonar: e.permite_clonar || false,
+      ordem: e.ordem,
+      atividades: (e.jornada_atividades || [])
+        .sort((a: any, b: any) => a.ordem - b.ordem)
+        .map((a: any) => ({
           tempId: crypto.randomUUID(),
           id: a.id,
           nome: a.nome,
@@ -333,9 +330,8 @@ export default function JornadaImplantacao() {
           mesa_atendimento_id: a.mesa_atendimento_id || "",
           ordem: a.ordem,
         })),
-        mesa_atendimento: (e as any).mesas_atendimento ? { nome: (e as any).mesas_atendimento.nome } : null,
-      } as any);
-    }
+      mesa_atendimento: e.mesas_atendimento ? { nome: e.mesas_atendimento.nome } : null,
+    } as any));
     setViewEtapas(localEtapas);
     setViewExpandedEtapas(new Set(localEtapas.map(e => e.tempId)));
     setViewDialogOpen(true);
