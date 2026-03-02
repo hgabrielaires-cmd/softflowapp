@@ -82,7 +82,7 @@ export default function JornadaImplantacao() {
   const { data: jornadas = [], isLoading } = useQuery({
     queryKey: ["jornadas"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("jornadas").select("*, filiais(nome)").order("nome");
+      const { data, error } = await supabase.from("jornadas").select("*, filiais(nome), jornada_etapas(id, nome, jornada_atividades(horas_estimadas))").order("nome");
       if (error) throw error;
       return data.map((j: any) => ({ ...j, filial: j.filiais ? { nome: j.filiais.nome } : null })) as Jornada[];
     },
@@ -556,36 +556,50 @@ export default function JornadaImplantacao() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Vínculo</TableHead>
                 <TableHead>Filial</TableHead>
+                <TableHead className="text-center">Total Horas</TableHead>
+                <TableHead className="text-center">Qtd Etapas</TableHead>
                 <TableHead className="w-24 text-center">Ativo</TableHead>
                 <TableHead className="w-24 text-center">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhuma jornada encontrada.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma jornada encontrada.</TableCell></TableRow>
               ) : (
-                filtered.map((j) => (
-                  <TableRow key={j.id}>
-                    <TableCell className="font-medium">{j.nome}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">{j.vinculo_tipo}</Badge>
-                      <span className="ml-2 text-sm text-muted-foreground">{getVinculoLabel(j.vinculo_tipo, j.vinculo_id)}</span>
-                    </TableCell>
-                    <TableCell>{j.filial?.nome || <span className="text-muted-foreground">Global</span>}</TableCell>
-                    <TableCell className="text-center">
-                      <Switch checked={j.ativo} onCheckedChange={(v) => toggleMutation.mutate({ id: j.id, ativo: v })} />
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Button variant="ghost" size="icon" title="Visualizar" onClick={() => openView(j)}><Eye className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" title="Editar" onClick={() => openEdit(j)}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" title="Excluir" onClick={() => deleteMutation.mutate(j.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                filtered.map((j) => {
+                  const jAny = j as any;
+                  const etapasArr = Array.isArray(jAny.jornada_etapas) ? jAny.jornada_etapas : [];
+                  const totalMin = etapasArr.reduce((sum: number, e: any) => {
+                    const ativs = Array.isArray(e.jornada_atividades) ? e.jornada_atividades : [];
+                    return sum + ativs.reduce((s: number, a: any) => s + (Number(a.horas_estimadas) || 0) * 60, 0);
+                  }, 0);
+                  const h = Math.floor(totalMin / 60);
+                  const m = Math.round(totalMin % 60);
+                  return (
+                    <TableRow key={j.id}>
+                      <TableCell className="font-medium">{j.nome}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize">{j.vinculo_tipo}</Badge>
+                        <span className="ml-2 text-sm text-muted-foreground">{getVinculoLabel(j.vinculo_tipo, j.vinculo_id)}</span>
+                      </TableCell>
+                      <TableCell>{j.filial?.nome || <span className="text-muted-foreground">Global</span>}</TableCell>
+                      <TableCell className="text-center font-medium">{h}:{m.toString().padStart(2, "0")}h</TableCell>
+                      <TableCell className="text-center">{etapasArr.length}</TableCell>
+                      <TableCell className="text-center">
+                        <Switch checked={j.ativo} onCheckedChange={(v) => toggleMutation.mutate({ id: j.id, ativo: v })} />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button variant="ghost" size="icon" title="Visualizar" onClick={() => openView(j)}><Eye className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" title="Editar" onClick={() => openEdit(j)}><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" title="Excluir" onClick={() => deleteMutation.mutate(j.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
