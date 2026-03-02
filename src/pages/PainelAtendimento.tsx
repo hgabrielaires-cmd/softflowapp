@@ -284,6 +284,7 @@ export default function PainelAtendimento() {
   const podePausarProjeto = userPermissions.includes("acao.pausar_projeto");
   const podeRecusarProjeto = userPermissions.includes("acao.recusar_projeto");
   const podeGerenciarApontamento = userPermissions.includes("acao.gerenciar_apontamento");
+  const podeVoltarEtapa = userPermissions.includes("acao.voltar_etapa");
 
   // Precompute SLA da Etapa per card (jornada-based) + total checklist items per jornada
   const { data: jornadaSlaMap = {} } = useQuery({
@@ -1637,9 +1638,17 @@ export default function PainelAtendimento() {
     if (dragCardId) {
       const card = cards.find((c) => c.id === dragCardId);
       if (card && card.etapa_id !== etapaId) {
+        const etapaAtual = etapas.find((e) => e.id === card.etapa_id);
         const etapaDestino = etapas.find((e) => e.id === etapaId);
+
+        // Block moving to a previous stage without permission
+        if (etapaAtual && etapaDestino && etapaDestino.ordem < etapaAtual.ordem && !podeVoltarEtapa) {
+          toast.error("Você não tem permissão para voltar etapa. Solicite acesso ao administrador.");
+          setDragCardId(null);
+          return;
+        }
+
         if (etapaDestino?.nome === "Em Execução") {
-          const etapaAtual = etapas.find((e) => e.id === card.etapa_id);
           if (etapaAtual && etapaAtual.ordem < 2) {
             toast.error("Complete as etapas obrigatórias antes de mover para 'Em Execução'.");
             setDragCardId(null);
