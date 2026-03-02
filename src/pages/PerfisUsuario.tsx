@@ -40,6 +40,8 @@ const PERMISSION_LABELS: Record<string, { label: string; description: string; ic
   "acao.gerenciar_apontamento": { label: "Gerenciar Apontamento", description: "Permite trocar ou remover apontamentos de usuários", icon: <Users className="h-4 w-4" />, group: "Ações" },
   "acao.cadastro_retroativo": { label: "Cadastro Retroativo", description: "Permite cadastrar contratos retroativos sem automação", icon: <FileText className="h-4 w-4" />, group: "Ações" },
   "acao.importar_clientes": { label: "Importar Clientes", description: "Permite importar lista de clientes via planilha", icon: <Users className="h-4 w-4" />, group: "Ações" },
+  "acao.voltar_etapa": { label: "Voltar Etapa", description: "Permite mover cards para etapas anteriores no painel de atendimento", icon: <Settings className="h-4 w-4" />, group: "Ações" },
+  "acao.enviar_espelho_whatsapp": { label: "Enviar Espelho WhatsApp", description: "Permite enviar espelho do pedido via WhatsApp", icon: <Settings className="h-4 w-4" />, group: "Ações" },
 };
 
 const ROLES: AppRole[] = ["admin", "financeiro", "vendedor", "operacional", "tecnico"];
