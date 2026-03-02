@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
@@ -74,6 +75,7 @@ export default function JornadaImplantacao() {
   const [viewJornada, setViewJornada] = useState<Jornada | null>(null);
   const [viewEtapas, setViewEtapas] = useState<LocalEtapa[]>([]);
   const [viewExpandedEtapas, setViewExpandedEtapas] = useState<Set<string>>(new Set());
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const dragEtapaItem = useRef<number | null>(null);
   const dragEtapaOverItem = useRef<number | null>(null);
   const dragAtivItem = useRef<{ etapaTempId: string; index: number } | null>(null);
@@ -625,7 +627,11 @@ export default function JornadaImplantacao() {
       </div>
 
       {/* ─── Main Dialog ──────────────────────────────────────────────────────── */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setConfirmCloseOpen(true);
+        }
+      }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "Editar Jornada" : "Nova Jornada de Implantação"}</DialogTitle>
@@ -1113,6 +1119,22 @@ export default function JornadaImplantacao() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ─── Confirm Close Dialog ─────────────────────────────────────────────── */}
+      <AlertDialog open={confirmCloseOpen} onOpenChange={setConfirmCloseOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deseja salvar as alterações?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você possui alterações não salvas. Deseja salvar antes de sair?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setConfirmCloseOpen(false); closeDialog(); }}>Não</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setConfirmCloseOpen(false); saveMutation.mutate(); }}>Sim, salvar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
