@@ -650,6 +650,7 @@ export type Database = {
           etapa_id: string
           horas_estimadas: number
           id: string
+          mesa_atendimento_id: string | null
           nome: string
           ordem: number
           tipo_responsabilidade: string
@@ -662,6 +663,7 @@ export type Database = {
           etapa_id: string
           horas_estimadas?: number
           id?: string
+          mesa_atendimento_id?: string | null
           nome: string
           ordem?: number
           tipo_responsabilidade?: string
@@ -674,6 +676,7 @@ export type Database = {
           etapa_id?: string
           horas_estimadas?: number
           id?: string
+          mesa_atendimento_id?: string | null
           nome?: string
           ordem?: number
           tipo_responsabilidade?: string
@@ -685,6 +688,13 @@ export type Database = {
             columns: ["etapa_id"]
             isOneToOne: false
             referencedRelation: "jornada_etapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jornada_atividades_mesa_atendimento_id_fkey"
+            columns: ["mesa_atendimento_id"]
+            isOneToOne: false
+            referencedRelation: "mesas_atendimento"
             referencedColumns: ["id"]
           },
         ]
@@ -2430,6 +2440,35 @@ export type Database = {
             columns: ["filial_id"]
             isOneToOne: false
             referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usuario_mesas: {
+        Row: {
+          created_at: string
+          id: string
+          mesa_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mesa_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mesa_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usuario_mesas_mesa_id_fkey"
+            columns: ["mesa_id"]
+            isOneToOne: false
+            referencedRelation: "mesas_atendimento"
             referencedColumns: ["id"]
           },
         ]
