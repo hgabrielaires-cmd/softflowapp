@@ -99,7 +99,7 @@ export function PedidoComentarios({ pedidoId, readOnly = false }: Props) {
   };
 
   const fetchLikes = async (commentIds: string[]) => {
-    const { data: allLikes } = await supabase
+    const { data: allLikes } = await (supabase as any)
       .from("pedido_curtidas")
       .select("comentario_id, user_id")
       .in("comentario_id", commentIds);
@@ -123,14 +123,14 @@ export function PedidoComentarios({ pedidoId, readOnly = false }: Props) {
     
     if (likeInfo?.likedByMe) {
       // Unlike
-      await supabase
+      await (supabase as any)
         .from("pedido_curtidas")
         .delete()
         .eq("comentario_id", comentario.id)
         .eq("user_id", user.id);
     } else {
       // Like
-      await supabase
+      await (supabase as any)
         .from("pedido_curtidas")
         .insert({ comentario_id: comentario.id, user_id: user.id });
 
