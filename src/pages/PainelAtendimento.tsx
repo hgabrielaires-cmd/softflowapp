@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
@@ -134,6 +135,7 @@ export default function PainelAtendimento() {
   const [slaEtapaJornada, setSlaEtapaJornada] = useState<number | null>(null);
   const [slaProjeto, setSlaProjeto] = useState<number | null>(null);
   const [checklistEtapa, setChecklistEtapa] = useState<any[]>([]);
+  const [checklistLoading, setChecklistLoading] = useState(false);
   const [checklistProgresso, setChecklistProgresso] = useState<Record<string, { concluido: boolean; valor_texto?: string; valor_data?: string; concluido_por?: string; concluido_em?: string; concluido_por_nome?: string }>>({});
   const [finalizando, setFinalizando] = useState(false);
   const [, setTick] = useState(0); // force re-render for atrasado checks
@@ -580,6 +582,7 @@ export default function PainelAtendimento() {
     if (!detailCard || !detailCard.plano_id) {
       return;
     }
+    setChecklistLoading(true);
     (async () => {
       // Find jornada linked to this plano
       let resolvedJornadaId = detailCard.jornada_id;
@@ -595,6 +598,7 @@ export default function PainelAtendimento() {
           setSlaEtapaJornada(null);
           setSlaProjeto(null);
           setChecklistEtapa([]);
+          setChecklistLoading(false);
           return;
         }
         resolvedJornadaId = jornada[0].id;
@@ -648,6 +652,7 @@ export default function PainelAtendimento() {
           };
         });
         setChecklistProgresso(progressoMap);
+        setChecklistLoading(false);
         return;
       }
 
@@ -676,6 +681,7 @@ export default function PainelAtendimento() {
         };
       });
       setChecklistProgresso(progressoMap);
+      setChecklistLoading(false);
     })();
   }, [detailCard, etapas]);
 
@@ -2319,6 +2325,20 @@ export default function PainelAtendimento() {
               </div>
 
               {/* Checklist da Etapa (da Jornada) - Interativo */}
+              {checklistLoading && checklistEtapa.length === 0 && (
+                <div className="rounded-lg border border-border bg-card p-3 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-4 rounded" />
+                    <Skeleton className="h-4 w-40" />
+                  </div>
+                  <Skeleton className="h-2 w-full rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-6 w-3/4" />
+                  </div>
+                </div>
+              )}
               {checklistEtapa.length > 0 && (() => {
                 const totalItens = checklistEtapa.reduce((acc: number, a: any) => acc + (Array.isArray(a.checklist) ? a.checklist.length : 0), 0);
                 const totalConcluidos = checklistEtapa.reduce((acc: number, a: any) => {
