@@ -67,9 +67,9 @@ function gerarSenhaSegura(): string {
     crypto.getRandomValues(arr);
     return s[arr[0] % s.length];
   };
-  // Garantir pelo menos 1 de cada tipo + extras para atingir 72 caracteres
+  // Garantir pelo menos 1 de cada tipo + extras = 12 caracteres
   const mandatory = [securePick(upper), securePick(lower), securePick(digits), securePick(special)];
-  const rest = Array.from({ length: 68 }, () => securePick(all));
+  const rest = Array.from({ length: 8 }, () => securePick(all));
   const combined = [...mandatory, ...rest];
   for (let i = combined.length - 1; i > 0; i--) {
     const arr = new Uint32Array(1);

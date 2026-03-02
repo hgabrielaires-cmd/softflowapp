@@ -57,7 +57,7 @@ serve(async (req) => {
       });
     }
 
-    if (!password || typeof password !== "string" || password.length < 68 || password.length > 72) {
+    if (!password || typeof password !== "string" || password.length < 8 || password.length > 72) {
       return new Response(JSON.stringify({ error: "Senha deve ter entre 6 e 72 caracteres" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
