@@ -398,9 +398,10 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
 
     const { data } = await query;
     const notifs = (data || []) as Notificacao[];
-    setNotificacoes(notifs);
     const { data: lidas } = await supabase.from("notificacoes_lidas").select("notificacao_id").eq("user_id", profile.user_id);
-    setLidasIds(new Set((lidas || []).map((l: any) => l.notificacao_id)));
+    const lidasSet = new Set((lidas || []).map((l: any) => l.notificacao_id));
+    setLidasIds(lidasSet);
+    setNotificacoes(notifs);
 
     // Fetch profiles for criado_por
     const criadoPorIds = [...new Set(notifs.map(n => n.criado_por).filter(Boolean))];
