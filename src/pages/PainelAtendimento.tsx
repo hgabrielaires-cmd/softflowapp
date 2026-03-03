@@ -124,6 +124,7 @@ export default function PainelAtendimento() {
   const [filtroFilial, setFiltroFilial] = useState<string>("_init_");
   const [filtroResponsavel, setFiltroResponsavel] = useState<string>("todos");
   const [filtroEtapa, setFiltroEtapa] = useState<string>("todos");
+  const [filtroMesa, setFiltroMesa] = useState<string>("todos");
   const [detailCard, setDetailCard] = useState<PainelCard | null>(null);
   const [openedFrom, setOpenedFrom] = useState<string | null>(null);
   const [detalhesOpen, setDetalhesOpen] = useState(false);
@@ -245,6 +246,49 @@ export default function PainelAtendimento() {
     queryFn: async () => {
       const { data } = await supabase.from("profiles").select("id, full_name, user_id, telefone, avatar_url").eq("active", true).order("full_name");
       return data || [];
+    },
+  });
+
+  // Fetch mesas de atendimento for filter + display
+  const { data: mesasAtendimento = [] } = useQuery({
+    queryKey: ["mesas_atendimento_painel"],
+    queryFn: async () => {
+      const { data } = await supabase.from("mesas_atendimento").select("id, nome").eq("ativo", true).order("nome");
+      return data || [];
+    },
+  });
+
+  // Map jornada_id -> set of mesa_atendimento_ids (from atividades + etapas)
+  const { data: jornadaMesaMap = {} } = useQuery({
+    queryKey: ["jornada_mesa_map"],
+    queryFn: async () => {
+      const { data: jornadas } = await supabase.from("jornadas").select("id").eq("ativo", true);
+      if (!jornadas || jornadas.length === 0) return {};
+      const jornadaIds = jornadas.map(j => j.id);
+      const { data: etapasJ } = await supabase.from("jornada_etapas").select("id, jornada_id, mesa_atendimento_id").in("jornada_id", jornadaIds);
+      if (!etapasJ || etapasJ.length === 0) return {};
+      const etapaIds = etapasJ.map(e => e.id);
+      const { data: atividades } = await supabase.from("jornada_atividades").select("etapa_id, mesa_atendimento_id").in("etapa_id", etapaIds);
+
+      // Build jornada_id -> etapa_ids map
+      const jornadaEtapaMap: Record<string, string[]> = {};
+      etapasJ.forEach(e => {
+        if (!jornadaEtapaMap[e.jornada_id]) jornadaEtapaMap[e.jornada_id] = [];
+        jornadaEtapaMap[e.jornada_id].push(e.id);
+      });
+
+      // Collect mesa_ids per jornada from etapas and atividades
+      const result: Record<string, string[]> = {};
+      jornadas.forEach(j => {
+        const mesaSet = new Set<string>();
+        const etapaIdsJ = jornadaEtapaMap[j.id] || [];
+        // Mesas from etapas
+        etapasJ.filter(e => e.jornada_id === j.id && e.mesa_atendimento_id).forEach(e => mesaSet.add(e.mesa_atendimento_id!));
+        // Mesas from atividades
+        (atividades || []).filter(a => etapaIdsJ.includes(a.etapa_id) && a.mesa_atendimento_id).forEach(a => mesaSet.add(a.mesa_atendimento_id!));
+        if (mesaSet.size > 0) result[j.id] = [...mesaSet];
+      });
+      return result;
     },
   });
 
@@ -666,7 +710,7 @@ export default function PainelAtendimento() {
       // Fetch activities + profiles in parallel
       const [{ data: atividades }, { data: profiles }] = await Promise.all([
         supabase.from("jornada_atividades")
-          .select("id, nome, horas_estimadas, checklist")
+          .select("id, nome, horas_estimadas, checklist, mesa_atendimento_id, mesas_atendimento:mesa_atendimento_id(nome)")
           .eq("etapa_id", jornadaEtapa[0].id)
           .order("ordem"),
         profileMapPromise,
@@ -1004,7 +1048,7 @@ export default function PainelAtendimento() {
           if (jornadaEtapa && jornadaEtapa.length > 0) {
             const { data: atv } = await supabase
               .from("jornada_atividades")
-              .select("id, nome, horas_estimadas, checklist")
+              .select("id, nome, horas_estimadas, checklist, mesa_atendimento_id, mesas_atendimento:mesa_atendimento_id(nome)")
               .eq("etapa_id", jornadaEtapa[0].id)
               .order("ordem");
             atividades = atv || [];
@@ -1643,9 +1687,14 @@ export default function PainelAtendimento() {
         if (!isResponsavel && !isApontado) return false;
       }
       if (filtroEtapa !== "todos" && c.etapa_id !== filtroEtapa) return false;
+      if (filtroMesa !== "todos") {
+        if (!c.jornada_id) return false;
+        const mesasDoCard = jornadaMesaMap[c.jornada_id] || [];
+        if (!mesasDoCard.includes(filtroMesa)) return false;
+      }
       return true;
     });
-  }, [cards, search, filtroTipo, filtroFilial, filtroResponsavel, filtroEtapa, cardApontamentosDetalhado]);
+  }, [cards, search, filtroTipo, filtroFilial, filtroResponsavel, filtroEtapa, filtroMesa, cardApontamentosDetalhado, jornadaMesaMap]);
 
   // ─── Drag & Drop ─────────────────────────────────────────────────────────
 
@@ -1951,6 +2000,17 @@ export default function PainelAtendimento() {
               <SelectItem value="todos">Todos</SelectItem>
               {responsaveis.map((r: any) => (
                 <SelectItem key={r.id} value={r.id}>{r.full_name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filtroMesa} onValueChange={setFiltroMesa}>
+            <SelectTrigger className="h-9 w-44">
+              <SelectValue placeholder="Mesa" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todas as mesas</SelectItem>
+              {mesasAtendimento.map((m: any) => (
+                <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -2423,7 +2483,15 @@ export default function PainelAtendimento() {
                         if (items.length === 0) return null;
                         return (
                           <div key={aIdx}>
-                            <p className="text-xs font-medium text-muted-foreground mb-1.5">{atividade.nome} <span className="text-[10px]">({formatSLA(atividade.horas_estimadas)})</span></p>
+                            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                              <p className="text-xs font-medium text-muted-foreground">{atividade.nome} <span className="text-[10px]">({formatSLA(atividade.horas_estimadas)})</span></p>
+                              {atividade.mesas_atendimento?.nome && (
+                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-1 bg-purple-50 text-purple-700 border-purple-200">
+                                  <Layers className="h-2.5 w-2.5" />
+                                  {atividade.mesas_atendimento.nome}
+                                </Badge>
+                              )}
+                            </div>
                             <ul className="space-y-2 pl-1">
                               {items.map((item: any, cIdx: number) => {
                                 const key = `${atividade.id}_${cIdx}`;
@@ -3589,7 +3657,15 @@ export default function PainelAtendimento() {
                           if (items.length === 0) return null;
                           return (
                             <div key={aIdx}>
-                              <p className="text-xs font-medium text-muted-foreground mb-1">{atividade.nome}</p>
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <p className="text-xs font-medium text-muted-foreground">{atividade.nome}</p>
+                                {atividade.mesas_atendimento?.nome && (
+                                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-1 bg-purple-50 text-purple-700 border-purple-200">
+                                    <Layers className="h-2.5 w-2.5" />
+                                    {atividade.mesas_atendimento.nome}
+                                  </Badge>
+                                )}
+                              </div>
                               <ul className="space-y-1 pl-1">
                                 {items.map((item: any, cIdx: number) => {
                                   const key = `${atividade.id}_${cIdx}`;
