@@ -1289,7 +1289,7 @@ export default function Pedidos() {
       return;
     }
     setSavingCliente(true);
-    const filial_id = profile?.filial_id || (isAdmin ? form.filial_id || null : null);
+    const filial_id = form.filial_id || filialFavoritaId || profile?.filial_favorita_id || profile?.filial_id || null;
     const { data, error } = await supabase.from("clientes").insert({
       nome_fantasia: clienteForm.nome_fantasia.trim(),
       razao_social: clienteForm.razao_social.trim(),
