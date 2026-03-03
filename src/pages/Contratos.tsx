@@ -688,8 +688,15 @@ export default function Contratos() {
       .from("contratos")
       .update({ status: "Encerrado" })
       .eq("id", selected.id);
+    if (error) { toast.error("Erro ao encerrar contrato: " + error.message); setProcessando(false); return; }
+    // Cancelar pedido vinculado
+    if (selected.pedido_id) {
+      await supabase
+        .from("pedidos")
+        .update({ status_pedido: "Cancelado", financeiro_status: "Cancelado" })
+        .eq("id", selected.pedido_id);
+    }
     setProcessando(false);
-    if (error) { toast.error("Erro ao encerrar contrato: " + error.message); return; }
     toast.success("Contrato encerrado.");
     setOpenEncerrar(false);
     setOpenDetail(false);
@@ -894,21 +901,34 @@ export default function Contratos() {
     }
   }
 
-  function getZapSignStatusBadge(status: string | undefined) {
+  function getZapSignStatusBadge(status: string | undefined, contratoStatus?: string) {
     if (!status) return null;
+    const canceladoBadge = contratoStatus === "Encerrado" ? (
+      <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 text-xs flex items-center gap-1 w-fit">
+        <XCircle className="h-3 w-3" />
+        Cancelado
+      </Badge>
+    ) : null;
+
     if (status === "Assinado")
       return (
-        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs flex items-center gap-1 w-fit">
-          <CheckCircle2 className="h-3 w-3" />
-          Assinado
-        </Badge>
+        <div className="flex flex-col gap-0.5 w-fit">
+          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs flex items-center gap-1 w-fit">
+            <CheckCircle2 className="h-3 w-3" />
+            Assinado
+          </Badge>
+          {canceladoBadge}
+        </div>
       );
     if (status === "Recusado")
       return (
-        <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 text-xs flex items-center gap-1 w-fit">
-          <XCircle className="h-3 w-3" />
-          Recusado
-        </Badge>
+        <div className="flex flex-col gap-0.5 w-fit">
+          <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 text-xs flex items-center gap-1 w-fit">
+            <XCircle className="h-3 w-3" />
+            Recusado
+          </Badge>
+          {canceladoBadge}
+        </div>
       );
     if (status === "Enviado" || status === "Pendente")
       return (
@@ -918,9 +938,15 @@ export default function Contratos() {
             Enviado
           </Badge>
           <span className="text-[10px] text-amber-600 text-center w-full">Aguardando assinatura</span>
+          {canceladoBadge}
         </div>
       );
-    return <Badge variant="secondary" className="text-xs w-fit">{status}</Badge>;
+    return (
+      <div className="flex flex-col gap-0.5 w-fit">
+        <Badge variant="secondary" className="text-xs w-fit">{status}</Badge>
+        {canceladoBadge}
+      </div>
+    );
   }
 
   function getStatusBadge(status: string) {
@@ -939,7 +965,15 @@ export default function Contratos() {
     );
   }
 
-  function getStatusGeracaoBadge(statusGeracao: string | null) {
+  function getStatusGeracaoBadge(statusGeracao: string | null, contratoStatus?: string) {
+    if (contratoStatus === "Encerrado") {
+      return (
+        <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 text-xs flex items-center gap-1 w-fit">
+          <XCircle className="h-3 w-3" />
+          Cancelado
+        </Badge>
+      );
+    }
     if (statusGeracao === "Gerado")
       return (
         <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 text-xs flex items-center gap-1 w-fit">
@@ -990,6 +1024,14 @@ export default function Contratos() {
 
   function getPedidoStatusBadges(contrato: Contrato) {
     if (!contrato.pedidos) return <span className="text-xs text-muted-foreground">—</span>;
+    if (contrato.status === "Encerrado") {
+      return (
+        <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 text-xs flex items-center gap-1 w-fit">
+          <XCircle className="h-3 w-3" />
+          Cancelado
+        </Badge>
+      );
+    }
     return (
       <div className="flex flex-col gap-1">
         {contrato.pedidos.financeiro_status === "Aprovado" && (
@@ -1439,8 +1481,8 @@ Estou à disposição.`;
                     </TableCell>
                     <TableCell>{getStatusBadge(contrato.status)}</TableCell>
                     <TableCell>{getPedidoStatusBadges(contrato)}</TableCell>
-                    <TableCell>{getStatusGeracaoBadge(contrato.status_geracao)}</TableCell>
-                    <TableCell>{getZapSignStatusBadge(zapsignRecords[contrato.id]?.status)}</TableCell>
+                    <TableCell>{getStatusGeracaoBadge(contrato.status_geracao, contrato.status)}</TableCell>
+                    <TableCell>{getZapSignStatusBadge(zapsignRecords[contrato.id]?.status, contrato.status)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       <div>{format(new Date(contrato.created_at), "dd/MM/yyyy", { locale: ptBR })}</div>
                       <div className="text-xs">{format(new Date(contrato.created_at), "HH:mm", { locale: ptBR })}</div>
@@ -1661,19 +1703,27 @@ Estou à disposição.`;
 
                     {/* Status do pedido */}
                     <div className="flex flex-wrap gap-1.5">
-                      {p.financeiro_status === "Aprovado" && (
-                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs">
-                          ✓ Aprovado Financeiro
-                        </Badge>
-                      )}
-                      {p.contrato_liberado ? (
-                        <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 text-xs">
-                          Contrato Liberado
+                      {selected.status === "Encerrado" ? (
+                        <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 text-xs">
+                          Cancelado
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="text-xs">
-                          Contrato Pendente
-                        </Badge>
+                        <>
+                          {p.financeiro_status === "Aprovado" && (
+                            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs">
+                              ✓ Aprovado Financeiro
+                            </Badge>
+                          )}
+                          {p.contrato_liberado ? (
+                            <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 text-xs">
+                              Contrato Liberado
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">
+                              Contrato Pendente
+                            </Badge>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
