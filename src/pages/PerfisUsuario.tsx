@@ -223,7 +223,7 @@ const ACTION_PERMS: { key: string; label: string; description: string; icon: Rea
   { key: "acao.enviar_espelho_whatsapp", label: "Enviar Espelho WhatsApp", description: "Permite enviar espelho do pedido via WhatsApp", icon: <Settings className="h-4 w-4" /> },
 ];
 
-const ROLES: AppRole[] = ["admin", "financeiro", "vendedor", "operacional", "tecnico"];
+const ROLES: AppRole[] = ["admin", "gestor", "financeiro", "vendedor", "operacional", "tecnico"];
 
 // ─── Permission Row Component ───────────────────────────────────────────────
 
