@@ -1,6 +1,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
 import { ROLE_LABELS, ROLE_COLORS, AppRole, Filial } from "@/lib/supabase-types";
+import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,9 +13,9 @@ import { UserAvatar } from "@/components/UserAvatar";
 
 export default function Perfil() {
   const { profile, roles, refreshProfile } = useAuth();
+  const { filiaisDoUsuario } = useUserFiliais();
   const [name, setName] = useState(profile?.full_name || "");
   const [saving, setSaving] = useState(false);
-  const [filiais, setFiliais] = useState<Filial[]>([]);
   const [filialFavoritaId, setFilialFavoritaId] = useState<string | null>(null);
   const [savingFavorita, setSavingFavorita] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -26,12 +27,6 @@ export default function Perfil() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
-
-  useEffect(() => {
-    supabase.from("filiais").select("*").eq("ativa", true).order("nome").then(({ data }) => {
-      setFiliais((data || []) as Filial[]);
-    });
-  }, []);
 
   useEffect(() => {
     if (profile) {
@@ -164,7 +159,7 @@ export default function Perfil() {
     setSavingFavorita(false);
   }
 
-  const filialAtual = filiais.find((f) => f.id === profile?.filial_id);
+  const filialAtual = filiaisDoUsuario.find((f) => f.id === profile?.filial_id);
 
   return (
     <AppLayout>
@@ -286,11 +281,11 @@ export default function Perfil() {
             A filial favorita será pré-selecionada ao criar novos pedidos. Clique na estrela para marcar ou desmarcar.
           </p>
 
-          {filiais.length === 0 ? (
+          {filiaisDoUsuario.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhuma filial disponível.</p>
           ) : (
             <ul className="divide-y divide-border">
-              {filiais.map((filial) => {
+              {filiaisDoUsuario.map((filial) => {
                 const isFavorita = filialFavoritaId === filial.id;
                 return (
                   <li key={filial.id} className="flex items-center justify-between py-3">
