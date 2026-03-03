@@ -112,7 +112,7 @@ interface ContratoInfo {
   contrato_status: string;
 }
 
-type DialogType = "pedidos" | "upsell" | "upgrade" | "contratos" | "descontos" | "plano" | "tipo" | null;
+type DialogType = "pedidos" | "upsell" | "upgrade" | "contratos" | "descontos" | "plano" | "tipo" | "cancelados" | null;
 
 export default function Dashboard() {
   const { profile, roles, isAdmin, user } = useAuth();
@@ -423,6 +423,10 @@ export default function Dashboard() {
     const upgradeCount = upgradePedidos.length;
     const upgradeValor = upgradePedidos.reduce((s, p) => s + (p.valor_total || 0), 0);
 
+    const canceladosPedidos = pedidos.filter(p => p.status_pedido === "Cancelado");
+    const canceladosPedidosCount = canceladosPedidos.length;
+    const canceladosPedidosValor = canceladosPedidos.reduce((s, p) => s + (p.valor_total || 0), 0);
+
     const assinados = contratosInfo.filter(c => c.zapsign_status === "Assinado" && c.contrato_status !== "Encerrado").length;
     const cancelados = contratosInfo.filter(c => c.contrato_status === "Encerrado").length;
     const pendentes = contratosInfo.filter(c => c.contrato_status !== "Encerrado" && (!c.zapsign_status || c.zapsign_status !== "Assinado")).length;
@@ -474,6 +478,8 @@ export default function Dashboard() {
       upsellValor,
       upgradeCount,
       upgradeValor,
+      canceladosPedidosCount,
+      canceladosPedidosValor,
       assinados,
       cancelados,
       pendentes,
@@ -547,6 +553,7 @@ export default function Dashboard() {
     if (dialogType === "pedidos") return pedidos;
     if (dialogType === "upsell") return pedidos.filter(p => p.tipo_pedido === "Aditivo");
     if (dialogType === "upgrade") return pedidos.filter(p => p.tipo_pedido === "Upgrade");
+    if (dialogType === "cancelados") return pedidos.filter(p => p.status_pedido === "Cancelado");
     if (dialogType === "descontos") return pedidos.filter(p => {
       const hasDescImpl = (p.desconto_implantacao_valor || 0) > 0;
       const hasDescMens = (p.desconto_mensalidade_valor || 0) > 0;
@@ -581,6 +588,7 @@ export default function Dashboard() {
     if (dialogType === "upgrade") return "⬆️ Upgrades";
     if (dialogType === "contratos") return "✍️ Contratos";
     if (dialogType === "descontos") return "⚠️ Descontos Aplicados";
+    if (dialogType === "cancelados") return "🚫 Pedidos Cancelados";
     if (dialogType === "plano") return `📦 Vendas — ${dialogFilter}`;
     if (dialogType === "tipo") return `📊 Vendas — ${dialogFilter}`;
     return "";
@@ -744,7 +752,16 @@ export default function Dashboard() {
         </div>
 
         {/* KPI Cards - Row 3 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <KPICard
+            label="🚫 Cancelados"
+            value={loading ? "..." : `${stats.canceladosPedidosCount}`}
+            subtitle={loading ? undefined : fmtBRL(stats.canceladosPedidosValor)}
+            icon={X}
+            color="text-destructive bg-destructive/10"
+            loading={loading}
+            onClick={() => openDialog("cancelados")}
+          />
           <KPICard
             label="🤝 Upsell (Mód. Adicional)"
             value={loading ? "..." : `${stats.upsellCount}`}
