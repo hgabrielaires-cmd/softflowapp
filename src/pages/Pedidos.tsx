@@ -1165,11 +1165,39 @@ export default function Pedidos() {
     setCnpjError("");
     setLoadingCnpj(true);
     try {
-      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
-      if (!res.ok) {
-        setCnpjError("CNPJ não encontrado");
+      let data = null;
+      // Try BrasilAPI first
+      try {
+        const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+        if (res.ok) data = await res.json();
+      } catch {}
+      // Fallback to ReceitaWS
+      if (!data) {
+        try {
+          const res2 = await fetch(`https://receitaws.com.br/v1/cnpj/${cnpj}`);
+          if (res2.ok) {
+            const d = await res2.json();
+            if (d.status !== "ERROR") {
+              data = {
+                razao_social: d.nome || "",
+                nome_fantasia: d.fantasia || "",
+                email: d.email || "",
+                ddd_telefone_1: d.telefone ? d.telefone.split("/")[0].replace(/[^\d]/g, "").slice(0, 2) : "",
+                telefone_1: d.telefone ? d.telefone.split("/")[0].replace(/[^\d]/g, "").slice(2) : "",
+                municipio: d.municipio || "",
+                uf: d.uf || "",
+                tipo_logradouro: "",
+                logradouro: d.logradouro || "",
+                bairro: d.bairro || "",
+                cep: d.cep ? d.cep.replace(/\D/g, "") : "",
+              };
+            }
+          }
+        } catch {}
+      }
+      if (!data) {
+        setCnpjError("CNPJ não encontrado. Verifique o número ou tente novamente.");
       } else {
-        const data = await res.json();
         const telefoneApi = data.ddd_telefone_1
           ? `(${data.ddd_telefone_1}) ${data.telefone_1 || ""}`.trim()
           : "";
@@ -1190,7 +1218,7 @@ export default function Pedidos() {
         }));
       }
     } catch {
-      setCnpjError("CNPJ não encontrado");
+      setCnpjError("Erro de conexão ao consultar CNPJ. Tente novamente.");
     } finally {
       setLoadingCnpj(false);
     }
