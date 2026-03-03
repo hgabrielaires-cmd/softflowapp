@@ -1806,6 +1806,10 @@ export type Database = {
       }
       pedidos: {
         Row: {
+          acrescimo_implantacao_tipo: string
+          acrescimo_implantacao_valor: number
+          acrescimo_mensalidade_tipo: string
+          acrescimo_mensalidade_valor: number
           cliente_id: string
           comissao_implantacao_percentual: number | null
           comissao_implantacao_valor: number | null
@@ -1858,6 +1862,10 @@ export type Database = {
           vendedor_id: string
         }
         Insert: {
+          acrescimo_implantacao_tipo?: string
+          acrescimo_implantacao_valor?: number
+          acrescimo_mensalidade_tipo?: string
+          acrescimo_mensalidade_valor?: number
           cliente_id: string
           comissao_implantacao_percentual?: number | null
           comissao_implantacao_valor?: number | null
@@ -1910,6 +1918,10 @@ export type Database = {
           vendedor_id: string
         }
         Update: {
+          acrescimo_implantacao_tipo?: string
+          acrescimo_implantacao_valor?: number
+          acrescimo_mensalidade_tipo?: string
+          acrescimo_mensalidade_valor?: number
           cliente_id?: string
           comissao_implantacao_percentual?: number | null
           comissao_implantacao_valor?: number | null

@@ -137,6 +137,10 @@ interface PedidoWithJoins {
   desconto_mensalidade_tipo?: string;
   desconto_mensalidade_valor?: number;
   valor_mensalidade_final?: number;
+  acrescimo_implantacao_tipo?: string;
+  acrescimo_implantacao_valor?: number;
+  acrescimo_mensalidade_tipo?: string;
+  acrescimo_mensalidade_valor?: number;
   modulos_adicionais?: ModuloAdicionadoItem[];
   tipo_pedido?: string;
   contrato_id?: string | null;
@@ -167,6 +171,11 @@ interface FormState {
   desconto_implantacao_valor: string;
   desconto_mensalidade_tipo: "R$" | "%";
   desconto_mensalidade_valor: string;
+  // Acréscimos
+  acrescimo_implantacao_tipo: "R$" | "%";
+  acrescimo_implantacao_valor: string;
+  acrescimo_mensalidade_tipo: "R$" | "%";
+  acrescimo_mensalidade_valor: string;
   // Módulos adicionais (lista de itens com quantidade)
   modulos_adicionais: ModuloAdicionadoItem[];
   // Tipo do pedido
@@ -203,6 +212,10 @@ const emptyForm: FormState = {
   desconto_implantacao_valor: "0",
   desconto_mensalidade_tipo: "R$",
   desconto_mensalidade_valor: "0",
+  acrescimo_implantacao_tipo: "R$",
+  acrescimo_implantacao_valor: "0",
+  acrescimo_mensalidade_tipo: "R$",
+  acrescimo_mensalidade_valor: "0",
   modulos_adicionais: [],
   tipo_pedido: "Novo",
   tipo_atendimento: "",
@@ -230,6 +243,10 @@ function fmtBRL(v: number) {
 function applyDesconto(original: number, tipo: "R$" | "%", valor: number): number {
   const raw = tipo === "%" ? original - (original * valor / 100) : original - valor;
   return Math.max(0, raw);
+}
+
+function applyAcrescimo(original: number, tipo: "R$" | "%", valor: number): number {
+  return tipo === "%" ? original + (original * valor / 100) : original + valor;
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -282,6 +299,7 @@ export default function Pedidos() {
   const [editingPedido, setEditingPedido] = useState<PedidoWithJoins | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [descontoAtivo, setDescontoAtivo] = useState(false);
+  const [acrescimoAtivo, setAcrescimoAtivo] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Limites de desconto do vendedor atual
@@ -431,14 +449,26 @@ export default function Pedidos() {
         ? Math.max(0, (planoSelecionado?.valor_mensalidade_padrao ?? 0) - planoAnteriorValores.mensalidade)
         : (planoSelecionado?.valor_mensalidade_padrao ?? form.valor_mensalidade_original) + totalAdicionaisMens;
 
-  const valorImplantacaoFinal = applyDesconto(
+  // Aplicar acréscimo primeiro, depois desconto
+  const valorImpComAcrescimo = applyAcrescimo(
     valorImplantacaoOriginal,
+    form.acrescimo_implantacao_tipo,
+    parseFloat(form.acrescimo_implantacao_valor) || 0
+  );
+  const valorMensComAcrescimo = applyAcrescimo(
+    valorMensalidadeOriginal,
+    form.acrescimo_mensalidade_tipo,
+    parseFloat(form.acrescimo_mensalidade_valor) || 0
+  );
+
+  const valorImplantacaoFinal = applyDesconto(
+    valorImpComAcrescimo,
     form.desconto_implantacao_tipo,
     parseFloat(form.desconto_implantacao_valor) || 0
   );
 
   const valorMensalidadeFinal = applyDesconto(
-    valorMensalidadeOriginal,
+    valorMensComAcrescimo,
     form.desconto_mensalidade_tipo,
     parseFloat(form.desconto_mensalidade_valor) || 0
   );
@@ -851,6 +881,7 @@ export default function Pedidos() {
     setModuloBuscaId("");
     setModuloBuscaQtd("1");
     setDescontoAtivo(false);
+    setAcrescimoAtivo(false);
     setEditingPedido(null);
     setLimiteDesconto(null);
     setContratoAtivo(null);
@@ -896,12 +927,18 @@ export default function Pedidos() {
       pagamento_implantacao_parcelas: (pedido as any).pagamento_implantacao_parcelas?.toString() || "",
       pagamento_implantacao_desconto_percentual: ((pedido as any).pagamento_implantacao_desconto_percentual ?? 0).toString(),
       pagamento_implantacao_observacao: (pedido as any).pagamento_implantacao_observacao || "",
+      acrescimo_implantacao_tipo: ((pedido as any).acrescimo_implantacao_tipo as "R$" | "%") || "R$",
+      acrescimo_implantacao_valor: ((pedido as any).acrescimo_implantacao_valor ?? 0).toString(),
+      acrescimo_mensalidade_tipo: ((pedido as any).acrescimo_mensalidade_tipo as "R$" | "%") || "R$",
+      acrescimo_mensalidade_valor: ((pedido as any).acrescimo_mensalidade_valor ?? 0).toString(),
     });
     // Limpar a busca de cliente ao editar (o nome será exibido via form.cliente_id)
     setClienteSearch("");
     setModuloBuscaId("");
     setModuloBuscaQtd("1");
     setDescontoAtivo(temDesconto);
+    const temAcrescimo = ((pedido as any).acrescimo_implantacao_valor ?? 0) > 0 || ((pedido as any).acrescimo_mensalidade_valor ?? 0) > 0;
+    setAcrescimoAtivo(temAcrescimo);
     setEditingPedido(pedido);
     setOpenDialog(true);
     loadPlano(pedido.plano_id, adicionais);
@@ -973,6 +1010,10 @@ export default function Pedidos() {
         desconto_mensalidade_tipo: form.desconto_mensalidade_tipo,
         desconto_mensalidade_valor: parseFloat(form.desconto_mensalidade_valor) || 0,
         valor_mensalidade_final: valorMensalidadeFinal,
+        acrescimo_implantacao_tipo: form.acrescimo_implantacao_tipo,
+        acrescimo_implantacao_valor: parseFloat(form.acrescimo_implantacao_valor) || 0,
+        acrescimo_mensalidade_tipo: form.acrescimo_mensalidade_tipo,
+        acrescimo_mensalidade_valor: parseFloat(form.acrescimo_mensalidade_valor) || 0,
         modulos_adicionais: form.modulos_adicionais,
         servicos_pedido: form.servicos_pedido,
         tipo_pedido: form.tipo_pedido,
@@ -2010,27 +2051,45 @@ export default function Pedidos() {
             {/* ── Precificação ── */}
             {(form.plano_id || (form.tipo_pedido === "OA" && form.servicos_pedido.length > 0)) && (
               <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-4">
-                {/* Header com toggle de desconto */}
-                <div className="flex items-center justify-between">
+                {/* Header com toggles de acréscimo e desconto */}
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                     <Tag className="h-4 w-4 text-muted-foreground" /> Precificação
                   </p>
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <span className="text-xs text-muted-foreground">Aplicar desconto</span>
-                    <Switch
-                      checked={descontoAtivo}
-                      onCheckedChange={(v) => {
-                        setDescontoAtivo(v);
-                        if (!v) {
-                          setForm((f) => ({
-                            ...f,
-                            desconto_implantacao_valor: "0",
-                            desconto_mensalidade_valor: "0",
-                          }));
-                        }
-                      }}
-                    />
-                  </label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <span className="text-xs text-muted-foreground">Acréscimo</span>
+                      <Switch
+                        checked={acrescimoAtivo}
+                        onCheckedChange={(v) => {
+                          setAcrescimoAtivo(v);
+                          if (!v) {
+                            setForm((f) => ({
+                              ...f,
+                              acrescimo_implantacao_valor: "0",
+                              acrescimo_mensalidade_valor: "0",
+                            }));
+                          }
+                        }}
+                      />
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <span className="text-xs text-muted-foreground">Desconto</span>
+                      <Switch
+                        checked={descontoAtivo}
+                        onCheckedChange={(v) => {
+                          setDescontoAtivo(v);
+                          if (!v) {
+                            setForm((f) => ({
+                              ...f,
+                              desconto_implantacao_valor: "0",
+                              desconto_mensalidade_valor: "0",
+                            }));
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 {/* Valores originais (readonly) */}
@@ -2038,23 +2097,74 @@ export default function Pedidos() {
                   /* OA: Campo único "Valor do Serviço" */
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground">Valor do Serviço</Label>
-                    <Input readOnly value={fmtBRL(descontoAtivo ? valorImplantacaoOriginal : valorImplantacaoFinal)} className="bg-background font-mono text-sm" />
+                    <Input readOnly value={fmtBRL((acrescimoAtivo || descontoAtivo) ? valorImplantacaoOriginal : valorImplantacaoFinal)} className="bg-background font-mono text-sm" />
                   </div>
                 ) : (
                   /* Outros tipos: Implantação + Mensalidade */
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs text-muted-foreground">Implantação</Label>
-                      <Input readOnly value={fmtBRL(descontoAtivo ? valorImplantacaoOriginal : valorImplantacaoFinal)} className="bg-background font-mono text-sm" />
+                      <Input readOnly value={fmtBRL((acrescimoAtivo || descontoAtivo) ? valorImplantacaoOriginal : valorImplantacaoFinal)} className="bg-background font-mono text-sm" />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs text-muted-foreground">Mensalidade</Label>
-                      <Input readOnly value={fmtBRL(descontoAtivo ? valorMensalidadeOriginal : valorMensalidadeFinal)} className="bg-background font-mono text-sm" />
+                      <Input readOnly value={fmtBRL((acrescimoAtivo || descontoAtivo) ? valorMensalidadeOriginal : valorMensalidadeFinal)} className="bg-background font-mono text-sm" />
                     </div>
                   </div>
                 )}
 
-                {/* Descontos — só exibe quando toggle ativo */}
+                {/* Acréscimos — só exibe quando toggle ativo */}
+                {acrescimoAtivo && (
+                  <div className="space-y-3 border-t border-border pt-3">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Acréscimos</p>
+
+                    {/* Acréscimo implantação / serviço */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Acréscimo — {form.tipo_pedido === "OA" ? "Serviço" : "Implantação"}</Label>
+                      <div className="flex gap-2">
+                        <Select value={form.acrescimo_implantacao_tipo} onValueChange={(v) => setForm((f) => ({ ...f, acrescimo_implantacao_tipo: v as "R$" | "%" }))}>
+                          <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="R$">R$</SelectItem>
+                            <SelectItem value="%">%</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="number" min="0" step="0.01"
+                          value={form.acrescimo_implantacao_valor}
+                          onChange={(e) => setForm((f) => ({ ...f, acrescimo_implantacao_valor: e.target.value }))}
+                          className="flex-1"
+                          placeholder="0"
+                        />
+                        <Input readOnly value={fmtBRL(valorImpComAcrescimo)} className="w-36 bg-background font-mono text-sm text-emerald-600 font-semibold" />
+                      </div>
+                    </div>
+
+                    {/* Acréscimo mensalidade — oculto para OA */}
+                    {form.tipo_pedido !== "OA" && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Acréscimo — Mensalidade</Label>
+                        <div className="flex gap-2">
+                          <Select value={form.acrescimo_mensalidade_tipo} onValueChange={(v) => setForm((f) => ({ ...f, acrescimo_mensalidade_tipo: v as "R$" | "%" }))}>
+                            <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="R$">R$</SelectItem>
+                              <SelectItem value="%">%</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            type="number" min="0" step="0.01"
+                            value={form.acrescimo_mensalidade_valor}
+                            onChange={(e) => setForm((f) => ({ ...f, acrescimo_mensalidade_valor: e.target.value }))}
+                            className="flex-1"
+                            placeholder="0"
+                          />
+                          <Input readOnly value={fmtBRL(valorMensComAcrescimo)} className="w-36 bg-background font-mono text-sm text-emerald-600 font-semibold" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {descontoAtivo && (
                   <div className="space-y-3 border-t border-border pt-3">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Descontos</p>
@@ -2862,6 +2972,27 @@ export default function Pedidos() {
                     <p className="text-xs text-muted-foreground italic">Nenhum detalhe de itens disponível.</p>
                   )}
                 </div>
+
+                {/* Acréscimo info */}
+                {(((vp as any).acrescimo_implantacao_valor ?? 0) > 0 || ((vp as any).acrescimo_mensalidade_valor ?? 0) > 0) && (
+                  <div className="border-t border-border pt-3 space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">Acréscimos aplicados</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {((vp as any).acrescimo_implantacao_valor ?? 0) > 0 && (
+                        <div className="space-y-0.5">
+                          <p className="text-xs text-muted-foreground">Implantação</p>
+                          <p className="text-xs font-mono text-emerald-600">+{(vp as any).acrescimo_implantacao_valor} {(vp as any).acrescimo_implantacao_tipo === "%" ? "%" : "R$"}</p>
+                        </div>
+                      )}
+                      {((vp as any).acrescimo_mensalidade_valor ?? 0) > 0 && (
+                        <div className="space-y-0.5">
+                          <p className="text-xs text-muted-foreground">Mensalidade</p>
+                          <p className="text-xs font-mono text-emerald-600">+{(vp as any).acrescimo_mensalidade_valor} {(vp as any).acrescimo_mensalidade_tipo === "%" ? "%" : "R$"}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="border-t border-border pt-3 grid grid-cols-3 gap-3">
                   <div className="space-y-0.5">
