@@ -20,6 +20,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ClientePlanViewer } from "@/components/ClientePlanViewer";
+import { UserAvatar } from "@/components/UserAvatar";
 import { AppRole, ROLE_LABELS, Profile } from "@/lib/supabase-types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -333,6 +334,7 @@ interface Notificacao {
   mensagem: string;
   tipo: string;
   created_at: string;
+  criado_por: string;
   metadata?: { card_id?: string; comentario_id?: string } | null;
 }
 
@@ -354,6 +356,9 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
+  const [criadoPorProfiles, setCriadoPorProfiles] = useState<Record<string, { full_name: string; avatar_url: string | null }>>({});
+  const [notifLiked, setNotifLiked] = useState(false);
+  const [likesUsers, setLikesUsers] = useState<{ name: string; avatar: string | null }[]>([]);
 
   const isAdmin = roles.includes("admin");
   const isGestor = isAdmin || (profile as any)?.gestor_desconto === true;
@@ -392,9 +397,19 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     query = query.or(orFilters.join(","));
 
     const { data } = await query;
-    setNotificacoes((data || []) as Notificacao[]);
+    const notifs = (data || []) as Notificacao[];
+    setNotificacoes(notifs);
     const { data: lidas } = await supabase.from("notificacoes_lidas").select("notificacao_id").eq("user_id", profile.user_id);
     setLidasIds(new Set((lidas || []).map((l: any) => l.notificacao_id)));
+
+    // Fetch profiles for criado_por
+    const criadoPorIds = [...new Set(notifs.map(n => n.criado_por).filter(Boolean))];
+    if (criadoPorIds.length > 0) {
+      const { data: profs } = await supabase.from("profiles").select("user_id, full_name, avatar_url").in("user_id", criadoPorIds);
+      const map: Record<string, { full_name: string; avatar_url: string | null }> = {};
+      (profs || []).forEach((p: any) => { map[p.user_id] = { full_name: p.full_name, avatar_url: p.avatar_url }; });
+      setCriadoPorProfiles(map);
+    }
   }
 
   async function marcarLida(notificacaoId: string) {
@@ -542,9 +557,15 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
               return (
                 <div key={n.id}
                   className={cn("px-4 py-3 border-b border-border cursor-pointer hover:bg-muted/30 transition-colors", !lida && "bg-primary/5")}
-                  onClick={() => { marcarLida(n.id); setSelectedNotif(n); }}>
+                  onClick={() => { marcarLida(n.id); setSelectedNotif(n); loadNotifLikes(n); }}>
                   <div className="flex items-start gap-2.5">
-                    <div className="mt-0.5 flex-shrink-0">{TIPO_ICON[n.tipo] || TIPO_ICON.info}</div>
+                    <div className="mt-0.5 flex-shrink-0">
+                      {criadoPorProfiles[n.criado_por]?.avatar_url || criadoPorProfiles[n.criado_por]?.full_name ? (
+                        <UserAvatar avatarUrl={criadoPorProfiles[n.criado_por]?.avatar_url} fullName={criadoPorProfiles[n.criado_por]?.full_name} size="sm" />
+                      ) : (
+                        TIPO_ICON[n.tipo] || TIPO_ICON.info
+                      )}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className={cn("text-sm truncate", !lida ? "font-semibold" : "font-medium")}>{n.titulo}</p>
@@ -577,7 +598,7 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     </DropdownMenu>
 
     {/* Dialog de mensagem completa */}
-    <Dialog open={!!selectedNotif} onOpenChange={(v) => { if (!v) { setSelectedNotif(null); setReplyText(""); } }}>
+    <Dialog open={!!selectedNotif} onOpenChange={(v) => { if (!v) { setSelectedNotif(null); setReplyText(""); setNotifLiked(false); setLikesUsers([]); } }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
@@ -585,6 +606,24 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
             {selectedNotif?.titulo}
           </DialogTitle>
         </DialogHeader>
+
+        {/* Author info with avatar */}
+        {selectedNotif && criadoPorProfiles[selectedNotif.criado_por] && (
+          <div className="flex items-center gap-2.5 pb-2 border-b border-border">
+            <UserAvatar
+              avatarUrl={criadoPorProfiles[selectedNotif.criado_por].avatar_url}
+              fullName={criadoPorProfiles[selectedNotif.criado_por].full_name}
+              size="md"
+            />
+            <div>
+              <p className="text-sm font-semibold">{criadoPorProfiles[selectedNotif.criado_por].full_name}</p>
+              <p className="text-[11px] text-muted-foreground">
+                {selectedNotif.created_at && new Date(selectedNotif.created_at).toLocaleString("pt-BR")}
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
           {selectedNotif?.mensagem}
         </div>
@@ -615,23 +654,37 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
                 <Send className="h-3.5 w-3.5" />
               </Button>
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-1.5 text-xs"
+                className={cn("gap-1.5 text-xs transition-colors", notifLiked && "text-red-500 border-red-200 bg-red-50 hover:bg-red-100 hover:text-red-600")}
                 onClick={() => handleNotifLike()}
               >
-                <Heart className="h-3.5 w-3.5" /> Curtir
+                <Heart className={cn("h-3.5 w-3.5", notifLiked && "fill-red-500")} />
+                {notifLiked ? "Curtido" : "Curtir"}
               </Button>
+              {/* Liked-by avatars */}
+              {likesUsers.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <div className="flex -space-x-1.5">
+                    {likesUsers.slice(0, 3).map((u, i) => (
+                      <div key={i} className="h-5 w-5 rounded-full border-2 border-background overflow-hidden">
+                        <UserAvatar avatarUrl={u.avatar} fullName={u.name} size="xs" />
+                      </div>
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    Curtido por {likesUsers.map(u => u.name.split(" ")[0]).slice(0, 2).join(", ")}
+                    {likesUsers.length > 2 && ` +${likesUsers.length - 2}`}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        <div className="flex items-center justify-between mt-2">
-          <p className="text-xs text-muted-foreground">
-            {selectedNotif?.created_at && new Date(selectedNotif.created_at).toLocaleString("pt-BR")}
-          </p>
+        <div className="flex items-center justify-end mt-2">
           <div className="flex items-center gap-2">
             {selectedNotif?.metadata?.card_id && (
               <Button
@@ -685,6 +738,26 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     }
   }
 
+  async function loadNotifLikes(notif: Notificacao) {
+    if (!notif.metadata?.comentario_id || !profile?.user_id) {
+      setNotifLiked(false);
+      setLikesUsers([]);
+      return;
+    }
+    const { data: allLikes } = await supabase
+      .from("painel_curtidas")
+      .select("user_id")
+      .eq("comentario_id", notif.metadata.comentario_id);
+    const likeUserIds = (allLikes || []).map((l: any) => l.user_id);
+    setNotifLiked(likeUserIds.includes(profile.user_id));
+    if (likeUserIds.length > 0) {
+      const { data: profs } = await supabase.from("profiles").select("user_id, full_name, avatar_url").in("user_id", likeUserIds);
+      setLikesUsers((profs || []).map((p: any) => ({ name: p.full_name, avatar: p.avatar_url })));
+    } else {
+      setLikesUsers([]);
+    }
+  }
+
   async function handleNotifLike() {
     if (!selectedNotif?.metadata?.comentario_id || !profile) return;
     try {
@@ -698,9 +771,13 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
         .maybeSingle();
       if (existing) {
         await supabase.from("painel_curtidas").delete().eq("id", existing.id);
+        setNotifLiked(false);
+        setLikesUsers(prev => prev.filter(u => u.name !== profile.full_name));
         toast.success("Curtida removida");
       } else {
         await supabase.from("painel_curtidas").insert({ comentario_id: selectedNotif.metadata.comentario_id, user_id: user.id });
+        setNotifLiked(true);
+        setLikesUsers(prev => [...prev, { name: profile.full_name || "Você", avatar: profile.avatar_url || null }]);
         toast.success("Comentário curtido!");
       }
     } catch {

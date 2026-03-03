@@ -31,7 +31,7 @@ import {
   GripVertical, ChevronRight, FileText, Package, ArrowUpCircle,
   Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw, ArrowRight, CheckSquare,
   CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare, Info, History, Pencil, MoreHorizontal, XCircle, PauseCircle, UserPlus, Users, Ban, X,
-  Heart, Reply, CornerDownRight
+  Heart, Reply, CornerDownRight, BellRing, BellOff
 } from "lucide-react";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { ChecklistItem } from "@/lib/supabase-types";
@@ -168,6 +168,8 @@ export default function PainelAtendimento() {
   const [retomarOpen, setRetomarOpen] = useState(false);
   const [retomarComentario, setRetomarComentario] = useState("");
   const [retomando, setRetomando] = useState(false);
+  const [seguindoProjeto, setSeguindoProjeto] = useState(false);
+  const [seguindoLoading, setSeguindoLoading] = useState(false);
   // Auto-refresh atrasado status every 60s
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60_000);
@@ -536,11 +538,12 @@ export default function PainelAtendimento() {
       setSlaProjeto(null);
       setChecklistEtapa([]);
       setChecklistProgresso({});
+      setSeguindoProjeto(false);
       return;
     }
     (async () => {
       // Run ALL card detail queries in parallel
-      const [{ data: coms }, { data: tecs }, { data: likes }, { data: agData }] = await Promise.all([
+      const [{ data: coms }, { data: tecs }, { data: likes }, { data: agData }, { data: seguindo }] = await Promise.all([
         supabase
           .from("painel_comentarios")
           .select("id, texto, criado_por, created_at, parent_id, etapa_id")
@@ -558,6 +561,12 @@ export default function PainelAtendimento() {
           .select("*, jornada_atividades(nome)")
           .eq("card_id", detailCard.id)
           .order("data"),
+        supabase
+          .from("painel_seguidores" as any)
+          .select("id")
+          .eq("card_id", detailCard.id)
+          .eq("user_id", profile?.user_id || "")
+          .maybeSingle(),
       ]);
       setComentarios(coms || []);
       setTecnicosSelecionados((tecs || []).map((t: any) => t.tecnico_id));
@@ -569,6 +578,7 @@ export default function PainelAtendimento() {
       setCurtidas(likesMap);
       setReplyTo(null);
       setCardAgendamentos(agData || []);
+      setSeguindoProjeto(!!seguindo);
     })();
   }, [detailCard?.id]);
 
@@ -2914,7 +2924,33 @@ export default function PainelAtendimento() {
 
               {/* Comunicação */}
               <div className="rounded-lg border border-border bg-card p-3 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comunicação</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comunicação</p>
+                  <Button
+                    variant={seguindoProjeto ? "default" : "outline"}
+                    size="sm"
+                    className={cn("gap-1.5 text-[10px] h-7", seguindoProjeto && "bg-primary/90")}
+                    disabled={seguindoLoading}
+                    onClick={async () => {
+                      if (!profile?.user_id || !detailCard) return;
+                      setSeguindoLoading(true);
+                      try {
+                        if (seguindoProjeto) {
+                          await (supabase as any).from("painel_seguidores").delete().eq("card_id", detailCard.id).eq("user_id", profile.user_id);
+                          setSeguindoProjeto(false);
+                          toast.success("Você deixou de seguir este projeto");
+                        } else {
+                          await (supabase as any).from("painel_seguidores").insert({ card_id: detailCard.id, user_id: profile.user_id });
+                          setSeguindoProjeto(true);
+                          toast.success("Você está seguindo este projeto! Receberá notificações de comentários e apontamentos.");
+                        }
+                      } catch { toast.error("Erro ao alterar seguimento"); }
+                      finally { setSeguindoLoading(false); }
+                    }}
+                  >
+                    {seguindoProjeto ? <><BellRing className="h-3 w-3" /> Seguindo</> : <><BellOff className="h-3 w-3" /> Seguir Projeto</>}
+                  </Button>
+                </div>
 
                 {/* Comentários (thread) */}
                 <div className="space-y-2">
@@ -3163,6 +3199,39 @@ export default function PainelAtendimento() {
                               }
                             }
                           }
+
+                          // Notify followers (excluding mentioned users and the author)
+                          const mentionedUserIds = new Set(mentioned.map((pid: string) => {
+                            const prof = (responsaveis as any[]).find((r: any) => r.id === pid);
+                            return prof?.user_id || pid;
+                          }));
+                          // Also exclude reply parent author
+                          if (replyTo) {
+                            const parentCom = comentarios.find((c: any) => c.id === replyTo.id);
+                            if (parentCom) {
+                              const parentProf = (responsaveis as any[]).find((r: any) => r.id === parentCom.criado_por);
+                              if (parentProf?.user_id) mentionedUserIds.add(parentProf.user_id);
+                            }
+                          }
+                          try {
+                            const { data: seguidores } = await (supabase as any)
+                              .from("painel_seguidores")
+                              .select("user_id")
+                              .eq("card_id", detailCard.id);
+                            for (const seg of (seguidores || [])) {
+                              if (seg.user_id === user.id) continue; // don't notify self
+                              if (mentionedUserIds.has(seg.user_id)) continue; // already notified via mention
+                              await supabase.from("notificacoes").insert({
+                                titulo: `💬 ${autorNome} comentou no projeto`,
+                                mensagem: `${autorNome} fez um comentário no projeto ${clienteNome} que você segue: "${novoComentario.trim().slice(0, 100)}${novoComentario.trim().length > 100 ? "..." : ""}"`,
+                                tipo: "info",
+                                criado_por: user.id,
+                                destinatario_user_id: seg.user_id,
+                                metadata: { card_id: detailCard.id, comentario_id: novo.id },
+                              });
+                            }
+                          } catch { /* followers notification is best-effort */ }
+
                           setNovoComentario("");
                           setReplyTo(null);
                           mentionedUsersRef.current = [];
