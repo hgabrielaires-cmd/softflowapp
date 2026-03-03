@@ -1,0 +1,1 @@
+UPDATE clientes SET filial_id = '18ae8343-6fab-4187-9ec4-783e627aa531' WHERE id = 'b47fe595-4d87-48bb-b90f-93b4b157ec01';
