@@ -189,8 +189,15 @@ export default function JornadaImplantacao() {
         const { error } = await supabase.from("jornadas").update(payload).eq("id", editing.id);
         if (error) throw error;
         jornadaId = editing.id;
-        // Delete old etapas (cascade deletes atividades)
-        await supabase.from("jornada_etapas").delete().eq("jornada_id", jornadaId);
+        // Delete atividades first to avoid FK constraint issues, then delete etapas
+        const { data: oldEtapas } = await supabase.from("jornada_etapas").select("id").eq("jornada_id", jornadaId);
+        if (oldEtapas && oldEtapas.length > 0) {
+          const oldEtapaIds = oldEtapas.map(e => e.id);
+          const { error: delAtivErr } = await supabase.from("jornada_atividades").delete().in("etapa_id", oldEtapaIds);
+          if (delAtivErr) throw delAtivErr;
+        }
+        const { error: delEtapaErr } = await supabase.from("jornada_etapas").delete().eq("jornada_id", jornadaId);
+        if (delEtapaErr) throw delEtapaErr;
       } else {
         const { data, error } = await supabase.from("jornadas").insert(payload).select("id").single();
         if (error) throw error;
