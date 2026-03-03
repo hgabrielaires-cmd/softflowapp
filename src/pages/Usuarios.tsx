@@ -60,7 +60,7 @@ interface MesaOption {
   nome: string;
 }
 
-const ALL_ROLES: AppRole[] = ["admin", "financeiro", "vendedor", "tecnico"];
+const ALL_ROLES: AppRole[] = ["admin", "gestor", "financeiro", "vendedor", "operacional", "tecnico"];
 
 function gerarSenhaSegura(): string {
   const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
