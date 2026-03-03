@@ -13,7 +13,7 @@ import {
   Loader2, Shield, Save, LayoutDashboard, Users, ShoppingCart, FileText,
   DollarSign, Building2, Bell, BookOpen, Plug, Settings, ChevronDown,
   Headphones, Calendar, Ticket, Wrench, ListOrdered, Inbox, TrendingUp,
-  TrendingDown, BarChart3, Globe, UserCheck,
+  TrendingDown, BarChart3, Globe, UserCheck, Plus, Pencil, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -34,6 +34,15 @@ interface MenuNode {
   children?: MenuNode[];
 }
 
+// CRUD sub-permissions factory
+function crudChildren(module: string): MenuNode[] {
+  return [
+    { key: `crud.${module}.incluir`, label: "Incluir", description: "Permissão para incluir registros", icon: <Plus className="h-4 w-4" /> },
+    { key: `crud.${module}.editar`, label: "Editar", description: "Permissão para editar registros", icon: <Pencil className="h-4 w-4" /> },
+    { key: `crud.${module}.excluir`, label: "Excluir", description: "Permissão para excluir registros", icon: <Trash2 className="h-4 w-4" /> },
+  ];
+}
+
 const MENU_TREE: MenuNode[] = [
   {
     key: "menu.dashboard", label: "Dashboard", description: "Acesso ao painel principal",
@@ -47,17 +56,19 @@ const MENU_TREE: MenuNode[] = [
   {
     key: "menu.clientes", label: "Clientes", description: "Cadastro e gestão de clientes",
     icon: <UserCheck className="h-4 w-4" />,
+    children: crudChildren("clientes"),
   },
   {
     key: "menu.pedidos", label: "Pedidos", description: "Gestão de pedidos de venda",
     icon: <ShoppingCart className="h-4 w-4" />,
+    children: crudChildren("pedidos"),
   },
   {
     key: "menu.financeiro", label: "Financeiro", description: "Módulo financeiro completo",
     icon: <DollarSign className="h-4 w-4" />,
     children: [
       { key: "menu.fila_financeiro", label: "Fila do Financeiro", description: "Aprovação e análise financeira", icon: <Inbox className="h-4 w-4" /> },
-      { key: "menu.contratos", label: "Contratos", description: "Visualização e geração de contratos", icon: <FileText className="h-4 w-4" /> },
+      { key: "menu.contratos", label: "Contratos", description: "Visualização e geração de contratos", icon: <FileText className="h-4 w-4" />, children: crudChildren("contratos") },
       { key: "menu.receitas", label: "Receitas", description: "Lançamento e controle de receitas", icon: <TrendingUp className="h-4 w-4" /> },
       { key: "menu.despesas", label: "Despesas", description: "Lançamento e controle de despesas", icon: <TrendingDown className="h-4 w-4" /> },
       { key: "menu.dre", label: "DRE", description: "Demonstrativo de Resultado do Exercício", icon: <BarChart3 className="h-4 w-4" /> },
@@ -66,10 +77,12 @@ const MENU_TREE: MenuNode[] = [
   {
     key: "menu.planos", label: "Planos", description: "Cadastro e gestão de planos",
     icon: <BookOpen className="h-4 w-4" />,
+    children: crudChildren("planos"),
   },
   {
     key: "menu.modulos", label: "Módulos", description: "Gestão de módulos do sistema",
     icon: <Settings className="h-4 w-4" />,
+    children: crudChildren("modulos"),
   },
   {
     key: "menu.perfil", label: "Meu Perfil", description: "Acesso ao perfil pessoal",
@@ -78,14 +91,17 @@ const MENU_TREE: MenuNode[] = [
   {
     key: "menu.usuarios", label: "Usuários", description: "Gerenciar contas de usuários",
     icon: <Users className="h-4 w-4" />,
+    children: crudChildren("usuarios"),
   },
   {
     key: "menu.filiais", label: "Filiais", description: "Gerenciar filiais do sistema",
     icon: <Building2 className="h-4 w-4" />,
+    children: crudChildren("filiais"),
   },
   {
     key: "menu.modelos_contrato", label: "Modelos de Documentos", description: "Gerenciar templates de contratos",
     icon: <FileText className="h-4 w-4" />,
+    children: crudChildren("modelos_contrato"),
   },
   {
     key: "menu.notificacoes", label: "Notificações", description: "Gerenciar notificações do sistema",
@@ -108,10 +124,12 @@ const MENU_TREE: MenuNode[] = [
   {
     key: "menu.fornecedores", label: "Fornecedores", description: "Cadastro de fornecedores",
     icon: <Building2 className="h-4 w-4" />,
+    children: crudChildren("fornecedores"),
   },
   {
     key: "menu.servicos", label: "Catálogo de Serviços", description: "Cadastro de serviços avulsos",
     icon: <Wrench className="h-4 w-4" />,
+    children: crudChildren("servicos"),
   },
   // Parâmetros extras
   {
@@ -133,6 +151,7 @@ const MENU_TREE: MenuNode[] = [
   {
     key: "menu.segmentos", label: "Segmentos", description: "Gerenciar segmentos de clientes",
     icon: <UserCheck className="h-4 w-4" />,
+    children: crudChildren("segmentos"),
   },
   {
     key: "menu.integracoes", label: "Integrações", description: "Configurar integrações externas",
@@ -429,18 +448,44 @@ export default function PerfisUsuario() {
                                             const childChanged = changes[childPerm.id] !== undefined;
 
                                             return (
-                                              <PermissionRow
-                                                key={child.key}
-                                                label={child.label}
-                                                description={child.description}
-                                                icon={child.icon}
-                                                perm={childPerm}
-                                                isAdminRole={isAdminRole}
-                                                isChanged={childChanged}
-                                                isActive={childActive}
-                                                onToggle={() => togglePermission(childPerm.id, childPerm.ativo)}
-                                                indent
-                                              />
+                                              <div key={child.key}>
+                                                <PermissionRow
+                                                  label={child.label}
+                                                  description={child.description}
+                                                  icon={child.icon}
+                                                  perm={childPerm}
+                                                  isAdminRole={isAdminRole}
+                                                  isChanged={childChanged}
+                                                  isActive={childActive}
+                                                  onToggle={() => togglePermission(childPerm.id, childPerm.ativo)}
+                                                  indent
+                                                />
+                                                {/* CRUD sub-permissions */}
+                                                {child.children && childActive && (
+                                                  <div className="space-y-0">
+                                                    {child.children.map(grandchild => {
+                                                      const gcPerm = rolePerms.find(p => p.permissao === grandchild.key);
+                                                      if (!gcPerm) return null;
+                                                      const gcActive = getEffectiveValue(gcPerm.id, gcPerm.ativo);
+                                                      const gcChanged = changes[gcPerm.id] !== undefined;
+                                                      return (
+                                                        <PermissionRow
+                                                          key={grandchild.key}
+                                                          label={grandchild.label}
+                                                          description={grandchild.description}
+                                                          icon={grandchild.icon}
+                                                          perm={gcPerm}
+                                                          isAdminRole={isAdminRole}
+                                                          isChanged={gcChanged}
+                                                          isActive={gcActive}
+                                                          onToggle={() => togglePermission(gcPerm.id, gcPerm.ativo)}
+                                                          indent
+                                                        />
+                                                      );
+                                                    })}
+                                                  </div>
+                                                )}
+                                              </div>
                                             );
                                           })}
                                         </div>
