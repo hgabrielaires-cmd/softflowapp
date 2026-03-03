@@ -1137,6 +1137,35 @@ export default function PainelAtendimento() {
     });
   }
 
+  // Notify followers when a card changes stage
+  async function notificarSeguidoresAvanco(cardId: string, novaEtapaNome: string, clienteNome: string) {
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) return;
+      const autorNome = profile?.full_name || "Usuário";
+
+      const { data: seguidores } = await supabase
+        .from("painel_seguidores")
+        .select("user_id")
+        .eq("card_id", cardId);
+
+      if (!seguidores || seguidores.length === 0) return;
+
+      for (const seg of seguidores) {
+        if (seg.user_id === currentUser.id) continue;
+        await supabase.from("notificacoes").insert({
+          titulo: `🔄 ${autorNome} avançou etapa`,
+          mensagem: `${autorNome} avançou a etapa para ${novaEtapaNome} no projeto ${clienteNome}.`,
+          criado_por: currentUser.id,
+          destinatario_user_id: seg.user_id,
+          metadata: { card_id: cardId },
+        });
+      }
+    } catch (err) {
+      console.error("Erro ao notificar seguidores sobre avanço:", err);
+    }
+  }
+
   async function registrarSaidaEtapa(cardId: string, etapaId: string, slaPrevisto?: number | null) {
     // Find the open record (saida_em IS NULL) for this card+etapa
     const { data } = await supabase
@@ -1581,6 +1610,9 @@ export default function PainelAtendimento() {
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
       toast.success(`Avançado para etapa: ${proximaEtapa.nome}`);
+      // Notify followers about stage change
+      const clienteNomeNotif = detailCard.clientes?.apelido || detailCard.clientes?.nome_fantasia || "Projeto";
+      notificarSeguidoresAvanco(detailCard.id, proximaEtapa.nome, clienteNomeNotif);
       setDetailCard(null);
     } catch {
       toast.error("Erro ao finalizar etapa.");
@@ -1741,7 +1773,11 @@ export default function PainelAtendimento() {
         (async () => {
           const dragSla = getSlaEtapaForCard(card);
           await registrarSaidaEtapa(card.id, card.etapa_id, dragSla);
-          if (etapaDestino) await registrarEntradaEtapa(card.id, etapaId, etapaDestino.nome);
+          if (etapaDestino) {
+            await registrarEntradaEtapa(card.id, etapaId, etapaDestino.nome);
+            const clienteNomeDrag = card.clientes?.apelido || card.clientes?.nome_fantasia || "Projeto";
+            notificarSeguidoresAvanco(card.id, etapaDestino.nome, clienteNomeDrag);
+          }
         })();
         moverCard.mutate({ cardId: dragCardId, etapaId });
       }
