@@ -189,10 +189,18 @@ export default function JornadaImplantacao() {
         const { error } = await supabase.from("jornadas").update(payload).eq("id", editing.id);
         if (error) throw error;
         jornadaId = editing.id;
-        // Delete atividades first to avoid FK constraint issues, then delete etapas
+        // Delete in correct order: agendamentos/checklist -> atividades -> etapas
         const { data: oldEtapas } = await supabase.from("jornada_etapas").select("id").eq("jornada_id", jornadaId);
         if (oldEtapas && oldEtapas.length > 0) {
           const oldEtapaIds = oldEtapas.map(e => e.id);
+          // Get all activity IDs for these etapas
+          const { data: oldAtividades } = await supabase.from("jornada_atividades").select("id").in("etapa_id", oldEtapaIds);
+          if (oldAtividades && oldAtividades.length > 0) {
+            const oldAtivIds = oldAtividades.map(a => a.id);
+            // Delete references in painel_agendamentos and painel_checklist_progresso first
+            await supabase.from("painel_agendamentos").delete().in("atividade_id", oldAtivIds);
+            await supabase.from("painel_checklist_progresso").delete().in("atividade_id", oldAtivIds);
+          }
           const { error: delAtivErr } = await supabase.from("jornada_atividades").delete().in("etapa_id", oldEtapaIds);
           if (delAtivErr) throw delAtivErr;
         }
