@@ -36,6 +36,7 @@ interface AgendamentoComDetalhes extends Agendamento {
   filial_nome: string;
   atividade_nome: string;
   tecnicos: { id: string; full_name: string; avatar_url: string | null }[];
+  apontados: { id: string; full_name: string; avatar_url: string | null }[];
   tipo_atendimento: string | null;
   status_projeto: string;
   pausado: boolean;
@@ -101,6 +102,18 @@ export default function Agenda() {
     },
   });
 
+  // Fetch apontamentos
+  const { data: painelApontamentos = [] } = useQuery({
+    queryKey: ["agenda-apontamentos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("painel_apontamentos")
+        .select("card_id, usuario_id, profiles:usuario_id(id, full_name, avatar_url)");
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
   // Mapa de cards
   const cardsMap = useMemo(() => {
     const map: Record<string, any> = {};
@@ -125,6 +138,16 @@ export default function Agenda() {
     return map;
   }, [painelTecnicos]);
 
+  // Mapa de apontados por card
+  const apontadosPorCard = useMemo(() => {
+    const map: Record<string, { id: string; full_name: string; avatar_url: string | null }[]> = {};
+    painelApontamentos.forEach((pa: any) => {
+      if (!map[pa.card_id]) map[pa.card_id] = [];
+      if (pa.profiles) map[pa.card_id].push(pa.profiles);
+    });
+    return map;
+  }, [painelApontamentos]);
+
   // Agendamentos enriquecidos
   const agendamentosDetalhados = useMemo<AgendamentoComDetalhes[]>(() => {
     return agendamentos.map((ag) => {
@@ -137,6 +160,7 @@ export default function Agenda() {
         filial_nome: card?.filiais?.nome || "—",
         atividade_nome: atividadesMap[ag.atividade_id] || "—",
         tecnicos: tecnicosPorCard[ag.card_id] || [],
+        apontados: apontadosPorCard[ag.card_id] || [],
         tipo_atendimento: card?.tipo_atendimento_local || null,
         status_projeto: card?.status_projeto || "ativo",
         pausado: card?.pausado || false,
@@ -144,7 +168,7 @@ export default function Agenda() {
         sla_horas: card?.sla_horas || 0,
       };
     });
-  }, [agendamentos, cardsMap, atividadesMap, tecnicosPorCard]);
+  }, [agendamentos, cardsMap, atividadesMap, tecnicosPorCard, apontadosPorCard]);
 
   // Listas para filtros
   const tecnicosList = useMemo(() => {
@@ -363,6 +387,17 @@ export default function Agenda() {
                                   <Badge key={t.id} variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20 flex items-center gap-1">
                                     <UserAvatar avatarUrl={t.avatar_url} fullName={t.full_name} size="xs" />
                                     {t.full_name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                            {ag.apontados.length > 0 && (
+                              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                <span className="text-[10px] text-muted-foreground font-medium">Designados:</span>
+                                {ag.apontados.map((a) => (
+                                  <Badge key={a.id} variant="secondary" className="text-xs bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1">
+                                    <UserAvatar avatarUrl={a.avatar_url} fullName={a.full_name} size="xs" />
+                                    {a.full_name}
                                   </Badge>
                                 ))}
                               </div>
