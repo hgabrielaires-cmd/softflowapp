@@ -781,12 +781,16 @@ export default function JornadaImplantacao() {
                                       <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                       <div className="space-y-0.5">
                                         <p className="text-sm font-medium">{a.nome}</p>
-                                      <div className="flex gap-2 text-xs text-muted-foreground">
+                                      <div className="flex gap-2 text-xs text-muted-foreground flex-wrap items-center">
                                         <span>{Math.floor(a.horas_estimadas)}:{(Math.round((a.horas_estimadas - Math.floor(a.horas_estimadas)) * 60)).toString().padStart(2, "0")}h estimadas</span>
-                                        <span>•</span>
-                                        <span>{a.tipo_responsabilidade}</span>
-                                        {a.checklist.length > 0 && <><span>•</span><span>{a.checklist.length} itens checklist</span></>}
-                                      </div>
+                                         <span>•</span>
+                                         <span>{a.tipo_responsabilidade}</span>
+                                         {a.checklist.length > 0 && <><span>•</span><span>{a.checklist.length} itens checklist</span></>}
+                                         {a.mesa_atendimento_id && a.mesa_atendimento_id !== etapa.mesa_atendimento_id && (() => {
+                                           const mesaAtiv = mesas.find(m => m.id === a.mesa_atendimento_id);
+                                           return mesaAtiv ? <Badge variant="secondary" className="text-[10px] bg-purple-100 text-purple-700 border-purple-200">{mesaAtiv.nome}</Badge> : null;
+                                         })()}
+                                       </div>
                                     </div>
                                     </div>
                                     <div className="flex gap-1">
@@ -1085,6 +1089,10 @@ export default function JornadaImplantacao() {
                                       <div className="flex items-center justify-between">
                                         <span className="text-sm font-medium">{aIdx + 1}. {a.nome}</span>
                                         <div className="flex items-center gap-2">
+                                          {a.mesa_atendimento_id && a.mesa_atendimento_id !== etapa.mesa_atendimento_id && (() => {
+                                            const mesaAtiv = mesas.find(m => m.id === a.mesa_atendimento_id);
+                                            return mesaAtiv ? <Badge variant="secondary" className="text-[10px] bg-purple-100 text-purple-700 border-purple-200">{mesaAtiv.nome}</Badge> : null;
+                                          })()}
                                           <Badge variant="outline" className="text-xs">{a.tipo_responsabilidade}</Badge>
                                           <span className="text-xs text-muted-foreground">{Math.floor(a.horas_estimadas)}h{String(Math.round((a.horas_estimadas % 1) * 60)).padStart(2, "0")}</span>
                                         </div>
