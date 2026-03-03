@@ -170,6 +170,8 @@ export default function PainelAtendimento() {
   const [retomando, setRetomando] = useState(false);
   const [seguindoProjeto, setSeguindoProjeto] = useState(false);
   const [seguindoLoading, setSeguindoLoading] = useState(false);
+  const [seguidoresList, setSeguidoresList] = useState<any[]>([]);
+  const [seguidoresPopupOpen, setSeguidoresPopupOpen] = useState(false);
   // Auto-refresh atrasado status every 60s
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60_000);
@@ -335,6 +337,7 @@ export default function PainelAtendimento() {
   const podeGerenciarApontamento = userPermissions.includes("acao.gerenciar_apontamento");
   const podeVoltarEtapa = userPermissions.includes("acao.voltar_etapa");
   const podeEditarChecklist = userPermissions.includes("acao.editar_checklist");
+  const podeVisualizarSeguidores = userPermissions.includes("acao.visualiza_seguidores_projeto");
 
   // Precompute SLA da Etapa per card (jornada-based) + total checklist items per jornada
   const { data: jornadaSlaMap = {} } = useQuery({
@@ -539,11 +542,12 @@ export default function PainelAtendimento() {
       setChecklistEtapa([]);
       setChecklistProgresso({});
       setSeguindoProjeto(false);
+      setSeguidoresList([]);
       return;
     }
     (async () => {
       // Run ALL card detail queries in parallel
-      const [{ data: coms }, { data: tecs }, { data: likes }, { data: agData }, { data: seguindo }] = await Promise.all([
+      const [{ data: coms }, { data: tecs }, { data: likes }, { data: agData }, { data: seguindo }, { data: allSeguidores }] = await Promise.all([
         supabase
           .from("painel_comentarios")
           .select("id, texto, criado_por, created_at, parent_id, etapa_id")
@@ -566,7 +570,12 @@ export default function PainelAtendimento() {
           .select("id")
           .eq("card_id", detailCard.id)
           .eq("user_id", profile?.user_id || "")
+          .is("unfollowed_at", null)
           .maybeSingle(),
+        (supabase as any)
+          .from("painel_seguidores")
+          .select("user_id, created_at, unfollowed_at")
+          .eq("card_id", detailCard.id),
       ]);
       setComentarios(coms || []);
       setTecnicosSelecionados((tecs || []).map((t: any) => t.tecnico_id));
@@ -579,6 +588,17 @@ export default function PainelAtendimento() {
       setReplyTo(null);
       setCardAgendamentos(agData || []);
       setSeguindoProjeto(!!seguindo);
+      // Resolve follower profiles
+      const segData = allSeguidores || [];
+      if (segData.length > 0) {
+        const uids = segData.map((s: any) => s.user_id);
+        const { data: profs } = await supabase.from("profiles").select("id, user_id, full_name, avatar_url").in("user_id", uids);
+        const profMap: Record<string, any> = {};
+        (profs || []).forEach((p: any) => { profMap[p.user_id] = p; });
+        setSeguidoresList(segData.map((s: any) => ({ ...s, profile: profMap[s.user_id] || null })));
+      } else {
+        setSeguidoresList([]);
+      }
     })();
   }, [detailCard?.id]);
 
@@ -1144,10 +1164,11 @@ export default function PainelAtendimento() {
       if (!currentUser) return;
       const autorNome = profile?.full_name || "Usuário";
 
-      const { data: seguidores } = await supabase
+      const { data: seguidores } = await (supabase as any)
         .from("painel_seguidores")
         .select("user_id")
-        .eq("card_id", cardId);
+        .eq("card_id", cardId)
+        .is("unfollowed_at", null);
 
       if (!seguidores || seguidores.length === 0) return;
 
@@ -2972,13 +2993,24 @@ export default function PainelAtendimento() {
                       setSeguindoLoading(true);
                       try {
                         if (seguindoProjeto) {
-                          await (supabase as any).from("painel_seguidores").delete().eq("card_id", detailCard.id).eq("user_id", profile.user_id);
+                          // Instead of deleting, set unfollowed_at
+                          await (supabase as any).from("painel_seguidores").update({ unfollowed_at: new Date().toISOString() }).eq("card_id", detailCard.id).eq("user_id", profile.user_id);
                           setSeguindoProjeto(false);
+                          setSeguidoresList(prev => prev.map(s => s.user_id === profile.user_id ? { ...s, unfollowed_at: new Date().toISOString() } : s));
                           toast.success("Você deixou de seguir este projeto");
                         } else {
-                          await (supabase as any).from("painel_seguidores").insert({ card_id: detailCard.id, user_id: profile.user_id });
+                          // Check if there's an existing unfollowed record to reactivate
+                          const existing = seguidoresList.find(s => s.user_id === profile.user_id);
+                          if (existing) {
+                            await (supabase as any).from("painel_seguidores").update({ unfollowed_at: null, created_at: new Date().toISOString() }).eq("card_id", detailCard.id).eq("user_id", profile.user_id);
+                            setSeguidoresList(prev => prev.map(s => s.user_id === profile.user_id ? { ...s, unfollowed_at: null, created_at: new Date().toISOString() } : s));
+                          } else {
+                            await (supabase as any).from("painel_seguidores").insert({ card_id: detailCard.id, user_id: profile.user_id });
+                            const { data: myProf } = await supabase.from("profiles").select("id, user_id, full_name, avatar_url").eq("user_id", profile.user_id).maybeSingle();
+                            setSeguidoresList(prev => [...prev, { user_id: profile.user_id, created_at: new Date().toISOString(), unfollowed_at: null, profile: myProf }]);
+                          }
                           setSeguindoProjeto(true);
-                          toast.success("Você está seguindo este projeto! Receberá notificações de comentários e apontamentos.");
+                          toast.success("Você está seguindo este projeto!");
                         }
                       } catch { toast.error("Erro ao alterar seguimento"); }
                       finally { setSeguindoLoading(false); }
@@ -2987,6 +3019,85 @@ export default function PainelAtendimento() {
                     {seguindoProjeto ? "Deixar de Seguir" : "Seguir"}
                   </Button>
                 </div>
+
+                {/* Seguidores */}
+                {seguidoresList.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-muted-foreground font-medium">Seguidores:</span>
+                    <div className="flex items-center -space-x-1.5">
+                      {seguidoresList.filter(s => !s.unfollowed_at).slice(0, 8).map((s: any, i: number) => (
+                        <div
+                          key={i}
+                          className={cn(
+                            "h-6 w-6 rounded-full overflow-hidden border-2 border-background flex items-center justify-center shrink-0 bg-primary text-[8px] font-bold text-primary-foreground",
+                            podeVisualizarSeguidores && "cursor-pointer"
+                          )}
+                          title={s.profile?.full_name || ""}
+                          onClick={() => podeVisualizarSeguidores && setSeguidoresPopupOpen(true)}
+                        >
+                          {s.profile?.avatar_url ? (
+                            <img src={s.profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            (s.profile?.full_name || "?").split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
+                          )}
+                        </div>
+                      ))}
+                      {seguidoresList.filter(s => !s.unfollowed_at).length > 8 && (
+                        <span className="text-[10px] text-muted-foreground ml-2">+{seguidoresList.filter(s => !s.unfollowed_at).length - 8}</span>
+                      )}
+                    </div>
+                    {podeVisualizarSeguidores && (
+                      <button
+                        className="text-[10px] text-primary hover:underline"
+                        onClick={() => setSeguidoresPopupOpen(true)}
+                      >
+                        Ver todos
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Popup Seguidores */}
+                {seguidoresPopupOpen && podeVisualizarSeguidores && (
+                  <Dialog open={seguidoresPopupOpen} onOpenChange={setSeguidoresPopupOpen}>
+                    <DialogContent className="max-w-sm">
+                      <DialogHeader>
+                        <DialogTitle className="text-sm">Seguidores do Projeto</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {seguidoresList.map((s: any, i: number) => {
+                          const ativo = !s.unfollowed_at;
+                          return (
+                            <div key={i} className={cn("flex items-center gap-2.5 p-2 rounded-md border border-border", !ativo && "opacity-50")}>
+                              <div className="h-8 w-8 rounded-full overflow-hidden bg-primary flex items-center justify-center shrink-0 text-xs font-bold text-primary-foreground">
+                                {s.profile?.avatar_url ? (
+                                  <img src={s.profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                                ) : (
+                                  (s.profile?.full_name || "?").split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium truncate">{s.profile?.full_name || "Usuário"}</p>
+                                {ativo ? (
+                                  <p className="text-[10px] text-muted-foreground">
+                                    Seguindo desde {format(new Date(s.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                  </p>
+                                ) : (
+                                  <p className="text-[10px] text-destructive">
+                                    Deixou de seguir em {format(new Date(s.unfollowed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                  </p>
+                                )}
+                              </div>
+                              <Badge variant={ativo ? "default" : "secondary"} className="text-[9px] h-4 px-1.5">
+                                {ativo ? "Seguindo" : "Não segue"}
+                              </Badge>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
 
                 {/* Comentários (thread) */}
                 <div className="space-y-2">
@@ -3253,7 +3364,8 @@ export default function PainelAtendimento() {
                             const { data: seguidores } = await (supabase as any)
                               .from("painel_seguidores")
                               .select("user_id")
-                              .eq("card_id", detailCard.id);
+                              .eq("card_id", detailCard.id)
+                              .is("unfollowed_at", null);
                             for (const seg of (seguidores || [])) {
                               if (seg.user_id === user.id) continue; // don't notify self
                               if (mentionedUserIds.has(seg.user_id)) continue; // already notified via mention
