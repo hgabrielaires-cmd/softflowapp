@@ -2984,7 +2984,7 @@ export default function PainelAtendimento() {
                       finally { setSeguindoLoading(false); }
                     }}
                   >
-                    {seguindoProjeto ? <><BellRing className="h-3 w-3" /> Seguindo</> : <><BellOff className="h-3 w-3" /> Seguir Projeto</>}
+                    {seguindoProjeto ? "Deixar de Seguir" : "Seguir"}
                   </Button>
                 </div>
 
