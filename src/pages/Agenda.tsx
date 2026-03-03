@@ -42,6 +42,7 @@ interface AgendamentoComDetalhes extends Agendamento {
   pausado: boolean;
   iniciado_em: string | null;
   sla_horas: number;
+  prioridade: string | null;
 }
 
 export default function Agenda() {
@@ -72,7 +73,7 @@ export default function Agenda() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("painel_atendimento")
-        .select("id, cliente_id, contrato_id, filial_id, tipo_atendimento_local, status_projeto, pausado, iniciado_em, sla_horas, clientes(nome_fantasia), contratos(numero_exibicao), filiais(nome)");
+        .select("id, cliente_id, contrato_id, pedido_id, filial_id, tipo_atendimento_local, status_projeto, pausado, iniciado_em, sla_horas, clientes(nome_fantasia), contratos(numero_exibicao), filiais(nome)");
       if (error) throw error;
       return data as any[];
     },
@@ -148,10 +149,41 @@ export default function Agenda() {
     return map;
   }, [painelApontamentos]);
 
+  // Fetch highest priority per pedido
+  const PRIORIDADE_PESO: Record<string, number> = { prioridade: 4, urgente: 3, medio: 2, normal: 1 };
+  const PRIORIDADE_DISPLAY: Record<string, { label: string; emoji: string; className: string }> = {
+    prioridade: { label: "Alta Prioridade", emoji: "⚡", className: "bg-purple-100 text-purple-700 border-purple-200" },
+    urgente: { label: "Urgente", emoji: "🔴", className: "bg-red-100 text-red-700 border-red-200" },
+    medio: { label: "Médio", emoji: "🟡", className: "bg-yellow-100 text-yellow-700 border-yellow-200" },
+    normal: { label: "Normal", emoji: "🟢", className: "bg-green-100 text-green-700 border-green-200" },
+  };
+
+  const pedidoIds = useMemo(() => [...new Set(cards.map((c: any) => c.pedido_id).filter(Boolean))], [cards]);
+
+  const { data: pedidoPrioridadeMap = {} } = useQuery({
+    queryKey: ["agenda-pedido-prioridade", pedidoIds.join(",")],
+    enabled: pedidoIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("pedido_comentarios")
+        .select("pedido_id, prioridade")
+        .in("pedido_id", pedidoIds);
+      const map: Record<string, string> = {};
+      (data || []).forEach((r: any) => {
+        const current = map[r.pedido_id];
+        if (!current || (PRIORIDADE_PESO[r.prioridade] || 0) > (PRIORIDADE_PESO[current] || 0)) {
+          map[r.pedido_id] = r.prioridade;
+        }
+      });
+      return map;
+    },
+  });
+
   // Agendamentos enriquecidos
   const agendamentosDetalhados = useMemo<AgendamentoComDetalhes[]>(() => {
     return agendamentos.map((ag) => {
       const card = cardsMap[ag.card_id];
+      const pedidoId = card?.pedido_id;
       return {
         ...ag,
         cliente_nome: card?.clientes?.nome_fantasia || "—",
@@ -166,9 +198,10 @@ export default function Agenda() {
         pausado: card?.pausado || false,
         iniciado_em: card?.iniciado_em || null,
         sla_horas: card?.sla_horas || 0,
+        prioridade: pedidoId ? (pedidoPrioridadeMap[pedidoId] || null) : null,
       };
     });
-  }, [agendamentos, cardsMap, atividadesMap, tecnicosPorCard, apontadosPorCard]);
+  }, [agendamentos, cardsMap, atividadesMap, tecnicosPorCard, apontadosPorCard, pedidoPrioridadeMap]);
 
   // Listas para filtros
   const tecnicosList = useMemo(() => {
@@ -376,6 +409,16 @@ export default function Agenda() {
                               <Badge variant="outline" className={cn("text-xs", statusInfo.color)}>
                                 {statusInfo.label}
                               </Badge>
+                              {(() => {
+                                if (!ag.prioridade || ag.prioridade === "normal") return null;
+                                const display = PRIORIDADE_DISPLAY[ag.prioridade];
+                                if (!display) return null;
+                                return (
+                                  <Badge variant="outline" className={cn("text-xs", display.className)}>
+                                    {display.emoji} {display.label}
+                                  </Badge>
+                                );
+                              })()}
                             </div>
                             <p className="font-medium text-sm text-foreground truncate">{ag.cliente_nome}</p>
                             <p className="text-xs text-muted-foreground">
