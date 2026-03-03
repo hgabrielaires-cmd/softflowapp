@@ -39,7 +39,7 @@ export function MentionInput({
   // Extract mentioned user_ids from text
   const extractMentions = useCallback(
     (text: string): string[] => {
-      const mentionRegex = /@(\w[\w\s]*?)(?=\s@|\s*$|[.,;!?\n])/g;
+      const mentionRegex = /@(\w+)/g;
       const mentioned: string[] = [];
       let match;
       while ((match = mentionRegex.exec(text)) !== null) {
