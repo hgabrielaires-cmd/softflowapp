@@ -190,6 +190,7 @@ export default function Contratos() {
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [filialParametros, setFilialParametros] = useState<Record<string, any>>({});
+  const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [filterFilial, setFilterFilial] = useState("_init_");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -560,7 +561,7 @@ export default function Contratos() {
 
   async function loadData() {
     setLoading(true);
-    const [{ data: contratosData, error: contratosError }, { data: filiaisData }, { data: paramsData }] = await Promise.all([
+    const [{ data: contratosData, error: contratosError }, { data: filiaisData }, { data: paramsData }, { data: profilesData }] = await Promise.all([
       supabase
         .from("contratos")
         .select(`
@@ -583,6 +584,7 @@ export default function Contratos() {
         .order("numero_registro", { ascending: false }),
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
       supabase.from("filial_parametros").select("*"),
+      supabase.from("profiles").select("user_id, full_name").eq("active", true),
     ]);
     if (contratosError) {
       toast.error("Erro ao carregar contratos: " + contratosError.message);
@@ -593,6 +595,10 @@ export default function Contratos() {
     const paramsMap: Record<string, any> = {};
     (paramsData || []).forEach((p: any) => { paramsMap[p.filial_id] = p; });
     setFilialParametros(paramsMap);
+    // Indexar profiles por user_id
+    const pMap: Record<string, string> = {};
+    (profilesData || []).forEach((p: any) => { pMap[p.user_id] = p.full_name; });
+    setProfilesMap(pMap);
     setLoading(false);
 
     // Carregar registros ZapSign
@@ -1124,7 +1130,12 @@ export default function Contratos() {
   function gerarTermoAceite(contrato: Contrato, linkAssinatura?: string, templateOverride?: { conteudo: string }, contatosOverride?: { nome: string; telefone: string | null; decisor: boolean; ativo: boolean }[]): string {
     const pedido = contrato.pedidos;
     const plano = contrato.planos;
+    // FIX #1: Nome do vendedor do pedido, não do usuário logado
+    const nomeVendedorPedido = pedido?.vendedor_id ? (profilesMap[pedido.vendedor_id] || profile?.full_name || "{vendedor}") : (profile?.full_name || "{vendedor}");
     const nomeUsuario = profile?.full_name || "{nome_usuario}";
+    // FIX #3: Saudação baseada no horário
+    const hora = new Date().getHours();
+    const saudacao = hora >= 0 && hora < 12 ? "bom dia" : hora < 18 ? "boa tarde" : "boa noite";
     const nomeFantasia = contrato.clientes?.nome_fantasia || "{nome_fantasia}";
     const razaoSocial = contrato.clientes?.razao_social || "{razao_social}";
     const nomePlano = plano?.nome || "{plano}";
@@ -1235,7 +1246,24 @@ export default function Contratos() {
         if (cOrigem) numeroContratoOrigem = cOrigem.numero_exibicao;
       }
 
+      // FIX #2: Variáveis de desconto (original vs final)
+      const impOriginal = pedido?.valor_implantacao_original ?? 0;
+      const mensOriginal = pedido?.valor_mensalidade_original ?? 0;
+      const descontoImpl = impOriginal - impFinal;
+      const descontoMens = mensOriginal - mensFinal;
+      const implantacaoComDesconto = descontoImpl > 0
+        ? `~${fmtBRL(impOriginal)}~ *${fmtBRL(impFinal)}*`
+        : `*${fmtBRL(impFinal)}*`;
+      const mensalidadeComDesconto = descontoMens > 0
+        ? `~${fmtBRL(mensOriginal)}~ *${fmtBRL(mensFinal)}*`
+        : `*${fmtBRL(mensFinal)}*`;
+
+      // FIX #4: Observações de pagamento do pedido (não formas disponíveis)
+      const obsPagamentoImpl = pedido?.pagamento_implantacao_observacao || "";
+      const obsPagamentoMens = pedido?.pagamento_mensalidade_observacao || "";
+
       return effectiveTemplate.conteudo
+        .replace(/\{saudacao\}/g, saudacao)
         .replace(/\{contato\.nome\}/g, nomeDecisor)
         .replace(/\{nome_decisor\}/g, nomeDecisor)
         .replace(/\{cliente\.nome_fantasia\}/g, nomeFantasia)
@@ -1254,7 +1282,13 @@ export default function Contratos() {
         .replace(/\{valores\.adicionais_anteriores\}/g, valorAdicionaisAnteriores)
         .replace(/\{valores\.total_anterior\}/g, totalAnterior)
         .replace(/\{valores\.implantacao\}/g, fmtBRL(impFinal))
+        .replace(/\{valores\.implantacao_original\}/g, fmtBRL(impOriginal))
+        .replace(/\{valores\.implantacao_com_desconto\}/g, implantacaoComDesconto)
         .replace(/\{valores\.mensalidade\}/g, fmtBRL(pedido?.tipo_pedido === "Upgrade" ? mensalidadeTotalUpgrade : mensFinal))
+        .replace(/\{valores\.mensalidade_original\}/g, fmtBRL(mensOriginal))
+        .replace(/\{valores\.mensalidade_com_desconto\}/g, mensalidadeComDesconto)
+        .replace(/\{valores\.desconto_implantacao\}/g, descontoImpl > 0 ? fmtBRL(descontoImpl) : "")
+        .replace(/\{valores\.desconto_mensalidade\}/g, descontoMens > 0 ? fmtBRL(descontoMens) : "")
         .replace(/\{regras\.mensalidade\}/g, regrasMens)
         .replace(/\{regras\.implantacao\}/g, regrasImpl)
         .replace(/\{formas\.pagamento\}/g, formasPagamento)
@@ -1263,28 +1297,35 @@ export default function Contratos() {
         .replace(/\{servicos\.valor_total\}/g, servicosValorTotal)
         .replace(/\{servicos\.quantidade_total\}/g, servicosQtdTotal)
         .replace(/\{servicos\.tipo_atendimento\}/g, pedido?.tipo_atendimento || "")
-        .replace(/\{pagamento\.observacoes\}/g, pedido?.pagamento_mensalidade_observacao || pedido?.pagamento_implantacao_observacao || "")
+        .replace(/\{pagamento\.observacoes\}/g, obsPagamentoMens || obsPagamentoImpl || "")
         .replace(/\{pagamento\.implantacao\.forma\}/g, pedido?.pagamento_implantacao_forma || "")
         .replace(/\{pagamento\.implantacao\.parcelas\}/g, pedido?.pagamento_implantacao_parcelas ? `${pedido.pagamento_implantacao_parcelas}x` : "")
+        .replace(/\{pagamento\.implantacao\.observacao\}/g, obsPagamentoImpl)
         .replace(/\{pagamento\.mensalidade\.forma\}/g, pedido?.pagamento_mensalidade_forma || "")
         .replace(/\{pagamento\.mensalidade\.parcelas\}/g, pedido?.pagamento_mensalidade_parcelas ? `${pedido.pagamento_mensalidade_parcelas}x` : "")
+        .replace(/\{pagamento\.mensalidade\.observacao\}/g, obsPagamentoMens)
         .replace(/\{desconto\.oa_html\}/g, (() => {
-          const implOrig = pedido?.valor_implantacao_original ?? 0;
-          const implFin = pedido?.valor_implantacao_final ?? 0;
-          const descImpl = implOrig - implFin;
-          if (descImpl <= 0) return "";
-          let txt = `⚡ *Desconto:* ~${fmtBRL(implOrig)}~ → *${fmtBRL(implFin)}* (economia de ${fmtBRL(descImpl)})`;
+          const descImpl2 = impOriginal - impFinal;
+          if (descImpl2 <= 0) return "";
+          let txt = `⚡ *Desconto:* ~${fmtBRL(impOriginal)}~ → *${fmtBRL(impFinal)}* (economia de ${fmtBRL(descImpl2)})`;
           if (pedido?.motivo_desconto) txt += `\n📋 *Motivo:* ${pedido.motivo_desconto}`;
           return txt;
         })())
         .replace(/\{pedido\.observacoes_geral\}/g, pedido?.observacoes || "")
         .replace(/\{empresa\.nome\}/g, "Softplus Tecnologia")
-        .replace(/\{vendedor\.nome\}/g, nomeUsuario)
+        .replace(/\{vendedor\.nome\}/g, nomeVendedorPedido)
         .replace(/\{usuario\.nome\}/g, nomeUsuario);
     }
 
     // Fallback hardcoded
-    return `Olá ${nomeDecisor}, bom dia!
+    const impOrigFb = pedido?.valor_implantacao_original ?? 0;
+    const mensOrigFb = pedido?.valor_mensalidade_original ?? 0;
+    const descImplFb = impOrigFb - impFinal;
+    const descMensFb = mensOrigFb - mensFinal;
+    const obsImplFb = pedido?.pagamento_implantacao_observacao || "";
+    const obsMensFb = pedido?.pagamento_mensalidade_observacao || "";
+
+    return `Olá ${nomeDecisor}, ${saudacao}!
 
 Tudo bem?
 
@@ -1294,7 +1335,7 @@ Primeiro queria agradecer por ter escolhido nosso sistema para auxiliar nos proc
 
 Saiba que vamos nos empenhar ao máximo para que tudo corra como o esperado. ☺️💙
 
-Passando para alinhar o que ficou acertado com nossa equipe:
+Passando para alinhar o que ficou acertado com ${nomeVendedorPedido}:
 
 ☑️ *Módulos Contratados*
 
@@ -1304,13 +1345,13 @@ Valor base do plano: ${valorMensBase}${adicionais.length > 0 ? `\n\n🔘 *ADICIO
 
 *MENSALIDADE TOTAL*
 
-*${fmtBRL(mensFinal)}*
+${descMensFb > 0 ? `~${fmtBRL(mensOrigFb)}~\n` : ""}*${fmtBRL(mensFinal)}*
 
-Valor pré-pago.${regrasMens ? "\n" + regrasMens : ""}
+${obsMensFb || "Valor pré-pago."}${regrasMens ? "\n" + regrasMens : ""}
 
 *IMPLANTAÇÃO E TREINAMENTO*
 
-*${fmtBRL(impFinal)}*${regrasImpl ? "\n" + regrasImpl : ""}${parcelasCartao || pixDesconto > 0 ? `\n\nFormas disponíveis:${parcelasCartao ? `\n- Até ${parcelasCartao}x no cartão sem juros` : ""}${pixDesconto > 0 ? `\n- PIX ${pixDesconto}% desconto` : ""}` : ""}
+${descImplFb > 0 ? `~${fmtBRL(impOrigFb)}~\n` : ""}*${fmtBRL(impFinal)}*${obsImplFb ? "\n" + obsImplFb : ""}${regrasImpl ? "\n" + regrasImpl : ""}
 
 ✍️ *TERMO DE ACEITE:*
 
