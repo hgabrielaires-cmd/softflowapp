@@ -92,6 +92,7 @@ export default function Usuarios() {
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [mesasDisponiveis, setMesasDisponiveis] = useState<MesaOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filiaisLoaded, setFiliaisLoaded] = useState(false);
   const [search, setSearch] = useState("");
   
 
@@ -152,6 +153,7 @@ export default function Usuarios() {
     ]);
     if (fData) setFiliais(fData as Filial[]);
     if (mData) setMesasDisponiveis(mData as MesaOption[]);
+    setFiliaisLoaded(true);
   }
 
   async function loadUsers() {
@@ -198,8 +200,13 @@ export default function Usuarios() {
 
   useEffect(() => {
     loadFiliais();
-    loadUsers();
   }, []);
+
+  useEffect(() => {
+    if (filiaisLoaded) {
+      loadUsers();
+    }
+  }, [filiaisLoaded]);
 
   // ── Enviar WhatsApp de boas-vindas ──────────────────────
   async function enviarWhatsappBoasVindas(nome: string, email: string, senha: string, telefone: string) {
