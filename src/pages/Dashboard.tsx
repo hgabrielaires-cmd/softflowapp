@@ -396,13 +396,21 @@ export default function Dashboard() {
 
   // Computed stats
   const stats = useMemo(() => {
-    const totalPedidos = pedidos.length;
-    const vendasTotal = pedidos.reduce((s, p) => s + (p.valor_total || 0), 0);
-    const valorImplantacao = pedidos.reduce((s, p) => s + (p.valor_implantacao_final || 0), 0);
-    const valorMensal = pedidos.reduce((s, p) => s + (p.valor_mensalidade_final || 0), 0);
+    // Separar cancelados dos ativos
+    const canceladosPedidos = pedidos.filter(p => p.status_pedido === "Cancelado");
+    const canceladosPedidosCount = canceladosPedidos.length;
+    const canceladosPedidosValor = canceladosPedidos.reduce((s, p) => s + (p.valor_total || 0), 0);
+
+    // Pedidos ativos (excluindo cancelados) para todos os KPIs principais
+    const activePedidos = pedidos.filter(p => p.status_pedido !== "Cancelado");
+
+    const totalPedidos = activePedidos.length;
+    const vendasTotal = activePedidos.reduce((s, p) => s + (p.valor_total || 0), 0);
+    const valorImplantacao = activePedidos.reduce((s, p) => s + (p.valor_implantacao_final || 0), 0);
+    const valorMensal = activePedidos.reduce((s, p) => s + (p.valor_mensalidade_final || 0), 0);
 
     let descontosTotal = 0;
-    pedidos.forEach(p => {
+    activePedidos.forEach(p => {
       if (p.desconto_implantacao_tipo === "R$") {
         descontosTotal += p.desconto_implantacao_valor || 0;
       } else if (p.desconto_implantacao_tipo === "%" && p.valor_implantacao_original > 0) {
@@ -415,24 +423,20 @@ export default function Dashboard() {
       }
     });
 
-    const upsellPedidos = pedidos.filter(p => p.tipo_pedido === "Aditivo");
+    const upsellPedidos = activePedidos.filter(p => p.tipo_pedido === "Aditivo");
     const upsellCount = upsellPedidos.length;
     const upsellValor = upsellPedidos.reduce((s, p) => s + (p.valor_total || 0), 0);
 
-    const upgradePedidos = pedidos.filter(p => p.tipo_pedido === "Upgrade");
+    const upgradePedidos = activePedidos.filter(p => p.tipo_pedido === "Upgrade");
     const upgradeCount = upgradePedidos.length;
     const upgradeValor = upgradePedidos.reduce((s, p) => s + (p.valor_total || 0), 0);
-
-    const canceladosPedidos = pedidos.filter(p => p.status_pedido === "Cancelado");
-    const canceladosPedidosCount = canceladosPedidos.length;
-    const canceladosPedidosValor = canceladosPedidos.reduce((s, p) => s + (p.valor_total || 0), 0);
 
     const assinados = contratosInfo.filter(c => c.zapsign_status === "Assinado" && c.contrato_status !== "Encerrado").length;
     const cancelados = contratosInfo.filter(c => c.contrato_status === "Encerrado").length;
     const pendentes = contratosInfo.filter(c => c.contrato_status !== "Encerrado" && (!c.zapsign_status || c.zapsign_status !== "Assinado")).length;
 
     const vendasPorPlano: Record<string, { nome: string; count: number; valor: number; clientes: string[] }> = {};
-    pedidos
+    activePedidos
       .filter(p => p.tipo_pedido === "Novo" || p.tipo_pedido === "Upgrade")
       .forEach(p => {
       const plano = planos.find(pl => pl.id === p.plano_id);
@@ -451,7 +455,7 @@ export default function Dashboard() {
       .sort((a, b) => b.count - a.count);
 
     const porTipo: Record<string, { count: number; clientes: string[] }> = {};
-    pedidos.forEach(p => {
+    activePedidos.forEach(p => {
       const tipo = p.tipo_pedido || "Outro";
       if (!porTipo[tipo]) {
         porTipo[tipo] = { count: 0, clientes: [] };
@@ -465,8 +469,8 @@ export default function Dashboard() {
       .map(([key, val]) => ({ name: traduzirTipo(key), originalKey: key, value: val.count, clientes: val.clientes }))
       .sort((a, b) => b.value - a.value);
 
-    const comissaoImplantacao = pedidos.reduce((s, p) => s + (p.comissao_implantacao_valor || 0), 0);
-    const comissaoMensalidade = pedidos.reduce((s, p) => s + (p.comissao_mensalidade_valor || 0), 0);
+    const comissaoImplantacao = activePedidos.reduce((s, p) => s + (p.comissao_implantacao_valor || 0), 0);
+    const comissaoMensalidade = activePedidos.reduce((s, p) => s + (p.comissao_mensalidade_valor || 0), 0);
 
     return {
       totalPedidos,
