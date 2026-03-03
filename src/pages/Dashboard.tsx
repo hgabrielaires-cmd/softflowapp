@@ -109,6 +109,7 @@ interface ContratoInfo {
   cliente_nome: string;
   zapsign_status: string | null;
   sign_url: string | null;
+  contrato_status: string;
 }
 
 type DialogType = "pedidos" | "upsell" | "upgrade" | "contratos" | "descontos" | "plano" | "tipo" | null;
@@ -341,7 +342,7 @@ export default function Dashboard() {
       if (pedidoIdsDoMes.length > 0) {
         const { data } = await supabase
           .from("contratos")
-          .select("id, numero_exibicao, cliente_id, clientes(nome_fantasia)")
+          .select("id, numero_exibicao, cliente_id, status, clientes(nome_fantasia)")
           .in("pedido_id", pedidoIdsDoMes);
         contratosViaPedidoId = data || [];
       }
@@ -351,7 +352,7 @@ export default function Dashboard() {
       if (contratoIdsFromPedidos.length > 0) {
         const { data } = await supabase
           .from("contratos")
-          .select("id, numero_exibicao, cliente_id, clientes(nome_fantasia)")
+          .select("id, numero_exibicao, cliente_id, status, clientes(nome_fantasia)")
           .in("id", contratoIdsFromPedidos);
         contratosViaContratoId = data || [];
       }
@@ -379,6 +380,7 @@ export default function Dashboard() {
             cliente_nome: c.clientes?.nome_fantasia || "Cliente",
             zapsign_status: zap?.status || null,
             sign_url: zap?.sign_url || null,
+            contrato_status: c.status || "Ativo",
           };
         });
         setContratosInfo(mapped);
@@ -421,8 +423,9 @@ export default function Dashboard() {
     const upgradeCount = upgradePedidos.length;
     const upgradeValor = upgradePedidos.reduce((s, p) => s + (p.valor_total || 0), 0);
 
-    const assinados = contratosInfo.filter(c => c.zapsign_status === "Assinado").length;
-    const pendentes = contratosInfo.filter(c => !c.zapsign_status || c.zapsign_status !== "Assinado").length;
+    const assinados = contratosInfo.filter(c => c.zapsign_status === "Assinado" && c.contrato_status !== "Encerrado").length;
+    const cancelados = contratosInfo.filter(c => c.contrato_status === "Encerrado").length;
+    const pendentes = contratosInfo.filter(c => c.contrato_status !== "Encerrado" && (!c.zapsign_status || c.zapsign_status !== "Assinado")).length;
 
     const vendasPorPlano: Record<string, { nome: string; count: number; valor: number; clientes: string[] }> = {};
     pedidos
@@ -472,6 +475,7 @@ export default function Dashboard() {
       upgradeCount,
       upgradeValor,
       assinados,
+      cancelados,
       pendentes,
       vendasPorPlanoArr,
       porTipoArr,
@@ -780,6 +784,15 @@ export default function Dashboard() {
                   <p className="text-2xl font-bold text-amber-500">{loading ? "..." : stats.pendentes}</p>
                   <p className="text-[10px] text-muted-foreground">Pendentes</p>
                 </div>
+                {stats.cancelados > 0 && (
+                  <>
+                    <div className="h-8 w-px bg-border" />
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-destructive">{loading ? "..." : stats.cancelados}</p>
+                      <p className="text-[10px] text-muted-foreground">Cancelados</p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-2">Contratos</p>
@@ -903,8 +916,12 @@ export default function Dashboard() {
                         <p className="text-sm font-medium text-foreground truncate">{c.cliente_nome}</p>
                         <p className="text-xs text-muted-foreground">Contrato {c.numero_exibicao}</p>
                       </div>
-                      <div className="flex items-center gap-2 ml-3">
-                        {c.zapsign_status === "Assinado" ? (
+                     <div className="flex items-center gap-2 ml-3">
+                        {c.contrato_status === "Encerrado" ? (
+                          <Badge variant="destructive" className="hover:bg-destructive">
+                            ❌ Cancelado
+                          </Badge>
+                        ) : c.zapsign_status === "Assinado" ? (
                           <Badge variant="default" className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100">
                             ✅ Assinado
                           </Badge>
