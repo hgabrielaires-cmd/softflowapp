@@ -1693,18 +1693,21 @@ export type Database = {
           card_id: string
           created_at: string
           id: string
+          unfollowed_at: string | null
           user_id: string
         }
         Insert: {
           card_id: string
           created_at?: string
           id?: string
+          unfollowed_at?: string | null
           user_id: string
         }
         Update: {
           card_id?: string
           created_at?: string
           id?: string
+          unfollowed_at?: string | null
           user_id?: string
         }
         Relationships: [
