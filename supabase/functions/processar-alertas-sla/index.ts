@@ -337,6 +337,7 @@ serve(async (req) => {
           detalhes: {
             recipients: recipients.map((r) => r.profile?.full_name),
             template_id: alerta.template_id,
+            instance_used: alerta.canal === "whatsapp" ? (templateMap[alerta.template_id]?.setor_id && setorInstanceMap[templateMap[alerta.template_id]?.setor_id] || "Softflow_WhatsApp") : null,
             atraso_horas: horasAtrasado.toFixed(2),
           },
         });
