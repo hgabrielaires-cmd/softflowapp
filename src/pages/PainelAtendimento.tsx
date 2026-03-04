@@ -2349,6 +2349,7 @@ export default function PainelAtendimento() {
                         e.stopPropagation();
                         iniciarAtendimento.mutate(detailCard.id);
                         setDetailCard({ ...detailCard, iniciado_em: new Date().toISOString() });
+                        setChecklistEditMode(true);
                       }}
                       disabled={iniciarAtendimento.isPending}
                     >
