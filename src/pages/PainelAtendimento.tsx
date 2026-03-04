@@ -769,7 +769,7 @@ export default function PainelAtendimento() {
       setChecklistProgresso(progressoMap);
       setChecklistLoading(false);
     })();
-  }, [detailCard, etapas]);
+  }, [detailCard?.id, detailCard?.etapa_id, detailCard?.plano_id, detailCard?.jornada_id, etapas]);
 
   // ─── Mutations ───────────────────────────────────────────────────────────
 
@@ -2347,7 +2347,6 @@ export default function PainelAtendimento() {
                         e.stopPropagation();
                         iniciarAtendimento.mutate(detailCard.id);
                         setDetailCard({ ...detailCard, iniciado_em: new Date().toISOString() });
-                        setChecklistEditMode(true);
                       }}
                       disabled={iniciarAtendimento.isPending}
                     >
