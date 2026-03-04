@@ -830,7 +830,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         "hidden lg:flex flex-col flex-shrink-0 bg-sidebar border-r border-sidebar-border transition-all duration-300",
         collapsed ? "w-14" : "w-60"
       )}>
-        <Sidebar collapsed={collapsed} profile={profile} roles={roles} initials={initials} onNavigate={navigate} onSignOut={handleSignOut} />
+        <Sidebar collapsed={collapsed} profile={profile} permissions={permissions} initials={initials} onNavigate={navigate} onSignOut={handleSignOut} />
       </aside>
 
       {/* Mobile Drawer */}
