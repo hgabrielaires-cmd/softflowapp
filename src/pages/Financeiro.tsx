@@ -108,6 +108,8 @@ export default function Financeiro() {
   const [pedidos, setPedidos] = useState<PedidoFila[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 15;
   const [filterFilial, setFilterFilial] = useState("_init_");
   const [filterDe, setFilterDe] = useState("");
   const [filterAte, setFilterAte] = useState("");
