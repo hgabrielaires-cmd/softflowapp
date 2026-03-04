@@ -75,10 +75,11 @@ const App = () => (
             <Route
               path="/usuarios"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <Usuarios />
                 </ProtectedRoute>
               }
+            />
             />
             <Route
               path="/perfil"
