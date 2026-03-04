@@ -2189,6 +2189,7 @@ export type Database = {
           id: string
           is_tecnico: boolean
           is_vendedor: boolean
+          mesa_favorita_id: string | null
           permite_enviar_espelho_whatsapp: boolean
           permitir_cnpj_duplicado: boolean | null
           recebe_comissao: boolean
@@ -2218,6 +2219,7 @@ export type Database = {
           id?: string
           is_tecnico?: boolean
           is_vendedor?: boolean
+          mesa_favorita_id?: string | null
           permite_enviar_espelho_whatsapp?: boolean
           permitir_cnpj_duplicado?: boolean | null
           recebe_comissao?: boolean
@@ -2247,6 +2249,7 @@ export type Database = {
           id?: string
           is_tecnico?: boolean
           is_vendedor?: boolean
+          mesa_favorita_id?: string | null
           permite_enviar_espelho_whatsapp?: boolean
           permitir_cnpj_duplicado?: boolean | null
           recebe_comissao?: boolean
@@ -2268,6 +2271,13 @@ export type Database = {
             columns: ["filial_id"]
             isOneToOne: false
             referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_mesa_favorita_id_fkey"
+            columns: ["mesa_favorita_id"]
+            isOneToOne: false
+            referencedRelation: "mesas_atendimento"
             referencedColumns: ["id"]
           },
         ]
