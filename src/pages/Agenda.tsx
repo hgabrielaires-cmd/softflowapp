@@ -198,6 +198,8 @@ export default function Agenda() {
         filial_id: card?.filial_id || "",
         filial_nome: card?.filiais?.nome || "—",
         atividade_nome: atividadesMap[ag.atividade_id] || "—",
+        titulo_evento: ag.titulo || null,
+        cor_evento: ag.cor_evento || null,
         tecnicos: tecnicosPorCard[ag.card_id] || [],
         apontados: apontadosPorCard[ag.card_id] || [],
         tipo_atendimento: card?.tipo_atendimento_local || null,
