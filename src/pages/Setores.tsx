@@ -146,6 +146,7 @@ export default function Setores() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead>Telefone</TableHead>
+                <TableHead>Instância WhatsApp</TableHead>
                 <TableHead className="w-20 text-center">Ativo</TableHead>
                 <TableHead className="w-20 text-center">Ações</TableHead>
               </TableRow>
