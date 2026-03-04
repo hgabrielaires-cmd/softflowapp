@@ -30,10 +30,32 @@ export default function Perfil() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
 
+  // Fetch mesas do usuário
+  const { data: mesasDoUsuario = [] } = useQuery({
+    queryKey: ["perfil-usuario-mesas", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data: umData } = await supabase
+        .from("usuario_mesas")
+        .select("mesa_id")
+        .eq("user_id", user!.id);
+      const mesaIds = (umData || []).map((r: any) => r.mesa_id);
+      if (mesaIds.length === 0) return [];
+      const { data: mesasData } = await supabase
+        .from("mesas_atendimento")
+        .select("id, nome, cor")
+        .in("id", mesaIds)
+        .eq("ativo", true)
+        .order("nome");
+      return (mesasData || []) as { id: string; nome: string; cor: string | null }[];
+    },
+  });
+
   useEffect(() => {
     if (profile) {
       setName(profile.full_name);
       setAvatarUrl(profile.avatar_url || null);
+      setMesaFavoritaId(profile.mesa_favorita_id || null);
       supabase.from("profiles").select("filial_favorita_id").eq("user_id", profile.user_id).single().then(({ data }) => {
         if (data) setFilialFavoritaId((data as any).filial_favorita_id || null);
       });
