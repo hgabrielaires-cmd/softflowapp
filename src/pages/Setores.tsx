@@ -170,6 +170,7 @@ export default function Setores() {
                     <TableCell className="font-medium">{setor.nome}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{setor.descricao || "—"}</TableCell>
                     <TableCell className="text-sm">{setor.telefone || "—"}</TableCell>
+                    <TableCell className="text-sm font-mono">{setor.instance_name || "—"}</TableCell>
                     <TableCell className="text-center">
                       <Switch
                         checked={setor.ativo}
