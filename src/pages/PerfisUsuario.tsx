@@ -201,7 +201,7 @@ const MENU_SECTIONS: MenuSection[] = [
     icon: <Building2 className="h-4 w-4" />,
     items: MENU_TREE.filter(m =>
       ["menu.filiais", "menu.usuarios", "menu.perfis_usuario", "menu.modelos_contrato",
-       "menu.notificacoes", "menu.integracoes", "menu.jornadas", "menu.mesas_atendimento",
+       "menu.notificacoes", "menu.integracoes", "menu.setores", "menu.jornadas", "menu.mesas_atendimento",
        "menu.etapas_painel", "menu.segmentos"].includes(m.key)
     ),
   },
