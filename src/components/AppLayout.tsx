@@ -555,9 +555,19 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
                         {sol.desconto_mensalidade_valor > 0 && <p>Mensalidade: {sol.desconto_mensalidade_tipo === "%" ? `${sol.desconto_mensalidade_percentual?.toFixed(1)}%` : `R$ ${sol.desconto_mensalidade_valor}`} de desconto {mensFinal != null && `→ R$ ${mensFinal.toFixed(2)}`}</p>}
                       </div>
                     </div>
-                    {clienteId && (
-                      <ClientePlanViewer clienteId={clienteId} clienteNome={clienteNome} variant="icon" className="shrink-0" />
-                    )}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        className="p-1 rounded hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
+                        title="Visualizar pedido"
+                        onClick={(e) => { e.stopPropagation(); loadPedidoDetails(sol.pedido_id, sol); }}
+                        disabled={loadingPedido}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </button>
+                      {clienteId && (
+                        <ClientePlanViewer clienteId={clienteId} clienteNome={clienteNome} variant="icon" className="shrink-0" />
+                      )}
+                    </div>
                   </div>
                   <input type="text" placeholder="Motivo (opcional)" className="w-full text-xs border border-border rounded px-2 py-1 bg-background"
                     value={motivoReprova[sol.id] || ""} onChange={(e) => setMotivoReprova((p) => ({ ...p, [sol.id]: e.target.value }))} />
