@@ -231,6 +231,17 @@ export default function Setores() {
                 placeholder="(00) 00000-0000"
               />
             </div>
+            <div>
+              <label className="text-sm font-medium">Instância WhatsApp (Evolution API)</label>
+              <Input
+                value={form.instance_name}
+                onChange={e => setForm(f => ({ ...f, instance_name: e.target.value }))}
+                placeholder="Ex: Financeiro_WhatsApp"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Nome da instância na Evolution API. Se vazio, usa a instância padrão.
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
