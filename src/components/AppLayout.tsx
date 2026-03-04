@@ -838,7 +838,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="fixed inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
           <div className="fixed left-0 top-0 h-full w-64 bg-sidebar border-r border-sidebar-border z-50">
-            <Sidebar collapsed={false} profile={profile} roles={roles} initials={initials} onNavigate={(p) => { navigate(p); setMobileOpen(false); }} onSignOut={handleSignOut} onMobileClose={() => setMobileOpen(false)} />
+            <Sidebar collapsed={false} profile={profile} permissions={permissions} initials={initials} onNavigate={(p) => { navigate(p); setMobileOpen(false); }} onSignOut={handleSignOut} onMobileClose={() => setMobileOpen(false)} />
           </div>
         </div>
       )}
