@@ -1080,7 +1080,7 @@ export default function Contratos() {
     setEnviandoWhatsapp(true);
     try {
       // Resolver template_id para roteamento de instância
-      const selContrato = selectedContrato;
+      const selContrato = selected;
       const docType = selContrato?.tipo === "OA" ? "ORDEM_ATENDIMENTO"
         : selContrato?.tipo === "Aditivo"
           ? (selContrato?.pedidos?.tipo_pedido === "Upgrade" ? "ADITIVO_UPGRADE" : "ADITIVO_MODULO")

@@ -284,8 +284,13 @@ serve(async (req) => {
               }
             } catch { /* keep */ }
 
+            // Resolve instance name from template's setor
+            const instanceName = template?.setor_id && setorInstanceMap[template.setor_id]
+              ? setorInstanceMap[template.setor_id]
+              : "Softflow_WhatsApp";
+
             try {
-              await fetch(`${baseUrl}/message/sendText/Softflow_WhatsApp`, {
+              await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
