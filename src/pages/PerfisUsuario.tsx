@@ -157,6 +157,10 @@ const MENU_TREE: MenuNode[] = [
     key: "menu.integracoes", label: "Integrações", description: "Configurar integrações externas",
     icon: <Plug className="h-4 w-4" />,
   },
+  {
+    key: "menu.setores", label: "Setores", description: "Gerenciar setores vinculados aos templates de mensagens",
+    icon: <Building2 className="h-4 w-4" />,
+  },
 ];
 
 // Group menus into sections for display
