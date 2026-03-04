@@ -285,9 +285,9 @@ export default function Agenda() {
   // Filtragem
   const agendamentosFiltrados = useMemo(() => {
     return agendamentosDetalhados.filter((ag) => {
-      if (filtroFilial !== "todas" && ag.filial_id !== filtroFilial) return false;
+      if (filtroFilial !== "todas" && filtroFilial !== "_init_" && ag.filial_id !== filtroFilial) return false;
       if (filtroTecnico !== "todos" && !ag.tecnicos.some((t) => t.id === filtroTecnico)) return false;
-      if (filtroMesa !== "todas" && ag.mesa_id !== filtroMesa) return false;
+      if (filtroMesa !== "todas" && filtroMesa !== "_init_" && ag.mesa_id !== filtroMesa) return false;
       if (filtroCliente !== "todos") {
         const card = cardsMap[ag.card_id];
         if (card?.cliente_id !== filtroCliente) return false;
