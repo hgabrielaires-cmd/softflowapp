@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN mesa_favorita_id uuid REFERENCES public.mesas_atendimento(id) ON DELETE SET NULL;

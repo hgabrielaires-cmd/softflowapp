@@ -8,15 +8,17 @@ import { Label } from "@/components/ui/label";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, User, Building2, Shield, Star, KeyRound, Camera } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2, User, Building2, Shield, Star, KeyRound, Camera, Layers } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
 
 export default function Perfil() {
-  const { profile, roles, refreshProfile } = useAuth();
+  const { profile, roles, refreshProfile, user } = useAuth();
   const { filiaisDoUsuario } = useUserFiliais();
   const [name, setName] = useState(profile?.full_name || "");
   const [saving, setSaving] = useState(false);
   const [filialFavoritaId, setFilialFavoritaId] = useState<string | null>(null);
+  const [mesaFavoritaId, setMesaFavoritaId] = useState<string | null>(null);
   const [savingFavorita, setSavingFavorita] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -28,10 +30,32 @@ export default function Perfil() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
 
+  // Fetch mesas do usuário
+  const { data: mesasDoUsuario = [] } = useQuery({
+    queryKey: ["perfil-usuario-mesas", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data: umData } = await supabase
+        .from("usuario_mesas")
+        .select("mesa_id")
+        .eq("user_id", user!.id);
+      const mesaIds = (umData || []).map((r: any) => r.mesa_id);
+      if (mesaIds.length === 0) return [];
+      const { data: mesasData } = await supabase
+        .from("mesas_atendimento")
+        .select("id, nome, cor")
+        .in("id", mesaIds)
+        .eq("ativo", true)
+        .order("nome");
+      return (mesasData || []) as { id: string; nome: string; cor: string | null }[];
+    },
+  });
+
   useEffect(() => {
     if (profile) {
       setName(profile.full_name);
       setAvatarUrl(profile.avatar_url || null);
+      setMesaFavoritaId(profile.mesa_favorita_id || null);
       supabase.from("profiles").select("filial_favorita_id").eq("user_id", profile.user_id).single().then(({ data }) => {
         if (data) setFilialFavoritaId((data as any).filial_favorita_id || null);
       });
@@ -155,6 +179,23 @@ export default function Perfil() {
     } else {
       setFilialFavoritaId(novaFavorita);
       toast.success(novaFavorita ? "Filial favorita definida!" : "Filial favorita removida");
+    }
+    setSavingFavorita(false);
+  }
+
+  async function handleFavoritarMesa(mesaId: string) {
+    if (!profile) return;
+    const novaFavorita = mesaFavoritaId === mesaId ? null : mesaId;
+    setSavingFavorita(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ mesa_favorita_id: novaFavorita } as any)
+      .eq("user_id", profile.user_id);
+    if (error) {
+      toast.error("Erro ao salvar mesa favorita");
+    } else {
+      setMesaFavoritaId(novaFavorita);
+      toast.success(novaFavorita ? "Mesa favorita definida!" : "Mesa favorita removida");
     }
     setSavingFavorita(false);
   }
@@ -304,6 +345,57 @@ export default function Perfil() {
                       type="button"
                       disabled={savingFavorita}
                       onClick={() => handleFavoritar(filial.id)}
+                      title={isFavorita ? "Remover favorita" : "Marcar como favorita"}
+                      className="rounded-full p-1.5 hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      <Star
+                        className={`h-5 w-5 transition-colors ${
+                          isFavorita
+                            ? "text-amber-400 fill-amber-400"
+                            : "text-muted-foreground hover:text-amber-400"
+                        }`}
+                      />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        {/* Mesa favorita */}
+        <div className="bg-card rounded-xl border border-border p-6 shadow-card space-y-4">
+          <div className="flex items-center gap-2">
+            <Layers className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold text-foreground">Mesa Favorita</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            A mesa favorita será pré-selecionada ao abrir a Agenda. Clique na estrela para marcar ou desmarcar.
+          </p>
+
+          {mesasDoUsuario.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma mesa disponível.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {mesasDoUsuario.map((mesa) => {
+                const isFavorita = mesaFavoritaId === mesa.id;
+                return (
+                  <li key={mesa.id} className="flex items-center justify-between py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: mesa.cor || 'hsl(var(--muted-foreground))' }} />
+                      <span className={`text-sm font-medium ${isFavorita ? "text-foreground" : "text-muted-foreground"}`}>
+                        {mesa.nome}
+                      </span>
+                      {isFavorita && (
+                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                          Favorita
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={savingFavorita}
+                      onClick={() => handleFavoritarMesa(mesa.id)}
                       title={isFavorita ? "Remover favorita" : "Marcar como favorita"}
                       className="rounded-full p-1.5 hover:bg-muted transition-colors disabled:opacity-50"
                     >

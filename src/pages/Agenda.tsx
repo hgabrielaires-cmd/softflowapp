@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
@@ -53,14 +53,48 @@ interface AgendamentoComDetalhes extends Agendamento {
 }
 
 export default function Agenda() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const navigate = useNavigate();
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [filtroFilial, setFiltroFilial] = useState<string>("todas");
+  const [filtroFilial, setFiltroFilial] = useState<string>("_init_");
   const [filtroTecnico, setFiltroTecnico] = useState<string>("todos");
-  const [filtroMesa, setFiltroMesa] = useState<string>("todas");
+  const [filtroMesa, setFiltroMesa] = useState<string>("_init_");
   const [filtroCliente, setFiltroCliente] = useState<string>("todos");
+  const [filtersInitialized, setFiltersInitialized] = useState(false);
+
+  // Fetch mesas do usuário para default
+  const { data: mesasDoUsuario = [] } = useQuery({
+    queryKey: ["agenda-usuario-mesas", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("usuario_mesas")
+        .select("mesa_id")
+        .eq("user_id", user!.id);
+      return (data || []).map((r: any) => r.mesa_id) as string[];
+    },
+  });
+
+  // Initialize filters from profile favorites
+  useEffect(() => {
+    if (filtersInitialized) return;
+    if (!profile) return;
+
+    // Filial default
+    const defaultFilial = profile.filial_favorita_id || filialPadraoId || "todas";
+    setFiltroFilial(defaultFilial);
+
+    // Mesa default
+    const defaultMesa = profile.mesa_favorita_id
+      ? profile.mesa_favorita_id
+      : mesasDoUsuario.length === 1
+        ? mesasDoUsuario[0]
+        : "todas";
+    setFiltroMesa(defaultMesa);
+
+    setFiltersInitialized(true);
+  }, [profile, filialPadraoId, mesasDoUsuario, filtersInitialized]);
 
   // Fetch agendamentos
   const { data: agendamentos = [] } = useQuery({
@@ -251,9 +285,9 @@ export default function Agenda() {
   // Filtragem
   const agendamentosFiltrados = useMemo(() => {
     return agendamentosDetalhados.filter((ag) => {
-      if (filtroFilial !== "todas" && ag.filial_id !== filtroFilial) return false;
+      if (filtroFilial !== "todas" && filtroFilial !== "_init_" && ag.filial_id !== filtroFilial) return false;
       if (filtroTecnico !== "todos" && !ag.tecnicos.some((t) => t.id === filtroTecnico)) return false;
-      if (filtroMesa !== "todas" && ag.mesa_id !== filtroMesa) return false;
+      if (filtroMesa !== "todas" && filtroMesa !== "_init_" && ag.mesa_id !== filtroMesa) return false;
       if (filtroCliente !== "todos") {
         const card = cardsMap[ag.card_id];
         if (card?.cliente_id !== filtroCliente) return false;
