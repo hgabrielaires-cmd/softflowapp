@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send, MessageCircle, Globe, Wrench, ShoppingCart, Headphones } from "lucide-react";
+import { TablePagination } from "@/components/TablePagination";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -94,6 +95,8 @@ export default function Usuarios() {
   const [loading, setLoading] = useState(true);
   const [filiaisLoaded, setFiliaisLoaded] = useState(false);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 15;
   
 
   // Create dialog
@@ -483,7 +486,8 @@ export default function Usuarios() {
       u.email.toLowerCase().includes(search.toLowerCase())
   );
 
-
+  // Reset page when search changes
+  useEffect(() => { setCurrentPage(1); }, [search]);
 
 
 
@@ -541,7 +545,7 @@ export default function Usuarios() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((user) => (
+                filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.full_name}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{user.email}</TableCell>
@@ -641,12 +645,13 @@ export default function Usuarios() {
               )}
             </TableBody>
           </Table>
-          {!loading && (
-            <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground flex items-center gap-1.5">
-              <Shield className="h-3.5 w-3.5" />
-              {filtered.length} usuário(s) encontrado(s)
-            </div>
-          )}
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(filtered.length / ITEMS_PER_PAGE)}
+            totalItems={filtered.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
 

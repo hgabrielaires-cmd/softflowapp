@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/table";
 import { CheckCircle, XCircle, Loader2, Filter, Clock, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -107,6 +108,8 @@ export default function Financeiro() {
   const [pedidos, setPedidos] = useState<PedidoFila[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 15;
   const [filterFilial, setFilterFilial] = useState("_init_");
   const [filterDe, setFilterDe] = useState("");
   const [filterAte, setFilterAte] = useState("");
@@ -154,6 +157,9 @@ export default function Financeiro() {
       }
     }
   }, [filialPadraoId, isGlobal, profile?.filial_favorita_id]);
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [filterFilial, filterDe, filterAte]);
 
   if (!canAccess) return <Navigate to="/dashboard" replace />;
 
@@ -291,7 +297,7 @@ export default function Financeiro() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((pedido) => (
+                filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((pedido) => (
                   <TableRow key={pedido.id}>
                     <TableCell className="font-mono text-xs font-semibold text-primary">{pedido.numero_exibicao || "—"}</TableCell>
                     <TableCell className="font-medium">{pedido.clientes?.nome_fantasia || "—"}</TableCell>
@@ -379,6 +385,13 @@ export default function Financeiro() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(filtered.length / ITEMS_PER_PAGE)}
+            totalItems={filtered.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
 
