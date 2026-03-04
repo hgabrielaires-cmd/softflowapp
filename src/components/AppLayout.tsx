@@ -413,7 +413,7 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     setLoadingPedido(false);
   }
 
-
+  async function loadNotificacoes() {
     if (!profile?.user_id) return;
     // Fetch user roles for role-based notifications
     const { data: userRolesData } = await supabase.from("user_roles").select("role").eq("user_id", profile.user_id);
