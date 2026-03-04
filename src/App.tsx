@@ -80,7 +80,6 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            />
             <Route
               path="/perfil"
               element={
