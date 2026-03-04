@@ -176,6 +176,7 @@ export function MessageTemplates() {
       conteudo: form.conteudo,
       descricao: form.descricao.trim() || null,
       ativo: form.ativo,
+      setor_id: form.setor_id || null,
     };
 
     if (editingTemplate) {
