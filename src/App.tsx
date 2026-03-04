@@ -180,7 +180,7 @@ const App = () => (
             <Route
               path="/dre"
               element={
-                <ProtectedRoute requiredRole="financeiro">
+                <ProtectedRoute>
                   <ComingSoon module="Financeiro" title="DRE" description="Em desenvolvimento. Demonstrativo de Resultado do Exercício." />
                 </ProtectedRoute>
               }
