@@ -373,6 +373,9 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
   const [criadoPorProfiles, setCriadoPorProfiles] = useState<Record<string, { full_name: string; avatar_url: string | null }>>({});
   const [notifLiked, setNotifLiked] = useState(false);
   const [likesUsers, setLikesUsers] = useState<{ name: string; avatar: string | null }[]>([]);
+  const [viewingPedidoData, setViewingPedidoData] = useState<any>(null);
+  const [viewingPedidoSol, setViewingPedidoSol] = useState<SolicitacaoDesconto | null>(null);
+  const [loadingPedido, setLoadingPedido] = useState(false);
 
   const isAdmin = roles.includes("admin");
   const isGestor = isAdmin || (profile as any)?.gestor_desconto === true;
