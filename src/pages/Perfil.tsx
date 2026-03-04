@@ -13,11 +13,12 @@ import { Loader2, User, Building2, Shield, Star, KeyRound, Camera, Layers } from
 import { UserAvatar } from "@/components/UserAvatar";
 
 export default function Perfil() {
-  const { profile, roles, refreshProfile } = useAuth();
+  const { profile, roles, refreshProfile, user } = useAuth();
   const { filiaisDoUsuario } = useUserFiliais();
   const [name, setName] = useState(profile?.full_name || "");
   const [saving, setSaving] = useState(false);
   const [filialFavoritaId, setFilialFavoritaId] = useState<string | null>(null);
+  const [mesaFavoritaId, setMesaFavoritaId] = useState<string | null>(null);
   const [savingFavorita, setSavingFavorita] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
