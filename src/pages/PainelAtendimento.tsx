@@ -2692,7 +2692,7 @@ export default function PainelAtendimento() {
                                           size="sm"
                                           variant={prog.concluido ? 'default' : 'outline'}
                                           className="h-7 text-[11px]"
-                                          disabled={!checklistEditMode}
+                                          disabled={!checklistEnabled}
                                           onClick={() => saveChecklistItem(atividade.id, cIdx, { concluido: !prog.concluido })}
                                         >
                                           <Paperclip className="h-3 w-3 mr-1" />
