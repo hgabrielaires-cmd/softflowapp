@@ -436,7 +436,9 @@ export default function Agenda() {
                                 );
                               })()}
                             </div>
-                            <p className="font-medium text-sm text-foreground truncate">{ag.cliente_nome}</p>
+                            <p className="font-medium text-sm text-foreground truncate">
+                              {ag.titulo_evento || ag.cliente_nome}
+                            </p>
                             <p className="text-xs text-muted-foreground">
                               Contrato: {ag.contrato_numero} · {ag.atividade_nome}
                             </p>
