@@ -460,17 +460,41 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
           {/* Instances list */}
           {instances.length > 0 && (
             <div className="rounded-lg border border-border p-4 space-y-2">
-              <Label className="text-sm font-medium">Instâncias encontradas</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Instâncias encontradas ({instances.length})</Label>
+                <Button variant="ghost" size="sm" onClick={fetchInstances} className="h-7">
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Atualizar
+                </Button>
+              </div>
               <div className="space-y-1">
                 {instances.map((inst: any, i: number) => {
-                  const name = inst?.instance?.instanceName || inst?.instanceName || `Instância ${i + 1}`;
-                  const state = inst?.instance?.state || inst?.state || "unknown";
+                  const name = inst?.instance?.instanceName || inst?.instanceName || inst?.name || `Instância ${i + 1}`;
+                  const state = inst?.instance?.state || inst?.state || inst?.connectionStatus || "unknown";
+                  const isOpen = state === "open" || state === "connected";
+                  const isClosed = state === "close" || state === "closed" || state === "disconnected";
                   return (
                     <div key={i} className="flex items-center justify-between text-sm py-1.5 px-2 rounded hover:bg-muted/50">
                       <span className="font-mono text-xs">{name}</span>
-                      <Badge variant={state === "open" ? "default" : "outline"} className="text-[10px]">
-                        {state === "open" ? "Conectado" : state === "close" ? "Desconectado" : state}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={isOpen ? "default" : "outline"} className="text-[10px]">
+                          {isOpen ? "Conectado" : isClosed ? "Desconectado" : state}
+                        </Badge>
+                        {!isOpen && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-[10px]"
+                            onClick={() => {
+                              setNewInstanceName(name);
+                              handleConnectQr(name);
+                            }}
+                          >
+                            <QrCode className="h-3 w-3 mr-1" />
+                            Conectar
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
