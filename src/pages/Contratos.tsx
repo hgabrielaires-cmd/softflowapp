@@ -780,9 +780,19 @@ export default function Contratos() {
           zapsign_doc_token: zData.doc_token,
           status: "Enviado",
           signers: zData.signers || [],
-          sign_url: zData.signers?.[0]?.sign_url || null,
+          sign_url: zData.signers?.[zData.signers.length - 1]?.sign_url || null,
         },
       }));
+
+      // PDF foi apagado do storage pelo backend — limpar referência local
+      const contratoSemPdf = { ...updatedContrato, pdf_url: null };
+      setContratos((prev) =>
+        prev.map((c) => (c.id === contrato.id ? contratoSemPdf : c))
+      );
+      if (selected?.id === contrato.id) {
+        setSelected(contratoSemPdf);
+      }
+      setZapsignPopupContrato(contratoSemPdf);
 
       // PASSO 3: Auto enviar WhatsApp
       setZapsignPopupStep("whatsapp");
