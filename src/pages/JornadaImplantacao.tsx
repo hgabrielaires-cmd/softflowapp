@@ -628,7 +628,7 @@ export default function JornadaImplantacao() {
                         <div className="flex items-center justify-center gap-1">
                           <Button variant="ghost" size="icon" title="Visualizar" onClick={() => openView(j)}><Eye className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" title="Editar" onClick={() => openEdit(j)}><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" title="Excluir" onClick={() => deleteMutation.mutate(j.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          <Button variant="ghost" size="icon" title="Excluir" onClick={() => setDeleteConfirmId(j.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </div>
                       </TableCell>
                     </TableRow>
