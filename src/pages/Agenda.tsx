@@ -398,7 +398,14 @@ export default function Agenda() {
                     const statusInfo = getStatusInfo();
 
                     return (
-                      <div key={ag.id} className="border rounded-lg p-3 hover:bg-accent/50 transition-colors">
+                      <div
+                        key={ag.id}
+                        className="border rounded-lg p-3 hover:bg-accent/50 transition-colors"
+                        style={{
+                          borderLeftWidth: ag.cor_evento ? '4px' : undefined,
+                          borderLeftColor: ag.cor_evento || undefined,
+                        }}
+                      >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
