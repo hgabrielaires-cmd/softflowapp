@@ -258,6 +258,7 @@ export function MessageTemplates() {
               <TableHead>Nome</TableHead>
               <TableHead>Canal</TableHead>
               <TableHead>Categoria</TableHead>
+              <TableHead>Setor</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Atualizado</TableHead>
               <TableHead className="text-right">Ações</TableHead>
