@@ -106,6 +106,7 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
   const [serverUrl, setServerUrl] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [newInstanceName, setNewInstanceName] = useState("");
 
   // QR code / connection state
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -113,6 +114,7 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
   const [loadingQr, setLoadingQr] = useState(false);
   const [loadingState, setLoadingState] = useState(false);
   const [creatingInstance, setCreatingInstance] = useState(false);
+  const [instances, setInstances] = useState<any[]>([]);
 
   useEffect(() => {
     if (config) {
