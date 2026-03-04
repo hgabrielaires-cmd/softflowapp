@@ -53,7 +53,7 @@ interface AgendamentoComDetalhes extends Agendamento {
 }
 
 export default function Agenda() {
-  const { profile, user } = useAuth();
+  const { profile, user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
