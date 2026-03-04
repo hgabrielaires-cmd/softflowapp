@@ -258,7 +258,7 @@ function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSign
                             </button>
                           </CollapsibleTrigger>
                           <CollapsibleContent className="space-y-0.5 overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-                            {item.children.map((child) => {
+                            {visibleChildren.map((child) => {
                               const cActive = location.pathname === child.to || location.pathname.startsWith(child.to + "/");
                               return (
                                 <NavLink key={child.to} to={child.to} onClick={onMobileClose}
