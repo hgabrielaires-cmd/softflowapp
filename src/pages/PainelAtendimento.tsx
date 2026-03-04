@@ -2654,7 +2654,7 @@ export default function PainelAtendimento() {
                                         <Input
                                           className="h-7 text-xs"
                                           placeholder="Digite aqui..."
-                                           disabled={!checklistEditMode}
+                                           disabled={!checklistEnabled}
                                           value={prog.valor_texto || ''}
                                           onChange={(e) => {
                                             const val = e.target.value;
