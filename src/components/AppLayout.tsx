@@ -808,6 +808,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const { profile, roles, signOut } = useAuth();
+  const { permissions } = useMenuPermissions(roles);
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
