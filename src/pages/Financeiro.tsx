@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
+import { useMenuPermissions } from "@/hooks/useMenuPermissions";
 import { Navigate } from "react-router-dom";
 import { Filial } from "@/lib/supabase-types";
 import { PedidoComentarios } from "@/components/PedidoComentarios";
