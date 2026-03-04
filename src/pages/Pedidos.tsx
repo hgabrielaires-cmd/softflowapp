@@ -1465,15 +1465,16 @@ export default function Pedidos() {
                     "Desconto Aprovado",
                     "Cancelado",
                   ];
-                  const canEditVendedor = isVendedor && pedido.vendedor_id === profile?.user_id
+                   const canEditVendedor = isVendedor && pedido.vendedor_id === profile?.user_id
                     && isReprovado
                     && !temContratoVigente
                     && !statusBloqueadoVendedor.includes(pedido.status_pedido);
-                  const canEditAdmin = isAdmin && !temContratoVigente && pedido.status_pedido !== "Cancelado";
-                  const canEdit = canEditAdmin || canEditVendedor;
+                   const canEditAdmin = isAdmin && !temContratoVigente && pedido.status_pedido !== "Cancelado";
+                   const canEditCrud = crudEditar && !temContratoVigente && pedido.status_pedido !== "Cancelado";
+                   const canEdit = canEditAdmin || canEditVendedor || canEditCrud;
 
-                  // Cancelar: apenas admin (sem contrato vigente); vendedor nunca cancela
-                  const canCancel = isAdmin && pedido.status_pedido !== "Cancelado" && !temContratoVigente;
+                   // Cancelar: admin ou perfil com permissão de excluir (sem contrato vigente)
+                   const canCancel = (isAdmin || crudExcluir) && pedido.status_pedido !== "Cancelado" && !temContratoVigente;
 
                   const vendedorNome = vendedores.find((v) => v.user_id === pedido.vendedor_id)?.full_name || "—";
                   const filialNome = (pedido as any).filiais?.nome || filiais.find(f => f.id === pedido.filial_id)?.nome || "—";
