@@ -1036,6 +1036,7 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
       toast.error("Erro ao curtir");
     }
   }
+}
 
 // ─── AppLayout ────────────────────────────────────────────────────────────────
 
