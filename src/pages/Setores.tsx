@@ -64,7 +64,7 @@ export default function Setores() {
 
   function openEdit(setor: Setor) {
     setEditando(setor);
-    setForm({ nome: setor.nome, descricao: setor.descricao || "", telefone: setor.telefone || "" });
+    setForm({ nome: setor.nome, descricao: setor.descricao || "", telefone: setor.telefone || "", instance_name: setor.instance_name || "" });
     setDialogOpen(true);
   }
 
