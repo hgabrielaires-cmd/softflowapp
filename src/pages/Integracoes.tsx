@@ -37,7 +37,7 @@ interface IntegrationDef {
   hasEvolutionApi?: boolean;
 }
 
-const INSTANCE_NAME = "Softflow_WhatsApp";
+const DEFAULT_INSTANCE_NAME = "Softflow_WhatsApp";
 
 const integrationDefs: IntegrationDef[] = [
   {
