@@ -1,0 +1,1 @@
+ALTER TABLE public.setores ADD COLUMN instance_name text DEFAULT NULL;
