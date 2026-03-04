@@ -251,7 +251,7 @@ const App = () => (
             <Route
               path="/etapas-painel"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <EtapasPainel />
                 </ProtectedRoute>
               }
