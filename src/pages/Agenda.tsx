@@ -253,13 +253,14 @@ export default function Agenda() {
     return agendamentosDetalhados.filter((ag) => {
       if (filtroFilial !== "todas" && ag.filial_id !== filtroFilial) return false;
       if (filtroTecnico !== "todos" && !ag.tecnicos.some((t) => t.id === filtroTecnico)) return false;
+      if (filtroMesa !== "todas" && ag.mesa_id !== filtroMesa) return false;
       if (filtroCliente !== "todos") {
         const card = cardsMap[ag.card_id];
         if (card?.cliente_id !== filtroCliente) return false;
       }
       return true;
     });
-  }, [agendamentosDetalhados, filtroFilial, filtroTecnico, filtroCliente, cardsMap]);
+  }, [agendamentosDetalhados, filtroFilial, filtroTecnico, filtroMesa, filtroCliente, cardsMap]);
 
   // Agendamentos do dia selecionado
   const agendamentosDoDia = useMemo(() => {
