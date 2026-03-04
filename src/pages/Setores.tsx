@@ -58,7 +58,7 @@ export default function Setores() {
 
   function openNew() {
     setEditando(null);
-    setForm({ nome: "", descricao: "", telefone: "" });
+    setForm({ nome: "", descricao: "", telefone: "", instance_name: "" });
     setDialogOpen(true);
   }
 
