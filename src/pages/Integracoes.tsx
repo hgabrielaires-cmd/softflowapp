@@ -439,7 +439,7 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleCreateInstance}
+                onClick={() => handleCreateInstance()}
                 disabled={creatingInstance || !serverUrl.trim() || !token.trim()}
               >
                 {creatingInstance ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
