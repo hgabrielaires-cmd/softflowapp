@@ -40,6 +40,8 @@ interface AgendamentoComDetalhes extends Agendamento {
   filial_id: string;
   filial_nome: string;
   atividade_nome: string;
+  titulo_evento: string | null;
+  cor_evento: string | null;
   tecnicos: { id: string; full_name: string; avatar_url: string | null }[];
   apontados: { id: string; full_name: string; avatar_url: string | null }[];
   tipo_atendimento: string | null;
