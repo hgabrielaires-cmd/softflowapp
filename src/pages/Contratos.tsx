@@ -1079,11 +1079,28 @@ export default function Contratos() {
 
     setEnviandoWhatsapp(true);
     try {
+      // Resolver template_id para roteamento de instância
+      const selContrato = selectedContrato;
+      const docType = selContrato?.tipo === "OA" ? "ORDEM_ATENDIMENTO"
+        : selContrato?.tipo === "Aditivo"
+          ? (selContrato?.pedidos?.tipo_pedido === "Upgrade" ? "ADITIVO_UPGRADE" : "ADITIVO_MODULO")
+          : selContrato?.tipo === "Cancelamento" ? "CANCELAMENTO"
+          : "CONTRATO_BASE";
+      const { data: docTplEnvio } = await supabase
+        .from("document_templates")
+        .select("message_template_id")
+        .eq("tipo", docType)
+        .eq("ativo", true)
+        .not("message_template_id", "is", null)
+        .limit(1)
+        .maybeSingle();
+
       const { data, error } = await supabase.functions.invoke("evolution-api", {
         body: {
           action: "send_text",
           number: decisor.telefone,
           text: mensagem,
+          template_id: docTplEnvio?.message_template_id || undefined,
         },
       });
 

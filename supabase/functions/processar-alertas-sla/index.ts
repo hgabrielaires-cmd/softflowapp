@@ -106,15 +106,28 @@ serve(async (req) => {
 
     const whatsappEnabled = whatsappConfig?.ativo && whatsappConfig?.server_url && whatsappConfig?.token;
 
-    // 6. Get templates
+    // 6. Get templates (including setor_id for instance routing)
     const templateIds = [...new Set(alertas.map((a: any) => a.template_id).filter(Boolean))];
     let templateMap: Record<string, any> = {};
     if (templateIds.length > 0) {
       const { data: templates } = await supabase
         .from("message_templates")
-        .select("id, conteudo, tipo")
+        .select("id, conteudo, tipo, setor_id")
         .in("id", templateIds);
       (templates || []).forEach((t: any) => { templateMap[t.id] = t; });
+    }
+
+    // 6b. Resolve instance_name from setor for each template
+    const setorIds = [...new Set(Object.values(templateMap).map((t: any) => t.setor_id).filter(Boolean))];
+    let setorInstanceMap: Record<string, string> = {};
+    if (setorIds.length > 0) {
+      const { data: setores } = await supabase
+        .from("setores")
+        .select("id, instance_name")
+        .in("id", setorIds);
+      (setores || []).forEach((s: any) => {
+        if (s.instance_name) setorInstanceMap[s.id] = s.instance_name;
+      });
     }
 
     // 7. Get profile info for usuario_ids referenced in alerts
