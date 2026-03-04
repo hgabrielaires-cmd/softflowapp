@@ -1,4 +1,5 @@
 import { ReactNode, useState, useEffect } from "react";
+import { useMenuPermissions } from "@/hooks/useMenuPermissions";
 import iconSoftflow from "@/assets/icon-softflow.png";
 import logoSoftflowBranca from "@/assets/logo-softflow-branca.png";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
