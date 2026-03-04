@@ -4,16 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Clock } from "lucide-react";
+import { CalendarDays, Clock, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 interface Agendamento {
   id?: string;
-  data: string; // YYYY-MM-DD
+  data: string;
   hora_inicio?: string | null;
   hora_fim?: string | null;
   observacao?: string | null;
@@ -24,16 +23,20 @@ interface Props {
   atividadeId: string;
   checklistIndex: number;
   disabled?: boolean;
+  mesaId?: string | null;
+  mesaCor?: string | null;
+  filialId?: string | null;
+  etapaId?: string | null;
+  titulo?: string | null;
   onUpdate?: (hasAgendamentos: boolean) => void;
 }
 
-export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disabled, onUpdate }: Props) {
+export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disabled, mesaId, mesaCor, filialId, etapaId, titulo, onUpdate }: Props) {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [loading, setLoading] = useState(true);
   const [popoverOpen, setPopoverOpen] = useState(false);
 
-  // Load existing agendamentos
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -61,7 +64,6 @@ export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disa
 
   async function handleSelectDates(dates: Date[] | undefined) {
     if (!dates) return;
-    // Filter out past dates (before today)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const filtered = dates.filter(d => d >= today);
@@ -71,17 +73,13 @@ export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disa
   async function confirmarDatas() {
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Find dates to add (not in current agendamentos)
     const currentDatesSet = new Set(agendamentos.map(a => a.data));
     const selectedDatesStr = selectedDates.map(d => format(d, "yyyy-MM-dd"));
     const selectedSet = new Set(selectedDatesStr);
 
-    // Dates to add
     const toAdd = selectedDatesStr.filter(d => !currentDatesSet.has(d));
-    // Dates to remove
     const toRemove = agendamentos.filter(a => !selectedSet.has(a.data));
 
-    // Insert new
     if (toAdd.length > 0) {
       const { error } = await supabase.from("painel_agendamentos").insert(
         toAdd.map(data => ({
@@ -90,12 +88,16 @@ export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disa
           checklist_index: checklistIndex,
           data,
           criado_por: user?.id || null,
+          mesa_id: mesaId || null,
+          filial_id: filialId || null,
+          etapa_id: etapaId || null,
+          titulo: titulo || null,
+          cor_evento: mesaCor || null,
         }))
       );
       if (error) { toast.error("Erro ao salvar agendamentos"); return; }
     }
 
-    // Remove deleted
     if (toRemove.length > 0) {
       const ids = toRemove.filter(a => a.id).map(a => a.id!);
       if (ids.length > 0) {
@@ -103,7 +105,6 @@ export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disa
       }
     }
 
-    // Reload
     const { data } = await supabase
       .from("painel_agendamentos")
       .select("*")
@@ -124,7 +125,6 @@ export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disa
       onUpdate?.(data.length > 0);
     }
 
-    // Also mark checklist item as concluido
     await supabase.from("painel_checklist_progresso").upsert({
       card_id: cardId,
       atividade_id: atividadeId,
@@ -151,7 +151,6 @@ export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disa
       setSelectedDates(updated.map(a => new Date(a.data + "T12:00:00")));
       onUpdate?.(updated.length > 0);
 
-      // Update checklist progress
       (async () => {
         const { data: { user } } = await supabase.auth.getUser();
         await supabase.from("painel_checklist_progresso").upsert({
@@ -174,7 +173,6 @@ export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disa
 
   return (
     <div className="space-y-2 pl-1 w-full">
-      {/* Add dates button */}
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
         <PopoverTrigger asChild>
           <Button variant="outline" size="sm" className="h-7 text-xs gap-1" disabled={disabled}>
@@ -208,11 +206,17 @@ export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disa
         </PopoverContent>
       </Popover>
 
-      {/* List of agendamentos */}
       {agendamentos.length > 0 && (
         <div className="space-y-1.5">
           {agendamentos.map((ag) => (
-            <div key={ag.id} className="flex items-center gap-2 bg-muted/50 rounded px-2 py-1.5 text-xs">
+            <div
+              key={ag.id}
+              className="flex items-center gap-2 rounded px-2 py-1.5 text-xs"
+              style={{
+                backgroundColor: mesaCor ? `${mesaCor}15` : undefined,
+                borderLeft: mesaCor ? `3px solid ${mesaCor}` : undefined,
+              }}
+            >
               <CalendarDays className="h-3 w-3 text-primary shrink-0" />
               <span className="font-medium min-w-[70px]">
                 {format(new Date(ag.data + "T12:00:00"), "dd/MM/yyyy")}

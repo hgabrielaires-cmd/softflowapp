@@ -1085,7 +1085,7 @@ export default function PainelAtendimento() {
           if (jornadaEtapa && jornadaEtapa.length > 0) {
             const { data: atv } = await supabase
               .from("jornada_atividades")
-              .select("id, nome, horas_estimadas, checklist, mesa_atendimento_id, mesas_atendimento:mesa_atendimento_id(nome)")
+              .select("id, nome, horas_estimadas, checklist, mesa_atendimento_id, mesas_atendimento:mesa_atendimento_id(id, nome, cor)")
               .eq("etapa_id", jornadaEtapa[0].id)
               .order("ordem");
             atividades = atv || [];
