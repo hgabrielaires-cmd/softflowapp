@@ -31,9 +31,14 @@ export function TablePagination({ currentPage, totalPages, totalItems, itemsPerP
 
   return (
     <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-      <span className="text-sm text-muted-foreground">
-        {start}–{end} de {totalItems}
-      </span>
+      <div className="flex flex-col gap-0.5">
+        <span className="text-sm text-muted-foreground">
+          {start}–{end} de {totalItems}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          Página {currentPage} de {totalPages}
+        </span>
+      </div>
       <div className="flex items-center gap-1">
         <Button variant="ghost" size="icon" className="h-8 w-8" disabled={currentPage === 1} onClick={() => onPageChange(1)}>
           <ChevronsLeft className="h-4 w-4" />

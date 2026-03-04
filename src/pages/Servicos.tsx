@@ -12,6 +12,9 @@ import { Plus, Pencil, Trash2, Search, Wrench } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { TablePagination } from "@/components/TablePagination";
+
+const PAGE_SIZE = 15;
 
 interface Servico {
   id: string;
@@ -28,19 +31,31 @@ const Servicos = () => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Servico | null>(null);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [form, setForm] = useState({ nome: "", descricao: "", valor: "", unidade_medida: "unidade" });
 
-  const { data: servicos = [], isLoading } = useQuery({
-    queryKey: ["servicos"],
+  const { data: result, isLoading } = useQuery({
+    queryKey: ["servicos", currentPage, search],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = (currentPage - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      let query = supabase
         .from("servicos")
-        .select("*")
-        .order("nome");
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false });
+      if (search) {
+        const q = `%${search}%`;
+        query = query.or(`nome.ilike.${q},descricao.ilike.${q}`);
+      }
+      const { data, count, error } = await query.range(from, to);
       if (error) throw error;
-      return data as Servico[];
+      return { items: data as Servico[], total: count || 0 };
     },
   });
+
+  const servicos = result?.items || [];
+  const totalCount = result?.total || 0;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -95,12 +110,6 @@ const Servicos = () => {
     setOpen(true);
   };
 
-  const filtered = servicos.filter(
-    (s) =>
-      s.nome.toLowerCase().includes(search.toLowerCase()) ||
-      (s.descricao && s.descricao.toLowerCase().includes(search.toLowerCase()))
-  );
-
   const formatCurrency = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -122,7 +131,7 @@ const Servicos = () => {
           <Input
             placeholder="Buscar serviço..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
             className="pl-9"
           />
         </div>
@@ -146,14 +155,14 @@ const Servicos = () => {
                     Carregando...
                   </TableCell>
                 </TableRow>
-              ) : filtered.length === 0 ? (
+              ) : servicos.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     Nenhum serviço encontrado.
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((s) => (
+                servicos.map((s) => (
                   <TableRow key={s.id}>
                     <TableCell className="font-medium">{s.nome}</TableCell>
                     <TableCell className="text-muted-foreground max-w-[300px] truncate">
@@ -189,6 +198,13 @@ const Servicos = () => {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalCount}
+            itemsPerPage={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
 
