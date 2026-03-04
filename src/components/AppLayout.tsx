@@ -556,9 +556,14 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      {clienteId && (
-                        <ClientePlanViewer clienteId={clienteId} clienteNome={clienteNome} variant="icon" className="shrink-0" />
-                      )}
+                      <button
+                        className="p-1 rounded hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
+                        title="Visualizar pedido"
+                        onClick={(e) => { e.stopPropagation(); loadPedidoDetails(sol.pedido_id, sol); }}
+                        disabled={loadingPedido}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
                   <input type="text" placeholder="Motivo (opcional)" className="w-full text-xs border border-border rounded px-2 py-1 bg-background"
