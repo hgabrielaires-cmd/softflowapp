@@ -59,6 +59,7 @@ export default function Agenda() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [filtroFilial, setFiltroFilial] = useState<string>("todas");
   const [filtroTecnico, setFiltroTecnico] = useState<string>("todos");
+  const [filtroMesa, setFiltroMesa] = useState<string>("todas");
   const [filtroCliente, setFiltroCliente] = useState<string>("todos");
 
   // Fetch agendamentos
