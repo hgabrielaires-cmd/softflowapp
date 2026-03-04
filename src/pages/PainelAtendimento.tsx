@@ -2963,8 +2963,13 @@ export default function PainelAtendimento() {
                             />
                           </div>
                           {ag.jornada_atividades?.nome && (
-                            <span className="text-[10px] text-muted-foreground truncate max-w-[120px]" title={ag.jornada_atividades.nome}>
+                            <span className="text-[10px] text-muted-foreground truncate max-w-[200px]" title={ag.jornada_atividades.nome}>
                               {ag.jornada_atividades.nome}
+                            </span>
+                          )}
+                          {ag.painel_etapas?.nome && (
+                            <span className="text-[10px] font-medium truncate max-w-[120px] shrink-0" style={{ color: ag.painel_etapas.cor || undefined }} title={ag.painel_etapas.nome}>
+                              {ag.painel_etapas.nome}
                             </span>
                           )}
                           {!configLocked && (
