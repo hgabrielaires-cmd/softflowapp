@@ -254,6 +254,7 @@ function applyAcrescimo(original: number, tipo: "R$" | "%", valor: number): numb
 export default function Pedidos() {
   const { user, profile, roles, isAdmin } = useAuth();
   const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais, loading: loadingFiliais } = useUserFiliais();
+  const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("pedidos", roles);
   const isFinanceiro = roles.includes("financeiro");
   const isVendedor = roles.includes("vendedor");
   const isTecnico = roles.includes("tecnico") && !isAdmin && !isFinanceiro && !isVendedor;
