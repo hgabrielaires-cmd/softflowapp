@@ -345,9 +345,49 @@ export default function Agenda() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <Select value={filtroMesa} onValueChange={setFiltroMesa}>
+                <SelectTrigger className="w-[180px] h-9">
+                  <Layers className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                  <SelectValue placeholder="Mesa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas as Mesas</SelectItem>
+                  {mesas.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      <span className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: m.cor || 'hsl(var(--muted-foreground))' }} />
+                        {m.nome}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
+
+        {/* Legenda de Mesas */}
+        {mesas.length > 0 && (
+          <div className="flex items-center gap-3 flex-wrap px-1">
+            <span className="text-xs font-medium text-muted-foreground">Mesas:</span>
+            {mesas.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setFiltroMesa(filtroMesa === m.id ? "todas" : m.id)}
+                className={cn(
+                  "flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer",
+                  filtroMesa === m.id
+                    ? "border-primary bg-primary/10 text-primary font-medium"
+                    : "border-border text-muted-foreground hover:bg-accent"
+                )}
+              >
+                <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: m.cor || 'hsl(var(--muted-foreground))' }} />
+                {m.nome}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Layout: Calendário + Lista */}
         <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4">
