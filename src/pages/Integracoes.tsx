@@ -477,50 +477,75 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
             )}
           </div>
 
-          {/* Instances list */}
-          {instances.length > 0 && (
-            <div className="rounded-lg border border-border p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Instâncias encontradas ({instances.length})</Label>
-                <Button variant="ghost" size="sm" onClick={fetchInstances} className="h-7">
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Atualizar
-                </Button>
-              </div>
-              <div className="space-y-1">
-                {instances.map((inst: any, i: number) => {
-                  const name = inst?.instance?.instanceName || inst?.instanceName || inst?.name || `Instância ${i + 1}`;
-                  const state = inst?.instance?.state || inst?.state || inst?.connectionStatus || "unknown";
-                  const isOpen = state === "open" || state === "connected";
-                  const isClosed = state === "close" || state === "closed" || state === "disconnected";
-                  return (
-                    <div key={i} className="flex items-center justify-between text-sm py-1.5 px-2 rounded hover:bg-muted/50">
-                      <span className="font-mono text-xs">{name}</span>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={isOpen ? "default" : "outline"} className="text-[10px]">
-                          {isOpen ? "Conectado" : isClosed ? "Desconectado" : state}
-                        </Badge>
-                        {!isOpen && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-[10px]"
-                            onClick={() => {
-                              setNewInstanceName(name);
-                              handleConnectQr(name);
-                            }}
-                          >
-                            <QrCode className="h-3 w-3 mr-1" />
-                            Conectar
-                          </Button>
-                        )}
+          {/* Instances list - merged from Evolution API + Setores */}
+          {(() => {
+            const apiNames = new Set<string>();
+            const mergedItems: { name: string; state: string; setor?: string; fromApi: boolean }[] = [];
+            instances.forEach((inst: any, i: number) => {
+              const name = inst?.instance?.instanceName || inst?.instanceName || inst?.name || `Instância ${i + 1}`;
+              const state = inst?.instance?.state || inst?.state || inst?.connectionStatus || "unknown";
+              apiNames.add(name);
+              const setor = setoresInstances.find(s => s.instance_name === name);
+              mergedItems.push({ name, state, setor: setor?.nome, fromApi: true });
+            });
+            setoresInstances.forEach(s => {
+              if (!apiNames.has(s.instance_name)) {
+                mergedItems.push({ name: s.instance_name, state: "not_created", setor: s.nome, fromApi: false });
+              }
+            });
+            if (mergedItems.length === 0) return null;
+            return (
+              <div className="rounded-lg border border-border p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Instâncias ({mergedItems.length})</Label>
+                  <Button variant="ghost" size="sm" onClick={() => { fetchInstances(); fetchSetoresInstances(); }} className="h-7">
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Atualizar
+                  </Button>
+                </div>
+                <div className="space-y-1">
+                  {mergedItems.map((item, i) => {
+                    const isOpen = item.state === "open" || item.state === "connected";
+                    const isClosed = item.state === "close" || item.state === "closed" || item.state === "disconnected";
+                    const isNotCreated = item.state === "not_created";
+                    return (
+                      <div key={i} className="flex items-center justify-between text-sm py-1.5 px-2 rounded hover:bg-muted/50">
+                        <div className="flex flex-col">
+                          <span className="font-mono text-xs">{item.name}</span>
+                          {item.setor && (
+                            <span className="text-[10px] text-muted-foreground">Setor: {item.setor}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={isOpen ? "default" : "outline"} className="text-[10px]">
+                            {isOpen ? "Conectado" : isNotCreated ? "Não criada" : isClosed ? "Desconectado" : item.state}
+                          </Badge>
+                          {!isOpen && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-[10px]"
+                              onClick={() => {
+                                setNewInstanceName(item.name);
+                                if (isNotCreated) {
+                                  handleCreateInstance();
+                                } else {
+                                  handleConnectQr(item.name);
+                                }
+                              }}
+                            >
+                              <QrCode className="h-3 w-3 mr-1" />
+                              {isNotCreated ? "Criar" : "Conectar"}
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
