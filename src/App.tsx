@@ -75,7 +75,7 @@ const App = () => (
             <Route
               path="/usuarios"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <Usuarios />
                 </ProtectedRoute>
               }
@@ -115,7 +115,7 @@ const App = () => (
             <Route
               path="/filiais"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <Filiais />
                 </ProtectedRoute>
               }
@@ -131,7 +131,7 @@ const App = () => (
             <Route
               path="/planos"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <Planos />
                 </ProtectedRoute>
               }
@@ -163,7 +163,7 @@ const App = () => (
             <Route
               path="/receitas"
               element={
-                <ProtectedRoute requiredRole="financeiro">
+                <ProtectedRoute>
                   <ComingSoon module="Financeiro" title="Receitas" description="Em desenvolvimento. Lançamento e controle de receitas." />
                 </ProtectedRoute>
               }
@@ -171,7 +171,7 @@ const App = () => (
             <Route
               path="/despesas"
               element={
-                <ProtectedRoute requiredRole="financeiro">
+                <ProtectedRoute>
                   <ComingSoon module="Financeiro" title="Despesas" description="Em desenvolvimento. Lançamento e controle de despesas." />
                 </ProtectedRoute>
               }
@@ -179,7 +179,7 @@ const App = () => (
             <Route
               path="/dre"
               element={
-                <ProtectedRoute requiredRole="financeiro">
+                <ProtectedRoute>
                   <ComingSoon module="Financeiro" title="DRE" description="Em desenvolvimento. Demonstrativo de Resultado do Exercício." />
                 </ProtectedRoute>
               }
@@ -187,7 +187,7 @@ const App = () => (
             <Route
               path="/notificacoes"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <Notificacoes />
                 </ProtectedRoute>
               }
@@ -195,7 +195,7 @@ const App = () => (
             <Route
               path="/modelos-contrato"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <ModelosContrato />
                 </ProtectedRoute>
               }
@@ -203,7 +203,7 @@ const App = () => (
             <Route
               path="/perfis-usuario"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <PerfisUsuario />
                 </ProtectedRoute>
               }
@@ -219,7 +219,7 @@ const App = () => (
             <Route
               path="/servicos"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <Servicos />
                 </ProtectedRoute>
               }
@@ -227,7 +227,7 @@ const App = () => (
             <Route
               path="/integracoes"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <Integracoes />
                 </ProtectedRoute>
               }
@@ -235,7 +235,7 @@ const App = () => (
             <Route
               path="/jornadas"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <JornadaImplantacao />
                 </ProtectedRoute>
               }
@@ -243,7 +243,7 @@ const App = () => (
             <Route
               path="/mesas-atendimento"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <MesasAtendimento />
                 </ProtectedRoute>
               }
@@ -251,7 +251,7 @@ const App = () => (
             <Route
               path="/etapas-painel"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <EtapasPainel />
                 </ProtectedRoute>
               }
