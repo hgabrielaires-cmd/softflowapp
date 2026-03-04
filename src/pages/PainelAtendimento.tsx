@@ -2634,7 +2634,7 @@ export default function PainelAtendimento() {
                                         cardId={detailCard.id}
                                         atividadeId={atividade.id}
                                         checklistIndex={cIdx}
-                                        disabled={!checklistEditMode}
+                                        disabled={!checklistEnabled}
                                         mesaId={atividade.mesas_atendimento?.id || etapaMesaInfo?.id || null}
                                         mesaCor={atividade.mesas_atendimento?.cor || etapaMesaInfo?.cor || null}
                                         filialId={detailCard.filial_id}
