@@ -302,7 +302,7 @@ serve(async (req) => {
                   text,
                 }),
               });
-              console.log(`[SLA] WhatsApp enviado para ${profile.full_name} (${formattedNumber}) - nível ${alerta.nivel}`);
+              console.log(`[SLA] WhatsApp enviado para ${profile.full_name} (${formattedNumber}) via instância "${instanceName}" - nível ${alerta.nivel}`);
             } catch (err) {
               console.error(`[SLA] Erro WhatsApp para ${profile.full_name}:`, err);
             }
