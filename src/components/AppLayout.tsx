@@ -373,6 +373,9 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
   const [criadoPorProfiles, setCriadoPorProfiles] = useState<Record<string, { full_name: string; avatar_url: string | null }>>({});
   const [notifLiked, setNotifLiked] = useState(false);
   const [likesUsers, setLikesUsers] = useState<{ name: string; avatar: string | null }[]>([]);
+  const [viewingPedidoData, setViewingPedidoData] = useState<any>(null);
+  const [viewingPedidoSol, setViewingPedidoSol] = useState<SolicitacaoDesconto | null>(null);
+  const [loadingPedido, setLoadingPedido] = useState(false);
 
   const isAdmin = roles.includes("admin");
   const isGestor = isAdmin || (profile as any)?.gestor_desconto === true;
@@ -392,7 +395,25 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     setSolicitacoes(enriched as SolicitacaoDesconto[]);
   }
 
-  async function loadNotificacoes() {
+  async function loadPedidoDetails(pedidoId: string, sol: SolicitacaoDesconto) {
+    setLoadingPedido(true);
+    try {
+      const { data } = await supabase
+        .from("pedidos")
+        .select("*, clientes(nome_fantasia), planos(nome), filiais:filial_id(nome)")
+        .eq("id", pedidoId)
+        .single();
+      if (data) {
+        setViewingPedidoData(data);
+        setViewingPedidoSol(sol);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar pedido:", err);
+    }
+    setLoadingPedido(false);
+  }
+
+
     if (!profile?.user_id) return;
     // Fetch user roles for role-based notifications
     const { data: userRolesData } = await supabase.from("user_roles").select("role").eq("user_id", profile.user_id);
@@ -534,9 +555,19 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
                         {sol.desconto_mensalidade_valor > 0 && <p>Mensalidade: {sol.desconto_mensalidade_tipo === "%" ? `${sol.desconto_mensalidade_percentual?.toFixed(1)}%` : `R$ ${sol.desconto_mensalidade_valor}`} de desconto {mensFinal != null && `→ R$ ${mensFinal.toFixed(2)}`}</p>}
                       </div>
                     </div>
-                    {clienteId && (
-                      <ClientePlanViewer clienteId={clienteId} clienteNome={clienteNome} variant="icon" className="shrink-0" />
-                    )}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        className="p-1 rounded hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
+                        title="Visualizar pedido"
+                        onClick={(e) => { e.stopPropagation(); loadPedidoDetails(sol.pedido_id, sol); }}
+                        disabled={loadingPedido}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </button>
+                      {clienteId && (
+                        <ClientePlanViewer clienteId={clienteId} clienteNome={clienteNome} variant="icon" className="shrink-0" />
+                      )}
+                    </div>
                   </div>
                   <input type="text" placeholder="Motivo (opcional)" className="w-full text-xs border border-border rounded px-2 py-1 bg-background"
                     value={motivoReprova[sol.id] || ""} onChange={(e) => setMotivoReprova((p) => ({ ...p, [sol.id]: e.target.value }))} />
@@ -726,6 +757,168 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
               <Trash2 className="h-3.5 w-3.5" /> Excluir
             </Button>
           </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Dialog Visualizar Pedido (from discount approval) */}
+    <Dialog open={!!viewingPedidoData} onOpenChange={(v) => { if (!v) { setViewingPedidoData(null); setViewingPedidoSol(null); } }}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Eye className="h-4 w-4" /> Visualizar Pedido
+            {viewingPedidoData?.numero_exibicao && <span className="ml-auto font-mono text-sm text-primary">{viewingPedidoData.numero_exibicao}</span>}
+          </DialogTitle>
+        </DialogHeader>
+        {viewingPedidoData && (() => {
+          const vp = viewingPedidoData;
+          const fmtBRL = (v: number) => v?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00";
+          const impFinal = vp.valor_implantacao_final ?? vp.valor_implantacao;
+          const mensFinal = vp.valor_mensalidade_final ?? vp.valor_mensalidade;
+          const adicionais = (vp.modulos_adicionais || []) as any[];
+          const sol = viewingPedidoSol;
+          return (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-0.5">
+                  <p className="text-xs text-muted-foreground">Cliente</p>
+                  <p className="font-medium">{vp.clientes?.nome_fantasia || "—"}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs text-muted-foreground">Plano</p>
+                  <p className="font-medium">{vp.planos?.nome || "—"}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs text-muted-foreground">Filial</p>
+                  <p>{vp.filiais?.nome || "—"}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs text-muted-foreground">Vendedor</p>
+                  <p>{(sol?.profiles as any)?.full_name || "—"}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs text-muted-foreground">Tipo</p>
+                  <p>{vp.tipo_pedido || "Novo"}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs text-muted-foreground">Data</p>
+                  <p>{new Date(vp.created_at).toLocaleDateString("pt-BR")}</p>
+                </div>
+              </div>
+
+              {/* Itens do Pedido */}
+              {(vp.tipo_pedido === "Novo" || vp.tipo_pedido === "Upgrade") && vp.planos?.nome && (
+                <div className="border-t border-border pt-3 space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">📋 Itens do Pedido</p>
+                  <div className="bg-muted/50 rounded-md p-2.5 space-y-1">
+                    <p className="text-xs font-medium">{vp.tipo_pedido === "Upgrade" ? "⬆️ Upgrade de Plano" : "📦 Plano Contratado"}</p>
+                    <p className="text-sm font-semibold">{vp.planos?.nome}</p>
+                    <div className="flex gap-4 text-xs text-muted-foreground">
+                      <span>Impl: <span className="font-mono">{fmtBRL(vp.valor_implantacao_original ?? vp.valor_implantacao)}</span></span>
+                      <span>Mens: <span className="font-mono">{fmtBRL(vp.valor_mensalidade_original ?? vp.valor_mensalidade)}</span></span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Módulos Adicionais */}
+              {adicionais.length > 0 && (
+                <div className="bg-muted/50 rounded-md p-2.5 space-y-1.5">
+                  <p className="text-xs font-medium">➕ Módulos Adicionais</p>
+                  {adicionais.map((m: any) => (
+                    <div key={m.modulo_id} className="flex justify-between text-xs">
+                      <span>{m.nome} {m.quantidade > 1 ? `(x${m.quantidade})` : ""}</span>
+                      <div className="flex gap-3 font-mono text-muted-foreground">
+                        <span>Impl: {fmtBRL(m.valor_implantacao_modulo * m.quantidade)}</span>
+                        <span>Mens: {fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Serviços OA */}
+              {vp.tipo_pedido === "OA" && (() => {
+                const servicos = (vp.servicos_pedido || []) as any[];
+                if (servicos.length === 0) return null;
+                return (
+                  <div className="bg-muted/50 rounded-md p-2.5 space-y-1.5">
+                    <p className="text-xs font-medium">🔧 Serviços (OA)</p>
+                    {servicos.map((s: any, idx: number) => (
+                      <div key={idx} className="flex justify-between text-xs">
+                        <span>{s.nome} — {s.quantidade}x {s.unidade_medida || "un."}</span>
+                        <span className="font-mono text-muted-foreground">{fmtBRL(s.valor_unitario * s.quantidade)}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* Desconto aplicado pelo vendedor */}
+              {sol && (sol.desconto_implantacao_valor > 0 || sol.desconto_mensalidade_valor > 0) && (
+                <div className="border-t border-border pt-3 space-y-1.5">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                    <Percent className="h-3 w-3" /> Desconto Solicitado pelo Vendedor
+                  </p>
+                  <div className="bg-amber-50 border border-amber-200 rounded-md p-2.5 space-y-1">
+                    {sol.desconto_implantacao_valor > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Implantação</span>
+                        <span className="font-medium">
+                          {sol.desconto_implantacao_tipo === "%" ? `${sol.desconto_implantacao_percentual?.toFixed(1)}%` : `R$ ${sol.desconto_implantacao_valor.toFixed(2)}`} de desconto
+                          {" → "}<span className="font-mono font-semibold">{fmtBRL(impFinal)}</span>
+                        </span>
+                      </div>
+                    )}
+                    {sol.desconto_mensalidade_valor > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Mensalidade</span>
+                        <span className="font-medium">
+                          {sol.desconto_mensalidade_tipo === "%" ? `${sol.desconto_mensalidade_percentual?.toFixed(1)}%` : `R$ ${sol.desconto_mensalidade_valor.toFixed(2)}`} de desconto
+                          {" → "}<span className="font-mono font-semibold">{fmtBRL(mensFinal)}</span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Valores finais */}
+              <div className="border-t border-border pt-3 grid grid-cols-3 gap-3">
+                <div className="space-y-0.5">
+                  <p className="text-xs text-muted-foreground">Implantação</p>
+                  <p className="font-mono font-semibold">{fmtBRL(impFinal)}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs text-muted-foreground">Mensalidade</p>
+                  <p className="font-mono font-semibold">{fmtBRL(mensFinal)}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs text-muted-foreground">Total</p>
+                  <p className="font-mono font-bold text-primary">{fmtBRL(vp.valor_total)}</p>
+                </div>
+              </div>
+
+              {/* Motivo desconto */}
+              {vp.motivo_desconto && (
+                <div className="border-t border-border pt-3 space-y-0.5">
+                  <p className="text-xs text-muted-foreground">Motivo do Desconto</p>
+                  <p className="text-xs">{vp.motivo_desconto}</p>
+                </div>
+              )}
+
+              {/* Observações */}
+              {vp.observacoes && (
+                <div className="border-t border-border pt-3 space-y-0.5">
+                  <p className="text-xs text-muted-foreground">Observações</p>
+                  <p className="text-xs">{vp.observacoes}</p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+        <div className="flex justify-end pt-2">
+          <Button variant="outline" size="sm" onClick={() => { setViewingPedidoData(null); setViewingPedidoSol(null); }}>Fechar</Button>
         </div>
       </DialogContent>
     </Dialog>
