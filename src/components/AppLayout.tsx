@@ -738,12 +738,56 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      await supabase.from("painel_comentarios").insert({
-        card_id: selectedNotif.metadata.card_id,
-        parent_id: selectedNotif.metadata.comentario_id,
+
+      const cardId = selectedNotif.metadata.card_id;
+      const parentId = selectedNotif.metadata.comentario_id;
+      const texto = replyText.trim();
+
+      // Insert the reply comment
+      const { data: insertedComment } = await supabase.from("painel_comentarios").insert({
+        card_id: cardId,
+        parent_id: parentId,
         criado_por: user.id,
-        texto: replyText.trim(),
-      });
+        texto,
+      }).select("id").single();
+
+      // Notify the original commenter
+      const { data: parentComment } = await supabase
+        .from("painel_comentarios")
+        .select("criado_por")
+        .eq("id", parentId)
+        .single();
+
+      if (parentComment && parentComment.criado_por !== user.id) {
+        // Get client name for context
+        const { data: card } = await supabase
+          .from("painel_atendimento")
+          .select("cliente_id, clientes(nome_fantasia)")
+          .eq("id", cardId)
+          .single();
+
+        const clienteNome = (card as any)?.clientes?.nome_fantasia || "projeto";
+        const meuNome = profile.full_name?.split(" ")[0] || "Alguém";
+
+        // Find original commenter's user_id (profile.id -> user_id)
+        const { data: autorProfile } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("id", parentComment.criado_por)
+          .single();
+
+        if (autorProfile?.user_id) {
+          await supabase.from("notificacoes").insert({
+            titulo: `💬 ${meuNome} respondeu seu comentário`,
+            mensagem: `${meuNome} respondeu seu comentário no projeto ${clienteNome}: "${texto.slice(0, 100)}${texto.length > 100 ? "..." : ""}"`,
+            tipo: "info",
+            criado_por: user.id,
+            destinatario_user_id: autorProfile.user_id,
+            metadata: { card_id: cardId, comentario_id: insertedComment?.id || parentId },
+          });
+        }
+      }
+
       toast.success("Resposta enviada!");
       setReplyText("");
     } catch {
