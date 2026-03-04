@@ -159,11 +159,20 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
     if (!serverUrl.trim() || !token.trim()) return;
     try {
       const data = await callEvolutionApi("fetch_instances");
+      console.log("fetch_instances response:", JSON.stringify(data));
+      // Evolution API can return array directly or nested
+      let list: any[] = [];
       if (Array.isArray(data)) {
-        setInstances(data);
+        list = data;
+      } else if (data?.instances && Array.isArray(data.instances)) {
+        list = data.instances;
+      } else if (typeof data === "object" && data !== null) {
+        // Single instance object
+        list = [data];
       }
-    } catch {
-      // silent
+      setInstances(list);
+    } catch (err) {
+      console.error("fetchInstances error:", err);
     }
   }
 
