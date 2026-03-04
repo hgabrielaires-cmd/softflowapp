@@ -229,14 +229,14 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
     }
   }
 
-  async function handleConnectQr() {
+  async function handleConnectQr(instanceName?: string) {
     if (!serverUrl.trim() || !token.trim()) {
       toast.error("Preencha o servidor e a API Key primeiro.");
       return;
     }
     setLoadingQr(true);
     try {
-      const data = await callEvolutionApi("connect");
+      const data = await callEvolutionApi("connect", instanceName);
       const qr = data?.base64 || data?.qrcode?.base64 || null;
       if (qr) {
         setQrCode(qr);
