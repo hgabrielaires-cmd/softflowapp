@@ -76,6 +76,7 @@ export default function Setores() {
       nome: form.nome.trim(),
       descricao: form.descricao.trim() || null,
       telefone: form.telefone.trim() || null,
+      instance_name: form.instance_name.trim() || null,
     };
 
     if (editando) {
