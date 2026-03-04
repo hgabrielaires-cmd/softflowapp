@@ -217,12 +217,12 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
     }
   }
 
-  async function handleCreateInstance() {
+  async function handleCreateInstance(overrideName?: string) {
     if (!serverUrl.trim() || !token.trim()) {
       toast.error("Preencha o servidor e a API Key primeiro.");
       return;
     }
-    const instanceToCreate = newInstanceName.trim() || DEFAULT_INSTANCE_NAME;
+    const instanceToCreate = overrideName || newInstanceName.trim() || DEFAULT_INSTANCE_NAME;
     setCreatingInstance(true);
     try {
       const { data, error } = await supabase.functions.invoke("evolution-api", {
@@ -247,7 +247,7 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
       }
       await fetchInstances();
     } catch (err: any) {
-      if (err.message?.includes("already") || err.message?.includes("exists")) {
+      if (err.message?.includes("already") || err.message?.includes("exists") || err.message?.includes("in use")) {
         toast.info("Instância já existe. Buscando QR Code...");
         await handleConnectQr(instanceToCreate);
       } else {
@@ -439,7 +439,7 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleCreateInstance}
+                onClick={() => handleCreateInstance()}
                 disabled={creatingInstance || !serverUrl.trim() || !token.trim()}
               >
                 {creatingInstance ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
@@ -528,7 +528,7 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
                               onClick={() => {
                                 setNewInstanceName(item.name);
                                 if (isNotCreated) {
-                                  handleCreateInstance();
+                                  handleCreateInstance(item.name);
                                 } else {
                                   handleConnectQr(item.name);
                                 }
