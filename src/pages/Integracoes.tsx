@@ -193,25 +193,34 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
       toast.error("Preencha o servidor e a API Key primeiro.");
       return;
     }
+    const instanceToCreate = newInstanceName.trim() || DEFAULT_INSTANCE_NAME;
     setCreatingInstance(true);
     try {
-      const data = await callEvolutionApi("create_instance");
-      toast.success("Instância criada com sucesso!");
+      const { data, error } = await supabase.functions.invoke("evolution-api", {
+        body: {
+          action: "create_instance",
+          server_url: serverUrl.trim(),
+          api_key: token.trim(),
+          instance_name: instanceToCreate,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
 
-      // Check if QR code came back in create response
+      toast.success(`Instância "${instanceToCreate}" criada!`);
+
       const qr = data?.qrcode?.base64 || data?.base64 || null;
       if (qr) {
         setQrCode(qr);
         setConnectionState("connecting");
       } else {
-        // Try to connect to get QR
-        await handleConnectQr();
+        await handleConnectQr(instanceToCreate);
       }
+      await fetchInstances();
     } catch (err: any) {
-      // If instance already exists, try connecting
       if (err.message?.includes("already") || err.message?.includes("exists")) {
         toast.info("Instância já existe. Buscando QR Code...");
-        await handleConnectQr();
+        await handleConnectQr(instanceToCreate);
       } else {
         toast.error("Erro ao criar instância: " + err.message);
       }
