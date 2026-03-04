@@ -2522,6 +2522,7 @@ export default function PainelAtendimento() {
                 const checklistPercent = totalItens > 0 ? Math.round((totalConcluidos / totalItens) * 100) : 0;
                 const isCongelado = !detailCard.iniciado_em;
                 const isIniciado = !!detailCard.iniciado_em;
+                const checklistEnabled = isIniciado || checklistEditMode;
                 return (
                   <div className="rounded-lg border border-border bg-card p-3 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)]">
                     <div className="flex items-center justify-between mb-2">
