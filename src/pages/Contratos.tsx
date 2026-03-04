@@ -844,6 +844,7 @@ export default function Contratos() {
             action: "send_text",
             number: decisorContato.telefone,
             text: mensagem,
+            template_id: docTemplate?.message_template_id || undefined,
           },
         });
 
