@@ -53,7 +53,7 @@ interface AgendamentoComDetalhes extends Agendamento {
 }
 
 export default function Agenda() {
-  const { profile, user } = useAuth();
+  const { profile, user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -133,15 +133,20 @@ export default function Agenda() {
     },
   });
 
-  // Fetch mesas de atendimento
+  // Fetch mesas de atendimento (filtradas por acesso do usuário)
   const { data: mesas = [] } = useQuery({
-    queryKey: ["agenda-mesas"],
+    queryKey: ["agenda-mesas", isAdmin, isGlobal, mesasDoUsuario],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("mesas_atendimento")
         .select("id, nome, cor")
         .eq("ativo", true)
         .order("nome");
+      // Se não é admin/global e tem mesas vinculadas, filtrar
+      if (!isAdmin && !isGlobal && mesasDoUsuario.length > 0) {
+        query = query.in("id", mesasDoUsuario);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as { id: string; nome: string; cor: string | null }[];
     },
@@ -282,9 +287,18 @@ export default function Agenda() {
     return Array.from(map.entries()).map(([id, nome]) => ({ id, nome }));
   }, [agendamentosDetalhados, cardsMap]);
 
+  // IDs das mesas acessíveis (para filtro de segurança client-side)
+  const mesaIdsPermitidos = useMemo(() => {
+    if (isAdmin || isGlobal) return null; // sem restrição
+    if (mesasDoUsuario.length === 0) return null; // sem vínculo = sem restrição (fallback)
+    return new Set(mesasDoUsuario);
+  }, [isAdmin, isGlobal, mesasDoUsuario]);
+
   // Filtragem
   const agendamentosFiltrados = useMemo(() => {
     return agendamentosDetalhados.filter((ag) => {
+      // Segurança: restringir por mesas do usuário
+      if (mesaIdsPermitidos && ag.mesa_id && !mesaIdsPermitidos.has(ag.mesa_id)) return false;
       if (filtroFilial !== "todas" && filtroFilial !== "_init_" && ag.filial_id !== filtroFilial) return false;
       if (filtroTecnico !== "todos" && !ag.tecnicos.some((t) => t.id === filtroTecnico)) return false;
       if (filtroMesa !== "todas" && filtroMesa !== "_init_" && ag.mesa_id !== filtroMesa) return false;
@@ -294,7 +308,7 @@ export default function Agenda() {
       }
       return true;
     });
-  }, [agendamentosDetalhados, filtroFilial, filtroTecnico, filtroMesa, filtroCliente, cardsMap]);
+  }, [agendamentosDetalhados, filtroFilial, filtroTecnico, filtroMesa, filtroCliente, cardsMap, mesaIdsPermitidos]);
 
   // Agendamentos do dia selecionado
   const agendamentosDoDia = useMemo(() => {
