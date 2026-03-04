@@ -151,7 +151,12 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
       },
     });
     if (error) throw new Error(error.message || "Erro na comunicação");
-    if (data?.error) throw new Error(data.error);
+    if (data?.error) {
+      // Include details in error message for better matching
+      const details = data?.details?.response?.message;
+      const detailStr = Array.isArray(details) ? details.join(", ") : typeof details === "string" ? details : "";
+      throw new Error(detailStr || data.error);
+    }
     return data;
   }
 
