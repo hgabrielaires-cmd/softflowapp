@@ -93,6 +93,7 @@ const VARIAVEIS_DISPONIVEIS = [
 export function MessageTemplates() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
+  const [setores, setSetores] = useState<Setor[]>([]);
   const [loading, setLoading] = useState(true);
   const [openEditor, setOpenEditor] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -106,6 +107,7 @@ export function MessageTemplates() {
     conteudo: "",
     descricao: "",
     ativo: true,
+    setor_id: "" as string,
   });
 
   async function loadData() {
