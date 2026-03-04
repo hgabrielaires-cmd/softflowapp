@@ -31,14 +31,14 @@ interface NavSubItem {
   icon: ReactNode;
   label: string;
   to: string;
-  roles?: AppRole[];
+  permKey?: string; // maps to role_permissions.permissao
   children?: NavSubItem[];
 }
 
 interface NavGroup {
   groupLabel: string;
   groupIcon: ReactNode;
-  roles?: AppRole[];
+  permKey?: string; // if set, group-level permission
   items: NavSubItem[];
 }
 
@@ -48,88 +48,100 @@ const navGroups: NavGroup[] = [
   {
     groupLabel: "Dashboard",
     groupIcon: <LayoutDashboard className="h-4 w-4" />,
+    permKey: "menu.dashboard",
     items: [
-      { icon: <ShoppingCart className="h-4 w-4" />, label: "Dashboard Vendas", to: "/dashboard" },
-      { icon: <DollarSign className="h-4 w-4" />, label: "Dashboard Financeiro", to: "/dashboard-financeiro" },
-      { icon: <Headphones className="h-4 w-4" />, label: "Dashboard Atendimento", to: "/dashboard-atendimento" },
+      { icon: <ShoppingCart className="h-4 w-4" />, label: "Dashboard Vendas", to: "/dashboard", permKey: "menu.dashboard_vendas" },
+      { icon: <DollarSign className="h-4 w-4" />, label: "Dashboard Financeiro", to: "/dashboard-financeiro", permKey: "menu.dashboard_financeiro" },
+      { icon: <Headphones className="h-4 w-4" />, label: "Dashboard Atendimento", to: "/dashboard-atendimento", permKey: "menu.dashboard_atendimento" },
     ],
   },
   {
     groupLabel: "Onboarding",
     groupIcon: <Headphones className="h-4 w-4" />,
     items: [
-      { icon: <Calendar className="h-4 w-4" />, label: "Painel de Atendimento", to: "/fila-agendamento" },
-      { icon: <Calendar className="h-4 w-4" />, label: "Agenda", to: "/agenda" },
-      { icon: <Ticket className="h-4 w-4" />, label: "Tickets", to: "/tickets" },
+      { icon: <Calendar className="h-4 w-4" />, label: "Painel de Atendimento", to: "/fila-agendamento", permKey: "menu.painel_atendimento" },
+      { icon: <Calendar className="h-4 w-4" />, label: "Agenda", to: "/agenda", permKey: "menu.agenda" },
+      { icon: <Ticket className="h-4 w-4" />, label: "Tickets", to: "/tickets", permKey: "menu.tickets" },
     ],
   },
   {
     groupLabel: "Cadastros",
     groupIcon: <UserCheck className="h-4 w-4" />,
     items: [
-      { icon: <UserCheck className="h-4 w-4" />, label: "Clientes", to: "/clientes" },
-      { icon: <BookOpen className="h-4 w-4" />, label: "Planos", to: "/planos", roles: ["admin"] },
-      { icon: <Building2 className="h-4 w-4" />, label: "Fornecedores", to: "/fornecedores", roles: ["admin", "financeiro"] },
-      { icon: <Wrench className="h-4 w-4" />, label: "Catálogo de Serviços", to: "/servicos", roles: ["admin"] },
+      { icon: <UserCheck className="h-4 w-4" />, label: "Clientes", to: "/clientes", permKey: "menu.clientes" },
+      { icon: <BookOpen className="h-4 w-4" />, label: "Planos", to: "/planos", permKey: "menu.planos" },
+      { icon: <Building2 className="h-4 w-4" />, label: "Fornecedores", to: "/fornecedores", permKey: "menu.fornecedores" },
+      { icon: <Wrench className="h-4 w-4" />, label: "Catálogo de Serviços", to: "/servicos", permKey: "menu.servicos" },
     ],
   },
   {
     groupLabel: "Vendas",
     groupIcon: <ShoppingCart className="h-4 w-4" />,
-    roles: ["admin", "financeiro", "vendedor", "gestor"],
     items: [
-      { icon: <ListOrdered className="h-4 w-4" />, label: "Pedidos", to: "/pedidos" },
+      { icon: <ListOrdered className="h-4 w-4" />, label: "Pedidos", to: "/pedidos", permKey: "menu.pedidos" },
     ],
   },
   {
     groupLabel: "Financeiro",
     groupIcon: <DollarSign className="h-4 w-4" />,
-    roles: ["admin", "financeiro", "vendedor"],
+    permKey: "menu.financeiro",
     items: [
-      { icon: <Inbox className="h-4 w-4" />, label: "Fila do Financeiro", to: "/financeiro", roles: ["admin", "financeiro"] },
-      { icon: <FileText className="h-4 w-4" />, label: "Contratos", to: "/contratos" },
-      { icon: <TrendingUp className="h-4 w-4" />, label: "Receitas", to: "/receitas" },
-      { icon: <TrendingDown className="h-4 w-4" />, label: "Despesas", to: "/despesas", roles: ["admin", "financeiro"] },
-      { icon: <BarChart3 className="h-4 w-4" />, label: "DRE", to: "/dre", roles: ["admin", "financeiro"] },
+      { icon: <Inbox className="h-4 w-4" />, label: "Fila do Financeiro", to: "/financeiro", permKey: "menu.fila_financeiro" },
+      { icon: <FileText className="h-4 w-4" />, label: "Contratos", to: "/contratos", permKey: "menu.contratos" },
+      { icon: <TrendingUp className="h-4 w-4" />, label: "Receitas", to: "/receitas", permKey: "menu.receitas" },
+      { icon: <TrendingDown className="h-4 w-4" />, label: "Despesas", to: "/despesas", permKey: "menu.despesas" },
+      { icon: <BarChart3 className="h-4 w-4" />, label: "DRE", to: "/dre", permKey: "menu.dre" },
     ],
   },
   {
     groupLabel: "Parâmetros",
     groupIcon: <Building2 className="h-4 w-4" />,
-    roles: ["admin"],
     items: [
-      { icon: <Building2 className="h-4 w-4" />, label: "Filiais", to: "/filiais" },
-      { icon: <Users className="h-4 w-4" />, label: "Usuários", to: "/usuarios" },
-      { icon: <Globe className="h-4 w-4" />, label: "Perfis de Usuário", to: "/perfis-usuario" },
-      { icon: <FileText className="h-4 w-4" />, label: "Modelos de Documentos", to: "/modelos-contrato" },
+      { icon: <Building2 className="h-4 w-4" />, label: "Filiais", to: "/filiais", permKey: "menu.filiais" },
+      { icon: <Users className="h-4 w-4" />, label: "Usuários", to: "/usuarios", permKey: "menu.usuarios" },
+      { icon: <Globe className="h-4 w-4" />, label: "Perfis de Usuário", to: "/perfis-usuario", permKey: "menu.perfis_usuario" },
+      { icon: <FileText className="h-4 w-4" />, label: "Modelos de Documentos", to: "/modelos-contrato", permKey: "menu.modelos_contrato" },
       { icon: <Headphones className="h-4 w-4" />, label: "Onboarding", to: "#helpdesk", children: [
-        { icon: <ListOrdered className="h-4 w-4" />, label: "Jornadas de Implantação", to: "/jornadas" },
-        { icon: <Headphones className="h-4 w-4" />, label: "Mesas de Atendimento", to: "/mesas-atendimento" },
-        { icon: <ListOrdered className="h-4 w-4" />, label: "Etapas", to: "/etapas-painel" },
+        { icon: <ListOrdered className="h-4 w-4" />, label: "Jornadas de Implantação", to: "/jornadas", permKey: "menu.jornadas" },
+        { icon: <Headphones className="h-4 w-4" />, label: "Mesas de Atendimento", to: "/mesas-atendimento", permKey: "menu.mesas_atendimento" },
+        { icon: <ListOrdered className="h-4 w-4" />, label: "Etapas", to: "/etapas-painel", permKey: "menu.etapas_painel" },
       ] },
       { icon: <UserCheck className="h-4 w-4" />, label: "CRM", to: "#crm", children: [
-        { icon: <ListOrdered className="h-4 w-4" />, label: "Segmentos", to: "/segmentos" },
+        { icon: <ListOrdered className="h-4 w-4" />, label: "Segmentos", to: "/segmentos", permKey: "menu.segmentos" },
       ] },
-      { icon: <Bell className="h-4 w-4" />, label: "Notificações", to: "/notificacoes" },
-      { icon: <Plug className="h-4 w-4" />, label: "Integrações", to: "/integracoes" },
+      { icon: <Bell className="h-4 w-4" />, label: "Notificações", to: "/notificacoes", permKey: "menu.notificacoes" },
+      { icon: <Plug className="h-4 w-4" />, label: "Integrações", to: "/integracoes", permKey: "menu.integracoes" },
     ],
   },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function groupVisible(group: NavGroup, roles: AppRole[]): boolean {
-  if (!group.roles) return true;
-  return group.roles.some((r) => roles.includes(r));
+/** permissions = null means unrestricted (admin) */
+function itemVisible(item: NavSubItem, permissions: Set<string> | null): boolean {
+  if (permissions === null) return true; // admin
+  if (item.children) {
+    // Parent with children: visible if any child is visible
+    return item.children.some((c) => itemVisible(c, permissions));
+  }
+  if (!item.permKey) return true;
+  return permissions.has(item.permKey);
 }
 
-function itemVisible(item: NavSubItem, roles: AppRole[]): boolean {
-  if (!item.roles) return true;
-  return item.roles.some((r) => roles.includes(r));
+function visibleItemsInGroup(group: NavGroup, permissions: Set<string> | null): NavSubItem[] {
+  return group.items.filter((item) => itemVisible(item, permissions));
 }
 
-function visibleItemsInGroup(group: NavGroup, roles: AppRole[]): NavSubItem[] {
-  return group.items.filter((item) => itemVisible(item, roles));
+function groupVisible(group: NavGroup, permissions: Set<string> | null): boolean {
+  if (permissions === null) return true; // admin
+  // Check group-level perm if set
+  if (group.permKey && !permissions.has(group.permKey)) {
+    // Even if group perm is off, show group if any child item has permission
+    const visibleItems = visibleItemsInGroup(group, permissions);
+    return visibleItems.length > 0;
+  }
+  const visibleItems = visibleItemsInGroup(group, permissions);
+  return visibleItems.length > 0;
 }
 
 function isItemOrChildActive(item: NavSubItem, pathname: string): boolean {
