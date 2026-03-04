@@ -378,6 +378,18 @@ export function MessageTemplates() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Setor</Label>
+                <Select value={form.setor_id || "_none"} onValueChange={(v) => setForm((f) => ({ ...f, setor_id: v === "_none" ? "" : v }))}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">Nenhum</SelectItem>
+                    {setores.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-1 col-span-2">
                 <Label className="text-xs">Descrição (opcional)</Label>
                 <Input
