@@ -275,7 +275,7 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
             <img src={logoWhatsapp} alt="WhatsApp" className="h-10 w-10 object-contain" />
             <div>
               <DialogTitle>WhatsApp — Evolution API</DialogTitle>
-              <DialogDescription>Conecte via Evolution API com a instância {INSTANCE_NAME}</DialogDescription>
+              <DialogDescription>Gerencie as instâncias WhatsApp via Evolution API</DialogDescription>
             </div>
           </div>
         </DialogHeader>
