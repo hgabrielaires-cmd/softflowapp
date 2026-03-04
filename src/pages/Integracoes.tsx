@@ -129,6 +129,8 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
     setShowToken(false);
     setQrCode(null);
     setConnectionState(null);
+    setNewInstanceName("");
+    setInstances([]);
   }, [config, open]);
 
   // Check connection state when dialog opens with credentials
