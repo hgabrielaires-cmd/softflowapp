@@ -718,6 +718,12 @@ export default function PainelAtendimento() {
         : Promise.resolve({ data: [] });
 
       const jornadaEtapa = jornadaEtapaResult?.data;
+      // Extract etapa mesa info
+      if (jornadaEtapa && jornadaEtapa.length > 0 && jornadaEtapa[0].mesas_atendimento) {
+        setEtapaMesaInfo({ id: jornadaEtapa[0].mesas_atendimento.id, cor: jornadaEtapa[0].mesas_atendimento.cor || null });
+      } else {
+        setEtapaMesaInfo(null);
+      }
       if (!etapaAtual || !jornadaEtapa || jornadaEtapa.length === 0) {
         setSlaEtapaJornada(null);
         setChecklistEtapa([]);
