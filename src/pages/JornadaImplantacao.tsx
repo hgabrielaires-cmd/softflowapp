@@ -76,6 +76,7 @@ export default function JornadaImplantacao() {
   const [viewEtapas, setViewEtapas] = useState<LocalEtapa[]>([]);
   const [viewExpandedEtapas, setViewExpandedEtapas] = useState<Set<string>>(new Set());
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const skipConfirmRef = useRef(false);
   const dragEtapaItem = useRef<number | null>(null);
   const dragEtapaOverItem = useRef<number | null>(null);
