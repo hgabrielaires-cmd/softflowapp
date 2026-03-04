@@ -76,6 +76,7 @@ export default function JornadaImplantacao() {
   const [viewEtapas, setViewEtapas] = useState<LocalEtapa[]>([]);
   const [viewExpandedEtapas, setViewExpandedEtapas] = useState<Set<string>>(new Set());
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const skipConfirmRef = useRef(false);
   const dragEtapaItem = useRef<number | null>(null);
   const dragEtapaOverItem = useRef<number | null>(null);
@@ -627,7 +628,7 @@ export default function JornadaImplantacao() {
                         <div className="flex items-center justify-center gap-1">
                           <Button variant="ghost" size="icon" title="Visualizar" onClick={() => openView(j)}><Eye className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" title="Editar" onClick={() => openEdit(j)}><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" title="Excluir" onClick={() => deleteMutation.mutate(j.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          <Button variant="ghost" size="icon" title="Excluir" onClick={() => setDeleteConfirmId(j.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1158,6 +1159,22 @@ export default function JornadaImplantacao() {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => { setConfirmCloseOpen(false); closeDialog(); }}>Não</AlertDialogCancel>
             <AlertDialogAction onClick={() => { setConfirmCloseOpen(false); skipConfirmRef.current = true; setDialogOpen(false); saveMutation.mutate(); }}>Sim, salvar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmação de exclusão de jornada */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(v) => { if (!v) setDeleteConfirmId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Jornada de Implantação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja excluir esta jornada de implantação? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Não</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { if (deleteConfirmId) deleteMutation.mutate(deleteConfirmId); setDeleteConfirmId(null); }}>Sim</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
