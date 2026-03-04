@@ -158,6 +158,7 @@ export function MessageTemplates() {
       conteudo: t.conteudo,
       descricao: t.descricao || "",
       ativo: false,
+      setor_id: t.setor_id || "",
     });
     setOpenEditor(true);
   }
