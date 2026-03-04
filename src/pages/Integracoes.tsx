@@ -139,8 +139,22 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
     if (open && serverUrl && token) {
       checkConnectionState();
       fetchInstances();
+      fetchSetoresInstances();
     }
   }, [open]);
+
+  async function fetchSetoresInstances() {
+    try {
+      const { data } = await supabase
+        .from("setores")
+        .select("nome, instance_name")
+        .not("instance_name", "is", null)
+        .eq("ativo", true);
+      setSetoresInstances((data || []).filter((s: any) => s.instance_name?.trim()) as any);
+    } catch (err) {
+      console.error("fetchSetoresInstances error:", err);
+    }
+  }
 
   async function callEvolutionApi(action: string, instanceName?: string) {
     const { data, error } = await supabase.functions.invoke("evolution-api", {
