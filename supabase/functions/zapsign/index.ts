@@ -314,6 +314,27 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Apagar PDF do storage após envio bem-sucedido para ZapSign
+      if (contrato.pdf_url) {
+        try {
+          const { error: deleteError } = await supabase.storage
+            .from("contratos-pdf")
+            .remove([contrato.pdf_url]);
+          if (deleteError) {
+            console.warn("Erro ao apagar PDF do storage:", deleteError.message);
+          } else {
+            console.log(`[ZapSign] PDF apagado do storage: ${contrato.pdf_url}`);
+            // Limpar pdf_url no contrato (o link da ZapSign passa a ser a referência)
+            await supabase
+              .from("contratos")
+              .update({ pdf_url: null })
+              .eq("id", contrato.id);
+          }
+        } catch (delErr) {
+          console.warn("Erro ao apagar PDF:", delErr);
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success: true,
