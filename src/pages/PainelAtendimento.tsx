@@ -561,7 +561,7 @@ export default function PainelAtendimento() {
           .select("comentario_id, user_id"),
         supabase
           .from("painel_agendamentos")
-          .select("*, jornada_atividades(nome)")
+          .select("*, jornada_atividades(nome), painel_etapas:etapa_id(nome, cor)")
           .eq("card_id", detailCard.id)
           .order("data"),
         supabase
