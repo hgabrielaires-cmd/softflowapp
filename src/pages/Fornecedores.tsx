@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { useCrudPermissions } from "@/hooks/useCrudPermissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,7 +86,8 @@ export default function Fornecedores() {
   const { roles } = useAuth();
   const isAdmin = roles.includes("admin");
   const isFinanceiro = roles.includes("financeiro");
-  const canEdit = isAdmin || isFinanceiro;
+  const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("fornecedores", roles);
+  const canEdit = crudEditar || crudIncluir;
 
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -295,7 +297,7 @@ export default function Fornecedores() {
               Cadastro e gestão de fornecedores
             </p>
           </div>
-          {canEdit && (
+          {crudIncluir && (
             <Button className="gap-2" onClick={openNew}>
               <Plus className="h-4 w-4" /> Novo Fornecedor
             </Button>
@@ -401,7 +403,7 @@ export default function Fornecedores() {
                         <DropdownMenuItem onClick={() => openEdit(f)} className="cursor-pointer">
                           <Pencil className="h-4 w-4 mr-2" /> Editar
                         </DropdownMenuItem>
-                        {canEdit && (
+                        {crudExcluir && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => setDeletingId(f.id)} className="cursor-pointer text-destructive focus:text-destructive">

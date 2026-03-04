@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { useCrudPermissions } from "@/hooks/useCrudPermissions";
 import { Cliente, Filial, Contrato } from "@/lib/supabase-types";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Button } from "@/components/ui/button";
@@ -107,7 +108,8 @@ export default function Clientes() {
   const isAdmin = roles.includes("admin");
   const isFinanceiro = roles.includes("financeiro");
   const isVendedor = roles.includes("vendedor");
-  const canEdit = isAdmin || isFinanceiro || isVendedor;
+  const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("clientes", roles);
+  const canEdit = crudEditar || crudIncluir;
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -611,7 +613,7 @@ export default function Clientes() {
                 <Upload className="h-4 w-4" /> Importação
               </Button>
             )}
-            {canEdit && (
+            {crudIncluir && (
               <Button onClick={openCreate} className="gap-2">
                 <Plus className="h-4 w-4" /> Novo cliente
               </Button>

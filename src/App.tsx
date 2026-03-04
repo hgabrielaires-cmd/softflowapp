@@ -99,7 +99,7 @@ const App = () => (
             <Route
               path="/financeiro"
               element={
-              <ProtectedRoute requiredRole="financeiro">
+                <ProtectedRoute>
                   <Financeiro />
                 </ProtectedRoute>
               }
@@ -211,7 +211,7 @@ const App = () => (
             <Route
               path="/fornecedores"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <Fornecedores />
                 </ProtectedRoute>
               }
@@ -267,7 +267,7 @@ const App = () => (
             <Route
               path="/segmentos"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <Segmentos />
                 </ProtectedRoute>
               }

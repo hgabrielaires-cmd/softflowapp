@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
+import { useMenuPermissions } from "@/hooks/useMenuPermissions";
 import { Navigate } from "react-router-dom";
 import { Filial } from "@/lib/supabase-types";
 import { PedidoComentarios } from "@/components/PedidoComentarios";
@@ -103,6 +104,7 @@ export default function Financeiro() {
   const { profile, roles, isAdmin } = useAuth();
   const navigate = useNavigate();
   const isFinanceiro = roles.includes("financeiro");
+  const { permissions: menuPerms } = useMenuPermissions(roles);
   const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais } = useUserFiliais();
 
   const [pedidos, setPedidos] = useState<PedidoFila[]>([]);
@@ -123,7 +125,7 @@ export default function Financeiro() {
   const [pedidoPlano, setPedidoPlano] = useState<any>(null);
   const [pedidoModulos, setPedidoModulos] = useState<any[]>([]);
 
-  const canAccess = isAdmin || isFinanceiro;
+  const canAccess = isAdmin || isFinanceiro || (menuPerms !== null && menuPerms.has("menu.financeiro"));
 
   async function loadData() {
     setLoading(true);
