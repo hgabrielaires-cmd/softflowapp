@@ -2632,6 +2632,11 @@ export default function PainelAtendimento() {
                                         atividadeId={atividade.id}
                                         checklistIndex={cIdx}
                                         disabled={!checklistEditMode}
+                                        mesaId={atividade.mesas_atendimento?.id || etapaMesaInfo?.id || null}
+                                        mesaCor={atividade.mesas_atendimento?.cor || etapaMesaInfo?.cor || null}
+                                        filialId={detailCard.filial_id}
+                                        etapaId={detailCard.etapa_id}
+                                        titulo={`${detailCard.clientes?.nome_fantasia || detailCard.clientes?.apelido || ''} - ${atividade.nome} - ${item.texto || ''}`}
                                         onUpdate={(has) => {
                                           setChecklistProgresso((p) => ({
                                             ...p,
