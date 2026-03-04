@@ -122,11 +122,16 @@ export function MessageTemplates() {
     setLoading(false);
   }
 
-  useEffect(() => { loadData(); }, []);
+  async function loadSetores() {
+    const { data } = await supabase.from("setores").select("id, nome").eq("ativo", true).order("nome");
+    if (data) setSetores(data as Setor[]);
+  }
+
+  useEffect(() => { loadData(); loadSetores(); }, []);
 
   function openNew() {
     setEditingTemplate(null);
-    setForm({ nome: "", tipo: "whatsapp", categoria: "termo_aceite", conteudo: "", descricao: "", ativo: true });
+    setForm({ nome: "", tipo: "whatsapp", categoria: "termo_aceite", conteudo: "", descricao: "", ativo: true, setor_id: "" });
     setOpenEditor(true);
   }
 
