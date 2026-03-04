@@ -395,7 +395,25 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     setSolicitacoes(enriched as SolicitacaoDesconto[]);
   }
 
-  async function loadNotificacoes() {
+  async function loadPedidoDetails(pedidoId: string, sol: SolicitacaoDesconto) {
+    setLoadingPedido(true);
+    try {
+      const { data } = await supabase
+        .from("pedidos")
+        .select("*, clientes(nome_fantasia), planos(nome), filiais:filial_id(nome)")
+        .eq("id", pedidoId)
+        .single();
+      if (data) {
+        setViewingPedidoData(data);
+        setViewingPedidoSol(sol);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar pedido:", err);
+    }
+    setLoadingPedido(false);
+  }
+
+
     if (!profile?.user_id) return;
     // Fetch user roles for role-based notifications
     const { data: userRolesData } = await supabase.from("user_roles").select("role").eq("user_id", profile.user_id);
