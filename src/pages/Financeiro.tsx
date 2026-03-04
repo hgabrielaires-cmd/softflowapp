@@ -158,17 +158,17 @@ export default function Financeiro() {
     }
   }, [filialPadraoId, isGlobal, profile?.filial_favorita_id]);
 
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [filterFilial, filterDe, filterAte]);
+
   if (!canAccess) return <Navigate to="/dashboard" replace />;
 
-   const filtered = pedidos.filter((p) => {
+  const filtered = pedidos.filter((p) => {
     if (filterFilial !== "all" && filterFilial !== "_init_" && p.filial_id !== filterFilial) return false;
     if (filterDe && p.created_at < filterDe) return false;
     if (filterAte && p.created_at > filterAte + "T23:59:59") return false;
     return true;
   });
-
-  // Reset page when filters change
-  useEffect(() => { setCurrentPage(1); }, [filterFilial, filterDe, filterAte]);
 
   async function handleAprovar(pedido: PedidoFila) {
     setProcessando(true);
