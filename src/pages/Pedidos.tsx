@@ -1388,7 +1388,7 @@ export default function Pedidos() {
             <Select value={filterFilial} onValueChange={setFilterFilial}>
               <SelectTrigger><SelectValue placeholder="Filial" /></SelectTrigger>
               <SelectContent>
-                {canSeeAllBranches && <SelectItem value="all">Todas as filiais</SelectItem>}
+                {filiaisDoUsuario.length > 1 && <SelectItem value="all">Todas as filiais</SelectItem>}
                 {(filiaisDoUsuario.length > 0 ? filiaisDoUsuario : todasFiliais).map((f) => (
                   <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
                 ))}
