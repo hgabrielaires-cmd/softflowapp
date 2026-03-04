@@ -207,15 +207,13 @@ export default function PainelAtendimento() {
 
   useEffect(() => {
     if (filtroFilial === "_init_") {
-      if (isGlobal && !profile?.filial_favorita_id) {
-        setFiltroFilial("todos");
-      } else if (filialPadraoId) {
-        setFiltroFilial(filialPadraoId);
+      if (profile?.filial_favorita_id) {
+        setFiltroFilial(profile.filial_favorita_id);
       } else {
         setFiltroFilial("todos");
       }
     }
-  }, [filialPadraoId, isGlobal, profile?.filial_favorita_id]);
+  }, [filialPadraoId, profile?.filial_favorita_id]);
 
   // ─── Queries ─────────────────────────────────────────────────────────────
 
