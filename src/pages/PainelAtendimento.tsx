@@ -2058,7 +2058,7 @@ export default function PainelAtendimento() {
               <SelectValue placeholder="Filial" />
             </SelectTrigger>
             <SelectContent>
-              {isGlobal && <SelectItem value="todos">Todas as filiais</SelectItem>}
+              {filiaisDoUsuario.length > 1 && <SelectItem value="todos">Todas as filiais</SelectItem>}
               {(filiaisDoUsuario.length > 0 ? filiaisDoUsuario : todasFiliais).map((f) => (
                 <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
               ))}

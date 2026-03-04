@@ -690,15 +690,13 @@ export default function Pedidos() {
   // Default filial filter from user access
   useEffect(() => {
     if (filterFilial === "_init_") {
-      if (isGlobal && !profile?.filial_favorita_id) {
-        setFilterFilial("all");
-      } else if (filialPadraoId) {
-        setFilterFilial(filialPadraoId);
+      if (profile?.filial_favorita_id) {
+        setFilterFilial(profile.filial_favorita_id);
       } else {
         setFilterFilial("all");
       }
     }
-  }, [filialPadraoId, isGlobal, profile?.filial_favorita_id]);
+  }, [filialPadraoId, profile?.filial_favorita_id]);
 
   // ─── Buscar contrato ativo do cliente ─────────────────────────────────────
 

@@ -600,7 +600,7 @@ export default function Dashboard() {
     return "";
   }, [dialogType, dialogFilter]);
 
-  const canSeeAllFiliais = isGlobal || isAdmin || roles.includes("financeiro");
+  const canSeeAllFiliais = filiaisDoUsuario.length > 1;
 
   const chartConfigPlano = useMemo(() => {
     const config: Record<string, { label: string; color: string }> = {};
