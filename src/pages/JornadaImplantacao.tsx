@@ -190,54 +190,128 @@ export default function JornadaImplantacao() {
         const { error } = await supabase.from("jornadas").update(payload).eq("id", editing.id);
         if (error) throw error;
         jornadaId = editing.id;
-        // Delete in correct order: agendamentos/checklist -> atividades -> etapas
-        const { data: oldEtapas } = await supabase.from("jornada_etapas").select("id").eq("jornada_id", jornadaId);
+
+        // Build mapping of old atividades by (etapa_ordem, atividade_ordem) so we can remap operational data
+        const { data: oldEtapas } = await supabase
+          .from("jornada_etapas")
+          .select("id, nome, ordem")
+          .eq("jornada_id", jornadaId)
+          .order("ordem");
+
+        // Map: "etapaOrdem-atividadeOrdem" -> oldAtividadeId
+        const oldAtivMap: Record<string, string> = {};
+        const allOldAtivIds: string[] = [];
+
         if (oldEtapas && oldEtapas.length > 0) {
           const oldEtapaIds = oldEtapas.map(e => e.id);
-          // Get all activity IDs for these etapas
-          const { data: oldAtividades } = await supabase.from("jornada_atividades").select("id").in("etapa_id", oldEtapaIds);
-          if (oldAtividades && oldAtividades.length > 0) {
-            const oldAtivIds = oldAtividades.map(a => a.id);
-            // Delete references in painel_agendamentos and painel_checklist_progresso first
-            await supabase.from("painel_agendamentos").delete().in("atividade_id", oldAtivIds);
-            await supabase.from("painel_checklist_progresso").delete().in("atividade_id", oldAtivIds);
+          const { data: oldAtividades } = await supabase
+            .from("jornada_atividades")
+            .select("id, etapa_id, ordem")
+            .in("etapa_id", oldEtapaIds)
+            .order("ordem");
+
+          if (oldAtividades) {
+            const etapaOrdemMap: Record<string, number> = {};
+            oldEtapas.forEach(e => { etapaOrdemMap[e.id] = e.ordem; });
+
+            oldAtividades.forEach(a => {
+              const key = `${etapaOrdemMap[a.etapa_id]}-${a.ordem}`;
+              oldAtivMap[key] = a.id;
+              allOldAtivIds.push(a.id);
+            });
           }
-          const { error: delAtivErr } = await supabase.from("jornada_atividades").delete().in("etapa_id", oldEtapaIds);
-          if (delAtivErr) throw delAtivErr;
         }
-        const { error: delEtapaErr } = await supabase.from("jornada_etapas").delete().eq("jornada_id", jornadaId);
-        if (delEtapaErr) throw delEtapaErr;
+
+        // Step 1: Insert NEW etapas and atividades (before deleting old ones)
+        const newAtivMap: Record<string, string> = {};
+
+        for (const etapa of etapas) {
+          const { data: etapaData, error: etapaErr } = await supabase.from("jornada_etapas").insert({
+            jornada_id: jornadaId,
+            nome: etapa.nome,
+            descricao: etapa.descricao || null,
+            mesa_atendimento_id: etapa.mesa_atendimento_id || null,
+            permite_clonar: etapa.permite_clonar,
+            ordem: etapa.ordem,
+          }).select("id").single();
+          if (etapaErr) throw etapaErr;
+
+          if (etapa.atividades.length > 0) {
+            const atividades = etapa.atividades.map((a) => ({
+              etapa_id: etapaData.id,
+              nome: a.nome,
+              descricao: a.descricao || null,
+              horas_estimadas: a.horas_estimadas,
+              checklist: a.checklist as any,
+              tipo_responsabilidade: a.tipo_responsabilidade,
+              mesa_atendimento_id: a.mesa_atendimento_id || null,
+              ordem: a.ordem,
+            }));
+            const { data: insertedAtivs, error: atErr } = await supabase
+              .from("jornada_atividades")
+              .insert(atividades)
+              .select("id, ordem");
+            if (atErr) throw atErr;
+
+            if (insertedAtivs) {
+              insertedAtivs.forEach(a => {
+                const key = `${etapa.ordem}-${a.ordem}`;
+                newAtivMap[key] = a.id;
+              });
+            }
+          }
+        }
+
+        // Step 2: Remap operational data from old atividade IDs to new IDs (BEFORE deleting old ones)
+        for (const [key, oldId] of Object.entries(oldAtivMap)) {
+          const newId = newAtivMap[key];
+          if (newId && newId !== oldId) {
+            await Promise.all([
+              supabase.from("painel_agendamentos").update({ atividade_id: newId }).eq("atividade_id", oldId),
+              supabase.from("painel_checklist_progresso").update({ atividade_id: newId }).eq("atividade_id", oldId),
+            ]);
+          }
+        }
+
+        // Step 3: Now delete old atividades and etapas (safe - operational data already remapped)
+        if (oldEtapas && oldEtapas.length > 0) {
+          const oldEtapaIds = oldEtapas.map(e => e.id);
+          // ON DELETE SET NULL will handle any remaining orphaned refs
+          await supabase.from("jornada_atividades").delete().in("etapa_id", oldEtapaIds);
+          await supabase.from("jornada_etapas").delete().eq("jornada_id", jornadaId).in("id", oldEtapaIds);
+        }
+
       } else {
         const { data, error } = await supabase.from("jornadas").insert(payload).select("id").single();
         if (error) throw error;
         jornadaId = data.id;
-      }
 
-      // Insert etapas and atividades
-      for (const etapa of etapas) {
-        const { data: etapaData, error: etapaErr } = await supabase.from("jornada_etapas").insert({
-          jornada_id: jornadaId,
-          nome: etapa.nome,
-          descricao: etapa.descricao || null,
-          mesa_atendimento_id: etapa.mesa_atendimento_id || null,
-          permite_clonar: etapa.permite_clonar,
-          ordem: etapa.ordem,
-        }).select("id").single();
-        if (etapaErr) throw etapaErr;
+        // Insert etapas and atividades for new jornada
+        for (const etapa of etapas) {
+          const { data: etapaData, error: etapaErr } = await supabase.from("jornada_etapas").insert({
+            jornada_id: jornadaId,
+            nome: etapa.nome,
+            descricao: etapa.descricao || null,
+            mesa_atendimento_id: etapa.mesa_atendimento_id || null,
+            permite_clonar: etapa.permite_clonar,
+            ordem: etapa.ordem,
+          }).select("id").single();
+          if (etapaErr) throw etapaErr;
 
-        if (etapa.atividades.length > 0) {
-          const atividades = etapa.atividades.map((a) => ({
-            etapa_id: etapaData.id,
-            nome: a.nome,
-            descricao: a.descricao || null,
-            horas_estimadas: a.horas_estimadas,
-            checklist: a.checklist as any,
-            tipo_responsabilidade: a.tipo_responsabilidade,
-            mesa_atendimento_id: a.mesa_atendimento_id || null,
-            ordem: a.ordem,
-          }));
-          const { error: atErr } = await supabase.from("jornada_atividades").insert(atividades);
-          if (atErr) throw atErr;
+          if (etapa.atividades.length > 0) {
+            const atividades = etapa.atividades.map((a) => ({
+              etapa_id: etapaData.id,
+              nome: a.nome,
+              descricao: a.descricao || null,
+              horas_estimadas: a.horas_estimadas,
+              checklist: a.checklist as any,
+              tipo_responsabilidade: a.tipo_responsabilidade,
+              mesa_atendimento_id: a.mesa_atendimento_id || null,
+              ordem: a.ordem,
+            }));
+            const { error: atErr } = await supabase.from("jornada_atividades").insert(atividades);
+            if (atErr) throw atErr;
+          }
         }
       }
     },

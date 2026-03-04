@@ -1015,7 +1015,7 @@ export type Database = {
       }
       painel_agendamentos: {
         Row: {
-          atividade_id: string
+          atividade_id: string | null
           card_id: string
           checklist_index: number
           cor_evento: string | null
@@ -1032,7 +1032,7 @@ export type Database = {
           titulo: string | null
         }
         Insert: {
-          atividade_id: string
+          atividade_id?: string | null
           card_id: string
           checklist_index: number
           cor_evento?: string | null
@@ -1049,7 +1049,7 @@ export type Database = {
           titulo?: string | null
         }
         Update: {
-          atividade_id?: string
+          atividade_id?: string | null
           card_id?: string
           checklist_index?: number
           cor_evento?: string | null
@@ -1333,7 +1333,7 @@ export type Database = {
       }
       painel_checklist_progresso: {
         Row: {
-          atividade_id: string
+          atividade_id: string | null
           card_id: string
           checklist_index: number
           concluido: boolean
@@ -1346,7 +1346,7 @@ export type Database = {
           valor_texto: string | null
         }
         Insert: {
-          atividade_id: string
+          atividade_id?: string | null
           card_id: string
           checklist_index: number
           concluido?: boolean
@@ -1359,7 +1359,7 @@ export type Database = {
           valor_texto?: string | null
         }
         Update: {
-          atividade_id?: string
+          atividade_id?: string | null
           card_id?: string
           checklist_index?: number
           concluido?: boolean
