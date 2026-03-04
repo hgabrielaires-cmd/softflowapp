@@ -27,6 +27,11 @@ interface Agendamento {
   observacao: string | null;
   criado_por: string | null;
   created_at: string;
+  mesa_id: string | null;
+  filial_id: string | null;
+  etapa_id: string | null;
+  titulo: string | null;
+  cor_evento: string | null;
 }
 
 interface AgendamentoComDetalhes extends Agendamento {
