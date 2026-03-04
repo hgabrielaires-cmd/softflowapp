@@ -294,7 +294,7 @@ export default function Financeiro() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((pedido) => (
+                filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((pedido) => (
                   <TableRow key={pedido.id}>
                     <TableCell className="font-mono text-xs font-semibold text-primary">{pedido.numero_exibicao || "—"}</TableCell>
                     <TableCell className="font-medium">{pedido.clientes?.nome_fantasia || "—"}</TableCell>
