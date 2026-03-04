@@ -2391,6 +2391,7 @@ export type Database = {
           created_at: string
           descricao: string | null
           id: string
+          instance_name: string | null
           nome: string
           telefone: string | null
           updated_at: string
@@ -2400,6 +2401,7 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           id?: string
+          instance_name?: string | null
           nome: string
           telefone?: string | null
           updated_at?: string
@@ -2409,6 +2411,7 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           id?: string
+          instance_name?: string | null
           nome?: string
           telefone?: string | null
           updated_at?: string

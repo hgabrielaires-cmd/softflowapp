@@ -23,6 +23,7 @@ interface Setor {
   nome: string;
   descricao: string | null;
   telefone: string | null;
+  instance_name: string | null;
   ativo: boolean;
   created_at: string;
 }
@@ -37,7 +38,7 @@ export default function Setores() {
   const [busca, setBusca] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editando, setEditando] = useState<Setor | null>(null);
-  const [form, setForm] = useState({ nome: "", descricao: "", telefone: "" });
+  const [form, setForm] = useState({ nome: "", descricao: "", telefone: "", instance_name: "" });
   const [saving, setSaving] = useState(false);
 
   if (!canAccess) return <Navigate to="/dashboard" replace />;
@@ -57,13 +58,13 @@ export default function Setores() {
 
   function openNew() {
     setEditando(null);
-    setForm({ nome: "", descricao: "", telefone: "" });
+    setForm({ nome: "", descricao: "", telefone: "", instance_name: "" });
     setDialogOpen(true);
   }
 
   function openEdit(setor: Setor) {
     setEditando(setor);
-    setForm({ nome: setor.nome, descricao: setor.descricao || "", telefone: setor.telefone || "" });
+    setForm({ nome: setor.nome, descricao: setor.descricao || "", telefone: setor.telefone || "", instance_name: setor.instance_name || "" });
     setDialogOpen(true);
   }
 
@@ -75,6 +76,7 @@ export default function Setores() {
       nome: form.nome.trim(),
       descricao: form.descricao.trim() || null,
       telefone: form.telefone.trim() || null,
+      instance_name: form.instance_name.trim() || null,
     };
 
     if (editando) {
@@ -144,6 +146,7 @@ export default function Setores() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead>Telefone</TableHead>
+                <TableHead>Instância WhatsApp</TableHead>
                 <TableHead className="w-20 text-center">Ativo</TableHead>
                 <TableHead className="w-20 text-center">Ações</TableHead>
               </TableRow>
@@ -151,13 +154,13 @@ export default function Setores() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
+                  <TableCell colSpan={6} className="text-center py-8">
                     <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : filtrados.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     Nenhum setor encontrado
                   </TableCell>
                 </TableRow>
@@ -167,6 +170,7 @@ export default function Setores() {
                     <TableCell className="font-medium">{setor.nome}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{setor.descricao || "—"}</TableCell>
                     <TableCell className="text-sm">{setor.telefone || "—"}</TableCell>
+                    <TableCell className="text-sm font-mono">{setor.instance_name || "—"}</TableCell>
                     <TableCell className="text-center">
                       <Switch
                         checked={setor.ativo}
@@ -226,6 +230,17 @@ export default function Setores() {
                 onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))}
                 placeholder="(00) 00000-0000"
               />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Instância WhatsApp (Evolution API)</label>
+              <Input
+                value={form.instance_name}
+                onChange={e => setForm(f => ({ ...f, instance_name: e.target.value }))}
+                placeholder="Ex: Financeiro_WhatsApp"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Nome da instância na Evolution API. Se vazio, usa a instância padrão.
+              </p>
             </div>
           </div>
           <DialogFooter>

@@ -39,12 +39,13 @@ serve(async (req) => {
       });
     }
 
-    const { action, server_url, api_key, instance_name, number, text } = await req.json();
+    const { action, server_url, api_key, instance_name, number, text, template_id } = await req.json();
 
     // For send_text, read credentials from DB using service role (secure)
     // For config actions (create_instance, connect, etc.), accept from request body (admin setup)
     let baseUrl: string;
     let apiKey: string;
+    let resolvedInstanceName: string | undefined = instance_name;
 
     if (action === "send_text") {
       // Read WhatsApp config from DB using service role key
@@ -75,6 +76,27 @@ serve(async (req) => {
 
       baseUrl = config.server_url;
       apiKey = config.token;
+
+      // Setor-based routing: if template_id is provided, resolve the setor's instance_name
+      if (template_id && !resolvedInstanceName) {
+        const { data: templateData } = await serviceClient
+          .from("message_templates")
+          .select("setor_id")
+          .eq("id", template_id)
+          .maybeSingle();
+
+        if (templateData?.setor_id) {
+          const { data: setorData } = await serviceClient
+            .from("setores")
+            .select("instance_name")
+            .eq("id", templateData.setor_id)
+            .maybeSingle();
+
+          if (setorData?.instance_name) {
+            resolvedInstanceName = setorData.instance_name;
+          }
+        }
+      }
     } else {
       // Config actions require credentials from request (admin is setting them up)
       if (!server_url || !api_key) {
@@ -200,7 +222,7 @@ serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-        const name = instance_name || "Softflow_WhatsApp";
+        const name = resolvedInstanceName || instance_name || "Softflow_WhatsApp";
         let formattedNumber = number.replace(/\D/g, "");
         if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
         if (!formattedNumber.startsWith("55")) formattedNumber = "55" + formattedNumber;
