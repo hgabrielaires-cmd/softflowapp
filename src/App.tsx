@@ -243,7 +243,7 @@ const App = () => (
             <Route
               path="/mesas-atendimento"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <MesasAtendimento />
                 </ProtectedRoute>
               }
