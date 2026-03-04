@@ -297,7 +297,7 @@ export default function Fornecedores() {
               Cadastro e gestão de fornecedores
             </p>
           </div>
-          {canEdit && (
+          {crudIncluir && (
             <Button className="gap-2" onClick={openNew}>
               <Plus className="h-4 w-4" /> Novo Fornecedor
             </Button>
