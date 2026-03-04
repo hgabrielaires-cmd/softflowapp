@@ -644,12 +644,13 @@ export default function Usuarios() {
               )}
             </TableBody>
           </Table>
-          {!loading && (
-            <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground flex items-center gap-1.5">
-              <Shield className="h-3.5 w-3.5" />
-              {filtered.length} usuário(s) encontrado(s)
-            </div>
-          )}
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(filtered.length / ITEMS_PER_PAGE)}
+            totalItems={filtered.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
 
