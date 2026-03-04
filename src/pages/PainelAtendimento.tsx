@@ -2599,7 +2599,7 @@ export default function PainelAtendimento() {
                                       <div className="pl-1">
                                         <Checkbox
                                           checked={prog.concluido}
-                                          disabled={!checklistEditMode}
+                                          disabled={!checklistEnabled}
                                           onCheckedChange={() => saveChecklistItem(atividade.id, cIdx, { concluido: !prog.concluido })}
                                           className="h-4 w-4"
                                         />
