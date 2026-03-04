@@ -259,7 +259,7 @@ export default function Pedidos() {
   const isFinanceiro = roles.includes("financeiro");
   const isVendedor = roles.includes("vendedor");
   const isTecnico = roles.includes("tecnico") && !isAdmin && !isFinanceiro && !isVendedor;
-  const canSeeAllBranches = isGlobal;
+  const canSeeAllBranches = filiaisDoUsuario.length > 1;
 
   const [pedidos, setPedidos] = useState<PedidoWithJoins[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
