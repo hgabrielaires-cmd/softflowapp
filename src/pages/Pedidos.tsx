@@ -1352,7 +1352,7 @@ export default function Pedidos() {
   // Reset page when filters change
   useEffect(() => { setCurrentPage(1); }, [search, filterFilial, filterStatus, filterVendedor, filterDe, filterAte]);
 
-  const canCreate = isAdmin || isVendedor;
+  const canCreate = crudIncluir;
   // A RLS já restringe os clientes por filial para vendedores, não filtrar novamente
   const clientesDisponiveis = clientes;
 
