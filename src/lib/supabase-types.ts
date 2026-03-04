@@ -26,6 +26,7 @@ export interface Profile {
   filial: string | null;
   filial_id: string | null;
   filial_favorita_id: string | null;
+  mesa_favorita_id: string | null;
   avatar_url: string | null;
   active: boolean;
   comissao_percentual: number | null;
