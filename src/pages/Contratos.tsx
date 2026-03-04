@@ -844,6 +844,7 @@ export default function Contratos() {
             action: "send_text",
             number: decisorContato.telefone,
             text: mensagem,
+            template_id: docTemplate?.message_template_id || undefined,
           },
         });
 
@@ -1119,6 +1120,21 @@ export default function Contratos() {
       const zRec = zapsignRecords[contrato.id];
       const signUrl = zRec?.signers?.[0]?.sign_url || "";
 
+      // Resolver template_id do setor para roteamento de instância
+      const docTemplateType = contrato.tipo === "OA" ? "OA"
+        : contrato.tipo === "Aditivo"
+          ? (contrato.pedidos?.tipo_pedido === "Upgrade" ? "ADITIVO_UPGRADE" : "ADITIVO_MODULO")
+          : contrato.tipo === "Cancelamento" ? "CANCELAMENTO"
+          : "CONTRATO_BASE";
+      const { data: docTpl } = await supabase
+        .from("document_templates")
+        .select("message_template_id")
+        .eq("tipo", docTemplateType)
+        .eq("ativo", true)
+        .not("message_template_id", "is", null)
+        .limit(1)
+        .maybeSingle();
+
       const mensagem = gerarTermoAceite(contrato, signUrl, undefined, (contatos || []) as any);
 
       const { error } = await supabase.functions.invoke("evolution-api", {
@@ -1126,6 +1142,7 @@ export default function Contratos() {
           action: "send_text",
           number: decisor.telefone,
           text: mensagem,
+          template_id: docTpl?.message_template_id || undefined,
         },
       });
 
