@@ -1553,21 +1553,25 @@ Estou à disposição.`;
                             <Eye className="h-4 w-4 mr-2" />
                             Visualizar
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="cursor-pointer"
-                            onClick={() => handleGerarContrato(contrato)}
-                            disabled={gerando}
-                          >
-                            {gerando ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <FileOutput className="h-4 w-4 mr-2" />
-                            )}
-                            {contrato.tipo === "OA"
-                              ? (contrato.status_geracao === "Gerado" ? "Regerar OA" : "Gerar OA")
-                              : (contrato.status_geracao === "Gerado" ? "Regerar Contrato" : "Gerar Contrato")}
-                          </DropdownMenuItem>
-                          {contrato.status_geracao === "Gerado" && contrato.pdf_url && (
+                          {/* Gerar/Regerar — bloqueado se já enviado para ZapSign */}
+                          {!zapsignRecords[contrato.id] && (
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={() => handleGerarContrato(contrato)}
+                              disabled={gerando}
+                            >
+                              {gerando ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <FileOutput className="h-4 w-4 mr-2" />
+                              )}
+                              {contrato.tipo === "OA"
+                                ? (contrato.status_geracao === "Gerado" ? "Regerar OA" : "Gerar OA")
+                                : (contrato.status_geracao === "Gerado" ? "Regerar Contrato" : "Gerar Contrato")}
+                            </DropdownMenuItem>
+                          )}
+                          {/* Baixar PDF — só se tem pdf_url e NÃO foi enviado para ZapSign */}
+                          {contrato.status_geracao === "Gerado" && contrato.pdf_url && !zapsignRecords[contrato.id] && (
                             <DropdownMenuItem
                               className="cursor-pointer"
                               onClick={() => handleBaixarContrato(contrato)}
@@ -1575,6 +1579,16 @@ Estou à disposição.`;
                             >
                               <Download className="h-4 w-4 mr-2" />
                               {contrato.tipo === "OA" ? "Baixar OA" : "Baixar Contrato"}
+                            </DropdownMenuItem>
+                          )}
+                          {/* Visualizar via ZapSign — quando já enviado */}
+                          {zapsignRecords[contrato.id]?.sign_url && (
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={() => window.open(zapsignRecords[contrato.id].sign_url!, "_blank")}
+                            >
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              Visualizar Documento
                             </DropdownMenuItem>
                           )}
                           {canManage && zapsignRecords[contrato.id] && (
