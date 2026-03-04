@@ -112,6 +112,7 @@ const navGroups: NavGroup[] = [
       ] },
       { icon: <Bell className="h-4 w-4" />, label: "Notificações", to: "/notificacoes", permKey: "menu.notificacoes" },
       { icon: <Plug className="h-4 w-4" />, label: "Integrações", to: "/integracoes", permKey: "menu.integracoes" },
+      { icon: <Building2 className="h-4 w-4" />, label: "Setores", to: "/setores", permKey: "menu.setores" },
     ],
   },
 ];

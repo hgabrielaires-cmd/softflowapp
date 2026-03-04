@@ -833,6 +833,7 @@ export type Database = {
           descricao: string | null
           id: string
           nome: string
+          setor_id: string | null
           tipo: string
           updated_at: string
         }
@@ -844,6 +845,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome: string
+          setor_id?: string | null
           tipo?: string
           updated_at?: string
         }
@@ -855,10 +857,19 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome?: string
+          setor_id?: string | null
           tipo?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "message_templates_setor_id_fkey"
+            columns: ["setor_id"]
+            isOneToOne: false
+            referencedRelation: "setores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       modelos_contrato: {
         Row: {
@@ -2371,6 +2382,36 @@ export type Database = {
           unidade_medida?: string
           updated_at?: string
           valor?: number
+        }
+        Relationships: []
+      }
+      setores: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          telefone?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

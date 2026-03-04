@@ -157,6 +157,10 @@ const MENU_TREE: MenuNode[] = [
     key: "menu.integracoes", label: "Integrações", description: "Configurar integrações externas",
     icon: <Plug className="h-4 w-4" />,
   },
+  {
+    key: "menu.setores", label: "Setores", description: "Gerenciar setores vinculados aos templates de mensagens",
+    icon: <Building2 className="h-4 w-4" />,
+  },
 ];
 
 // Group menus into sections for display
@@ -197,7 +201,7 @@ const MENU_SECTIONS: MenuSection[] = [
     icon: <Building2 className="h-4 w-4" />,
     items: MENU_TREE.filter(m =>
       ["menu.filiais", "menu.usuarios", "menu.perfis_usuario", "menu.modelos_contrato",
-       "menu.notificacoes", "menu.integracoes", "menu.jornadas", "menu.mesas_atendimento",
+       "menu.notificacoes", "menu.integracoes", "menu.setores", "menu.jornadas", "menu.mesas_atendimento",
        "menu.etapas_painel", "menu.segmentos"].includes(m.key)
     ),
   },

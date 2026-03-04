@@ -39,8 +39,14 @@ interface MessageTemplate {
   conteudo: string;
   descricao: string | null;
   ativo: boolean;
+  setor_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface Setor {
+  id: string;
+  nome: string;
 }
 
 const TIPOS_MSG = [
@@ -87,6 +93,7 @@ const VARIAVEIS_DISPONIVEIS = [
 export function MessageTemplates() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
+  const [setores, setSetores] = useState<Setor[]>([]);
   const [loading, setLoading] = useState(true);
   const [openEditor, setOpenEditor] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -100,6 +107,7 @@ export function MessageTemplates() {
     conteudo: "",
     descricao: "",
     ativo: true,
+    setor_id: "" as string,
   });
 
   async function loadData() {
@@ -114,11 +122,16 @@ export function MessageTemplates() {
     setLoading(false);
   }
 
-  useEffect(() => { loadData(); }, []);
+  async function loadSetores() {
+    const { data } = await supabase.from("setores").select("id, nome").eq("ativo", true).order("nome");
+    if (data) setSetores(data as Setor[]);
+  }
+
+  useEffect(() => { loadData(); loadSetores(); }, []);
 
   function openNew() {
     setEditingTemplate(null);
-    setForm({ nome: "", tipo: "whatsapp", categoria: "termo_aceite", conteudo: "", descricao: "", ativo: true });
+    setForm({ nome: "", tipo: "whatsapp", categoria: "termo_aceite", conteudo: "", descricao: "", ativo: true, setor_id: "" });
     setOpenEditor(true);
   }
 
@@ -131,6 +144,7 @@ export function MessageTemplates() {
       conteudo: t.conteudo,
       descricao: t.descricao || "",
       ativo: t.ativo,
+      setor_id: t.setor_id || "",
     });
     setOpenEditor(true);
   }
@@ -144,6 +158,7 @@ export function MessageTemplates() {
       conteudo: t.conteudo,
       descricao: t.descricao || "",
       ativo: false,
+      setor_id: t.setor_id || "",
     });
     setOpenEditor(true);
   }
@@ -161,6 +176,7 @@ export function MessageTemplates() {
       conteudo: form.conteudo,
       descricao: form.descricao.trim() || null,
       ativo: form.ativo,
+      setor_id: form.setor_id || null,
     };
 
     if (editingTemplate) {
@@ -242,6 +258,7 @@ export function MessageTemplates() {
               <TableHead>Nome</TableHead>
               <TableHead>Canal</TableHead>
               <TableHead>Categoria</TableHead>
+              <TableHead>Setor</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Atualizado</TableHead>
               <TableHead className="text-right">Ações</TableHead>
@@ -250,13 +267,13 @@ export function MessageTemplates() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12">
+                <TableCell colSpan={7} className="text-center py-12">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : templates.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-16 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-16 text-muted-foreground">
                   <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   Nenhum template cadastrado ainda
                 </TableCell>
@@ -276,6 +293,9 @@ export function MessageTemplates() {
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary" className="text-xs">{getCategoriaLabel(t.categoria)}</Badge>
+                </TableCell>
+                <TableCell>
+                  <span className="text-xs text-muted-foreground">{t.setor_id ? setores.find(s => s.id === t.setor_id)?.nome || "—" : "—"}</span>
                 </TableCell>
                 <TableCell>
                   <button onClick={() => handleToggleAtivo(t)} className="flex items-center gap-1.5 group" title={t.ativo ? "Clique para inativar" : "Clique para ativar"}>
@@ -358,6 +378,18 @@ export function MessageTemplates() {
                   <SelectContent>
                     {CATEGORIAS.map((c) => (
                       <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Setor</Label>
+                <Select value={form.setor_id || "_none"} onValueChange={(v) => setForm((f) => ({ ...f, setor_id: v === "_none" ? "" : v }))}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">Nenhum</SelectItem>
+                    {setores.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
