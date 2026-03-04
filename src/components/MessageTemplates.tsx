@@ -273,7 +273,7 @@ export function MessageTemplates() {
               </TableRow>
             ) : templates.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-16 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-16 text-muted-foreground">
                   <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   Nenhum template cadastrado ainda
                 </TableCell>
