@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
@@ -8,141 +8,92 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarDays, Clock, User, Building2, Filter, MapPin, ExternalLink, Layers } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TablePagination } from "@/components/TablePagination";
+import {
+  CalendarDays, Clock, User, Building2, Filter, MapPin, ExternalLink,
+  Layers, List, Search, ChevronLeft, ChevronRight,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { format, parseISO, isSameDay } from "date-fns";
+import {
+  format, parseISO, isSameDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
+  addMonths, subMonths, addWeeks, subWeeks, addDays, subDays,
+} from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/UserAvatar";
 
-interface Agendamento {
-  id: string;
-  card_id: string;
-  atividade_id: string;
-  checklist_index: number;
-  data: string;
-  hora_inicio: string | null;
-  hora_fim: string | null;
-  observacao: string | null;
-  criado_por: string | null;
-  created_at: string;
-  mesa_id: string | null;
-  filial_id: string | null;
-  etapa_id: string | null;
-  titulo: string | null;
-  cor_evento: string | null;
-}
+const ITEMS_PER_PAGE = 15;
 
-interface AgendamentoComDetalhes extends Agendamento {
-  cliente_nome: string;
-  contrato_numero: string;
-  filial_id: string;
-  filial_nome: string;
-  atividade_nome: string;
-  titulo_evento: string | null;
-  cor_evento: string | null;
-  tecnicos: { id: string; full_name: string; avatar_url: string | null }[];
-  apontados: { id: string; full_name: string; avatar_url: string | null }[];
-  tipo_atendimento: string | null;
-  status_projeto: string;
-  pausado: boolean;
-  iniciado_em: string | null;
-  sla_horas: number;
-  prioridade: string | null;
-}
+const PRIORIDADE_PESO: Record<string, number> = { prioridade: 4, urgente: 3, medio: 2, normal: 1 };
+const PRIORIDADE_DISPLAY: Record<string, { label: string; emoji: string; className: string }> = {
+  prioridade: { label: "Alta Prioridade", emoji: "⚡", className: "bg-purple-100 text-purple-700 border-purple-200" },
+  urgente: { label: "Urgente", emoji: "🔴", className: "bg-red-100 text-red-700 border-red-200" },
+  medio: { label: "Médio", emoji: "🟡", className: "bg-yellow-100 text-yellow-700 border-yellow-200" },
+  normal: { label: "Normal", emoji: "🟢", className: "bg-green-100 text-green-700 border-green-200" },
+};
+
+type CalendarMode = "month" | "week";
 
 export default function Agenda() {
   const { profile, user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  // View state
+  const [activeView, setActiveView] = useState<"calendario" | "lista">("calendario");
+
+  // Shared filters
   const [filtroFilial, setFiltroFilial] = useState<string>("_init_");
-  const [filtroTecnico, setFiltroTecnico] = useState<string>("todos");
   const [filtroMesa, setFiltroMesa] = useState<string>("_init_");
-  const [filtroCliente, setFiltroCliente] = useState<string>("todos");
   const [filtersInitialized, setFiltersInitialized] = useState(false);
 
-  // Fetch mesas do usuário para default
+  // List-specific
+  const [listPage, setListPage] = useState(1);
+  const [listSearch, setListSearch] = useState("");
+  const [listStatus, setListStatus] = useState("todos");
+  const [listPeriodoDe, setListPeriodoDe] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return format(d, "yyyy-MM-dd");
+  });
+  const [listPeriodoAte, setListPeriodoAte] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return format(d, "yyyy-MM-dd");
+  });
+
+  // Calendar-specific
+  const [calMode, setCalMode] = useState<CalendarMode>("month");
+  const [calDate, setCalDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  // ===== Shared data =====
   const { data: mesasDoUsuario = [] } = useQuery({
     queryKey: ["agenda-usuario-mesas", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("usuario_mesas")
-        .select("mesa_id")
-        .eq("user_id", user!.id);
+      const { data } = await supabase.from("usuario_mesas").select("mesa_id").eq("user_id", user!.id);
       return (data || []).map((r: any) => r.mesa_id) as string[];
     },
   });
 
-  // Initialize filters from profile favorites
   useEffect(() => {
-    if (filtersInitialized) return;
-    if (!profile) return;
-
-    // Filial default
-    const defaultFilial = profile.filial_favorita_id || filialPadraoId || "todas";
-    setFiltroFilial(defaultFilial);
-
-    // Mesa default
+    if (filtersInitialized || !profile) return;
+    setFiltroFilial(profile.filial_favorita_id || filialPadraoId || "todas");
     const defaultMesa = profile.mesa_favorita_id
       ? profile.mesa_favorita_id
-      : mesasDoUsuario.length === 1
-        ? mesasDoUsuario[0]
-        : "todas";
+      : mesasDoUsuario.length === 1 ? mesasDoUsuario[0] : "todas";
     setFiltroMesa(defaultMesa);
-
     setFiltersInitialized(true);
   }, [profile, filialPadraoId, mesasDoUsuario, filtersInitialized]);
 
-  // Fetch agendamentos
-  const { data: agendamentos = [] } = useQuery({
-    queryKey: ["agenda-agendamentos"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("painel_agendamentos")
-        .select("*")
-        .order("data", { ascending: true });
-      if (error) throw error;
-      return data as Agendamento[];
-    },
-  });
-
-  // Fetch cards do painel
-  const { data: cards = [] } = useQuery({
-    queryKey: ["agenda-cards"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("painel_atendimento")
-        .select("id, cliente_id, contrato_id, pedido_id, filial_id, tipo_atendimento_local, status_projeto, pausado, iniciado_em, sla_horas, clientes(nome_fantasia), contratos(numero_exibicao), filiais(nome)");
-      if (error) throw error;
-      return data as any[];
-    },
-  });
-
-  // Fetch atividades
-  const { data: atividades = [] } = useQuery({
-    queryKey: ["agenda-atividades"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("jornada_atividades")
-        .select("id, nome");
-      if (error) throw error;
-      return data as any[];
-    },
-  });
-
-  // Fetch mesas de atendimento (filtradas por acesso do usuário)
   const { data: mesas = [] } = useQuery({
     queryKey: ["agenda-mesas", isAdmin, isGlobal, mesasDoUsuario],
     queryFn: async () => {
-      let query = supabase
-        .from("mesas_atendimento")
-        .select("id, nome, cor")
-        .eq("ativo", true)
-        .order("nome");
-      // Se não é admin/global e tem mesas vinculadas, filtrar
+      let query = supabase.from("mesas_atendimento").select("id, nome, cor").eq("ativo", true).order("nome");
       if (!isAdmin && !isGlobal && mesasDoUsuario.length > 0) {
         query = query.in("id", mesasDoUsuario);
       }
@@ -152,205 +103,382 @@ export default function Agenda() {
     },
   });
 
-  // Fetch técnicos apontados
-  const { data: painelTecnicos = [] } = useQuery({
-    queryKey: ["agenda-tecnicos"],
+  const { data: atividades = [] } = useQuery({
+    queryKey: ["agenda-atividades"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("painel_tecnicos")
-        .select("card_id, tecnico_id, profiles:tecnico_id(id, full_name, avatar_url)");
+      const { data, error } = await supabase.from("jornada_atividades").select("id, nome");
       if (error) throw error;
-      return data as any[];
+      return data as { id: string; nome: string }[];
     },
   });
 
-  // Fetch apontamentos
-  const { data: painelApontamentos = [] } = useQuery({
-    queryKey: ["agenda-apontamentos"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("painel_apontamentos")
-        .select("card_id, usuario_id, profiles:usuario_id(id, full_name, avatar_url)");
-      if (error) throw error;
-      return data as any[];
-    },
-  });
-
-  // Mapa de cards
-  const cardsMap = useMemo(() => {
-    const map: Record<string, any> = {};
-    cards.forEach((c) => { map[c.id] = c; });
-    return map;
-  }, [cards]);
-
-  // Mapa de atividades
   const atividadesMap = useMemo(() => {
     const map: Record<string, string> = {};
-    atividades.forEach((a: any) => { map[a.id] = a.nome; });
+    atividades.forEach((a) => { map[a.id] = a.nome; });
     return map;
   }, [atividades]);
 
-  // Mapa de técnicos por card
-  const tecnicosPorCard = useMemo(() => {
-    const map: Record<string, { id: string; full_name: string; avatar_url: string | null }[]> = {};
-    painelTecnicos.forEach((pt: any) => {
-      if (!map[pt.card_id]) map[pt.card_id] = [];
-      if (pt.profiles) map[pt.card_id].push(pt.profiles);
-    });
+  const mesasMap = useMemo(() => {
+    const map: Record<string, { nome: string; cor: string | null }> = {};
+    mesas.forEach((m) => { map[m.id] = { nome: m.nome, cor: m.cor }; });
     return map;
-  }, [painelTecnicos]);
+  }, [mesas]);
 
-  // Mapa de apontados por card
-  const apontadosPorCard = useMemo(() => {
-    const map: Record<string, { id: string; full_name: string; avatar_url: string | null }[]> = {};
-    painelApontamentos.forEach((pa: any) => {
-      if (!map[pa.card_id]) map[pa.card_id] = [];
-      if (pa.profiles) map[pa.card_id].push(pa.profiles);
-    });
-    return map;
-  }, [painelApontamentos]);
+  // Helper: build base query filters
+  const applyBaseFilters = useCallback((query: any) => {
+    if (filtroFilial !== "todas" && filtroFilial !== "_init_") {
+      query = query.eq("filial_id", filtroFilial);
+    }
+    if (filtroMesa !== "todas" && filtroMesa !== "_init_") {
+      query = query.eq("mesa_id", filtroMesa);
+    }
+    return query;
+  }, [filtroFilial, filtroMesa]);
 
-  // Fetch highest priority per pedido
-  const PRIORIDADE_PESO: Record<string, number> = { prioridade: 4, urgente: 3, medio: 2, normal: 1 };
-  const PRIORIDADE_DISPLAY: Record<string, { label: string; emoji: string; className: string }> = {
-    prioridade: { label: "Alta Prioridade", emoji: "⚡", className: "bg-purple-100 text-purple-700 border-purple-200" },
-    urgente: { label: "Urgente", emoji: "🔴", className: "bg-red-100 text-red-700 border-red-200" },
-    medio: { label: "Médio", emoji: "🟡", className: "bg-yellow-100 text-yellow-700 border-yellow-200" },
-    normal: { label: "Normal", emoji: "🟢", className: "bg-green-100 text-green-700 border-green-200" },
-  };
+  // ===== LIST VIEW: server-side paginated =====
+  const listQueryKey = useMemo(() => [
+    "agenda-list", filtroFilial, filtroMesa, listPage, listSearch, listStatus, listPeriodoDe, listPeriodoAte,
+  ], [filtroFilial, filtroMesa, listPage, listSearch, listStatus, listPeriodoDe, listPeriodoAte]);
 
-  const pedidoIds = useMemo(() => [...new Set(cards.map((c: any) => c.pedido_id).filter(Boolean))], [cards]);
-
-  const { data: pedidoPrioridadeMap = {} } = useQuery({
-    queryKey: ["agenda-pedido-prioridade", pedidoIds.join(",")],
-    enabled: pedidoIds.length > 0,
+  const { data: listData, isLoading: listLoading } = useQuery({
+    queryKey: listQueryKey,
+    enabled: activeView === "lista" && filtersInitialized,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("pedido_comentarios")
-        .select("pedido_id, prioridade")
-        .in("pedido_id", pedidoIds);
-      const map: Record<string, string> = {};
-      (data || []).forEach((r: any) => {
-        const current = map[r.pedido_id];
-        if (!current || (PRIORIDADE_PESO[r.prioridade] || 0) > (PRIORIDADE_PESO[current] || 0)) {
-          map[r.pedido_id] = r.prioridade;
-        }
+      // Step 1: count
+      let countQ = supabase.from("painel_agendamentos").select("id", { count: "exact", head: true });
+      countQ = applyBaseFilters(countQ);
+      countQ = countQ.gte("data", listPeriodoDe).lte("data", listPeriodoAte);
+      if (listSearch) {
+        // We'll filter client-side for search since we need join data
+        // But limit date range server-side
+      }
+      const { count: totalRaw } = await countQ;
+
+      // Step 2: fetch page
+      const from = (listPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+
+      let q = supabase.from("painel_agendamentos")
+        .select("id, card_id, atividade_id, checklist_index, data, hora_inicio, hora_fim, observacao, mesa_id, filial_id, etapa_id, titulo, cor_evento, criado_por, created_at");
+      q = applyBaseFilters(q);
+      q = q.gte("data", listPeriodoDe).lte("data", listPeriodoAte);
+      q = q.order("data", { ascending: false }).order("hora_inicio", { ascending: true });
+      q = q.range(from, to);
+
+      const { data: rows, error } = await q;
+      if (error) throw error;
+
+      // Step 3: enrich with card data
+      const cardIds = [...new Set((rows || []).map((r: any) => r.card_id))];
+      let cards: any[] = [];
+      if (cardIds.length > 0) {
+        const { data: cardsData } = await supabase
+          .from("painel_atendimento")
+          .select("id, cliente_id, contrato_id, pedido_id, filial_id, tipo_atendimento_local, status_projeto, pausado, iniciado_em, sla_horas, responsavel_id, etapa_id, clientes(nome_fantasia, cnpj_cpf), contratos(numero_exibicao), filiais(nome), profiles:responsavel_id(full_name)")
+          .in("id", cardIds);
+        cards = cardsData || [];
+      }
+      const cardsMap: Record<string, any> = {};
+      cards.forEach((c: any) => { cardsMap[c.id] = c; });
+
+      // Step 4: fetch técnicos & apontados for these cards
+      let tecnicos: any[] = [];
+      let apontados: any[] = [];
+      if (cardIds.length > 0) {
+        const [tecRes, aponRes] = await Promise.all([
+          supabase.from("painel_tecnicos").select("card_id, tecnico_id, profiles:tecnico_id(id, full_name, avatar_url)").in("card_id", cardIds),
+          supabase.from("painel_apontamentos").select("card_id, usuario_id, profiles:usuario_id(id, full_name, avatar_url)").in("card_id", cardIds),
+        ]);
+        tecnicos = tecRes.data || [];
+        apontados = aponRes.data || [];
+      }
+      const tecMap: Record<string, any[]> = {};
+      tecnicos.forEach((t: any) => {
+        if (!tecMap[t.card_id]) tecMap[t.card_id] = [];
+        if (t.profiles) tecMap[t.card_id].push(t.profiles);
       });
-      return map;
+      const aponMap: Record<string, any[]> = {};
+      apontados.forEach((a: any) => {
+        if (!aponMap[a.card_id]) aponMap[a.card_id] = [];
+        if (a.profiles) aponMap[a.card_id].push(a.profiles);
+      });
+
+      // Step 5: fetch etapa names for display
+      const etapaIds = [...new Set((rows || []).map((r: any) => r.etapa_id).filter(Boolean))];
+      let etapasMap: Record<string, { nome: string; cor: string | null }> = {};
+      if (etapaIds.length > 0) {
+        const { data: etapasData } = await supabase.from("painel_etapas").select("id, nome, cor").in("id", etapaIds);
+        (etapasData || []).forEach((e: any) => { etapasMap[e.id] = { nome: e.nome, cor: e.cor }; });
+      }
+
+      // Enrich
+      const enriched = (rows || []).map((ag: any) => {
+        const card = cardsMap[ag.card_id];
+        return {
+          ...ag,
+          cliente_nome: card?.clientes?.nome_fantasia || "—",
+          cliente_cnpj: card?.clientes?.cnpj_cpf || "",
+          contrato_numero: card?.contratos?.numero_exibicao || "—",
+          filial_nome: card?.filiais?.nome || "—",
+          atividade_nome: atividadesMap[ag.atividade_id] || "—",
+          mesa_nome: ag.mesa_id ? mesasMap[ag.mesa_id]?.nome || "—" : "—",
+          mesa_cor: ag.mesa_id ? mesasMap[ag.mesa_id]?.cor || null : null,
+          etapa_nome: ag.etapa_id ? etapasMap[ag.etapa_id]?.nome || "—" : "—",
+          etapa_cor: ag.etapa_id ? etapasMap[ag.etapa_id]?.cor || null : null,
+          responsavel_nome: card?.profiles?.full_name || "—",
+          tecnicos: tecMap[ag.card_id] || [],
+          apontados: aponMap[ag.card_id] || [],
+          status_projeto: card?.status_projeto || "ativo",
+          pausado: card?.pausado || false,
+          iniciado_em: card?.iniciado_em || null,
+          sla_horas: card?.sla_horas || 0,
+          tipo_atendimento: card?.tipo_atendimento_local || null,
+        };
+      });
+
+      // Client-side search filter
+      let filtered = enriched;
+      if (listSearch) {
+        const term = listSearch.toLowerCase();
+        filtered = enriched.filter((ag: any) =>
+          ag.cliente_nome.toLowerCase().includes(term) ||
+          ag.cliente_cnpj.toLowerCase().includes(term) ||
+          (ag.titulo || "").toLowerCase().includes(term)
+        );
+      }
+
+      return { items: filtered, total: totalRaw || 0 };
     },
   });
 
-  // Agendamentos enriquecidos
-  const agendamentosDetalhados = useMemo<AgendamentoComDetalhes[]>(() => {
-    return agendamentos.map((ag) => {
-      const card = cardsMap[ag.card_id];
-      const pedidoId = card?.pedido_id;
+  // Reset page on filter change
+  useEffect(() => { setListPage(1); }, [filtroFilial, filtroMesa, listSearch, listStatus, listPeriodoDe, listPeriodoAte]);
+
+  // ===== CALENDAR VIEW: interval-based =====
+  const calRange = useMemo(() => {
+    if (calMode === "week") {
       return {
-        ...ag,
-        cliente_nome: card?.clientes?.nome_fantasia || "—",
-        contrato_numero: card?.contratos?.numero_exibicao || "—",
-        filial_id: card?.filial_id || "",
-        filial_nome: card?.filiais?.nome || "—",
-        atividade_nome: atividadesMap[ag.atividade_id] || "—",
-        titulo_evento: ag.titulo || null,
-        cor_evento: ag.cor_evento || null,
-        tecnicos: tecnicosPorCard[ag.card_id] || [],
-        apontados: apontadosPorCard[ag.card_id] || [],
-        tipo_atendimento: card?.tipo_atendimento_local || null,
-        status_projeto: card?.status_projeto || "ativo",
-        pausado: card?.pausado || false,
-        iniciado_em: card?.iniciado_em || null,
-        sla_horas: card?.sla_horas || 0,
-        prioridade: pedidoId ? (pedidoPrioridadeMap[pedidoId] || null) : null,
+        start: format(startOfWeek(calDate, { weekStartsOn: 0 }), "yyyy-MM-dd"),
+        end: format(endOfWeek(calDate, { weekStartsOn: 0 }), "yyyy-MM-dd"),
       };
-    });
-  }, [agendamentos, cardsMap, atividadesMap, tecnicosPorCard, apontadosPorCard, pedidoPrioridadeMap]);
+    }
+    return {
+      start: format(startOfMonth(calDate), "yyyy-MM-dd"),
+      end: format(endOfMonth(calDate), "yyyy-MM-dd"),
+    };
+  }, [calDate, calMode]);
 
-  // Listas para filtros
-  const tecnicosList = useMemo(() => {
-    const map = new Map<string, string>();
-    agendamentosDetalhados.forEach((ag) => {
-      ag.tecnicos.forEach((t) => map.set(t.id, t.full_name));
-    });
-    return Array.from(map.entries()).map(([id, nome]) => ({ id, nome }));
-  }, [agendamentosDetalhados]);
+  const { data: calAgendamentos = [], isLoading: calLoading } = useQuery({
+    queryKey: ["agenda-cal", calRange.start, calRange.end, filtroFilial, filtroMesa],
+    enabled: activeView === "calendario" && filtersInitialized,
+    queryFn: async () => {
+      let q = supabase.from("painel_agendamentos")
+        .select("id, card_id, atividade_id, checklist_index, data, hora_inicio, hora_fim, observacao, mesa_id, filial_id, etapa_id, titulo, cor_evento");
+      q = applyBaseFilters(q);
+      q = q.gte("data", calRange.start).lte("data", calRange.end);
+      q = q.order("data").order("hora_inicio", { ascending: true });
 
-  const clientesList = useMemo(() => {
-    const map = new Map<string, string>();
-    agendamentosDetalhados.forEach((ag) => {
-      if (ag.cliente_nome !== "—") {
-        const cardId = ag.card_id;
-        const card = cardsMap[cardId];
-        if (card?.cliente_id) map.set(card.cliente_id, ag.cliente_nome);
+      const { data: rows, error } = await q;
+      if (error) throw error;
+
+      // Enrich with card data
+      const cardIds = [...new Set((rows || []).map((r: any) => r.card_id))];
+      let cardsMap: Record<string, any> = {};
+      if (cardIds.length > 0) {
+        const { data: cardsData } = await supabase
+          .from("painel_atendimento")
+          .select("id, cliente_id, contrato_id, filial_id, tipo_atendimento_local, status_projeto, pausado, iniciado_em, sla_horas, pedido_id, clientes(nome_fantasia), contratos(numero_exibicao), filiais(nome)")
+          .in("id", cardIds);
+        (cardsData || []).forEach((c: any) => { cardsMap[c.id] = c; });
       }
-    });
-    return Array.from(map.entries()).map(([id, nome]) => ({ id, nome }));
-  }, [agendamentosDetalhados, cardsMap]);
 
-  // IDs das mesas acessíveis (para filtro de segurança client-side)
-  const mesaIdsPermitidos = useMemo(() => {
-    if (isAdmin || isGlobal) return null; // sem restrição
-    if (mesasDoUsuario.length === 0) return null; // sem vínculo = sem restrição (fallback)
-    return new Set(mesasDoUsuario);
-  }, [isAdmin, isGlobal, mesasDoUsuario]);
+      // Técnicos
+      let tecMap: Record<string, any[]> = {};
+      if (cardIds.length > 0) {
+        const { data: tecData } = await supabase.from("painel_tecnicos").select("card_id, tecnico_id, profiles:tecnico_id(id, full_name, avatar_url)").in("card_id", cardIds);
+        (tecData || []).forEach((t: any) => {
+          if (!tecMap[t.card_id]) tecMap[t.card_id] = [];
+          if (t.profiles) tecMap[t.card_id].push(t.profiles);
+        });
+      }
 
-  // Filtragem
-  const agendamentosFiltrados = useMemo(() => {
-    return agendamentosDetalhados.filter((ag) => {
-      // Segurança: restringir por mesas do usuário
-      if (mesaIdsPermitidos && ag.mesa_id && !mesaIdsPermitidos.has(ag.mesa_id)) return false;
-      if (filtroFilial !== "todas" && filtroFilial !== "_init_" && ag.filial_id !== filtroFilial) return false;
-      if (filtroTecnico !== "todos" && !ag.tecnicos.some((t) => t.id === filtroTecnico)) return false;
-      if (filtroMesa !== "todas" && filtroMesa !== "_init_" && ag.mesa_id !== filtroMesa) return false;
-      if (filtroCliente !== "todos") {
+      // Apontados
+      let aponMap: Record<string, any[]> = {};
+      if (cardIds.length > 0) {
+        const { data: aponData } = await supabase.from("painel_apontamentos").select("card_id, usuario_id, profiles:usuario_id(id, full_name, avatar_url)").in("card_id", cardIds);
+        (aponData || []).forEach((a: any) => {
+          if (!aponMap[a.card_id]) aponMap[a.card_id] = [];
+          if (a.profiles) aponMap[a.card_id].push(a.profiles);
+        });
+      }
+
+      return (rows || []).map((ag: any) => {
         const card = cardsMap[ag.card_id];
-        if (card?.cliente_id !== filtroCliente) return false;
-      }
-      return true;
-    });
-  }, [agendamentosDetalhados, filtroFilial, filtroTecnico, filtroMesa, filtroCliente, cardsMap, mesaIdsPermitidos]);
+        return {
+          ...ag,
+          cliente_nome: card?.clientes?.nome_fantasia || "—",
+          contrato_numero: card?.contratos?.numero_exibicao || "—",
+          filial_id: card?.filial_id || "",
+          filial_nome: card?.filiais?.nome || "—",
+          atividade_nome: atividadesMap[ag.atividade_id] || "—",
+          tecnicos: tecMap[ag.card_id] || [],
+          apontados: aponMap[ag.card_id] || [],
+          tipo_atendimento: card?.tipo_atendimento_local || null,
+          status_projeto: card?.status_projeto || "ativo",
+          pausado: card?.pausado || false,
+          iniciado_em: card?.iniciado_em || null,
+          sla_horas: card?.sla_horas || 0,
+        };
+      });
+    },
+  });
 
-  // Agendamentos do dia selecionado
+  // Calendar: dates with events
+  const datasComAgendamento = useMemo(() => {
+    const dates = new Set<string>();
+    calAgendamentos.forEach((ag: any) => dates.add(ag.data));
+    return dates;
+  }, [calAgendamentos]);
+
+  const modifiers = useMemo(() => ({
+    hasEvent: (date: Date) => datasComAgendamento.has(format(date, "yyyy-MM-dd")),
+  }), [datasComAgendamento]);
+
+  const modifiersClassNames = { hasEvent: "agenda-has-event" };
+
+  // Calendar: events for selected day
   const agendamentosDoDia = useMemo(() => {
-    return agendamentosFiltrados
-      .filter((ag) => isSameDay(parseISO(ag.data), selectedDate))
-      .sort((a, b) => {
+    return calAgendamentos
+      .filter((ag: any) => isSameDay(parseISO(ag.data), selectedDate))
+      .sort((a: any, b: any) => {
         if (a.hora_inicio && b.hora_inicio) return a.hora_inicio.localeCompare(b.hora_inicio);
         if (a.hora_inicio) return -1;
         return 1;
       });
-  }, [agendamentosFiltrados, selectedDate]);
+  }, [calAgendamentos, selectedDate]);
 
-  // Datas que possuem agendamentos (para destacar no calendário)
-  const datasComAgendamento = useMemo(() => {
-    const dates = new Set<string>();
-    agendamentosFiltrados.forEach((ag) => dates.add(ag.data));
-    return dates;
-  }, [agendamentosFiltrados]);
-
-  const modifiers = useMemo(() => ({
-    hasEvent: (date: Date) => {
-      const dateStr = format(date, "yyyy-MM-dd");
-      return datasComAgendamento.has(dateStr);
-    },
-  }), [datasComAgendamento]);
-
-  const modifiersClassNames = {
-    hasEvent: "agenda-has-event",
+  // ===== SHARED: status helper =====
+  const getStatusInfo = (ag: any) => {
+    if (ag.status_projeto === "recusado") return { label: "Recusado", color: "bg-destructive/10 text-destructive border-destructive/20" };
+    if (ag.pausado) return { label: "Pausado", color: "bg-yellow-100 text-yellow-700 border-yellow-200" };
+    if (ag.iniciado_em && ag.sla_horas > 0) {
+      const horasDecorridas = (Date.now() - new Date(ag.iniciado_em).getTime()) / 3600000;
+      if (horasDecorridas > ag.sla_horas) return { label: "SLA Atrasado", color: "bg-destructive/10 text-destructive border-destructive/20" };
+    }
+    if (ag.iniciado_em) return { label: "Em Andamento", color: "bg-green-100 text-green-700 border-green-200" };
+    return { label: "Aguardando", color: "bg-muted text-muted-foreground border-border" };
   };
+
+  // ===== RENDER: event card (shared between views) =====
+  const renderEventCard = (ag: any, compact = false) => {
+    const statusInfo = getStatusInfo(ag);
+    return (
+      <div
+        key={ag.id}
+        className="border rounded-lg p-3 hover:bg-accent/50 transition-colors"
+        style={{
+          borderLeftWidth: ag.cor_evento ? "4px" : undefined,
+          borderLeftColor: ag.cor_evento || undefined,
+        }}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              {ag.hora_inicio && (
+                <Badge variant="outline" className="text-xs font-mono shrink-0">
+                  <Clock className="h-3 w-3 mr-1" />
+                  {ag.hora_inicio.slice(0, 5)}
+                  {ag.hora_fim && ` - ${ag.hora_fim.slice(0, 5)}`}
+                </Badge>
+              )}
+              {ag.tipo_atendimento && (
+                <Badge variant="secondary" className="text-xs">
+                  <MapPin className="h-3 w-3 mr-1" />
+                  {ag.tipo_atendimento}
+                </Badge>
+              )}
+              <Badge variant="outline" className={cn("text-xs", statusInfo.color)}>
+                {statusInfo.label}
+              </Badge>
+              {ag.mesa_nome && ag.mesa_nome !== "—" && (
+                <Badge variant="outline" className="text-xs" style={{ borderColor: ag.mesa_cor || undefined, color: ag.mesa_cor || undefined }}>
+                  <span className="h-2 w-2 rounded-full mr-1 inline-block" style={{ backgroundColor: ag.mesa_cor || "hsl(var(--muted-foreground))" }} />
+                  {ag.mesa_nome}
+                </Badge>
+              )}
+            </div>
+            <p className="font-medium text-sm text-foreground truncate">
+              {ag.titulo || ag.cliente_nome}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Contrato: {ag.contrato_numero} · {ag.atividade_nome}
+            </p>
+            {!compact && ag.tecnicos.length > 0 && (
+              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                {ag.tecnicos.map((t: any) => (
+                  <Badge key={t.id} variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20 flex items-center gap-1">
+                    <UserAvatar avatarUrl={t.avatar_url} fullName={t.full_name} size="xs" />
+                    {t.full_name}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {!compact && ag.apontados?.length > 0 && (
+              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                <span className="text-[10px] text-muted-foreground font-medium">Designados:</span>
+                {ag.apontados.map((a: any) => (
+                  <Badge key={a.id} variant="secondary" className="text-xs bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1">
+                    <UserAvatar avatarUrl={a.avatar_url} fullName={a.full_name} size="xs" />
+                    {a.full_name}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {ag.observacao && (
+              <p className="text-xs text-muted-foreground mt-1 italic">"{ag.observacao}"</p>
+            )}
+          </div>
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <Badge variant="outline" className="text-xs">
+              <Building2 className="h-3 w-3 mr-1" />
+              {ag.filial_nome}
+            </Badge>
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => navigate(`/fila-agendamento?card=${ag.card_id}&from=agenda`)}>
+              <ExternalLink className="h-3 w-3" /> Abrir Card
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ===== Calendar navigation =====
+  const calPrev = () => setCalDate(calMode === "month" ? subMonths(calDate, 1) : subWeeks(calDate, 1));
+  const calNext = () => setCalDate(calMode === "month" ? addMonths(calDate, 1) : addWeeks(calDate, 1));
+  const calToday = () => { setCalDate(new Date()); setSelectedDate(new Date()); };
 
   return (
     <AppLayout>
       <div className="space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Agenda Operacional</h1>
             <p className="text-sm text-muted-foreground">Agendamentos do Painel de Atendimento</p>
           </div>
+          <Tabs value={activeView} onValueChange={(v) => setActiveView(v as any)}>
+            <TabsList>
+              <TabsTrigger value="calendario" className="gap-1.5">
+                <CalendarDays className="h-4 w-4" /> Calendário
+              </TabsTrigger>
+              <TabsTrigger value="lista" className="gap-1.5">
+                <List className="h-4 w-4" /> Lista
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
-        {/* Filtros */}
+        {/* Filtros compartilhados */}
         <Card>
           <CardContent className="py-3 px-4">
             <div className="flex items-center gap-2 flex-wrap">
@@ -368,32 +496,6 @@ export default function Agenda() {
                 </SelectContent>
               </Select>
 
-              <Select value={filtroTecnico} onValueChange={setFiltroTecnico}>
-                <SelectTrigger className="w-[180px] h-9">
-                  <User className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                  <SelectValue placeholder="Técnico" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos os Técnicos</SelectItem>
-                  {tecnicosList.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={filtroCliente} onValueChange={setFiltroCliente}>
-                <SelectTrigger className="w-[200px] h-9">
-                  <User className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                  <SelectValue placeholder="Cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos os Clientes</SelectItem>
-                  {clientesList.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
               <Select value={filtroMesa} onValueChange={setFiltroMesa}>
                 <SelectTrigger className="w-[180px] h-9">
                   <Layers className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
@@ -404,13 +506,34 @@ export default function Agenda() {
                   {mesas.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       <span className="flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: m.cor || 'hsl(var(--muted-foreground))' }} />
+                        <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: m.cor || "hsl(var(--muted-foreground))" }} />
                         {m.nome}
                       </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+
+              {/* List-specific filters */}
+              {activeView === "lista" && (
+                <>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar cliente, CNPJ ou título..."
+                      value={listSearch}
+                      onChange={(e) => setListSearch(e.target.value)}
+                      className="h-9 pl-8 w-[250px]"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span>De:</span>
+                    <Input type="date" value={listPeriodoDe} onChange={(e) => setListPeriodoDe(e.target.value)} className="h-9 w-[140px]" />
+                    <span>Até:</span>
+                    <Input type="date" value={listPeriodoAte} onChange={(e) => setListPeriodoAte(e.target.value)} className="h-9 w-[140px]" />
+                  </div>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -430,191 +553,142 @@ export default function Agenda() {
                     : "border-border text-muted-foreground hover:bg-accent"
                 )}
               >
-                <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: m.cor || 'hsl(var(--muted-foreground))' }} />
+                <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: m.cor || "hsl(var(--muted-foreground))" }} />
                 {m.nome}
               </button>
             ))}
           </div>
         )}
 
-        {/* Layout: Calendário + Lista */}
-        <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4">
-          {/* Calendário */}
-          <Card>
-            <CardContent className="p-3">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(d) => d && setSelectedDate(d)}
-                locale={ptBR}
-                modifiers={modifiers}
-                modifiersClassNames={modifiersClassNames}
-                classNames={{
-                  day_selected: "agenda-day-selected !bg-transparent !shadow-none !outline-none",
-                }}
-                className="pointer-events-auto"
-              />
-              <div className="mt-2 px-2 flex items-center gap-2 text-xs text-muted-foreground">
-                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "hsl(var(--primary))" }} />
-                <span>Dias com agendamento</span>
+        {/* ===== CALENDAR VIEW ===== */}
+        {activeView === "calendario" && (
+          <div className="space-y-4">
+            {/* Calendar navigation */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" onClick={calPrev}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={calToday}>Hoje</Button>
+                <Button variant="outline" size="sm" onClick={calNext}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
-            </CardContent>
-          </Card>
+              <span className="text-sm font-medium text-foreground capitalize">
+                {calMode === "month"
+                  ? format(calDate, "MMMM yyyy", { locale: ptBR })
+                  : `Semana de ${format(startOfWeek(calDate, { weekStartsOn: 0 }), "dd/MM")} a ${format(endOfWeek(calDate, { weekStartsOn: 0 }), "dd/MM/yyyy")}`}
+              </span>
+              <div className="ml-auto flex gap-1">
+                <Button variant={calMode === "week" ? "default" : "outline"} size="sm" onClick={() => setCalMode("week")}>Semana</Button>
+                <Button variant={calMode === "month" ? "default" : "outline"} size="sm" onClick={() => setCalMode("month")}>Mês</Button>
+              </div>
+            </div>
 
-          {/* Lista do dia */}
+            <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4">
+              {/* Calendar widget */}
+              <Card>
+                <CardContent className="p-3">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(d) => d && setSelectedDate(d)}
+                    month={calDate}
+                    onMonthChange={setCalDate}
+                    locale={ptBR}
+                    modifiers={modifiers}
+                    modifiersClassNames={modifiersClassNames}
+                    classNames={{
+                      day_selected: "agenda-day-selected !bg-transparent !shadow-none !outline-none",
+                    }}
+                    className="pointer-events-auto"
+                  />
+                  <div className="mt-2 px-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "hsl(var(--primary))" }} />
+                    <span>Dias com agendamento</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Events of selected day */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4 text-primary" />
+                    {format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                    <Badge variant="secondary" className="ml-auto">{agendamentosDoDia.length} agendamento(s)</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {calLoading ? (
+                    <div className="py-8 text-center text-muted-foreground text-sm">Carregando...</div>
+                  ) : agendamentosDoDia.length === 0 ? (
+                    <div className="py-12 text-center text-muted-foreground">
+                      <CalendarDays className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">Nenhum agendamento para este dia</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {agendamentosDoDia.map((ag: any) => renderEventCard(ag))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* ===== LIST VIEW ===== */}
+        {activeView === "lista" && (
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <CalendarDays className="h-4 w-4 text-primary" />
-                {format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                <Badge variant="secondary" className="ml-auto">{agendamentosDoDia.length} agendamento(s)</Badge>
+                <List className="h-4 w-4 text-primary" />
+                Agendamentos
+                {listData && (
+                  <Badge variant="secondary" className="ml-auto">{listData.total} resultado(s)</Badge>
+                )}
               </CardTitle>
-              <p className="text-sm text-muted-foreground font-medium">Compromissos</p>
             </CardHeader>
             <CardContent>
-              {agendamentosDoDia.length === 0 ? (
+              {listLoading ? (
+                <div className="py-8 text-center text-muted-foreground text-sm">Carregando...</div>
+              ) : !listData || listData.items.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
                   <CalendarDays className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">Nenhum agendamento para este dia</p>
+                  <p className="text-sm">Nenhum agendamento encontrado no período</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {agendamentosDoDia.map((ag) => {
-                    // Outras datas agendadas para o mesmo card (contrato)
-                    const outrasData = agendamentosFiltrados
-                      .filter((o) => o.card_id === ag.card_id && o.id !== ag.id)
-                      .map((o) => o.data)
-                      .filter((v, i, arr) => arr.indexOf(v) === i)
-                      .sort();
-
-                    const getStatusInfo = () => {
-                      if (ag.status_projeto === "recusado") return { label: "Recusado", color: "bg-destructive/10 text-destructive border-destructive/20" };
-                      if (ag.pausado) return { label: "Pausado", color: "bg-yellow-100 text-yellow-700 border-yellow-200" };
-                      if (ag.iniciado_em && ag.sla_horas > 0) {
-                        const inicio = new Date(ag.iniciado_em).getTime();
-                        const agora = Date.now();
-                        const horasDecorridas = (agora - inicio) / (1000 * 60 * 60);
-                        if (horasDecorridas > ag.sla_horas) return { label: "SLA Atrasado", color: "bg-destructive/10 text-destructive border-destructive/20" };
-                      }
-                      if (ag.iniciado_em) return { label: "Em Andamento", color: "bg-green-100 text-green-700 border-green-200" };
-                      return { label: "Aguardando", color: "bg-muted text-muted-foreground border-border" };
-                    };
-                    const statusInfo = getStatusInfo();
-
-                    return (
-                      <div
-                        key={ag.id}
-                        className="border rounded-lg p-3 hover:bg-accent/50 transition-colors"
-                        style={{
-                          borderLeftWidth: ag.cor_evento ? '4px' : undefined,
-                          borderLeftColor: ag.cor_evento || undefined,
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              {ag.hora_inicio && (
-                                <Badge variant="outline" className="text-xs font-mono shrink-0">
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  {ag.hora_inicio.slice(0, 5)}
-                                  {ag.hora_fim && ` - ${ag.hora_fim.slice(0, 5)}`}
-                                </Badge>
-                              )}
-                              {ag.tipo_atendimento && (
-                                <Badge variant="secondary" className="text-xs">
-                                  <MapPin className="h-3 w-3 mr-1" />
-                                  {ag.tipo_atendimento}
-                                </Badge>
-                              )}
-                              <Badge variant="outline" className={cn("text-xs", statusInfo.color)}>
-                                {statusInfo.label}
-                              </Badge>
-                              {(() => {
-                                if (!ag.prioridade || ag.prioridade === "normal") return null;
-                                const display = PRIORIDADE_DISPLAY[ag.prioridade];
-                                if (!display) return null;
-                                return (
-                                  <Badge variant="outline" className={cn("text-xs", display.className)}>
-                                    {display.emoji} {display.label}
-                                  </Badge>
-                                );
-                              })()}
-                            </div>
-                            <p className="font-medium text-sm text-foreground truncate">
-                              {ag.titulo_evento || ag.cliente_nome}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Contrato: {ag.contrato_numero} · {ag.atividade_nome}
-                            </p>
-                            {ag.tecnicos.length > 0 && (
-                              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                                {ag.tecnicos.map((t) => (
-                                  <Badge key={t.id} variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20 flex items-center gap-1">
-                                    <UserAvatar avatarUrl={t.avatar_url} fullName={t.full_name} size="xs" />
-                                    {t.full_name}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-                            {ag.apontados.length > 0 && (
-                              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                                <span className="text-[10px] text-muted-foreground font-medium">Designados:</span>
-                                {ag.apontados.map((a) => (
-                                  <Badge key={a.id} variant="secondary" className="text-xs bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1">
-                                    <UserAvatar avatarUrl={a.avatar_url} fullName={a.full_name} size="xs" />
-                                    {a.full_name}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-                            {ag.observacao && (
-                              <p className="text-xs text-muted-foreground mt-1 italic">"{ag.observacao}"</p>
-                            )}
-                            {outrasData.length > 0 && (
-                              <div className="mt-2 pt-2 border-t border-border/50">
-                                <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
-                                  <CalendarDays className="h-3 w-3" />
-                                  Agendamentos Programados
-                                </p>
-                                <div className="flex flex-wrap gap-1">
-                                  {outrasData.map((d) => (
-                                    <Badge
-                                      key={d}
-                                      variant="outline"
-                                      className="text-xs font-mono cursor-pointer hover:bg-primary/10"
-                                      onClick={() => setSelectedDate(parseISO(d))}
-                                    >
-                                      {format(parseISO(d), "dd/MM", { locale: ptBR })}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex flex-col items-end gap-2 shrink-0">
-                            <Badge variant="outline" className="text-xs">
-                              <Building2 className="h-3 w-3 mr-1" />
-                              {ag.filial_nome}
-                            </Badge>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs gap-1"
-                              onClick={() => navigate(`/fila-agendamento?card=${ag.card_id}&from=agenda`)}
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                              Abrir Card
-                            </Button>
-                          </div>
-                        </div>
+                  {listData.items.map((ag: any) => (
+                    <div key={ag.id}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline" className="text-xs font-mono">
+                          {format(parseISO(ag.data), "dd/MM/yyyy", { locale: ptBR })}
+                        </Badge>
+                        {ag.etapa_nome && ag.etapa_nome !== "—" && (
+                          <Badge variant="outline" className="text-xs" style={{ borderColor: ag.etapa_cor || undefined, color: ag.etapa_cor || undefined }}>
+                            {ag.etapa_nome}
+                          </Badge>
+                        )}
                       </div>
-                    );
-                  })}
+                      {renderEventCard(ag)}
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
+            {listData && listData.total > ITEMS_PER_PAGE && (
+              <TablePagination
+                currentPage={listPage}
+                totalPages={Math.ceil(listData.total / ITEMS_PER_PAGE)}
+                totalItems={listData.total}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={setListPage}
+              />
+            )}
           </Card>
-        </div>
+        )}
       </div>
     </AppLayout>
   );
