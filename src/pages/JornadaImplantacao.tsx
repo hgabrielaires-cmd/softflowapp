@@ -221,16 +221,11 @@ export default function JornadaImplantacao() {
             });
           }
 
-          // Delete old atividades and etapas (but NOT operational data)
-          // First detach FK by setting atividade_id references temporarily
-          // We'll remap them after creating new atividades
+          // Delete old atividades and etapas
+          // FK is ON DELETE SET NULL so operational data (agendamentos/checklist) keeps rows
+          // but atividade_id becomes null. We remap to new IDs after insert.
           const { error: delAtivErr } = await supabase.from("jornada_atividades").delete().in("etapa_id", oldEtapaIds);
-          if (delAtivErr) {
-            // FK constraint - operational data references these. Remove FK refs first.
-            // Update painel_agendamentos to set atividade_id temporarily to first new one (will remap after)
-            // For now, need to handle this gracefully
-            console.warn("Could not delete old atividades, updating in place");
-          }
+          if (delAtivErr) console.warn("Could not delete old atividades:", delAtivErr);
           const { error: delEtapaErr } = await supabase.from("jornada_etapas").delete().eq("jornada_id", jornadaId);
           if (delEtapaErr) console.warn("Could not delete old etapas:", delEtapaErr);
         }
