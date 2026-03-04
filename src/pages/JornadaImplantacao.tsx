@@ -220,17 +220,9 @@ export default function JornadaImplantacao() {
               allOldAtivIds.push(a.id);
             });
           }
-
-          // Delete old atividades and etapas
-          // FK is ON DELETE SET NULL so operational data (agendamentos/checklist) keeps rows
-          // but atividade_id becomes null. We remap to new IDs after insert.
-          const { error: delAtivErr } = await supabase.from("jornada_atividades").delete().in("etapa_id", oldEtapaIds);
-          if (delAtivErr) console.warn("Could not delete old atividades:", delAtivErr);
-          const { error: delEtapaErr } = await supabase.from("jornada_etapas").delete().eq("jornada_id", jornadaId);
-          if (delEtapaErr) console.warn("Could not delete old etapas:", delEtapaErr);
         }
 
-        // Insert new etapas and atividades, collecting ID mapping
+        // Step 1: Insert NEW etapas and atividades (before deleting old ones)
         const newAtivMap: Record<string, string> = {};
 
         for (const etapa of etapas) {
@@ -270,7 +262,7 @@ export default function JornadaImplantacao() {
           }
         }
 
-        // Remap operational data (painel_agendamentos and painel_checklist_progresso) from old IDs to new IDs
+        // Step 2: Remap operational data from old atividade IDs to new IDs (BEFORE deleting old ones)
         for (const [key, oldId] of Object.entries(oldAtivMap)) {
           const newId = newAtivMap[key];
           if (newId && newId !== oldId) {
@@ -281,14 +273,12 @@ export default function JornadaImplantacao() {
           }
         }
 
-        // Clean up orphaned old atividade references (atividades that were removed from jornada)
-        const orphanedOldIds = allOldAtivIds.filter(oldId => {
-          return !Object.entries(oldAtivMap).some(([key, id]) => id === oldId && newAtivMap[key]);
-        });
-        if (orphanedOldIds.length > 0) {
-          // Don't delete operational data for removed atividades - just leave them orphaned
-          // They'll naturally not appear in any checklist view
-          console.log("Orphaned atividade IDs (removed from jornada):", orphanedOldIds);
+        // Step 3: Now delete old atividades and etapas (safe - operational data already remapped)
+        if (oldEtapas && oldEtapas.length > 0) {
+          const oldEtapaIds = oldEtapas.map(e => e.id);
+          // ON DELETE SET NULL will handle any remaining orphaned refs
+          await supabase.from("jornada_atividades").delete().in("etapa_id", oldEtapaIds);
+          await supabase.from("jornada_etapas").delete().eq("jornada_id", jornadaId).in("id", oldEtapaIds);
         }
 
       } else {
