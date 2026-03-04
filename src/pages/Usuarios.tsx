@@ -544,7 +544,7 @@ export default function Usuarios() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((user) => (
+                filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.full_name}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{user.email}</TableCell>
