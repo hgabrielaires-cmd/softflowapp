@@ -403,7 +403,7 @@ export default function Fornecedores() {
                         <DropdownMenuItem onClick={() => openEdit(f)} className="cursor-pointer">
                           <Pencil className="h-4 w-4 mr-2" /> Editar
                         </DropdownMenuItem>
-                        {canEdit && (
+                        {crudExcluir && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => setDeletingId(f.id)} className="cursor-pointer text-destructive focus:text-destructive">
