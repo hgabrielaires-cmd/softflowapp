@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarDays, Clock, User, Building2, Filter, MapPin, ExternalLink } from "lucide-react";
+import { CalendarDays, Clock, User, Building2, Filter, MapPin, ExternalLink, Layers } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -59,6 +59,7 @@ export default function Agenda() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [filtroFilial, setFiltroFilial] = useState<string>("todas");
   const [filtroTecnico, setFiltroTecnico] = useState<string>("todos");
+  const [filtroMesa, setFiltroMesa] = useState<string>("todas");
   const [filtroCliente, setFiltroCliente] = useState<string>("todos");
 
   // Fetch agendamentos
@@ -95,6 +96,20 @@ export default function Agenda() {
         .select("id, nome");
       if (error) throw error;
       return data as any[];
+    },
+  });
+
+  // Fetch mesas de atendimento
+  const { data: mesas = [] } = useQuery({
+    queryKey: ["agenda-mesas"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("mesas_atendimento")
+        .select("id, nome, cor")
+        .eq("ativo", true)
+        .order("nome");
+      if (error) throw error;
+      return data as { id: string; nome: string; cor: string | null }[];
     },
   });
 
@@ -238,13 +253,14 @@ export default function Agenda() {
     return agendamentosDetalhados.filter((ag) => {
       if (filtroFilial !== "todas" && ag.filial_id !== filtroFilial) return false;
       if (filtroTecnico !== "todos" && !ag.tecnicos.some((t) => t.id === filtroTecnico)) return false;
+      if (filtroMesa !== "todas" && ag.mesa_id !== filtroMesa) return false;
       if (filtroCliente !== "todos") {
         const card = cardsMap[ag.card_id];
         if (card?.cliente_id !== filtroCliente) return false;
       }
       return true;
     });
-  }, [agendamentosDetalhados, filtroFilial, filtroTecnico, filtroCliente, cardsMap]);
+  }, [agendamentosDetalhados, filtroFilial, filtroTecnico, filtroMesa, filtroCliente, cardsMap]);
 
   // Agendamentos do dia selecionado
   const agendamentosDoDia = useMemo(() => {
@@ -329,9 +345,49 @@ export default function Agenda() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <Select value={filtroMesa} onValueChange={setFiltroMesa}>
+                <SelectTrigger className="w-[180px] h-9">
+                  <Layers className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                  <SelectValue placeholder="Mesa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas as Mesas</SelectItem>
+                  {mesas.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      <span className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: m.cor || 'hsl(var(--muted-foreground))' }} />
+                        {m.nome}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
+
+        {/* Legenda de Mesas */}
+        {mesas.length > 0 && (
+          <div className="flex items-center gap-3 flex-wrap px-1">
+            <span className="text-xs font-medium text-muted-foreground">Mesas:</span>
+            {mesas.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setFiltroMesa(filtroMesa === m.id ? "todas" : m.id)}
+                className={cn(
+                  "flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border transition-colors cursor-pointer",
+                  filtroMesa === m.id
+                    ? "border-primary bg-primary/10 text-primary font-medium"
+                    : "border-border text-muted-foreground hover:bg-accent"
+                )}
+              >
+                <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: m.cor || 'hsl(var(--muted-foreground))' }} />
+                {m.nome}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Layout: Calendário + Lista */}
         <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4">
