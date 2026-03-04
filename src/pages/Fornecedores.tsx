@@ -86,7 +86,8 @@ export default function Fornecedores() {
   const { roles } = useAuth();
   const isAdmin = roles.includes("admin");
   const isFinanceiro = roles.includes("financeiro");
-  const canEdit = isAdmin || isFinanceiro;
+  const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("fornecedores", roles);
+  const canEdit = crudEditar || crudIncluir;
 
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [loading, setLoading] = useState(true);

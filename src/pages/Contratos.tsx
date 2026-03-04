@@ -170,7 +170,8 @@ function fmtBRL(v: number) {
 export default function Contratos() {
   const { isAdmin, roles, profile } = useAuth();
   const isFinanceiro = roles.includes("financeiro");
-  const canManage = isAdmin || isFinanceiro;
+  const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("contratos", roles);
+  const canManage = crudEditar || crudIncluir;
   const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais } = useUserFiliais();
 
   // Permissões do usuário

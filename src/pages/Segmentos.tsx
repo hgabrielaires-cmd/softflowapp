@@ -31,7 +31,9 @@ interface Filial {
 }
 
 export default function Segmentos() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, roles } = useAuth();
+  const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("segmentos", roles);
+  const canAccess = isAdmin || crudIncluir || crudEditar;
   const [segmentos, setSegmentos] = useState<Segmento[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +43,7 @@ export default function Segmentos() {
   const [saving, setSaving] = useState(false);
   const [busca, setBusca] = useState("");
 
-  if (!isAdmin) return <Navigate to="/dashboard" replace />;
+  if (!canAccess) return <Navigate to="/dashboard" replace />;
 
   async function loadFiliais() {
     const { data } = await supabase.from("filiais").select("id, nome").eq("ativa", true).order("nome");
