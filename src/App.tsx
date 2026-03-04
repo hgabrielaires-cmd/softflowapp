@@ -99,7 +99,7 @@ const App = () => (
             <Route
               path="/financeiro"
               element={
-              <ProtectedRoute requiredRole="financeiro">
+                <ProtectedRoute>
                   <Financeiro />
                 </ProtectedRoute>
               }
