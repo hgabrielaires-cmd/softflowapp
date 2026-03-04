@@ -183,6 +183,23 @@ export default function Perfil() {
     setSavingFavorita(false);
   }
 
+  async function handleFavoritarMesa(mesaId: string) {
+    if (!profile) return;
+    const novaFavorita = mesaFavoritaId === mesaId ? null : mesaId;
+    setSavingFavorita(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ mesa_favorita_id: novaFavorita } as any)
+      .eq("user_id", profile.user_id);
+    if (error) {
+      toast.error("Erro ao salvar mesa favorita");
+    } else {
+      setMesaFavoritaId(novaFavorita);
+      toast.success(novaFavorita ? "Mesa favorita definida!" : "Mesa favorita removida");
+    }
+    setSavingFavorita(false);
+  }
+
   const filialAtual = filiaisDoUsuario.find((f) => f.id === profile?.filial_id);
 
   return (
