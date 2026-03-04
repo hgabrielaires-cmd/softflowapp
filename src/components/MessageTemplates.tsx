@@ -39,8 +39,14 @@ interface MessageTemplate {
   conteudo: string;
   descricao: string | null;
   ativo: boolean;
+  setor_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface Setor {
+  id: string;
+  nome: string;
 }
 
 const TIPOS_MSG = [
