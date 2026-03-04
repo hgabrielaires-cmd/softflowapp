@@ -131,7 +131,7 @@ const App = () => (
             <Route
               path="/planos"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <Planos />
                 </ProtectedRoute>
               }
