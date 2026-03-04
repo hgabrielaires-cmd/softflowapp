@@ -695,7 +695,7 @@ export default function PainelAtendimento() {
           .select("atividade_id, checklist_index, concluido, valor_texto, valor_data, concluido_por, concluido_em")
           .eq("card_id", detailCard.id),
         etapaAtual
-          ? supabase.from("jornada_etapas").select("id").eq("jornada_id", resolvedJornadaId).eq("nome", etapaAtual.nome).limit(1)
+          ? supabase.from("jornada_etapas").select("id, mesa_atendimento_id, mesas_atendimento:mesa_atendimento_id(id, cor)").eq("jornada_id", resolvedJornadaId).eq("nome", etapaAtual.nome).limit(1)
           : Promise.resolve({ data: null }),
       ]);
 
