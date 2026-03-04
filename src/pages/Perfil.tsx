@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, User, Building2, Shield, Star, KeyRound, Camera } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2, User, Building2, Shield, Star, KeyRound, Camera, Layers } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
 
 export default function Perfil() {
