@@ -302,7 +302,7 @@ serve(async (req) => {
                   text,
                 }),
               });
-              console.log(`[SLA] WhatsApp enviado para ${profile.full_name} (${formattedNumber}) - nível ${alerta.nivel}`);
+              console.log(`[SLA] WhatsApp enviado para ${profile.full_name} (${formattedNumber}) via instância "${instanceName}" - nível ${alerta.nivel}`);
             } catch (err) {
               console.error(`[SLA] Erro WhatsApp para ${profile.full_name}:`, err);
             }
@@ -337,6 +337,7 @@ serve(async (req) => {
           detalhes: {
             recipients: recipients.map((r) => r.profile?.full_name),
             template_id: alerta.template_id,
+            instance_used: alerta.canal === "whatsapp" ? (templateMap[alerta.template_id]?.setor_id && setorInstanceMap[templateMap[alerta.template_id]?.setor_id] || "Softflow_WhatsApp") : null,
             atraso_horas: horasAtrasado.toFixed(2),
           },
         });
