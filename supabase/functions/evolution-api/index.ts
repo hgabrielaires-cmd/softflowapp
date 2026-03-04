@@ -222,7 +222,7 @@ serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-        const name = instance_name || "Softflow_WhatsApp";
+        const name = resolvedInstanceName || instance_name || "Softflow_WhatsApp";
         let formattedNumber = number.replace(/\D/g, "");
         if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
         if (!formattedNumber.startsWith("55")) formattedNumber = "55" + formattedNumber;
