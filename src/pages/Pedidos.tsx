@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
+import { useCrudPermissions } from "@/hooks/useCrudPermissions";
 import { Navigate } from "react-router-dom";
 import { Cliente, Filial, Profile, Contrato } from "@/lib/supabase-types";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
@@ -254,6 +255,7 @@ function applyAcrescimo(original: number, tipo: "R$" | "%", valor: number): numb
 export default function Pedidos() {
   const { user, profile, roles, isAdmin } = useAuth();
   const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais, loading: loadingFiliais } = useUserFiliais();
+  const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("pedidos", roles);
   const isFinanceiro = roles.includes("financeiro");
   const isVendedor = roles.includes("vendedor");
   const isTecnico = roles.includes("tecnico") && !isAdmin && !isFinanceiro && !isVendedor;
@@ -1351,7 +1353,7 @@ export default function Pedidos() {
   // Reset page when filters change
   useEffect(() => { setCurrentPage(1); }, [search, filterFilial, filterStatus, filterVendedor, filterDe, filterAte]);
 
-  const canCreate = isAdmin || isVendedor;
+  const canCreate = crudIncluir;
   // A RLS já restringe os clientes por filial para vendedores, não filtrar novamente
   const clientesDisponiveis = clientes;
 
@@ -1464,15 +1466,16 @@ export default function Pedidos() {
                     "Desconto Aprovado",
                     "Cancelado",
                   ];
-                  const canEditVendedor = isVendedor && pedido.vendedor_id === profile?.user_id
+                   const canEditVendedor = isVendedor && pedido.vendedor_id === profile?.user_id
                     && isReprovado
                     && !temContratoVigente
                     && !statusBloqueadoVendedor.includes(pedido.status_pedido);
-                  const canEditAdmin = isAdmin && !temContratoVigente && pedido.status_pedido !== "Cancelado";
-                  const canEdit = canEditAdmin || canEditVendedor;
+                   const canEditAdmin = isAdmin && !temContratoVigente && pedido.status_pedido !== "Cancelado";
+                   const canEditCrud = crudEditar && !temContratoVigente && pedido.status_pedido !== "Cancelado";
+                   const canEdit = canEditAdmin || canEditVendedor || canEditCrud;
 
-                  // Cancelar: apenas admin (sem contrato vigente); vendedor nunca cancela
-                  const canCancel = isAdmin && pedido.status_pedido !== "Cancelado" && !temContratoVigente;
+                   // Cancelar: admin ou perfil com permissão de excluir (sem contrato vigente)
+                   const canCancel = (isAdmin || crudExcluir) && pedido.status_pedido !== "Cancelado" && !temContratoVigente;
 
                   const vendedorNome = vendedores.find((v) => v.user_id === pedido.vendedor_id)?.full_name || "—";
                   const filialNome = (pedido as any).filiais?.nome || filiais.find(f => f.id === pedido.filial_id)?.nome || "—";
