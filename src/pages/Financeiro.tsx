@@ -104,6 +104,7 @@ export default function Financeiro() {
   const { profile, roles, isAdmin } = useAuth();
   const navigate = useNavigate();
   const isFinanceiro = roles.includes("financeiro");
+  const { permissions: menuPerms } = useMenuPermissions(roles);
   const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais } = useUserFiliais();
 
   const [pedidos, setPedidos] = useState<PedidoFila[]>([]);
@@ -124,7 +125,7 @@ export default function Financeiro() {
   const [pedidoPlano, setPedidoPlano] = useState<any>(null);
   const [pedidoModulos, setPedidoModulos] = useState<any[]>([]);
 
-  const canAccess = isAdmin || isFinanceiro;
+  const canAccess = isAdmin || isFinanceiro || (menuPerms !== null && menuPerms.has("menu.financeiro"));
 
   async function loadData() {
     setLoading(true);
