@@ -203,7 +203,7 @@ const App = () => (
             <Route
               path="/perfis-usuario"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <PerfisUsuario />
                 </ProtectedRoute>
               }
