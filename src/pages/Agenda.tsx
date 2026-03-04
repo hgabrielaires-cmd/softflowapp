@@ -82,7 +82,7 @@ export default function Agenda() {
 
   useEffect(() => {
     if (filtersInitialized || !profile) return;
-    setFiltroFilial(profile.filial_favorita_id || filialPadraoId || "todas");
+    setFiltroFilial(profile.filial_favorita_id || "todas");
     const defaultMesa = profile.mesa_favorita_id
       ? profile.mesa_favorita_id
       : mesasDoUsuario.length === 1 ? mesasDoUsuario[0] : "todas";

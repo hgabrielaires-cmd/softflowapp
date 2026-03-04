@@ -207,15 +207,13 @@ export default function PainelAtendimento() {
 
   useEffect(() => {
     if (filtroFilial === "_init_") {
-      if (isGlobal && !profile?.filial_favorita_id) {
-        setFiltroFilial("todos");
-      } else if (filialPadraoId) {
-        setFiltroFilial(filialPadraoId);
+      if (profile?.filial_favorita_id) {
+        setFiltroFilial(profile.filial_favorita_id);
       } else {
         setFiltroFilial("todos");
       }
     }
-  }, [filialPadraoId, isGlobal, profile?.filial_favorita_id]);
+  }, [filialPadraoId, profile?.filial_favorita_id]);
 
   // ─── Queries ─────────────────────────────────────────────────────────────
 
@@ -2060,7 +2058,7 @@ export default function PainelAtendimento() {
               <SelectValue placeholder="Filial" />
             </SelectTrigger>
             <SelectContent>
-              {isGlobal && <SelectItem value="todos">Todas as filiais</SelectItem>}
+              {filiaisDoUsuario.length > 1 && <SelectItem value="todos">Todas as filiais</SelectItem>}
               {(filiaisDoUsuario.length > 0 ? filiaisDoUsuario : todasFiliais).map((f) => (
                 <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
               ))}

@@ -259,7 +259,7 @@ export default function Pedidos() {
   const isFinanceiro = roles.includes("financeiro");
   const isVendedor = roles.includes("vendedor");
   const isTecnico = roles.includes("tecnico") && !isAdmin && !isFinanceiro && !isVendedor;
-  const canSeeAllBranches = isGlobal;
+  const canSeeAllBranches = filiaisDoUsuario.length > 1;
 
   const [pedidos, setPedidos] = useState<PedidoWithJoins[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -690,15 +690,13 @@ export default function Pedidos() {
   // Default filial filter from user access
   useEffect(() => {
     if (filterFilial === "_init_") {
-      if (isGlobal && !profile?.filial_favorita_id) {
-        setFilterFilial("all");
-      } else if (filialPadraoId) {
-        setFilterFilial(filialPadraoId);
+      if (profile?.filial_favorita_id) {
+        setFilterFilial(profile.filial_favorita_id);
       } else {
         setFilterFilial("all");
       }
     }
-  }, [filialPadraoId, isGlobal, profile?.filial_favorita_id]);
+  }, [filialPadraoId, profile?.filial_favorita_id]);
 
   // ─── Buscar contrato ativo do cliente ─────────────────────────────────────
 
@@ -1390,7 +1388,7 @@ export default function Pedidos() {
             <Select value={filterFilial} onValueChange={setFilterFilial}>
               <SelectTrigger><SelectValue placeholder="Filial" /></SelectTrigger>
               <SelectContent>
-                {canSeeAllBranches && <SelectItem value="all">Todas as filiais</SelectItem>}
+                {filiaisDoUsuario.length > 1 && <SelectItem value="all">Todas as filiais</SelectItem>}
                 {(filiaisDoUsuario.length > 0 ? filiaisDoUsuario : todasFiliais).map((f) => (
                   <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
                 ))}

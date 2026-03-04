@@ -144,12 +144,14 @@ export default function Dashboard() {
 
   // Inicializa filial padrão
   useEffect(() => {
-    if (filialPadraoId && !filialId) {
-      setFilialId(isGlobal ? (filialPadraoId || "todas") : filialPadraoId);
-    } else if (isGlobal && !filialId) {
-      setFilialId("todas");
+    if (!filialId) {
+      if (profile?.filial_favorita_id) {
+        setFilialId(profile.filial_favorita_id);
+      } else {
+        setFilialId("todas");
+      }
     }
-  }, [filialPadraoId, isGlobal]);
+  }, [filialPadraoId, profile?.filial_favorita_id]);
 
   useEffect(() => {
     if (isOnlyVendedor && user) {
@@ -598,7 +600,7 @@ export default function Dashboard() {
     return "";
   }, [dialogType, dialogFilter]);
 
-  const canSeeAllFiliais = isGlobal || isAdmin || roles.includes("financeiro");
+  const canSeeAllFiliais = filiaisDoUsuario.length > 1;
 
   const chartConfigPlano = useMemo(() => {
     const config: Record<string, { label: string; color: string }> = {};

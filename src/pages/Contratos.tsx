@@ -627,15 +627,13 @@ export default function Contratos() {
   // Default filial filter
   useEffect(() => {
     if (filterFilial === "_init_") {
-      if (isGlobal && !profile?.filial_favorita_id) {
-        setFilterFilial("all");
-      } else if (filialPadraoId) {
-        setFilterFilial(filialPadraoId);
+      if (profile?.filial_favorita_id) {
+        setFilterFilial(profile.filial_favorita_id);
       } else {
         setFilterFilial("all");
       }
     }
-  }, [filialPadraoId, isGlobal, profile?.filial_favorita_id]);
+  }, [filialPadraoId, profile?.filial_favorita_id]);
 
   async function loadContatosCliente(clienteId: string) {
     const { data } = await supabase
@@ -1480,7 +1478,7 @@ Estou à disposição.`;
                 <SelectValue placeholder="Todas as filiais" />
               </SelectTrigger>
               <SelectContent>
-                {isGlobal && <SelectItem value="all">Todas as filiais</SelectItem>}
+                {filiaisDoUsuario.length > 1 && <SelectItem value="all">Todas as filiais</SelectItem>}
                 {(filiaisDoUsuario.length > 0 ? filiaisDoUsuario : todasFiliais).map((f) => (
                   <SelectItem key={f.id} value={f.id}>
                     {f.nome}
