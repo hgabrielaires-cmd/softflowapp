@@ -2621,7 +2621,7 @@ export default function PainelAtendimento() {
                                           size="sm"
                                           variant={prog.valor_texto === 'nao' ? 'default' : 'outline'}
                                           className={cn("h-7 text-[11px] px-3", prog.valor_texto === 'nao' && "bg-red-600 hover:bg-red-700")}
-                                          disabled={!checklistEditMode}
+                                          disabled={!checklistEnabled}
                                           onClick={() => saveChecklistItem(atividade.id, cIdx, { concluido: true, valor_texto: 'nao' })}
                                         >
                                           <ThumbsDown className="h-3 w-3 mr-1" /> Não
