@@ -137,6 +137,7 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
   useEffect(() => {
     if (open && serverUrl && token) {
       checkConnectionState();
+      fetchInstances();
     }
   }, [open]);
 
