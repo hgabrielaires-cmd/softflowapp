@@ -141,18 +141,30 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
     }
   }, [open]);
 
-  async function callEvolutionApi(action: string) {
+  async function callEvolutionApi(action: string, instanceName?: string) {
     const { data, error } = await supabase.functions.invoke("evolution-api", {
       body: {
         action,
         server_url: serverUrl.trim(),
         api_key: token.trim(),
-        instance_name: INSTANCE_NAME,
+        instance_name: instanceName || DEFAULT_INSTANCE_NAME,
       },
     });
     if (error) throw new Error(error.message || "Erro na comunicação");
     if (data?.error) throw new Error(data.error);
     return data;
+  }
+
+  async function fetchInstances() {
+    if (!serverUrl.trim() || !token.trim()) return;
+    try {
+      const data = await callEvolutionApi("fetch_instances");
+      if (Array.isArray(data)) {
+        setInstances(data);
+      }
+    } catch {
+      // silent
+    }
   }
 
   async function checkConnectionState() {
