@@ -234,9 +234,10 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
       toast.error("Preencha o servidor e a API Key primeiro.");
       return;
     }
+    const name = instanceName || newInstanceName.trim() || DEFAULT_INSTANCE_NAME;
     setLoadingQr(true);
     try {
-      const data = await callEvolutionApi("connect", instanceName);
+      const data = await callEvolutionApi("connect", name);
       const qr = data?.base64 || data?.qrcode?.base64 || null;
       if (qr) {
         setQrCode(qr);
@@ -249,7 +250,33 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
         toast.info("Nenhum QR code retornado. Verifique o estado da conexão.");
       }
     } catch (err: any) {
-      toast.error("Erro ao buscar QR Code: " + err.message);
+      // If instance doesn't exist, auto-create it
+      if (err.message?.includes("does not exist") || err.message?.includes("not found") || err.message?.includes("404")) {
+        toast.info(`Instância "${name}" não encontrada. Criando automaticamente...`);
+        try {
+          const createData = await callEvolutionApi("create_instance", name);
+          const qr = createData?.qrcode?.base64 || createData?.base64 || null;
+          if (qr) {
+            setQrCode(qr);
+            setConnectionState("connecting");
+            toast.success(`Instância "${name}" criada!`);
+          } else {
+            // Try connect again after creation
+            const connectData = await callEvolutionApi("connect", name);
+            const qr2 = connectData?.base64 || connectData?.qrcode?.base64 || null;
+            if (qr2) {
+              setQrCode(qr2);
+              setConnectionState("connecting");
+            }
+            toast.success(`Instância "${name}" criada!`);
+          }
+          await fetchInstances();
+        } catch (createErr: any) {
+          toast.error("Erro ao criar instância: " + createErr.message);
+        }
+      } else {
+        toast.error("Erro ao buscar QR Code: " + err.message);
+      }
     } finally {
       setLoadingQr(false);
     }
