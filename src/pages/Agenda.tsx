@@ -99,6 +99,20 @@ export default function Agenda() {
     },
   });
 
+  // Fetch mesas de atendimento
+  const { data: mesas = [] } = useQuery({
+    queryKey: ["agenda-mesas"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("mesas_atendimento")
+        .select("id, nome, cor")
+        .eq("ativo", true)
+        .order("nome");
+      if (error) throw error;
+      return data as { id: string; nome: string; cor: string | null }[];
+    },
+  });
+
   // Fetch técnicos apontados
   const { data: painelTecnicos = [] } = useQuery({
     queryKey: ["agenda-tecnicos"],
