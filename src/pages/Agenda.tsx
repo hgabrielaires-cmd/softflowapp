@@ -27,6 +27,11 @@ interface Agendamento {
   observacao: string | null;
   criado_por: string | null;
   created_at: string;
+  mesa_id: string | null;
+  filial_id: string | null;
+  etapa_id: string | null;
+  titulo: string | null;
+  cor_evento: string | null;
 }
 
 interface AgendamentoComDetalhes extends Agendamento {
@@ -35,6 +40,8 @@ interface AgendamentoComDetalhes extends Agendamento {
   filial_id: string;
   filial_nome: string;
   atividade_nome: string;
+  titulo_evento: string | null;
+  cor_evento: string | null;
   tecnicos: { id: string; full_name: string; avatar_url: string | null }[];
   apontados: { id: string; full_name: string; avatar_url: string | null }[];
   tipo_atendimento: string | null;
@@ -191,6 +198,8 @@ export default function Agenda() {
         filial_id: card?.filial_id || "",
         filial_nome: card?.filiais?.nome || "—",
         atividade_nome: atividadesMap[ag.atividade_id] || "—",
+        titulo_evento: ag.titulo || null,
+        cor_evento: ag.cor_evento || null,
         tecnicos: tecnicosPorCard[ag.card_id] || [],
         apontados: apontadosPorCard[ag.card_id] || [],
         tipo_atendimento: card?.tipo_atendimento_local || null,
@@ -389,7 +398,14 @@ export default function Agenda() {
                     const statusInfo = getStatusInfo();
 
                     return (
-                      <div key={ag.id} className="border rounded-lg p-3 hover:bg-accent/50 transition-colors">
+                      <div
+                        key={ag.id}
+                        className="border rounded-lg p-3 hover:bg-accent/50 transition-colors"
+                        style={{
+                          borderLeftWidth: ag.cor_evento ? '4px' : undefined,
+                          borderLeftColor: ag.cor_evento || undefined,
+                        }}
+                      >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -420,7 +436,9 @@ export default function Agenda() {
                                 );
                               })()}
                             </div>
-                            <p className="font-medium text-sm text-foreground truncate">{ag.cliente_nome}</p>
+                            <p className="font-medium text-sm text-foreground truncate">
+                              {ag.titulo_evento || ag.cliente_nome}
+                            </p>
                             <p className="text-xs text-muted-foreground">
                               Contrato: {ag.contrato_numero} · {ag.atividade_nome}
                             </p>

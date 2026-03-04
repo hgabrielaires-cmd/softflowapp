@@ -797,6 +797,7 @@ export type Database = {
       mesas_atendimento: {
         Row: {
           ativo: boolean
+          cor: string | null
           created_at: string
           descricao: string | null
           id: string
@@ -805,6 +806,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          cor?: string | null
           created_at?: string
           descricao?: string | null
           id?: string
@@ -813,6 +815,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          cor?: string | null
           created_at?: string
           descricao?: string | null
           id?: string
@@ -1015,37 +1018,52 @@ export type Database = {
           atividade_id: string
           card_id: string
           checklist_index: number
+          cor_evento: string | null
           created_at: string
           criado_por: string | null
           data: string
+          etapa_id: string | null
+          filial_id: string | null
           hora_fim: string | null
           hora_inicio: string | null
           id: string
+          mesa_id: string | null
           observacao: string | null
+          titulo: string | null
         }
         Insert: {
           atividade_id: string
           card_id: string
           checklist_index: number
+          cor_evento?: string | null
           created_at?: string
           criado_por?: string | null
           data: string
+          etapa_id?: string | null
+          filial_id?: string | null
           hora_fim?: string | null
           hora_inicio?: string | null
           id?: string
+          mesa_id?: string | null
           observacao?: string | null
+          titulo?: string | null
         }
         Update: {
           atividade_id?: string
           card_id?: string
           checklist_index?: number
+          cor_evento?: string | null
           created_at?: string
           criado_por?: string | null
           data?: string
+          etapa_id?: string | null
+          filial_id?: string | null
           hora_fim?: string | null
           hora_inicio?: string | null
           id?: string
+          mesa_id?: string | null
           observacao?: string | null
+          titulo?: string | null
         }
         Relationships: [
           {
@@ -1060,6 +1078,27 @@ export type Database = {
             columns: ["card_id"]
             isOneToOne: false
             referencedRelation: "painel_atendimento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_agendamentos_etapa_id_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "painel_etapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_agendamentos_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_agendamentos_mesa_id_fkey"
+            columns: ["mesa_id"]
+            isOneToOne: false
+            referencedRelation: "mesas_atendimento"
             referencedColumns: ["id"]
           },
         ]

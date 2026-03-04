@@ -138,6 +138,7 @@ export default function PainelAtendimento() {
   const [checklistEtapa, setChecklistEtapa] = useState<any[]>([]);
   const [checklistLoading, setChecklistLoading] = useState(false);
   const [checklistProgresso, setChecklistProgresso] = useState<Record<string, { concluido: boolean; valor_texto?: string; valor_data?: string; concluido_por?: string; concluido_em?: string; concluido_por_nome?: string }>>({});
+  const [etapaMesaInfo, setEtapaMesaInfo] = useState<{ id: string; cor: string | null } | null>(null);
   const [finalizando, setFinalizando] = useState(false);
   const [, setTick] = useState(0); // force re-render for atrasado checks
   const [novoComentario, setNovoComentario] = useState("");
@@ -694,7 +695,7 @@ export default function PainelAtendimento() {
           .select("atividade_id, checklist_index, concluido, valor_texto, valor_data, concluido_por, concluido_em")
           .eq("card_id", detailCard.id),
         etapaAtual
-          ? supabase.from("jornada_etapas").select("id").eq("jornada_id", resolvedJornadaId).eq("nome", etapaAtual.nome).limit(1)
+          ? supabase.from("jornada_etapas").select("id, mesa_atendimento_id, mesas_atendimento:mesa_atendimento_id(id, cor)").eq("jornada_id", resolvedJornadaId).eq("nome", etapaAtual.nome).limit(1)
           : Promise.resolve({ data: null }),
       ]);
 
@@ -717,6 +718,12 @@ export default function PainelAtendimento() {
         : Promise.resolve({ data: [] });
 
       const jornadaEtapa = jornadaEtapaResult?.data;
+      // Extract etapa mesa info
+      if (jornadaEtapa && jornadaEtapa.length > 0 && jornadaEtapa[0].mesas_atendimento) {
+        setEtapaMesaInfo({ id: jornadaEtapa[0].mesas_atendimento.id, cor: jornadaEtapa[0].mesas_atendimento.cor || null });
+      } else {
+        setEtapaMesaInfo(null);
+      }
       if (!etapaAtual || !jornadaEtapa || jornadaEtapa.length === 0) {
         setSlaEtapaJornada(null);
         setChecklistEtapa([]);
@@ -740,7 +747,7 @@ export default function PainelAtendimento() {
       // Fetch activities + profiles in parallel
       const [{ data: atividades }, { data: profiles }] = await Promise.all([
         supabase.from("jornada_atividades")
-          .select("id, nome, horas_estimadas, checklist, mesa_atendimento_id, mesas_atendimento:mesa_atendimento_id(nome)")
+          .select("id, nome, horas_estimadas, checklist, mesa_atendimento_id, mesas_atendimento:mesa_atendimento_id(id, nome, cor)")
           .eq("etapa_id", jornadaEtapa[0].id)
           .order("ordem"),
         profileMapPromise,
@@ -1078,7 +1085,7 @@ export default function PainelAtendimento() {
           if (jornadaEtapa && jornadaEtapa.length > 0) {
             const { data: atv } = await supabase
               .from("jornada_atividades")
-              .select("id, nome, horas_estimadas, checklist, mesa_atendimento_id, mesas_atendimento:mesa_atendimento_id(nome)")
+              .select("id, nome, horas_estimadas, checklist, mesa_atendimento_id, mesas_atendimento:mesa_atendimento_id(id, nome, cor)")
               .eq("etapa_id", jornadaEtapa[0].id)
               .order("ordem");
             atividades = atv || [];
@@ -2625,6 +2632,11 @@ export default function PainelAtendimento() {
                                         atividadeId={atividade.id}
                                         checklistIndex={cIdx}
                                         disabled={!checklistEditMode}
+                                        mesaId={atividade.mesas_atendimento?.id || etapaMesaInfo?.id || null}
+                                        mesaCor={atividade.mesas_atendimento?.cor || etapaMesaInfo?.cor || null}
+                                        filialId={detailCard.filial_id}
+                                        etapaId={detailCard.etapa_id}
+                                        titulo={`${detailCard.clientes?.nome_fantasia || detailCard.clientes?.apelido || ''} - ${atividade.nome} - ${item.texto || ''}`}
                                         onUpdate={(has) => {
                                           setChecklistProgresso((p) => ({
                                             ...p,
