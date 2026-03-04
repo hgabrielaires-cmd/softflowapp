@@ -769,7 +769,7 @@ export default function PainelAtendimento() {
       setChecklistProgresso(progressoMap);
       setChecklistLoading(false);
     })();
-  }, [detailCard, etapas]);
+  }, [detailCard?.id, detailCard?.etapa_id, detailCard?.plano_id, detailCard?.jornada_id, etapas]);
 
   // ─── Mutations ───────────────────────────────────────────────────────────
 
