@@ -338,7 +338,7 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
                 ) : (
                   <WifiOff className="h-4 w-4 text-muted-foreground" />
                 )}
-                <Label className="text-sm font-medium">Status da Conexão</Label>
+                <Label className="text-sm font-medium">Instância Padrão ({DEFAULT_INSTANCE_NAME})</Label>
               </div>
               <Badge variant={isConnected ? "default" : "outline"} className="text-[10px]">
                 {loadingState ? "Verificando..." : isConnected ? "Conectado" : connectionState === "connecting" ? "Aguardando QR" : connectionState === "not_found" ? "Sem instância" : connectionState || "Desconhecido"}
@@ -355,34 +355,53 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
                 {loadingState ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
                 Verificar
               </Button>
+            </div>
 
-              {!isConnected && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCreateInstance}
-                    disabled={creatingInstance || !serverUrl.trim() || !token.trim()}
-                  >
-                    {creatingInstance ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                    Criar Instância
-                  </Button>
+            {isConnected && (
+              <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 p-3">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                <p className="text-sm text-emerald-700 dark:text-emerald-400">Instância padrão conectada!</p>
+              </div>
+            )}
+          </div>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleConnectQr}
-                    disabled={loadingQr || !serverUrl.trim() || !token.trim()}
-                  >
-                    {loadingQr ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <QrCode className="h-3 w-3 mr-1" />}
-                    Ler QR Code
-                  </Button>
-                </>
-              )}
+          {/* Create new instance */}
+          <div className="rounded-lg border border-border p-4 space-y-3">
+            <Label className="text-sm font-medium">Criar / Conectar Instância</Label>
+            <p className="text-xs text-muted-foreground">
+              Crie instâncias adicionais para vincular a setores específicos (ex: Financeiro_WhatsApp, Suporte_WhatsApp).
+            </p>
+            <div className="flex gap-2">
+              <Input
+                value={newInstanceName}
+                onChange={(e) => setNewInstanceName(e.target.value)}
+                placeholder="Nome da instância (ex: Financeiro_WhatsApp)"
+                className="flex-1"
+              />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCreateInstance}
+                disabled={creatingInstance || !serverUrl.trim() || !token.trim()}
+              >
+                {creatingInstance ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                Criar Instância
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleConnectQr(newInstanceName.trim() || undefined)}
+                disabled={loadingQr || !serverUrl.trim() || !token.trim()}
+              >
+                {loadingQr ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <QrCode className="h-3 w-3 mr-1" />}
+                Ler QR Code
+              </Button>
             </div>
 
             {/* QR Code display */}
-            {qrCode && !isConnected && (
+            {qrCode && (
               <div className="flex flex-col items-center gap-3 pt-2">
                 <p className="text-xs text-muted-foreground text-center">
                   Escaneie o QR Code abaixo com o WhatsApp no seu celular
@@ -394,20 +413,34 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
                     className="h-56 w-56 object-contain"
                   />
                 </div>
-                <Button variant="ghost" size="sm" onClick={handleConnectQr} disabled={loadingQr}>
+                <Button variant="ghost" size="sm" onClick={() => handleConnectQr(newInstanceName.trim() || undefined)} disabled={loadingQr}>
                   {loadingQr ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
                   Atualizar QR Code
                 </Button>
               </div>
             )}
-
-            {isConnected && (
-              <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 p-3">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                <p className="text-sm text-emerald-700 dark:text-emerald-400">WhatsApp conectado com sucesso!</p>
-              </div>
-            )}
           </div>
+
+          {/* Instances list */}
+          {instances.length > 0 && (
+            <div className="rounded-lg border border-border p-4 space-y-2">
+              <Label className="text-sm font-medium">Instâncias encontradas</Label>
+              <div className="space-y-1">
+                {instances.map((inst: any, i: number) => {
+                  const name = inst?.instance?.instanceName || inst?.instanceName || `Instância ${i + 1}`;
+                  const state = inst?.instance?.state || inst?.state || "unknown";
+                  return (
+                    <div key={i} className="flex items-center justify-between text-sm py-1.5 px-2 rounded hover:bg-muted/50">
+                      <span className="font-mono text-xs">{name}</span>
+                      <Badge variant={state === "open" ? "default" : "outline"} className="text-[10px]">
+                        {state === "open" ? "Conectado" : state === "close" ? "Desconectado" : state}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
