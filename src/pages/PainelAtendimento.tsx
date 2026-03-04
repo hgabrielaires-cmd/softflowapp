@@ -2535,7 +2535,7 @@ export default function PainelAtendimento() {
                           <Progress value={checklistPercent} className="h-1.5 w-20" />
                         )}
                         <span className="text-[10px] font-semibold text-muted-foreground">{checklistPercent}%</span>
-                        {podeEditarChecklist && (
+                        {podeEditarChecklist && !isIniciado && (
                           <Button
                             variant="ghost"
                             size="icon"
