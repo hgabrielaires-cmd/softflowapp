@@ -133,15 +133,20 @@ export default function Agenda() {
     },
   });
 
-  // Fetch mesas de atendimento
+  // Fetch mesas de atendimento (filtradas por acesso do usuário)
   const { data: mesas = [] } = useQuery({
-    queryKey: ["agenda-mesas"],
+    queryKey: ["agenda-mesas", isAdmin, isGlobal, mesasDoUsuario],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("mesas_atendimento")
         .select("id, nome, cor")
         .eq("ativo", true)
         .order("nome");
+      // Se não é admin/global e tem mesas vinculadas, filtrar
+      if (!isAdmin && !isGlobal && mesasDoUsuario.length > 0) {
+        query = query.in("id", mesasDoUsuario);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as { id: string; nome: string; cor: string | null }[];
     },
