@@ -362,6 +362,57 @@ export default function Perfil() {
             </ul>
           )}
         </div>
+
+        {/* Mesa favorita */}
+        <div className="bg-card rounded-xl border border-border p-6 shadow-card space-y-4">
+          <div className="flex items-center gap-2">
+            <Layers className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold text-foreground">Mesa Favorita</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            A mesa favorita será pré-selecionada ao abrir a Agenda. Clique na estrela para marcar ou desmarcar.
+          </p>
+
+          {mesasDoUsuario.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma mesa disponível.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {mesasDoUsuario.map((mesa) => {
+                const isFavorita = mesaFavoritaId === mesa.id;
+                return (
+                  <li key={mesa.id} className="flex items-center justify-between py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: mesa.cor || 'hsl(var(--muted-foreground))' }} />
+                      <span className={`text-sm font-medium ${isFavorita ? "text-foreground" : "text-muted-foreground"}`}>
+                        {mesa.nome}
+                      </span>
+                      {isFavorita && (
+                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                          Favorita
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={savingFavorita}
+                      onClick={() => handleFavoritarMesa(mesa.id)}
+                      title={isFavorita ? "Remover favorita" : "Marcar como favorita"}
+                      className="rounded-full p-1.5 hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      <Star
+                        className={`h-5 w-5 transition-colors ${
+                          isFavorita
+                            ? "text-amber-400 fill-amber-400"
+                            : "text-muted-foreground hover:text-amber-400"
+                        }`}
+                      />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </div>
     </AppLayout>
   );

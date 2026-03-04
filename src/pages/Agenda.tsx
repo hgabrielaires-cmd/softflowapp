@@ -53,14 +53,48 @@ interface AgendamentoComDetalhes extends Agendamento {
 }
 
 export default function Agenda() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const navigate = useNavigate();
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [filtroFilial, setFiltroFilial] = useState<string>("todas");
+  const [filtroFilial, setFiltroFilial] = useState<string>("_init_");
   const [filtroTecnico, setFiltroTecnico] = useState<string>("todos");
-  const [filtroMesa, setFiltroMesa] = useState<string>("todas");
+  const [filtroMesa, setFiltroMesa] = useState<string>("_init_");
   const [filtroCliente, setFiltroCliente] = useState<string>("todos");
+  const [filtersInitialized, setFiltersInitialized] = useState(false);
+
+  // Fetch mesas do usuário para default
+  const { data: mesasDoUsuario = [] } = useQuery({
+    queryKey: ["agenda-usuario-mesas", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("usuario_mesas")
+        .select("mesa_id")
+        .eq("user_id", user!.id);
+      return (data || []).map((r: any) => r.mesa_id) as string[];
+    },
+  });
+
+  // Initialize filters from profile favorites
+  useEffect(() => {
+    if (filtersInitialized) return;
+    if (!profile) return;
+
+    // Filial default
+    const defaultFilial = profile.filial_favorita_id || filialPadraoId || "todas";
+    setFiltroFilial(defaultFilial);
+
+    // Mesa default
+    const defaultMesa = profile.mesa_favorita_id
+      ? profile.mesa_favorita_id
+      : mesasDoUsuario.length === 1
+        ? mesasDoUsuario[0]
+        : "todas";
+    setFiltroMesa(defaultMesa);
+
+    setFiltersInitialized(true);
+  }, [profile, filialPadraoId, mesasDoUsuario, filtersInitialized]);
 
   // Fetch agendamentos
   const { data: agendamentos = [] } = useQuery({
