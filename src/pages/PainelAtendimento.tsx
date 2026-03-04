@@ -2612,7 +2612,7 @@ export default function PainelAtendimento() {
                                           size="sm"
                                           variant={prog.valor_texto === 'sim' ? 'default' : 'outline'}
                                           className={cn("h-7 text-[11px] px-3", prog.valor_texto === 'sim' && "bg-emerald-600 hover:bg-emerald-700")}
-                                          disabled={!checklistEditMode}
+                                          disabled={!checklistEnabled}
                                           onClick={() => saveChecklistItem(atividade.id, cIdx, { concluido: true, valor_texto: 'sim' })}
                                         >
                                           <ThumbsUp className="h-3 w-3 mr-1" /> Sim
