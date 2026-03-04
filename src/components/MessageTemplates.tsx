@@ -295,6 +295,9 @@ export function MessageTemplates() {
                   <Badge variant="secondary" className="text-xs">{getCategoriaLabel(t.categoria)}</Badge>
                 </TableCell>
                 <TableCell>
+                  <span className="text-xs text-muted-foreground">{t.setor_id ? setores.find(s => s.id === t.setor_id)?.nome || "—" : "—"}</span>
+                </TableCell>
+                <TableCell>
                   <button onClick={() => handleToggleAtivo(t)} className="flex items-center gap-1.5 group" title={t.ativo ? "Clique para inativar" : "Clique para ativar"}>
                     {t.ativo ? (
                       <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 gap-1 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
