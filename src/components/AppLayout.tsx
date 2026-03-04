@@ -76,7 +76,7 @@ const navGroups: NavGroup[] = [
   {
     groupLabel: "Vendas",
     groupIcon: <ShoppingCart className="h-4 w-4" />,
-    roles: ["admin", "financeiro", "vendedor"],
+    roles: ["admin", "financeiro", "vendedor", "gestor"],
     items: [
       { icon: <ListOrdered className="h-4 w-4" />, label: "Pedidos", to: "/pedidos" },
     ],
