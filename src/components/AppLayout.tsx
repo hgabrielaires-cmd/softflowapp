@@ -240,7 +240,8 @@ function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSign
                 <div className="pt-0.5 pb-1 space-y-0.5">
                   {items.map((item) => {
                     if (item.children) {
-                      const childActive = item.children.some((c) => location.pathname === c.to || location.pathname.startsWith(c.to + "/"));
+                      const visibleChildren = item.children.filter((c) => itemVisible(c, permissions));
+                      const childActive = visibleChildren.some((c) => location.pathname === c.to || location.pathname.startsWith(c.to + "/"));
                       const subKey = `sub_${item.label}`;
                       const isSubOpen = openGroups[subKey] ?? false;
                       return (
