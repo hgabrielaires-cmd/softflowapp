@@ -217,12 +217,12 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
     }
   }
 
-  async function handleCreateInstance() {
+  async function handleCreateInstance(overrideName?: string) {
     if (!serverUrl.trim() || !token.trim()) {
       toast.error("Preencha o servidor e a API Key primeiro.");
       return;
     }
-    const instanceToCreate = newInstanceName.trim() || DEFAULT_INSTANCE_NAME;
+    const instanceToCreate = overrideName || newInstanceName.trim() || DEFAULT_INSTANCE_NAME;
     setCreatingInstance(true);
     try {
       const { data, error } = await supabase.functions.invoke("evolution-api", {
