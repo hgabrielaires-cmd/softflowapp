@@ -194,8 +194,8 @@ function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSign
 
       <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {navGroups.map((group) => {
-          if (!groupVisible(group, roles)) return null;
-          const items = visibleItemsInGroup(group, roles);
+          if (!groupVisible(group, permissions)) return null;
+          const items = visibleItemsInGroup(group, permissions);
           if (items.length === 0) return null;
 
           const isGroupActive = items.some((item) => isItemOrChildActive(item, location.pathname));
