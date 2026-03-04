@@ -2673,7 +2673,7 @@ export default function PainelAtendimento() {
                                           type="number"
                                           className="h-7 text-xs w-28"
                                           placeholder="Qtd"
-                                           disabled={!checklistEditMode}
+                                           disabled={!checklistEnabled}
                                           value={prog.valor_texto || ''}
                                           onChange={(e) => {
                                             const val = e.target.value;
