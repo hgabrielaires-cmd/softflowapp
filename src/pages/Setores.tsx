@@ -23,6 +23,7 @@ interface Setor {
   nome: string;
   descricao: string | null;
   telefone: string | null;
+  instance_name: string | null;
   ativo: boolean;
   created_at: string;
 }
