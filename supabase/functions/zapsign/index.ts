@@ -289,6 +289,11 @@ Deno.serve(async (req) => {
         console.log("[ZapSign] Assinatura da empresa embutida no PDF — enviando apenas cliente para assinar.");
       }
 
+      // Determinar o sign_url do cliente (último signatário, que é sempre o cliente)
+      const clienteSignerUrl = returnedSigners.length > 0
+        ? returnedSigners[returnedSigners.length - 1]?.sign_url || null
+        : null;
+
       // Salvar no banco
       const { error: insertError } = await supabase
         .from("contratos_zapsign")
@@ -298,7 +303,7 @@ Deno.serve(async (req) => {
           zapsign_doc_id: zapsignData.open_id?.toString() || null,
           status: "Enviado",
           signers: returnedSigners,
-          sign_url: returnedSigners[0]?.sign_url || null,
+          sign_url: clienteSignerUrl,
         }, { onConflict: "contrato_id" });
 
       if (insertError) {
@@ -307,6 +312,27 @@ Deno.serve(async (req) => {
           JSON.stringify({ error: "Documento enviado ao ZapSign mas erro ao salvar no banco: " + insertError.message }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      // Apagar PDF do storage após envio bem-sucedido para ZapSign
+      if (contrato.pdf_url) {
+        try {
+          const { error: deleteError } = await supabase.storage
+            .from("contratos-pdf")
+            .remove([contrato.pdf_url]);
+          if (deleteError) {
+            console.warn("Erro ao apagar PDF do storage:", deleteError.message);
+          } else {
+            console.log(`[ZapSign] PDF apagado do storage: ${contrato.pdf_url}`);
+            // Limpar pdf_url no contrato (o link da ZapSign passa a ser a referência)
+            await supabase
+              .from("contratos")
+              .update({ pdf_url: null })
+              .eq("id", contrato.id);
+          }
+        } catch (delErr) {
+          console.warn("Erro ao apagar PDF:", delErr);
+        }
       }
 
       return new Response(

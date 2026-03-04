@@ -780,9 +780,19 @@ export default function Contratos() {
           zapsign_doc_token: zData.doc_token,
           status: "Enviado",
           signers: zData.signers || [],
-          sign_url: zData.signers?.[0]?.sign_url || null,
+          sign_url: zData.signers?.[zData.signers.length - 1]?.sign_url || null,
         },
       }));
+
+      // PDF foi apagado do storage pelo backend — limpar referência local
+      const contratoSemPdf = { ...updatedContrato, pdf_url: null };
+      setContratos((prev) =>
+        prev.map((c) => (c.id === contrato.id ? contratoSemPdf : c))
+      );
+      if (selected?.id === contrato.id) {
+        setSelected(contratoSemPdf);
+      }
+      setZapsignPopupContrato(contratoSemPdf);
 
       // PASSO 3: Auto enviar WhatsApp
       setZapsignPopupStep("whatsapp");
@@ -1543,21 +1553,25 @@ Estou à disposição.`;
                             <Eye className="h-4 w-4 mr-2" />
                             Visualizar
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="cursor-pointer"
-                            onClick={() => handleGerarContrato(contrato)}
-                            disabled={gerando}
-                          >
-                            {gerando ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <FileOutput className="h-4 w-4 mr-2" />
-                            )}
-                            {contrato.tipo === "OA"
-                              ? (contrato.status_geracao === "Gerado" ? "Regerar OA" : "Gerar OA")
-                              : (contrato.status_geracao === "Gerado" ? "Regerar Contrato" : "Gerar Contrato")}
-                          </DropdownMenuItem>
-                          {contrato.status_geracao === "Gerado" && contrato.pdf_url && (
+                          {/* Gerar/Regerar — bloqueado se já enviado para ZapSign */}
+                          {!zapsignRecords[contrato.id] && (
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={() => handleGerarContrato(contrato)}
+                              disabled={gerando}
+                            >
+                              {gerando ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <FileOutput className="h-4 w-4 mr-2" />
+                              )}
+                              {contrato.tipo === "OA"
+                                ? (contrato.status_geracao === "Gerado" ? "Regerar OA" : "Gerar OA")
+                                : (contrato.status_geracao === "Gerado" ? "Regerar Contrato" : "Gerar Contrato")}
+                            </DropdownMenuItem>
+                          )}
+                          {/* Baixar PDF — só se tem pdf_url e NÃO foi enviado para ZapSign */}
+                          {contrato.status_geracao === "Gerado" && contrato.pdf_url && !zapsignRecords[contrato.id] && (
                             <DropdownMenuItem
                               className="cursor-pointer"
                               onClick={() => handleBaixarContrato(contrato)}
@@ -1565,6 +1579,16 @@ Estou à disposição.`;
                             >
                               <Download className="h-4 w-4 mr-2" />
                               {contrato.tipo === "OA" ? "Baixar OA" : "Baixar Contrato"}
+                            </DropdownMenuItem>
+                          )}
+                          {/* Visualizar via ZapSign — quando já enviado */}
+                          {zapsignRecords[contrato.id]?.sign_url && (
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={() => window.open(zapsignRecords[contrato.id].sign_url!, "_blank")}
+                            >
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              Visualizar Documento
                             </DropdownMenuItem>
                           )}
                           {canManage && zapsignRecords[contrato.id] && (
@@ -1830,44 +1854,82 @@ Estou à disposição.`;
                   {getStatusGeracaoBadge(selected.status_geracao)}
                 </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => handleGerarContrato(selected)}
-                    disabled={gerando}
-                  >
-                    {gerando ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <FileOutput className="h-4 w-4 mr-2" />
-                    )}
-                    {selected.tipo === "OA"
-                      ? (selected.status_geracao === "Gerado" ? "Regerar OA" : "Gerar OA")
-                      : (selected.status_geracao === "Gerado" ? "Regerar Contrato" : "Gerar Contrato")}
-                  </Button>
-
-                  {selected.status_geracao === "Gerado" && selected.pdf_url && (
-                    <Button
-                      variant="default"
-                      className="flex-1"
-                      onClick={() => handleBaixarContrato(selected)}
-                      disabled={gerando}
-                    >
-                      {gerando ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Download className="h-4 w-4 mr-2" />
+                {/* Se já enviado para ZapSign — mostrar link e bloquear ações */}
+                {zapsignRecords[selected.id] ? (
+                  <div className="space-y-2">
+                    <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        📄 Documento enviado para assinatura. Visualize pelo link abaixo:
+                      </p>
+                      {zapsignRecords[selected.id].sign_url && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="default"
+                            className="flex-1 gap-2"
+                            onClick={() => window.open(zapsignRecords[selected.id].sign_url!, "_blank")}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            Visualizar Documento
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                              navigator.clipboard.writeText(zapsignRecords[selected.id].sign_url!);
+                              toast.success("Link copiado!");
+                            }}
+                          >
+                            <ClipboardCopy className="h-4 w-4" />
+                          </Button>
+                        </div>
                       )}
-                      {selected.tipo === "OA" ? "Baixar OA" : "Baixar Contrato"}
-                    </Button>
-                  )}
-                </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      🔒 Geração e reenvio bloqueados — documento já registrado na ZapSign.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => handleGerarContrato(selected)}
+                        disabled={gerando}
+                      >
+                        {gerando ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <FileOutput className="h-4 w-4 mr-2" />
+                        )}
+                        {selected.tipo === "OA"
+                          ? (selected.status_geracao === "Gerado" ? "Regerar OA" : "Gerar OA")
+                          : (selected.status_geracao === "Gerado" ? "Regerar Contrato" : "Gerar Contrato")}
+                      </Button>
 
-                {selected.status_geracao === "Gerado" && (
-                  <p className="text-xs text-muted-foreground">
-                    💡 {selected.tipo === "OA" ? "OA gerada" : "Contrato gerado"} em PDF e pronto para download.
-                  </p>
+                      {selected.status_geracao === "Gerado" && selected.pdf_url && (
+                        <Button
+                          variant="default"
+                          className="flex-1"
+                          onClick={() => handleBaixarContrato(selected)}
+                          disabled={gerando}
+                        >
+                          {gerando ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4 mr-2" />
+                          )}
+                          {selected.tipo === "OA" ? "Baixar OA" : "Baixar Contrato"}
+                        </Button>
+                      )}
+                    </div>
+
+                    {selected.status_geracao === "Gerado" && (
+                      <p className="text-xs text-muted-foreground">
+                        💡 {selected.tipo === "OA" ? "OA gerada" : "Contrato gerado"} em PDF e pronto para download.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
 
