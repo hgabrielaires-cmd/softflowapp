@@ -2349,6 +2349,7 @@ export default function PainelAtendimento() {
                         e.stopPropagation();
                         iniciarAtendimento.mutate(detailCard.id);
                         setDetailCard({ ...detailCard, iniciado_em: new Date().toISOString() });
+                        setChecklistEditMode(true);
                       }}
                       disabled={iniciarAtendimento.isPending}
                     >
@@ -2520,6 +2521,8 @@ export default function PainelAtendimento() {
                 }, 0);
                 const checklistPercent = totalItens > 0 ? Math.round((totalConcluidos / totalItens) * 100) : 0;
                 const isCongelado = !detailCard.iniciado_em;
+                const isIniciado = !!detailCard.iniciado_em;
+                const checklistEnabled = isIniciado || checklistEditMode;
                 return (
                   <div className="rounded-lg border border-border bg-card p-3 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)]">
                     <div className="flex items-center justify-between mb-2">
@@ -2532,7 +2535,7 @@ export default function PainelAtendimento() {
                           <Progress value={checklistPercent} className="h-1.5 w-20" />
                         )}
                         <span className="text-[10px] font-semibold text-muted-foreground">{checklistPercent}%</span>
-                        {podeEditarChecklist && (
+                        {podeEditarChecklist && !isIniciado && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -2596,7 +2599,7 @@ export default function PainelAtendimento() {
                                       <div className="pl-1">
                                         <Checkbox
                                           checked={prog.concluido}
-                                          disabled={!checklistEditMode}
+                                          disabled={!checklistEnabled}
                                           onCheckedChange={() => saveChecklistItem(atividade.id, cIdx, { concluido: !prog.concluido })}
                                           className="h-4 w-4"
                                         />
@@ -2609,7 +2612,7 @@ export default function PainelAtendimento() {
                                           size="sm"
                                           variant={prog.valor_texto === 'sim' ? 'default' : 'outline'}
                                           className={cn("h-7 text-[11px] px-3", prog.valor_texto === 'sim' && "bg-emerald-600 hover:bg-emerald-700")}
-                                          disabled={!checklistEditMode}
+                                          disabled={!checklistEnabled}
                                           onClick={() => saveChecklistItem(atividade.id, cIdx, { concluido: true, valor_texto: 'sim' })}
                                         >
                                           <ThumbsUp className="h-3 w-3 mr-1" /> Sim
@@ -2618,7 +2621,7 @@ export default function PainelAtendimento() {
                                           size="sm"
                                           variant={prog.valor_texto === 'nao' ? 'default' : 'outline'}
                                           className={cn("h-7 text-[11px] px-3", prog.valor_texto === 'nao' && "bg-red-600 hover:bg-red-700")}
-                                          disabled={!checklistEditMode}
+                                          disabled={!checklistEnabled}
                                           onClick={() => saveChecklistItem(atividade.id, cIdx, { concluido: true, valor_texto: 'nao' })}
                                         >
                                           <ThumbsDown className="h-3 w-3 mr-1" /> Não
@@ -2631,7 +2634,7 @@ export default function PainelAtendimento() {
                                         cardId={detailCard.id}
                                         atividadeId={atividade.id}
                                         checklistIndex={cIdx}
-                                        disabled={!checklistEditMode}
+                                        disabled={!checklistEnabled}
                                         mesaId={atividade.mesas_atendimento?.id || etapaMesaInfo?.id || null}
                                         mesaCor={atividade.mesas_atendimento?.cor || etapaMesaInfo?.cor || null}
                                         filialId={detailCard.filial_id}
@@ -2651,7 +2654,7 @@ export default function PainelAtendimento() {
                                         <Input
                                           className="h-7 text-xs"
                                           placeholder="Digite aqui..."
-                                           disabled={!checklistEditMode}
+                                           disabled={!checklistEnabled}
                                           value={prog.valor_texto || ''}
                                           onChange={(e) => {
                                             const val = e.target.value;
@@ -2670,7 +2673,7 @@ export default function PainelAtendimento() {
                                           type="number"
                                           className="h-7 text-xs w-28"
                                           placeholder="Qtd"
-                                           disabled={!checklistEditMode}
+                                           disabled={!checklistEnabled}
                                           value={prog.valor_texto || ''}
                                           onChange={(e) => {
                                             const val = e.target.value;
@@ -2689,7 +2692,7 @@ export default function PainelAtendimento() {
                                           size="sm"
                                           variant={prog.concluido ? 'default' : 'outline'}
                                           className="h-7 text-[11px]"
-                                          disabled={!checklistEditMode}
+                                          disabled={!checklistEnabled}
                                           onClick={() => saveChecklistItem(atividade.id, cIdx, { concluido: !prog.concluido })}
                                         >
                                           <Paperclip className="h-3 w-3 mr-1" />
