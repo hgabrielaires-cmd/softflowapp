@@ -38,7 +38,7 @@ export default function Setores() {
   const [busca, setBusca] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editando, setEditando] = useState<Setor | null>(null);
-  const [form, setForm] = useState({ nome: "", descricao: "", telefone: "" });
+  const [form, setForm] = useState({ nome: "", descricao: "", telefone: "", instance_name: "" });
   const [saving, setSaving] = useState(false);
 
   if (!canAccess) return <Navigate to="/dashboard" replace />;
