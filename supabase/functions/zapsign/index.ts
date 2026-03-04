@@ -289,6 +289,11 @@ Deno.serve(async (req) => {
         console.log("[ZapSign] Assinatura da empresa embutida no PDF — enviando apenas cliente para assinar.");
       }
 
+      // Determinar o sign_url do cliente (último signatário, que é sempre o cliente)
+      const clienteSignerUrl = returnedSigners.length > 0
+        ? returnedSigners[returnedSigners.length - 1]?.sign_url || null
+        : null;
+
       // Salvar no banco
       const { error: insertError } = await supabase
         .from("contratos_zapsign")
@@ -298,7 +303,7 @@ Deno.serve(async (req) => {
           zapsign_doc_id: zapsignData.open_id?.toString() || null,
           status: "Enviado",
           signers: returnedSigners,
-          sign_url: returnedSigners[0]?.sign_url || null,
+          sign_url: clienteSignerUrl,
         }, { onConflict: "contrato_id" });
 
       if (insertError) {
