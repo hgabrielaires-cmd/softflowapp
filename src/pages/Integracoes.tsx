@@ -247,7 +247,7 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
       }
       await fetchInstances();
     } catch (err: any) {
-      if (err.message?.includes("already") || err.message?.includes("exists")) {
+      if (err.message?.includes("already") || err.message?.includes("exists") || err.message?.includes("in use")) {
         toast.info("Instância já existe. Buscando QR Code...");
         await handleConnectQr(instanceToCreate);
       } else {
