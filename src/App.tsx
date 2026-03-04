@@ -33,6 +33,7 @@ import EtapasPainel from "./pages/EtapasPainel";
 import DashboardFinanceiro from "./pages/DashboardFinanceiro";
 import DashboardAtendimento from "./pages/DashboardAtendimento";
 import Segmentos from "./pages/Segmentos";
+import Setores from "./pages/Setores";
 
 const queryClient = new QueryClient();
 
