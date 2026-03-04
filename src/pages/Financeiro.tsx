@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/table";
 import { CheckCircle, XCircle, Loader2, Filter, Clock, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
