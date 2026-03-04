@@ -195,7 +195,7 @@ const App = () => (
             <Route
               path="/modelos-contrato"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <ModelosContrato />
                 </ProtectedRoute>
               }
