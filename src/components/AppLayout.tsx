@@ -156,14 +156,14 @@ function isItemOrChildActive(item: NavSubItem, pathname: string): boolean {
 interface SidebarProps {
   collapsed: boolean;
   profile: Profile | null;
-  roles: AppRole[];
+  permissions: Set<string> | null;
   initials: string;
   onNavigate: (path: string) => void;
   onSignOut: () => void;
   onMobileClose?: () => void;
 }
 
-function Sidebar({ collapsed, profile, roles, initials, onNavigate, onSignOut, onMobileClose }: SidebarProps) {
+function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSignOut, onMobileClose }: SidebarProps) {
   const location = useLocation();
 
   const initialOpen = navGroups.reduce<Record<string, boolean>>((acc, group) => {
