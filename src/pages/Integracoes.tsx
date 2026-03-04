@@ -528,7 +528,7 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
                               onClick={() => {
                                 setNewInstanceName(item.name);
                                 if (isNotCreated) {
-                                  handleCreateInstance();
+                                  handleCreateInstance(item.name);
                                 } else {
                                   handleConnectQr(item.name);
                                 }
