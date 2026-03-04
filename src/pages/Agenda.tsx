@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarDays, Clock, User, Building2, Filter, MapPin, ExternalLink } from "lucide-react";
+import { CalendarDays, Clock, User, Building2, Filter, MapPin, ExternalLink, Layers } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
