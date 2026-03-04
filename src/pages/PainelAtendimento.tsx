@@ -2906,7 +2906,7 @@ export default function PainelAtendimento() {
                     </Label>
                     <div className="space-y-1.5 max-h-48 overflow-y-auto">
                       {cardAgendamentos.map((ag: any) => (
-                        <div key={ag.id} className="flex items-center gap-2 bg-muted/50 rounded px-2 py-1.5 text-xs">
+                        <div key={ag.id} className="flex items-center gap-2 bg-muted/50 rounded px-2 py-1.5 text-xs" style={{ borderLeft: ag.painel_etapas?.cor ? `3px solid ${ag.painel_etapas.cor}` : undefined }}>
                           <CalendarDays className="h-3 w-3 text-primary shrink-0" />
                           {configLocked ? (
                             <span className="font-medium min-w-[70px]">
