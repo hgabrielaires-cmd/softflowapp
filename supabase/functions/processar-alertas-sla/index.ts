@@ -285,9 +285,10 @@ serve(async (req) => {
             } catch { /* keep */ }
 
             // Resolve instance name from template's setor
-            const instanceName = template?.setor_id && setorInstanceMap[template.setor_id]
-              ? setorInstanceMap[template.setor_id]
-              : "Softflow_WhatsApp";
+            const resolvedSetorId = template?.setor_id || null;
+            const resolvedInstance = resolvedSetorId ? setorInstanceMap[resolvedSetorId] : null;
+            const instanceName = resolvedInstance || "Softflow_WhatsApp";
+            console.log(`[SLA] Routing: template_id=${alerta.template_id}, setor_id=${resolvedSetorId}, instance=${instanceName}, setorInstanceMap=${JSON.stringify(setorInstanceMap)}`);
 
             try {
               await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
