@@ -213,10 +213,10 @@ export default function Usuarios() {
 
   // ── Enviar WhatsApp de boas-vindas ──────────────────────
   async function enviarWhatsappBoasVindas(nome: string, email: string, senha: string, telefone: string) {
-    // Buscar template de boas-vindas
+    // Buscar template de boas-vindas (com id para roteamento de instância)
     const { data: template } = await supabase
       .from("message_templates")
-      .select("conteudo")
+      .select("id, conteudo")
       .eq("categoria", "boas_vindas")
       .eq("ativo", true)
       .limit(1)
@@ -237,6 +237,7 @@ export default function Usuarios() {
         action: "send_text",
         number: telefone,
         text: mensagem,
+        template_id: template?.id || undefined,
       },
     });
 

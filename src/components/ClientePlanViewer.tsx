@@ -309,10 +309,10 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
         nome = profile.full_name || "Usuário";
       }
 
-      // Fetch template from database
+      // Fetch template from database (with id for instance routing)
       const { data: template } = await supabase
         .from("message_templates")
-        .select("conteudo")
+        .select("id, conteudo")
         .ilike("nome", "%espelho%")
         .eq("tipo", "whatsapp")
         .eq("ativo", true)
@@ -326,6 +326,7 @@ export function ClientePlanViewer({ clienteId, clienteNome, variant = "icon", cl
           action: "send_text",
           number: telefone,
           text: mensagem,
+          template_id: template?.id || undefined,
         },
       });
 
