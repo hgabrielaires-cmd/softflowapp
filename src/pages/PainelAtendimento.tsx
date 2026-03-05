@@ -176,6 +176,9 @@ export default function PainelAtendimento() {
   const [resetarOpen, setResetarOpen] = useState(false);
   const [resetarMotivo, setResetarMotivo] = useState("");
   const [resetando, setResetando] = useState(false);
+  const [cancelarOpen, setCancelarOpen] = useState(false);
+  const [cancelarMotivo, setCancelarMotivo] = useState("");
+  const [cancelando, setCancelando] = useState(false);
   // Auto-refresh atrasado status every 60s
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60_000);
@@ -341,6 +344,7 @@ export default function PainelAtendimento() {
   const podeEditarChecklist = userPermissions.includes("acao.editar_checklist");
   const podeVisualizarSeguidores = userPermissions.includes("acao.visualiza_seguidores_projeto");
   const podeResetarProjeto = (profile as any)?.permite_resetar_projeto === true;
+  const podeCancelarProjeto = (profile as any)?.permite_cancelar_projeto === true;
 
   // Precompute SLA da Etapa per card (jornada-based) + total checklist items per jornada
   const { data: jornadaSlaMap = {} } = useQuery({
@@ -1497,6 +1501,56 @@ export default function PainelAtendimento() {
       toast.error("Erro ao resetar projeto: " + (err.message || ""));
     } finally {
       setResetando(false);
+    }
+  }
+
+  // ─── Cancelar Projeto ─────────────────────────────────────────────────────
+  async function handleCancelarProjeto() {
+    if (!detailCard || !cancelarMotivo.trim()) return;
+    setCancelando(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      // Salvar no relatório de projetos cancelados
+      await supabase.from("projetos_cancelados").insert({
+        card_id: detailCard.id,
+        contrato_id: detailCard.contrato_id,
+        cliente_id: detailCard.cliente_id,
+        filial_id: detailCard.filial_id,
+        motivo: cancelarMotivo.trim(),
+        cancelado_por: user.id,
+        tipo_operacao: detailCard.tipo_operacao,
+        plano_nome: detailCard.planos?.nome || null,
+        cliente_nome: detailCard.clientes?.nome_fantasia || null,
+        contrato_numero: detailCard.contratos?.numero_exibicao || null,
+      } as any);
+
+      // Atualizar status do card para cancelado
+      const { error } = await supabase
+        .from("painel_atendimento")
+        .update({ status_projeto: "cancelado" } as any)
+        .eq("id", detailCard.id);
+      if (error) throw error;
+
+      // Adicionar comentário de cancelamento
+      const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
+      await supabase.from("painel_comentarios").insert({
+        card_id: detailCard.id,
+        etapa_id: detailCard.etapa_id,
+        criado_por: user.id,
+        texto: `❌ Projeto cancelado por ${autorNome}: ${cancelarMotivo.trim()}`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+      toast.success("Projeto cancelado com sucesso!");
+      setCancelarOpen(false);
+      setCancelarMotivo("");
+      setDetailCard(null);
+    } catch (err: any) {
+      toast.error("Erro ao cancelar projeto: " + (err.message || ""));
+    } finally {
+      setCancelando(false);
     }
   }
 
@@ -3555,6 +3609,15 @@ export default function PainelAtendimento() {
                           Resetar Projeto
                         </DropdownMenuItem>
                       )}
+                      {podeCancelarProjeto && detailCard.status_projeto !== "cancelado" && (
+                        <DropdownMenuItem
+                          className="gap-2 text-red-600 focus:text-red-600"
+                          onClick={() => setCancelarOpen(true)}
+                        >
+                          <Ban className="h-4 w-4" />
+                          Cancelar Projeto
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -4260,6 +4323,47 @@ export default function PainelAtendimento() {
               disabled={!resetarMotivo.trim() || resetando}
             >
               {resetando ? "Resetando..." : "Confirmar Reset"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancelar Projeto Dialog */}
+      <Dialog open={cancelarOpen} onOpenChange={(open) => { if (!open) { setCancelarOpen(false); setCancelarMotivo(""); } }}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Ban className="h-5 w-5" />
+              Cancelar Projeto
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+              <p className="text-sm text-destructive font-medium">⚠️ Atenção: esta ação é irreversível!</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                O projeto será marcado como cancelado e o motivo será registrado no relatório de projetos cancelados.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Motivo do cancelamento *</Label>
+              <Textarea
+                placeholder="Descreva o motivo para cancelar o projeto..."
+                value={cancelarMotivo}
+                onChange={(e) => setCancelarMotivo(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCancelarOpen(false); setCancelarMotivo(""); }}>
+              Voltar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelarProjeto}
+              disabled={!cancelarMotivo.trim() || cancelando}
+            >
+              {cancelando ? "Cancelando..." : "Confirmar Cancelamento"}
             </Button>
           </DialogFooter>
         </DialogContent>

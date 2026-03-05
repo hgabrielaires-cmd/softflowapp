@@ -205,6 +205,9 @@ export default function Contratos() {
   const [selected, setSelected] = useState<Contrato | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [openEncerrar, setOpenEncerrar] = useState(false);
+  const [openCancelarProjeto, setOpenCancelarProjeto] = useState(false);
+  const [cancelarProjetoMotivo, setCancelarProjetoMotivo] = useState("");
+  const [projetosAtivos, setProjetosAtivos] = useState<any[]>([]);
   const [processando, setProcessando] = useState(false);
   const [gerando, setGerando] = useState(false);
   const [gerarSignedUrl, setGerarSignedUrl] = useState<string | null>(null);
@@ -707,7 +710,69 @@ export default function Contratos() {
     toast.success("Contrato encerrado.");
     setOpenEncerrar(false);
     setOpenDetail(false);
+
+    // Verificar se há projetos ativos no painel de atendimento para este contrato
+    const { data: projetos } = await supabase
+      .from("painel_atendimento")
+      .select("id, tipo_operacao, filial_id, clientes(nome_fantasia), contratos(numero_exibicao), planos(nome)")
+      .eq("contrato_id", selected.id)
+      .neq("status_projeto", "cancelado");
+
+    if (projetos && projetos.length > 0) {
+      setProjetosAtivos(projetos);
+      setCancelarProjetoMotivo("");
+      setOpenCancelarProjeto(true);
+    }
+
     loadData();
+  }
+
+  async function handleCancelarProjetosVinculados() {
+    if (!cancelarProjetoMotivo.trim() || projetosAtivos.length === 0) return;
+    setProcessando(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      for (const projeto of projetosAtivos) {
+        // Salvar no relatório
+        await supabase.from("projetos_cancelados").insert({
+          card_id: projeto.id,
+          contrato_id: selected!.id,
+          cliente_id: selected!.cliente_id,
+          filial_id: projeto.filial_id,
+          motivo: cancelarProjetoMotivo.trim(),
+          cancelado_por: user.id,
+          tipo_operacao: projeto.tipo_operacao,
+          plano_nome: (projeto.planos as any)?.nome || null,
+          cliente_nome: (projeto.clientes as any)?.nome_fantasia || null,
+          contrato_numero: (projeto.contratos as any)?.numero_exibicao || null,
+        } as any);
+
+        // Atualizar status
+        await supabase
+          .from("painel_atendimento")
+          .update({ status_projeto: "cancelado" } as any)
+          .eq("id", projeto.id);
+
+        // Comentário
+        const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
+        await supabase.from("painel_comentarios").insert({
+          card_id: projeto.id,
+          criado_por: user.id,
+          texto: `❌ Projeto cancelado via encerramento de contrato por ${autorNome}: ${cancelarProjetoMotivo.trim()}`,
+        });
+      }
+
+      toast.success("Projeto(s) cancelado(s) com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro ao cancelar projeto(s): " + (err.message || ""));
+    } finally {
+      setProcessando(false);
+      setOpenCancelarProjeto(false);
+      setCancelarProjetoMotivo("");
+      setProjetosAtivos([]);
+    }
   }
 
   // ── Gerar Contrato + Auto ZapSign + WhatsApp ─────────────────────────────────
@@ -2034,6 +2099,51 @@ Estou à disposição.`;
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Cancelar Projeto vinculado Dialog */}
+      <Dialog open={openCancelarProjeto} onOpenChange={(open) => { if (!open) { setOpenCancelarProjeto(false); setCancelarProjetoMotivo(""); setProjetosAtivos([]); } }}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              Cancelar Projeto no Painel?
+            </DialogTitle>
+            <DialogDescription>
+              Foi encontrado projeto(s) ativo(s) no painel de atendimento vinculado(s) a este contrato. Deseja cancelá-lo(s)?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {projetosAtivos.map((p) => (
+              <div key={p.id} className="rounded-md border border-border p-2 text-sm">
+                <span className="font-medium">{(p.clientes as any)?.nome_fantasia}</span>
+                <span className="text-muted-foreground ml-2">— {p.tipo_operacao}</span>
+              </div>
+            ))}
+            <div className="space-y-2">
+              <Label>Motivo do cancelamento *</Label>
+              <Textarea
+                placeholder="Descreva o motivo para cancelar o projeto..."
+                value={cancelarProjetoMotivo}
+                onChange={(e) => setCancelarProjetoMotivo(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-2">
+            <Button variant="outline" onClick={() => { setOpenCancelarProjeto(false); setCancelarProjetoMotivo(""); setProjetosAtivos([]); }}>
+              Não cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelarProjetosVinculados}
+              disabled={!cancelarProjetoMotivo.trim() || processando}
+            >
+              {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Confirmar Cancelamento
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* (Old generation popup removed - now unified in ZapSign popup below) */}
 

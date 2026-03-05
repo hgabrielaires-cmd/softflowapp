@@ -40,7 +40,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send, MessageCircle, Globe, Wrench, ShoppingCart, Headphones, RefreshCw } from "lucide-react";
+import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send, MessageCircle, Globe, Wrench, ShoppingCart, Headphones, RefreshCw, Ban } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -141,6 +141,7 @@ export default function Usuarios() {
   const [editTelefone, setEditTelefone] = useState("");
   const [editPermiteEnviarEspelho, setEditPermiteEnviarEspelho] = useState(false);
   const [editPermiteResetarProjeto, setEditPermiteResetarProjeto] = useState(false);
+  const [editPermiteCancelarProjeto, setEditPermiteCancelarProjeto] = useState(false);
   const [editPermiteVerValoresProjeto, setEditPermiteVerValoresProjeto] = useState(false);
   const [editIsTecnico, setEditIsTecnico] = useState(false);
   const [editTipoTecnico, setEditTipoTecnico] = useState("interno");
@@ -343,6 +344,7 @@ export default function Usuarios() {
     setEditTelefone((user as any).telefone || "");
     setEditPermiteEnviarEspelho((user as any).permite_enviar_espelho_whatsapp ?? false);
     setEditPermiteResetarProjeto((user as any).permite_resetar_projeto ?? false);
+    setEditPermiteCancelarProjeto((user as any).permite_cancelar_projeto ?? false);
     setEditPermiteVerValoresProjeto((user as any).permite_ver_valores_projeto ?? false);
     setEditIsTecnico((user as any).is_tecnico ?? false);
     setEditTipoTecnico((user as any).tipo_tecnico || "interno");
@@ -376,6 +378,7 @@ export default function Usuarios() {
         telefone: editTelefone || null,
         permite_enviar_espelho_whatsapp: editPermiteEnviarEspelho,
         permite_resetar_projeto: editPermiteResetarProjeto,
+        permite_cancelar_projeto: editPermiteCancelarProjeto,
         permite_ver_valores_projeto: editPermiteVerValoresProjeto,
         is_tecnico: editIsTecnico,
         tipo_tecnico: editIsTecnico ? editTipoTecnico : null,
@@ -1185,6 +1188,19 @@ export default function Usuarios() {
                         </p>
                       </div>
                       <Switch checked={editPermiteResetarProjeto} onCheckedChange={setEditPermiteResetarProjeto} />
+                    </div>
+                    <div className="border-t border-border" />
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+                          <Ban className="h-4 w-4 text-red-500" />
+                          Cancelar Projeto
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Permite cancelar projetos no painel de atendimento, registrando o motivo no relatório de projetos cancelados.
+                        </p>
+                      </div>
+                      <Switch checked={editPermiteCancelarProjeto} onCheckedChange={setEditPermiteCancelarProjeto} />
                     </div>
                     <div className="border-t border-border" />
                     <div className="flex items-center justify-between">
