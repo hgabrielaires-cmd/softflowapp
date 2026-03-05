@@ -3510,7 +3510,7 @@ export default function PainelAtendimento() {
                 )}
               </div>
                <div className="flex items-center gap-2">
-                {(podePausarProjeto || podeRecusarProjeto || podeGerenciarApontamento) && (
+                {(podePausarProjeto || podeRecusarProjeto || podeGerenciarApontamento || podeResetarProjeto) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="gap-1.5">
@@ -3544,6 +3544,15 @@ export default function PainelAtendimento() {
                         >
                           <XCircle className="h-4 w-4" />
                           Recusar Projeto
+                        </DropdownMenuItem>
+                      )}
+                      {podeResetarProjeto && (
+                        <DropdownMenuItem
+                          className="gap-2 text-orange-600 focus:text-orange-600"
+                          onClick={() => setResetarOpen(true)}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          Resetar Projeto
                         </DropdownMenuItem>
                       )}
                     </DropdownMenuContent>
