@@ -173,6 +173,9 @@ export default function PainelAtendimento() {
   const [seguindoLoading, setSeguindoLoading] = useState(false);
   const [seguidoresList, setSeguidoresList] = useState<any[]>([]);
   const [seguidoresPopupOpen, setSeguidoresPopupOpen] = useState(false);
+  const [resetarOpen, setResetarOpen] = useState(false);
+  const [resetarMotivo, setResetarMotivo] = useState("");
+  const [resetando, setResetando] = useState(false);
   // Auto-refresh atrasado status every 60s
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60_000);
