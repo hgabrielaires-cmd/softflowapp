@@ -188,6 +188,7 @@ export default function Contratos() {
     loadPerms();
   }, [profile?.user_id]);
   const podeCadastroRetroativo = userPermissions.includes("acao.cadastro_retroativo");
+  const podeRegerarContrato = userPermissions.includes("acao.regerar_contrato");
 
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
