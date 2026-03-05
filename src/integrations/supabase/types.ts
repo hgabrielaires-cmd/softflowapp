@@ -2201,6 +2201,7 @@ export type Database = {
           is_tecnico: boolean
           is_vendedor: boolean
           mesa_favorita_id: string | null
+          permite_cancelar_projeto: boolean
           permite_enviar_espelho_whatsapp: boolean
           permite_resetar_projeto: boolean
           permite_ver_valores_projeto: boolean
@@ -2233,6 +2234,7 @@ export type Database = {
           is_tecnico?: boolean
           is_vendedor?: boolean
           mesa_favorita_id?: string | null
+          permite_cancelar_projeto?: boolean
           permite_enviar_espelho_whatsapp?: boolean
           permite_resetar_projeto?: boolean
           permite_ver_valores_projeto?: boolean
@@ -2265,6 +2267,7 @@ export type Database = {
           is_tecnico?: boolean
           is_vendedor?: boolean
           mesa_favorita_id?: string | null
+          permite_cancelar_projeto?: boolean
           permite_enviar_espelho_whatsapp?: boolean
           permite_resetar_projeto?: boolean
           permite_ver_valores_projeto?: boolean
@@ -2298,6 +2301,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      projetos_cancelados: {
+        Row: {
+          cancelado_em: string
+          cancelado_por: string
+          card_id: string
+          cliente_id: string
+          cliente_nome: string | null
+          contrato_id: string
+          contrato_numero: string | null
+          created_at: string
+          filial_id: string
+          id: string
+          motivo: string
+          plano_nome: string | null
+          tipo_operacao: string | null
+        }
+        Insert: {
+          cancelado_em?: string
+          cancelado_por: string
+          card_id: string
+          cliente_id: string
+          cliente_nome?: string | null
+          contrato_id: string
+          contrato_numero?: string | null
+          created_at?: string
+          filial_id: string
+          id?: string
+          motivo: string
+          plano_nome?: string | null
+          tipo_operacao?: string | null
+        }
+        Update: {
+          cancelado_em?: string
+          cancelado_por?: string
+          card_id?: string
+          cliente_id?: string
+          cliente_nome?: string | null
+          contrato_id?: string
+          contrato_numero?: string | null
+          created_at?: string
+          filial_id?: string
+          id?: string
+          motivo?: string
+          plano_nome?: string | null
+          tipo_operacao?: string | null
+        }
+        Relationships: []
       }
       role_permissions: {
         Row: {
