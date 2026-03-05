@@ -714,7 +714,7 @@ export default function Contratos() {
     // Verificar se há projetos ativos no painel de atendimento para este contrato
     const { data: projetos } = await supabase
       .from("painel_atendimento")
-      .select("id, tipo_operacao, clientes(nome_fantasia), contratos(numero_exibicao), planos(nome)")
+      .select("id, tipo_operacao, filial_id, clientes(nome_fantasia), contratos(numero_exibicao), planos(nome)")
       .eq("contrato_id", selected.id)
       .neq("status_projeto", "cancelado");
 
