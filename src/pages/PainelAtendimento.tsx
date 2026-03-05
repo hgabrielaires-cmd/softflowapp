@@ -245,6 +245,7 @@ export default function PainelAtendimento() {
       const { data, error } = await supabase
         .from("painel_atendimento")
         .select("*, clientes(nome_fantasia, apelido), filiais(nome), planos(nome, descricao), contratos(numero_exibicao), profiles(full_name)")
+        .neq("status_projeto", "cancelado")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data as PainelCard[];
