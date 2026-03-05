@@ -188,6 +188,7 @@ export default function Contratos() {
     loadPerms();
   }, [profile?.user_id]);
   const podeCadastroRetroativo = userPermissions.includes("acao.cadastro_retroativo");
+  const podeRegerarContrato = userPermissions.includes("acao.regerar_contrato");
 
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
@@ -1587,8 +1588,8 @@ Estou à disposição.`;
                             <Eye className="h-4 w-4 mr-2" />
                             Visualizar
                           </DropdownMenuItem>
-                          {/* Gerar/Regerar — bloqueado se já enviado para ZapSign */}
-                          {!zapsignRecords[contrato.id] && (
+                          {/* Gerar/Regerar — bloqueado se já enviado para ZapSign (exceto com permissão) */}
+                          {(!zapsignRecords[contrato.id] || podeRegerarContrato) && (
                             <DropdownMenuItem
                               className="cursor-pointer"
                               onClick={() => handleGerarContrato(contrato)}
@@ -1918,9 +1919,23 @@ Estou à disposição.`;
                         </div>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      🔒 Geração e reenvio bloqueados — documento já registrado na ZapSign.
-                    </p>
+                    {podeRegerarContrato ? (
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          variant="outline"
+                          className="flex-1 gap-2"
+                          onClick={() => handleGerarContrato(selected)}
+                          disabled={gerando}
+                        >
+                          {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                          {selected.tipo === "OA" ? "Regerar OA" : "Regerar Contrato"}
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        🔒 Geração e reenvio bloqueados — documento já registrado na ZapSign.
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <>
