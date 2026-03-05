@@ -179,6 +179,9 @@ export default function PainelAtendimento() {
   const [cancelarOpen, setCancelarOpen] = useState(false);
   const [cancelarMotivo, setCancelarMotivo] = useState("");
   const [cancelando, setCancelando] = useState(false);
+  const [verPedidoOpen, setVerPedidoOpen] = useState(false);
+  const [verPedidoData, setVerPedidoData] = useState<any>(null);
+  const [verPedidoLoading, setVerPedidoLoading] = useState(false);
   // Auto-refresh atrasado status every 60s
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60_000);
