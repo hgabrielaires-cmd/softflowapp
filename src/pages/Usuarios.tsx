@@ -1170,6 +1170,19 @@ export default function Usuarios() {
                       </div>
                       <Switch checked={editPermiteEnviarEspelho} onCheckedChange={setEditPermiteEnviarEspelho} />
                     </div>
+                    <div className="border-t border-border" />
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+                          <RefreshCw className="h-4 w-4 text-orange-500" />
+                          Resetar Projeto
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Permite resetar projetos no painel de atendimento, apagando histórico e voltando para etapa inicial.
+                        </p>
+                      </div>
+                      <Switch checked={editPermiteResetarProjeto} onCheckedChange={setEditPermiteResetarProjeto} />
+                    </div>
                   </div>
                 </TabsContent>
 
