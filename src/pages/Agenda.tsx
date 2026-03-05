@@ -312,6 +312,14 @@ export default function Agenda() {
         });
       }
 
+      // Fetch etapa data
+      const etapaIds = [...new Set((rows || []).map((r: any) => r.etapa_id).filter(Boolean))];
+      let etapasMap: Record<string, { nome: string; cor: string | null }> = {};
+      if (etapaIds.length > 0) {
+        const { data: etapasData } = await supabase.from("painel_etapas").select("id, nome, cor").in("id", etapaIds);
+        (etapasData || []).forEach((e: any) => { etapasMap[e.id] = { nome: e.nome, cor: e.cor }; });
+      }
+
       return (rows || []).map((ag: any) => {
         const card = cardsMap[ag.card_id];
         return {
@@ -321,6 +329,10 @@ export default function Agenda() {
           filial_id: card?.filial_id || "",
           filial_nome: card?.filiais?.nome || "—",
           atividade_nome: atividadesMap[ag.atividade_id] || "—",
+          mesa_nome: ag.mesa_id ? mesasMap[ag.mesa_id]?.nome || "—" : "—",
+          mesa_cor: ag.mesa_id ? mesasMap[ag.mesa_id]?.cor || null : null,
+          etapa_nome: ag.etapa_id ? etapasMap[ag.etapa_id]?.nome || "—" : "—",
+          etapa_cor: ag.etapa_id ? etapasMap[ag.etapa_id]?.cor || null : null,
           tecnicos: tecMap[ag.card_id] || [],
           apontados: aponMap[ag.card_id] || [],
           tipo_atendimento: card?.tipo_atendimento_local || null,
