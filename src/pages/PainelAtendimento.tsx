@@ -1045,6 +1045,32 @@ export default function PainelAtendimento() {
     }
   }
 
+  // ─── Fetch Ver Pedido (completo) ──────────────────────────────────────
+  async function fetchVerPedido(pedidoId: string) {
+    setVerPedidoLoading(true);
+    setVerPedidoOpen(true);
+    try {
+      const { data: ped } = await supabase
+        .from("pedidos")
+        .select("*, planos(nome), clientes(nome_fantasia), filiais(nome), profiles:vendedor_id(full_name)")
+        .eq("id", pedidoId)
+        .single();
+      if (ped) {
+        // Fetch plano details for pricing
+        let planoDetalhes: any = null;
+        if (ped.plano_id) {
+          const { data: pl } = await supabase.from("planos").select("*").eq("id", ped.plano_id).single();
+          planoDetalhes = pl;
+        }
+        setVerPedidoData({ ...ped, planoDetalhes });
+      }
+    } catch {
+      toast.error("Erro ao carregar dados do pedido.");
+    } finally {
+      setVerPedidoLoading(false);
+    }
+  }
+
   // ─── Fetch Histórico de Etapas Anteriores ─────────────────────────────
   async function fetchHistorico(card: PainelCard) {
     setHistoricoLoading(true);
