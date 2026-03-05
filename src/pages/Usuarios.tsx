@@ -1186,6 +1186,19 @@ export default function Usuarios() {
                       </div>
                       <Switch checked={editPermiteResetarProjeto} onCheckedChange={setEditPermiteResetarProjeto} />
                     </div>
+                    <div className="border-t border-border" />
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+                          <ShoppingCart className="h-4 w-4 text-blue-500" />
+                          Ver Valores do Projeto em Detalhes
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Permite visualizar os valores financeiros (implantação, mensalidade, etc.) nos detalhes do projeto no painel de atendimento.
+                        </p>
+                      </div>
+                      <Switch checked={editPermiteVerValoresProjeto} onCheckedChange={setEditPermiteVerValoresProjeto} />
+                    </div>
                   </div>
                 </TabsContent>
 
