@@ -3871,6 +3871,17 @@ export default function PainelAtendimento() {
                       <h4 className="text-sm font-bold text-foreground">
                         {detailCard?.tipo_operacao === "Upgrade" ? "Novo Plano Contratado" : "Plano Contratado"}
                       </h4>
+                      {podeVerValoresProjeto && detailCard?.pedido_id && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="ml-auto h-7 text-xs px-2.5 gap-1"
+                          onClick={() => fetchVerPedido(detailCard.pedido_id!)}
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                          Ver Pedido
+                        </Button>
+                      )}
                     </div>
                     <p className="text-sm font-semibold ml-9">
                       {detalhesData.planoNome}
