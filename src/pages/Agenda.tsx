@@ -290,7 +290,7 @@ export default function Agenda() {
       if (cardIds.length > 0) {
         const { data: cardsData } = await supabase
           .from("painel_atendimento")
-          .select("id, cliente_id, contrato_id, filial_id, tipo_atendimento_local, status_projeto, pausado, iniciado_em, sla_horas, pedido_id, clientes(nome_fantasia), contratos(numero_exibicao), filiais(nome)")
+          .select("id, cliente_id, contrato_id, filial_id, etapa_id, tipo_atendimento_local, status_projeto, pausado, iniciado_em, sla_horas, pedido_id, clientes(nome_fantasia), contratos(numero_exibicao), filiais(nome)")
           .in("id", cardIds);
         (cardsData || []).forEach((c: any) => { cardsMap[c.id] = c; });
       }
