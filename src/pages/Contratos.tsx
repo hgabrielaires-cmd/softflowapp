@@ -1919,9 +1919,23 @@ Estou à disposição.`;
                         </div>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      🔒 Geração e reenvio bloqueados — documento já registrado na ZapSign.
-                    </p>
+                    {podeRegerarContrato ? (
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          variant="outline"
+                          className="flex-1 gap-2"
+                          onClick={() => handleGerarContrato(selected)}
+                          disabled={gerando}
+                        >
+                          {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                          {selected.tipo === "OA" ? "Regerar OA" : "Regerar Contrato"}
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        🔒 Geração e reenvio bloqueados — documento já registrado na ZapSign.
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <>
