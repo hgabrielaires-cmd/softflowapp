@@ -173,6 +173,9 @@ export default function PainelAtendimento() {
   const [seguindoLoading, setSeguindoLoading] = useState(false);
   const [seguidoresList, setSeguidoresList] = useState<any[]>([]);
   const [seguidoresPopupOpen, setSeguidoresPopupOpen] = useState(false);
+  const [resetarOpen, setResetarOpen] = useState(false);
+  const [resetarMotivo, setResetarMotivo] = useState("");
+  const [resetando, setResetando] = useState(false);
   // Auto-refresh atrasado status every 60s
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60_000);
@@ -337,6 +340,7 @@ export default function PainelAtendimento() {
   const podeVoltarEtapa = userPermissions.includes("acao.voltar_etapa");
   const podeEditarChecklist = userPermissions.includes("acao.editar_checklist");
   const podeVisualizarSeguidores = userPermissions.includes("acao.visualiza_seguidores_projeto");
+  const podeResetarProjeto = userPermissions.includes("acao.resetar_projeto");
 
   // Precompute SLA da Etapa per card (jornada-based) + total checklist items per jornada
   const { data: jornadaSlaMap = {} } = useQuery({
@@ -1415,6 +1419,84 @@ export default function PainelAtendimento() {
       toast.error("Erro ao recusar projeto: " + (err.message || ""));
     } finally {
       setRecusando(false);
+    }
+  }
+
+  // ─── Resetar Projeto ─────────────────────────────────────────────────────
+  async function handleResetarProjeto() {
+    if (!detailCard || !resetarMotivo.trim()) return;
+    setResetando(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      // Buscar etapa inicial da filial
+      const { data: filialData } = await supabase
+        .from("filiais")
+        .select("etapa_inicial_id")
+        .eq("id", detailCard.filial_id)
+        .single();
+
+      let etapaDestinoId = filialData?.etapa_inicial_id;
+      if (!etapaDestinoId) {
+        // Fallback: primeira etapa ativa por ordem
+        const primeiraEtapa = etapas.find(e => e.ativo);
+        if (!primeiraEtapa) {
+          toast.error("Nenhuma etapa ativa encontrada.");
+          setResetando(false);
+          return;
+        }
+        etapaDestinoId = primeiraEtapa.id;
+      }
+
+      // 1. Apagar histórico de etapas
+      await supabase.from("painel_historico_etapas").delete().eq("card_id", detailCard.id);
+
+      // 2. Apagar progresso de checklist
+      await supabase.from("painel_checklist_progresso").delete().eq("card_id", detailCard.id);
+
+      // 3. Apagar agendamentos
+      await supabase.from("painel_agendamentos").delete().eq("card_id", detailCard.id);
+
+      // 4. Registrar entrada na etapa destino
+      const etapaDestino = etapas.find(e => e.id === etapaDestinoId);
+      await registrarEntradaEtapa(detailCard.id, etapaDestinoId!, etapaDestino?.nome || "Etapa Inicial");
+
+      // 5. Atualizar o card
+      const { error } = await supabase
+        .from("painel_atendimento")
+        .update({
+          etapa_id: etapaDestinoId,
+          iniciado_em: null,
+          iniciado_por: null,
+          pausado: false,
+          pausado_em: null,
+          pausado_por: null,
+          pausado_motivo: null,
+          status_projeto: "ativo",
+          etapa_origem_id: null,
+        } as any)
+        .eq("id", detailCard.id);
+      if (error) throw error;
+
+      // 6. Adicionar comentário de reset
+      const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
+      await supabase.from("painel_comentarios").insert({
+        card_id: detailCard.id,
+        etapa_id: etapaDestinoId,
+        criado_por: user.id,
+        texto: `🔄 Projeto resetado por ${autorNome}: ${resetarMotivo.trim()}`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+      toast.success("Projeto resetado com sucesso!");
+      setResetarOpen(false);
+      setResetarMotivo("");
+      setDetailCard(null);
+    } catch (err: any) {
+      toast.error("Erro ao resetar projeto: " + (err.message || ""));
+    } finally {
+      setResetando(false);
     }
   }
 
@@ -3428,7 +3510,7 @@ export default function PainelAtendimento() {
                 )}
               </div>
                <div className="flex items-center gap-2">
-                {(podePausarProjeto || podeRecusarProjeto || podeGerenciarApontamento) && (
+                {(podePausarProjeto || podeRecusarProjeto || podeGerenciarApontamento || podeResetarProjeto) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="gap-1.5">
@@ -3462,6 +3544,15 @@ export default function PainelAtendimento() {
                         >
                           <XCircle className="h-4 w-4" />
                           Recusar Projeto
+                        </DropdownMenuItem>
+                      )}
+                      {podeResetarProjeto && (
+                        <DropdownMenuItem
+                          className="gap-2 text-orange-600 focus:text-orange-600"
+                          onClick={() => setResetarOpen(true)}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          Resetar Projeto
                         </DropdownMenuItem>
                       )}
                     </DropdownMenuContent>
@@ -4124,6 +4215,47 @@ export default function PainelAtendimento() {
               disabled={!recusarMotivo.trim() || recusando}
             >
               {recusando ? "Recusando..." : "Confirmar Recusa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Resetar Projeto Dialog */}
+      <Dialog open={resetarOpen} onOpenChange={(open) => { if (!open) { setResetarOpen(false); setResetarMotivo(""); } }}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-orange-600">
+              <RefreshCw className="h-5 w-5" />
+              Resetar Projeto
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+              <p className="text-sm text-destructive font-medium">⚠️ Atenção: esta ação é irreversível!</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Todo o histórico de etapas, progresso de checklist e agendamentos serão apagados. O projeto voltará para a etapa inicial da filial.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Motivo do reset *</Label>
+              <Textarea
+                placeholder="Descreva o motivo para resetar o projeto..."
+                value={resetarMotivo}
+                onChange={(e) => setResetarMotivo(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setResetarOpen(false); setResetarMotivo(""); }}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleResetarProjeto}
+              disabled={!resetarMotivo.trim() || resetando}
+            >
+              {resetando ? "Resetando..." : "Confirmar Reset"}
             </Button>
           </DialogFooter>
         </DialogContent>
