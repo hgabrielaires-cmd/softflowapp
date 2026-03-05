@@ -175,7 +175,8 @@ export default function Agenda() {
         const { data: cardsData } = await supabase
           .from("painel_atendimento")
           .select("id, cliente_id, contrato_id, pedido_id, filial_id, tipo_atendimento_local, status_projeto, pausado, iniciado_em, sla_horas, responsavel_id, etapa_id, clientes(nome_fantasia, cnpj_cpf), contratos(numero_exibicao), filiais(nome), profiles:responsavel_id(full_name)")
-          .in("id", cardIds);
+          .in("id", cardIds)
+          .neq("status_projeto", "cancelado");
         cards = cardsData || [];
       }
       const cardsMap: Record<string, any> = {};
@@ -291,7 +292,8 @@ export default function Agenda() {
         const { data: cardsData } = await supabase
           .from("painel_atendimento")
           .select("id, cliente_id, contrato_id, filial_id, etapa_id, tipo_atendimento_local, status_projeto, pausado, iniciado_em, sla_horas, pedido_id, clientes(nome_fantasia), contratos(numero_exibicao), filiais(nome)")
-          .in("id", cardIds);
+          .in("id", cardIds)
+          .neq("status_projeto", "cancelado");
         (cardsData || []).forEach((c: any) => { cardsMap[c.id] = c; });
       }
 
