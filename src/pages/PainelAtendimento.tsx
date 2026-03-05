@@ -1052,7 +1052,7 @@ export default function PainelAtendimento() {
     try {
       const { data: ped } = await supabase
         .from("pedidos")
-        .select("*, planos(nome), clientes(nome_fantasia), filiais(nome), profiles:vendedor_id(full_name)")
+        .select("*, planos(nome), clientes(nome_fantasia), filiais(nome)")
         .eq("id", pedidoId)
         .single();
       if (ped) {
