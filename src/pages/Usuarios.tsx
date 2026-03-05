@@ -341,6 +341,7 @@ export default function Usuarios() {
     setEditRecebeComissao((user as any).recebe_comissao ?? true);
     setEditTelefone((user as any).telefone || "");
     setEditPermiteEnviarEspelho((user as any).permite_enviar_espelho_whatsapp ?? false);
+    setEditPermiteResetarProjeto((user as any).permite_resetar_projeto ?? false);
     setEditIsTecnico((user as any).is_tecnico ?? false);
     setEditTipoTecnico((user as any).tipo_tecnico || "interno");
     setEditIsVendedor((user as any).is_vendedor ?? false);
