@@ -4328,6 +4328,47 @@ export default function PainelAtendimento() {
         </DialogContent>
       </Dialog>
 
+      {/* Cancelar Projeto Dialog */}
+      <Dialog open={cancelarOpen} onOpenChange={(open) => { if (!open) { setCancelarOpen(false); setCancelarMotivo(""); } }}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Ban className="h-5 w-5" />
+              Cancelar Projeto
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+              <p className="text-sm text-destructive font-medium">⚠️ Atenção: esta ação é irreversível!</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                O projeto será marcado como cancelado e o motivo será registrado no relatório de projetos cancelados.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Motivo do cancelamento *</Label>
+              <Textarea
+                placeholder="Descreva o motivo para cancelar o projeto..."
+                value={cancelarMotivo}
+                onChange={(e) => setCancelarMotivo(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCancelarOpen(false); setCancelarMotivo(""); }}>
+              Voltar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelarProjeto}
+              disabled={!cancelarMotivo.trim() || cancelando}
+            >
+              {cancelando ? "Cancelando..." : "Confirmar Cancelamento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Apontamento Dialog */}
       <Dialog open={apontamentoOpen} onOpenChange={(open) => { if (!open) { setApontamentoOpen(false); setApontamentoUsuarios([]); setApontamentoCardId(null); setBuscaApontamento(""); } }}>
         <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
