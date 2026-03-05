@@ -437,6 +437,9 @@ export default function Agenda() {
             </p>
             <p className="text-xs text-muted-foreground">
               Contrato: {ag.contrato_numero} · {ag.atividade_nome}
+              {ag.etapa_nome && ag.etapa_nome !== "—" && (
+                <span className="ml-1 font-medium" style={{ color: ag.etapa_cor || undefined }}> · {ag.etapa_nome}</span>
+              )}
             </p>
             {!compact && ag.tecnicos.length > 0 && (
               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
