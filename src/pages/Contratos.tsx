@@ -2100,6 +2100,51 @@ Estou à disposição.`;
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Cancelar Projeto vinculado Dialog */}
+      <Dialog open={openCancelarProjeto} onOpenChange={(open) => { if (!open) { setOpenCancelarProjeto(false); setCancelarProjetoMotivo(""); setProjetosAtivos([]); } }}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              Cancelar Projeto no Painel?
+            </DialogTitle>
+            <DialogDescription>
+              Foi encontrado projeto(s) ativo(s) no painel de atendimento vinculado(s) a este contrato. Deseja cancelá-lo(s)?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {projetosAtivos.map((p) => (
+              <div key={p.id} className="rounded-md border border-border p-2 text-sm">
+                <span className="font-medium">{(p.clientes as any)?.nome_fantasia}</span>
+                <span className="text-muted-foreground ml-2">— {p.tipo_operacao}</span>
+              </div>
+            ))}
+            <div className="space-y-2">
+              <Label>Motivo do cancelamento *</Label>
+              <Textarea
+                placeholder="Descreva o motivo para cancelar o projeto..."
+                value={cancelarProjetoMotivo}
+                onChange={(e) => setCancelarProjetoMotivo(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-2">
+            <Button variant="outline" onClick={() => { setOpenCancelarProjeto(false); setCancelarProjetoMotivo(""); setProjetosAtivos([]); }}>
+              Não cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelarProjetosVinculados}
+              disabled={!cancelarProjetoMotivo.trim() || processando}
+            >
+              {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Confirmar Cancelamento
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* (Old generation popup removed - now unified in ZapSign popup below) */}
 
       {/* ZapSign Detail Dialog */}
