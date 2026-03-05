@@ -13,7 +13,7 @@ import {
   Loader2, Shield, Save, LayoutDashboard, Users, ShoppingCart, FileText,
   DollarSign, Building2, Bell, BookOpen, Plug, Settings, ChevronDown,
   Headphones, Calendar, Ticket, Wrench, ListOrdered, Inbox, TrendingUp,
-  TrendingDown, BarChart3, Globe, UserCheck, Plus, Pencil, Trash2,
+  TrendingDown, BarChart3, Globe, UserCheck, Plus, Pencil, Trash2, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
