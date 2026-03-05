@@ -740,7 +740,7 @@ export default function Contratos() {
           card_id: projeto.id,
           contrato_id: selected!.id,
           cliente_id: selected!.cliente_id,
-          filial_id: selected!.clientes?.filial_id || selected!.pedidos?.filial_id || "",
+          filial_id: projeto.filial_id,
           motivo: cancelarProjetoMotivo.trim(),
           cancelado_por: user.id,
           tipo_operacao: projeto.tipo_operacao,
