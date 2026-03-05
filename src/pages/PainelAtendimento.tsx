@@ -3700,6 +3700,10 @@ export default function PainelAtendimento() {
                       <span className="text-muted-foreground">CNPJ/CPF:</span>{" "}
                       <span className="font-medium text-foreground">{detalhesData.clienteInfo.cnpj_cpf}</span>
                     </div>
+                    <div>
+                      <span className="text-muted-foreground">Inscrição Estadual:</span>{" "}
+                      <span className="font-medium text-foreground">{detalhesData.clienteInfo.inscricao_estadual || "—"}</span>
+                    </div>
                     {detalhesData.clienteInfo.apelido && (
                       <div>
                         <span className="text-muted-foreground">Apelido:</span>{" "}
