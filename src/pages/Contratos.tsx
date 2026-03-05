@@ -1588,8 +1588,8 @@ Estou à disposição.`;
                             <Eye className="h-4 w-4 mr-2" />
                             Visualizar
                           </DropdownMenuItem>
-                          {/* Gerar/Regerar — bloqueado se já enviado para ZapSign */}
-                          {!zapsignRecords[contrato.id] && (
+                          {/* Gerar/Regerar — bloqueado se já enviado para ZapSign (exceto com permissão) */}
+                          {(!zapsignRecords[contrato.id] || podeRegerarContrato) && (
                             <DropdownMenuItem
                               className="cursor-pointer"
                               onClick={() => handleGerarContrato(contrato)}
