@@ -3609,6 +3609,15 @@ export default function PainelAtendimento() {
                           Resetar Projeto
                         </DropdownMenuItem>
                       )}
+                      {podeCancelarProjeto && detailCard.status_projeto !== "cancelado" && (
+                        <DropdownMenuItem
+                          className="gap-2 text-red-600 focus:text-red-600"
+                          onClick={() => setCancelarOpen(true)}
+                        >
+                          <Ban className="h-4 w-4" />
+                          Cancelar Projeto
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
