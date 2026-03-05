@@ -312,6 +312,14 @@ export default function Agenda() {
         });
       }
 
+      // Fetch etapa data
+      const etapaIds = [...new Set((rows || []).map((r: any) => r.etapa_id).filter(Boolean))];
+      let etapasMap: Record<string, { nome: string; cor: string | null }> = {};
+      if (etapaIds.length > 0) {
+        const { data: etapasData } = await supabase.from("painel_etapas").select("id, nome, cor").in("id", etapaIds);
+        (etapasData || []).forEach((e: any) => { etapasMap[e.id] = { nome: e.nome, cor: e.cor }; });
+      }
+
       return (rows || []).map((ag: any) => {
         const card = cardsMap[ag.card_id];
         return {
@@ -321,6 +329,10 @@ export default function Agenda() {
           filial_id: card?.filial_id || "",
           filial_nome: card?.filiais?.nome || "—",
           atividade_nome: atividadesMap[ag.atividade_id] || "—",
+          mesa_nome: ag.mesa_id ? mesasMap[ag.mesa_id]?.nome || "—" : "—",
+          mesa_cor: ag.mesa_id ? mesasMap[ag.mesa_id]?.cor || null : null,
+          etapa_nome: ag.etapa_id ? etapasMap[ag.etapa_id]?.nome || "—" : "—",
+          etapa_cor: ag.etapa_id ? etapasMap[ag.etapa_id]?.cor || null : null,
           tecnicos: tecMap[ag.card_id] || [],
           apontados: aponMap[ag.card_id] || [],
           tipo_atendimento: card?.tipo_atendimento_local || null,
@@ -333,11 +345,24 @@ export default function Agenda() {
     },
   });
 
-  // Calendar: dates with events
+  // Calendar: dates with events and their mesa colors
   const datasComAgendamento = useMemo(() => {
     const dates = new Set<string>();
     calAgendamentos.forEach((ag: any) => dates.add(ag.data));
     return dates;
+  }, [calAgendamentos]);
+
+  // Map date -> unique mesa colors for that date
+  const dateMesaColors = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    calAgendamentos.forEach((ag: any) => {
+      if (!map[ag.data]) map[ag.data] = [];
+      const color = ag.mesa_cor || ag.cor_evento || null;
+      if (color && !map[ag.data].includes(color)) {
+        map[ag.data].push(color);
+      }
+    });
+    return map;
   }, [calAgendamentos]);
 
   const modifiers = useMemo(() => ({
@@ -412,6 +437,9 @@ export default function Agenda() {
             </p>
             <p className="text-xs text-muted-foreground">
               Contrato: {ag.contrato_numero} · {ag.atividade_nome}
+              {ag.etapa_nome && ag.etapa_nome !== "—" && (
+                <span className="ml-1 font-medium" style={{ color: ag.etapa_cor || undefined }}> · {ag.etapa_nome}</span>
+              )}
             </p>
             {!compact && ag.tecnicos.length > 0 && (
               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
@@ -602,6 +630,24 @@ export default function Agenda() {
                       day_selected: "agenda-day-selected !bg-transparent !shadow-none !outline-none",
                     }}
                     className="pointer-events-auto"
+                    components={{
+                      DayContent: ({ date, ...props }) => {
+                        const dateStr = format(date, "yyyy-MM-dd");
+                        const colors = dateMesaColors[dateStr] || [];
+                        return (
+                          <div className="flex flex-col items-center">
+                            <span>{date.getDate()}</span>
+                            {colors.length > 0 && (
+                              <div className="flex gap-0.5 mt-0.5">
+                                {colors.slice(0, 3).map((c, i) => (
+                                  <span key={i} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: c }} />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      },
+                    }}
                   />
                   <div className="mt-2 px-2 flex items-center gap-2 text-xs text-muted-foreground">
                     <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "hsl(var(--primary))" }} />
