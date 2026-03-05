@@ -1422,6 +1422,84 @@ export default function PainelAtendimento() {
     }
   }
 
+  // ─── Resetar Projeto ─────────────────────────────────────────────────────
+  async function handleResetarProjeto() {
+    if (!detailCard || !resetarMotivo.trim()) return;
+    setResetando(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      // Buscar etapa inicial da filial
+      const { data: filialData } = await supabase
+        .from("filiais")
+        .select("etapa_inicial_id")
+        .eq("id", detailCard.filial_id)
+        .single();
+
+      let etapaDestinoId = filialData?.etapa_inicial_id;
+      if (!etapaDestinoId) {
+        // Fallback: primeira etapa ativa por ordem
+        const primeiraEtapa = etapas.find(e => e.ativo);
+        if (!primeiraEtapa) {
+          toast.error("Nenhuma etapa ativa encontrada.");
+          setResetando(false);
+          return;
+        }
+        etapaDestinoId = primeiraEtapa.id;
+      }
+
+      // 1. Apagar histórico de etapas
+      await supabase.from("painel_historico_etapas").delete().eq("card_id", detailCard.id);
+
+      // 2. Apagar progresso de checklist
+      await supabase.from("painel_checklist_progresso").delete().eq("card_id", detailCard.id);
+
+      // 3. Apagar agendamentos
+      await supabase.from("painel_agendamentos").delete().eq("card_id", detailCard.id);
+
+      // 4. Registrar entrada na etapa destino
+      const etapaDestino = etapas.find(e => e.id === etapaDestinoId);
+      await registrarEntradaEtapa(detailCard.id, etapaDestinoId!, etapaDestino?.nome || "Etapa Inicial");
+
+      // 5. Atualizar o card
+      const { error } = await supabase
+        .from("painel_atendimento")
+        .update({
+          etapa_id: etapaDestinoId,
+          iniciado_em: null,
+          iniciado_por: null,
+          pausado: false,
+          pausado_em: null,
+          pausado_por: null,
+          pausado_motivo: null,
+          status_projeto: "ativo",
+          etapa_origem_id: null,
+        } as any)
+        .eq("id", detailCard.id);
+      if (error) throw error;
+
+      // 6. Adicionar comentário de reset
+      const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
+      await supabase.from("painel_comentarios").insert({
+        card_id: detailCard.id,
+        etapa_id: etapaDestinoId,
+        criado_por: user.id,
+        texto: `🔄 Projeto resetado por ${autorNome}: ${resetarMotivo.trim()}`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+      toast.success("Projeto resetado com sucesso!");
+      setResetarOpen(false);
+      setResetarMotivo("");
+      setDetailCard(null);
+    } catch (err: any) {
+      toast.error("Erro ao resetar projeto: " + (err.message || ""));
+    } finally {
+      setResetando(false);
+    }
+  }
+
   // ─── Apontamento ─────────────────────────────────────────────────────────
   async function handleApontamento() {
     if (!apontamentoCardId || apontamentoUsuarios.length === 0) return;
