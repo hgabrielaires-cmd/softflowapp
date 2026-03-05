@@ -619,7 +619,7 @@ export default function Agenda() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-4">
               {/* Calendar widget */}
               <Card>
                 <CardContent className="p-3">
