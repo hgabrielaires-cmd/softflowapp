@@ -4220,6 +4220,47 @@ export default function PainelAtendimento() {
         </DialogContent>
       </Dialog>
 
+      {/* Resetar Projeto Dialog */}
+      <Dialog open={resetarOpen} onOpenChange={(open) => { if (!open) { setResetarOpen(false); setResetarMotivo(""); } }}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-orange-600">
+              <RefreshCw className="h-5 w-5" />
+              Resetar Projeto
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+              <p className="text-sm text-destructive font-medium">⚠️ Atenção: esta ação é irreversível!</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Todo o histórico de etapas, progresso de checklist e agendamentos serão apagados. O projeto voltará para a etapa inicial da filial.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Motivo do reset *</Label>
+              <Textarea
+                placeholder="Descreva o motivo para resetar o projeto..."
+                value={resetarMotivo}
+                onChange={(e) => setResetarMotivo(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setResetarOpen(false); setResetarMotivo(""); }}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleResetarProjeto}
+              disabled={!resetarMotivo.trim() || resetando}
+            >
+              {resetando ? "Resetando..." : "Confirmar Reset"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Apontamento Dialog */}
       <Dialog open={apontamentoOpen} onOpenChange={(open) => { if (!open) { setApontamentoOpen(false); setApontamentoUsuarios([]); setApontamentoCardId(null); setBuscaApontamento(""); } }}>
         <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
