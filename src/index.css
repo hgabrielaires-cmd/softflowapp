@@ -159,14 +159,12 @@
 
 /* Agenda calendar styles */
 .agenda-has-event {
-  background-color: hsl(var(--primary)) !important;
-  color: hsl(var(--primary-foreground)) !important;
-  border-radius: 50%;
   font-weight: bold;
+  border-radius: 50%;
 }
 
 .agenda-day-selected {
-  background-color: hsl(var(--primary) / 0.2) !important;
+  background-color: hsl(var(--primary) / 0.15) !important;
   color: hsl(var(--primary)) !important;
   border-radius: 50% !important;
   font-weight: bold;
@@ -183,6 +181,6 @@ td:has(.agenda-day-selected) {
 }
 
 .agenda-day-selected.agenda-has-event {
-  background-color: hsl(210 90% 60%) !important;
-  color: hsl(0 0% 100%) !important;
+  background-color: hsl(var(--primary) / 0.2) !important;
+  color: hsl(var(--primary)) !important;
 }
