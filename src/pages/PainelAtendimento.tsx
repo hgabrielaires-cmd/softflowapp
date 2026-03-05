@@ -348,6 +348,7 @@ export default function PainelAtendimento() {
   const podeVisualizarSeguidores = userPermissions.includes("acao.visualiza_seguidores_projeto");
   const podeResetarProjeto = (profile as any)?.permite_resetar_projeto === true;
   const podeCancelarProjeto = (profile as any)?.permite_cancelar_projeto === true;
+  const podeVerValoresProjeto = (profile as any)?.permite_ver_valores_projeto === true;
 
   // Precompute SLA da Etapa per card (jornada-based) + total checklist items per jornada
   const { data: jornadaSlaMap = {} } = useQuery({
