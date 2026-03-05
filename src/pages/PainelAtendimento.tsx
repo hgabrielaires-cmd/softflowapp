@@ -947,7 +947,7 @@ export default function PainelAtendimento() {
       let clienteInfo: any = null;
       const { data: cli } = await supabase
         .from("clientes")
-        .select("nome_fantasia, razao_social, cnpj_cpf, telefone, email, cidade, uf, logradouro, numero, bairro, complemento, cep, apelido")
+        .select("nome_fantasia, razao_social, cnpj_cpf, telefone, email, cidade, uf, logradouro, numero, bairro, complemento, cep, apelido, inscricao_estadual")
         .eq("id", card.cliente_id)
         .single();
       clienteInfo = cli;
