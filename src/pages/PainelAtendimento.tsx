@@ -1056,13 +1056,12 @@ export default function PainelAtendimento() {
         .eq("id", pedidoId)
         .single();
       if (ped) {
-        // Fetch plano details for pricing
-        let planoDetalhes: any = null;
-        if (ped.plano_id) {
-          const { data: pl } = await supabase.from("planos").select("*").eq("id", ped.plano_id).single();
-          planoDetalhes = pl;
-        }
-        setVerPedidoData({ ...ped, planoDetalhes });
+        // Fetch vendedor name + plano details in parallel
+        const [vendRes, planoRes] = await Promise.all([
+          supabase.from("profiles").select("full_name").eq("user_id", ped.vendedor_id).single(),
+          ped.plano_id ? supabase.from("planos").select("*").eq("id", ped.plano_id).single() : Promise.resolve({ data: null }),
+        ]);
+        setVerPedidoData({ ...ped, vendedor_nome: vendRes.data?.full_name || "—", planoDetalhes: planoRes.data });
       }
     } catch {
       toast.error("Erro ao carregar dados do pedido.");
