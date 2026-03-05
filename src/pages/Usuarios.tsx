@@ -376,6 +376,7 @@ export default function Usuarios() {
         telefone: editTelefone || null,
         permite_enviar_espelho_whatsapp: editPermiteEnviarEspelho,
         permite_resetar_projeto: editPermiteResetarProjeto,
+        permite_ver_valores_projeto: editPermiteVerValoresProjeto,
         is_tecnico: editIsTecnico,
         tipo_tecnico: editIsTecnico ? editTipoTecnico : null,
         is_vendedor: editIsVendedor,
