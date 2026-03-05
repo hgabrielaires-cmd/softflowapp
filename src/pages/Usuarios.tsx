@@ -140,6 +140,7 @@ export default function Usuarios() {
   const [editRecebeComissao, setEditRecebeComissao] = useState(true);
   const [editTelefone, setEditTelefone] = useState("");
   const [editPermiteEnviarEspelho, setEditPermiteEnviarEspelho] = useState(false);
+  const [editPermiteResetarProjeto, setEditPermiteResetarProjeto] = useState(false);
   const [editIsTecnico, setEditIsTecnico] = useState(false);
   const [editTipoTecnico, setEditTipoTecnico] = useState("interno");
   const [editIsVendedor, setEditIsVendedor] = useState(false);
