@@ -710,7 +710,69 @@ export default function Contratos() {
     toast.success("Contrato encerrado.");
     setOpenEncerrar(false);
     setOpenDetail(false);
+
+    // Verificar se há projetos ativos no painel de atendimento para este contrato
+    const { data: projetos } = await supabase
+      .from("painel_atendimento")
+      .select("id, tipo_operacao, clientes(nome_fantasia), contratos(numero_exibicao), planos(nome)")
+      .eq("contrato_id", selected.id)
+      .neq("status_projeto", "cancelado");
+
+    if (projetos && projetos.length > 0) {
+      setProjetosAtivos(projetos);
+      setCancelarProjetoMotivo("");
+      setOpenCancelarProjeto(true);
+    }
+
     loadData();
+  }
+
+  async function handleCancelarProjetosVinculados() {
+    if (!cancelarProjetoMotivo.trim() || projetosAtivos.length === 0) return;
+    setProcessando(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      for (const projeto of projetosAtivos) {
+        // Salvar no relatório
+        await supabase.from("projetos_cancelados").insert({
+          card_id: projeto.id,
+          contrato_id: selected!.id,
+          cliente_id: selected!.cliente_id,
+          filial_id: selected!.clientes?.filial_id || selected!.pedidos?.filial_id || "",
+          motivo: cancelarProjetoMotivo.trim(),
+          cancelado_por: user.id,
+          tipo_operacao: projeto.tipo_operacao,
+          plano_nome: (projeto.planos as any)?.nome || null,
+          cliente_nome: (projeto.clientes as any)?.nome_fantasia || null,
+          contrato_numero: (projeto.contratos as any)?.numero_exibicao || null,
+        } as any);
+
+        // Atualizar status
+        await supabase
+          .from("painel_atendimento")
+          .update({ status_projeto: "cancelado" } as any)
+          .eq("id", projeto.id);
+
+        // Comentário
+        const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
+        await supabase.from("painel_comentarios").insert({
+          card_id: projeto.id,
+          criado_por: user.id,
+          texto: `❌ Projeto cancelado via encerramento de contrato por ${autorNome}: ${cancelarProjetoMotivo.trim()}`,
+        });
+      }
+
+      toast.success("Projeto(s) cancelado(s) com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro ao cancelar projeto(s): " + (err.message || ""));
+    } finally {
+      setProcessando(false);
+      setOpenCancelarProjeto(false);
+      setCancelarProjetoMotivo("");
+      setProjetosAtivos([]);
+    }
   }
 
   // ── Gerar Contrato + Auto ZapSign + WhatsApp ─────────────────────────────────
