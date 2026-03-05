@@ -1504,6 +1504,56 @@ export default function PainelAtendimento() {
     }
   }
 
+  // ─── Cancelar Projeto ─────────────────────────────────────────────────────
+  async function handleCancelarProjeto() {
+    if (!detailCard || !cancelarMotivo.trim()) return;
+    setCancelando(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      // Salvar no relatório de projetos cancelados
+      await supabase.from("projetos_cancelados").insert({
+        card_id: detailCard.id,
+        contrato_id: detailCard.contrato_id,
+        cliente_id: detailCard.cliente_id,
+        filial_id: detailCard.filial_id,
+        motivo: cancelarMotivo.trim(),
+        cancelado_por: user.id,
+        tipo_operacao: detailCard.tipo_operacao,
+        plano_nome: detailCard.planos?.nome || null,
+        cliente_nome: detailCard.clientes?.nome_fantasia || null,
+        contrato_numero: detailCard.contratos?.numero_exibicao || null,
+      } as any);
+
+      // Atualizar status do card para cancelado
+      const { error } = await supabase
+        .from("painel_atendimento")
+        .update({ status_projeto: "cancelado" } as any)
+        .eq("id", detailCard.id);
+      if (error) throw error;
+
+      // Adicionar comentário de cancelamento
+      const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
+      await supabase.from("painel_comentarios").insert({
+        card_id: detailCard.id,
+        etapa_id: detailCard.etapa_id,
+        criado_por: user.id,
+        texto: `❌ Projeto cancelado por ${autorNome}: ${cancelarMotivo.trim()}`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+      toast.success("Projeto cancelado com sucesso!");
+      setCancelarOpen(false);
+      setCancelarMotivo("");
+      setDetailCard(null);
+    } catch (err: any) {
+      toast.error("Erro ao cancelar projeto: " + (err.message || ""));
+    } finally {
+      setCancelando(false);
+    }
+  }
+
   // ─── Apontamento ─────────────────────────────────────────────────────────
   async function handleApontamento() {
     if (!apontamentoCardId || apontamentoUsuarios.length === 0) return;
