@@ -1193,6 +1193,19 @@ export default function Usuarios() {
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <Label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+                          <Ban className="h-4 w-4 text-red-500" />
+                          Cancelar Projeto
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Permite cancelar projetos no painel de atendimento, registrando o motivo no relatório de projetos cancelados.
+                        </p>
+                      </div>
+                      <Switch checked={editPermiteCancelarProjeto} onCheckedChange={setEditPermiteCancelarProjeto} />
+                    </div>
+                    <div className="border-t border-border" />
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
                           <ShoppingCart className="h-4 w-4 text-blue-500" />
                           Ver Valores do Projeto em Detalhes
                         </Label>
