@@ -345,11 +345,24 @@ export default function Agenda() {
     },
   });
 
-  // Calendar: dates with events
+  // Calendar: dates with events and their mesa colors
   const datasComAgendamento = useMemo(() => {
     const dates = new Set<string>();
     calAgendamentos.forEach((ag: any) => dates.add(ag.data));
     return dates;
+  }, [calAgendamentos]);
+
+  // Map date -> unique mesa colors for that date
+  const dateMesaColors = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    calAgendamentos.forEach((ag: any) => {
+      if (!map[ag.data]) map[ag.data] = [];
+      const color = ag.mesa_cor || ag.cor_evento || null;
+      if (color && !map[ag.data].includes(color)) {
+        map[ag.data].push(color);
+      }
+    });
+    return map;
   }, [calAgendamentos]);
 
   const modifiers = useMemo(() => ({
