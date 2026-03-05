@@ -205,6 +205,9 @@ export default function Contratos() {
   const [selected, setSelected] = useState<Contrato | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [openEncerrar, setOpenEncerrar] = useState(false);
+  const [openCancelarProjeto, setOpenCancelarProjeto] = useState(false);
+  const [cancelarProjetoMotivo, setCancelarProjetoMotivo] = useState("");
+  const [projetosAtivos, setProjetosAtivos] = useState<any[]>([]);
   const [processando, setProcessando] = useState(false);
   const [gerando, setGerando] = useState(false);
   const [gerarSignedUrl, setGerarSignedUrl] = useState<string | null>(null);
