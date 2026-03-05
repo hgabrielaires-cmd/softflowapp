@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN permite_resetar_projeto boolean NOT NULL DEFAULT false;
