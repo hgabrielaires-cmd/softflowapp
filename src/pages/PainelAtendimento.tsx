@@ -176,6 +176,9 @@ export default function PainelAtendimento() {
   const [resetarOpen, setResetarOpen] = useState(false);
   const [resetarMotivo, setResetarMotivo] = useState("");
   const [resetando, setResetando] = useState(false);
+  const [cancelarOpen, setCancelarOpen] = useState(false);
+  const [cancelarMotivo, setCancelarMotivo] = useState("");
+  const [cancelando, setCancelando] = useState(false);
   // Auto-refresh atrasado status every 60s
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60_000);
