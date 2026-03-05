@@ -630,6 +630,24 @@ export default function Agenda() {
                       day_selected: "agenda-day-selected !bg-transparent !shadow-none !outline-none",
                     }}
                     className="pointer-events-auto"
+                    components={{
+                      DayContent: ({ date, ...props }) => {
+                        const dateStr = format(date, "yyyy-MM-dd");
+                        const colors = dateMesaColors[dateStr] || [];
+                        return (
+                          <div className="flex flex-col items-center">
+                            <span>{date.getDate()}</span>
+                            {colors.length > 0 && (
+                              <div className="flex gap-0.5 mt-0.5">
+                                {colors.slice(0, 3).map((c, i) => (
+                                  <span key={i} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: c }} />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      },
+                    }}
                   />
                   <div className="mt-2 px-2 flex items-center gap-2 text-xs text-muted-foreground">
                     <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "hsl(var(--primary))" }} />
