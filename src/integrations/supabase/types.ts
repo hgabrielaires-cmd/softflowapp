@@ -2202,6 +2202,7 @@ export type Database = {
           is_vendedor: boolean
           mesa_favorita_id: string | null
           permite_enviar_espelho_whatsapp: boolean
+          permite_resetar_projeto: boolean
           permitir_cnpj_duplicado: boolean | null
           recebe_comissao: boolean
           telefone: string | null
@@ -2232,6 +2233,7 @@ export type Database = {
           is_vendedor?: boolean
           mesa_favorita_id?: string | null
           permite_enviar_espelho_whatsapp?: boolean
+          permite_resetar_projeto?: boolean
           permitir_cnpj_duplicado?: boolean | null
           recebe_comissao?: boolean
           telefone?: string | null
@@ -2262,6 +2264,7 @@ export type Database = {
           is_vendedor?: boolean
           mesa_favorita_id?: string | null
           permite_enviar_espelho_whatsapp?: boolean
+          permite_resetar_projeto?: boolean
           permitir_cnpj_duplicado?: boolean | null
           recebe_comissao?: boolean
           telefone?: string | null

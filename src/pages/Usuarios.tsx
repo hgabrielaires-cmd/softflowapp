@@ -40,7 +40,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send, MessageCircle, Globe, Wrench, ShoppingCart, Headphones } from "lucide-react";
+import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send, MessageCircle, Globe, Wrench, ShoppingCart, Headphones, RefreshCw } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -140,6 +140,7 @@ export default function Usuarios() {
   const [editRecebeComissao, setEditRecebeComissao] = useState(true);
   const [editTelefone, setEditTelefone] = useState("");
   const [editPermiteEnviarEspelho, setEditPermiteEnviarEspelho] = useState(false);
+  const [editPermiteResetarProjeto, setEditPermiteResetarProjeto] = useState(false);
   const [editIsTecnico, setEditIsTecnico] = useState(false);
   const [editTipoTecnico, setEditTipoTecnico] = useState("interno");
   const [editIsVendedor, setEditIsVendedor] = useState(false);
@@ -340,6 +341,7 @@ export default function Usuarios() {
     setEditRecebeComissao((user as any).recebe_comissao ?? true);
     setEditTelefone((user as any).telefone || "");
     setEditPermiteEnviarEspelho((user as any).permite_enviar_espelho_whatsapp ?? false);
+    setEditPermiteResetarProjeto((user as any).permite_resetar_projeto ?? false);
     setEditIsTecnico((user as any).is_tecnico ?? false);
     setEditTipoTecnico((user as any).tipo_tecnico || "interno");
     setEditIsVendedor((user as any).is_vendedor ?? false);
@@ -371,6 +373,7 @@ export default function Usuarios() {
         recebe_comissao: editRecebeComissao,
         telefone: editTelefone || null,
         permite_enviar_espelho_whatsapp: editPermiteEnviarEspelho,
+        permite_resetar_projeto: editPermiteResetarProjeto,
         is_tecnico: editIsTecnico,
         tipo_tecnico: editIsTecnico ? editTipoTecnico : null,
         is_vendedor: editIsVendedor,
@@ -1166,6 +1169,19 @@ export default function Usuarios() {
                         </p>
                       </div>
                       <Switch checked={editPermiteEnviarEspelho} onCheckedChange={setEditPermiteEnviarEspelho} />
+                    </div>
+                    <div className="border-t border-border" />
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+                          <RefreshCw className="h-4 w-4 text-orange-500" />
+                          Resetar Projeto
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Permite resetar projetos no painel de atendimento, apagando histórico e voltando para etapa inicial.
+                        </p>
+                      </div>
+                      <Switch checked={editPermiteResetarProjeto} onCheckedChange={setEditPermiteResetarProjeto} />
                     </div>
                   </div>
                 </TabsContent>
