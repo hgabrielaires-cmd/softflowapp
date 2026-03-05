@@ -203,8 +203,10 @@ export default function Agenda() {
         if (a.profiles) aponMap[a.card_id].push(a.profiles);
       });
 
-      // Step 5: fetch etapa names for display
-      const etapaIds = [...new Set((rows || []).map((r: any) => r.etapa_id).filter(Boolean))];
+      // Step 5: fetch etapa names for display - include card etapa_id as fallback
+      const etapaIdsFromAg = (rows || []).map((r: any) => r.etapa_id).filter(Boolean);
+      const etapaIdsFromCards = Object.values(cardsMap).map((c: any) => c.etapa_id).filter(Boolean);
+      const etapaIds = [...new Set([...etapaIdsFromAg, ...etapaIdsFromCards])];
       let etapasMap: Record<string, { nome: string; cor: string | null }> = {};
       if (etapaIds.length > 0) {
         const { data: etapasData } = await supabase.from("painel_etapas").select("id, nome, cor").in("id", etapaIds);
@@ -214,6 +216,7 @@ export default function Agenda() {
       // Enrich
       const enriched = (rows || []).map((ag: any) => {
         const card = cardsMap[ag.card_id];
+        const resolvedEtapaId = ag.etapa_id || card?.etapa_id;
         return {
           ...ag,
           cliente_nome: card?.clientes?.nome_fantasia || "—",
@@ -223,8 +226,8 @@ export default function Agenda() {
           atividade_nome: atividadesMap[ag.atividade_id] || "—",
           mesa_nome: ag.mesa_id ? mesasMap[ag.mesa_id]?.nome || "—" : "—",
           mesa_cor: ag.mesa_id ? mesasMap[ag.mesa_id]?.cor || null : null,
-          etapa_nome: ag.etapa_id ? etapasMap[ag.etapa_id]?.nome || "—" : "—",
-          etapa_cor: ag.etapa_id ? etapasMap[ag.etapa_id]?.cor || null : null,
+          etapa_nome: resolvedEtapaId ? etapasMap[resolvedEtapaId]?.nome || "—" : "—",
+          etapa_cor: resolvedEtapaId ? etapasMap[resolvedEtapaId]?.cor || null : null,
           responsavel_nome: card?.profiles?.full_name || "—",
           tecnicos: tecMap[ag.card_id] || [],
           apontados: aponMap[ag.card_id] || [],
