@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN permite_ver_valores_projeto boolean NOT NULL DEFAULT false;
