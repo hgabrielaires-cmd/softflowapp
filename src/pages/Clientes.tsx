@@ -1270,57 +1270,32 @@ export default function Clientes() {
 
               {/* Upgrades */}
               <TabsContent value="upgrades" className="mt-3">
-                {usarContratosUpgrade ? (
-                  contratosUpgrade.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">Nenhum upgrade registrado.</p>
-                  ) : (
-                    <div className="rounded-lg border border-border divide-y divide-border">
-                      {contratosUpgrade.map((ct) => (
-                        <div key={ct.id} className="px-4 py-3 flex items-center justify-between">
+                {pedidosUpgrade.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">Nenhum upgrade registrado.</p>
+                ) : (
+                  <div className="rounded-lg border border-border divide-y divide-border">
+                    {pedidosUpgrade.map((p) => (
+                      <div key={p.id} className="px-4 py-3">
+                        <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium">{ct.numero_exibicao}</p>
-                            <p className="text-xs text-muted-foreground">{fmtDateTime(ct.created_at)}</p>
+                            <p className="text-sm font-medium">{p.planos?.nome || "—"}</p>
+                            <p className="text-xs text-muted-foreground">{fmtDateTime(p.created_at)}</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ct.status === "Ativo" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
-                              {ct.status}
-                            </span>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Visualizar upgrade" onClick={() => { setHistoricoOpen(false); navigate("/contratos"); }}>
+                            <div className="text-right">
+                              <p className="text-xs font-mono">{fmtBRL(p.valor_total)}</p>
+                              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${p.status_pedido === "Cancelado" ? "bg-red-100 text-red-700" : TIPO_PEDIDO_COLORS[p.tipo_pedido] || "bg-muted text-muted-foreground"}`}>
+                                {p.status_pedido === "Cancelado" ? "Cancelado" : p.tipo_pedido}
+                              </span>
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Visualizar pedido" onClick={() => { setHistoricoOpen(false); navigate("/pedidos"); }}>
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )
-                ) : (
-                  pedidosUpgrade.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">Nenhum upgrade registrado.</p>
-                  ) : (
-                    <div className="rounded-lg border border-border divide-y divide-border">
-                      {pedidosUpgrade.map((p) => (
-                        <div key={p.id} className="px-4 py-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium">{p.planos?.nome || "—"}</p>
-                              <p className="text-xs text-muted-foreground">{fmtDateTime(p.created_at)}</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="text-right">
-                                <p className="text-xs font-mono">{fmtBRL(p.valor_total)}</p>
-                                <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${p.status_pedido === "Cancelado" ? "bg-red-100 text-red-700" : TIPO_PEDIDO_COLORS[p.tipo_pedido] || "bg-muted text-muted-foreground"}`}>
-                                  {p.status_pedido === "Cancelado" ? "Cancelado" : p.tipo_pedido}
-                                </span>
-                              </div>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" title="Visualizar pedido" onClick={() => { setHistoricoOpen(false); navigate("/pedidos"); }}>
-                                <Eye className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )
+                      </div>
+                    ))}
+                  </div>
                 )}
               </TabsContent>
 
