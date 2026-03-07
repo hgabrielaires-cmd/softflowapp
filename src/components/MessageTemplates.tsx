@@ -92,6 +92,8 @@ const VARIAVEIS_DISPONIVEIS = [
   { var: "{espelho.upgrade}", desc: "Espelho detalhado de Upgrade (config atual + desconto + nova config)" },
   { var: "{desconto.detalhes}", desc: "Detalhamento de descontos aplicados" },
   { var: "{desconto.motivo}", desc: "Motivo do desconto" },
+  { var: "{margem.bruta}", desc: "Margem bruta % da mensalidade" },
+  { var: "{margem.markup}", desc: "Markup % da mensalidade" },
   { var: "{pedido.numero}", desc: "Nº do pedido" },
   { var: "{pedido.tipo}", desc: "Tipo do pedido" },
   { var: "{pedido.data}", desc: "Data do pedido" },
