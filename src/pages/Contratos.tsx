@@ -580,7 +580,7 @@ export default function Contratos() {
         .from("contratos")
         .select(`
           *,
-          clientes(nome_fantasia, filial_id, razao_social, cnpj_cpf, inscricao_estadual, cidade, uf, cep, logradouro, numero, complemento, bairro, telefone, email),
+          clientes(nome_fantasia, filial_id, razao_social, cnpj_cpf, inscricao_estadual, cidade, uf, cep, logradouro, numero, complemento, bairro, telefone, email, apelido, responsavel_nome),
           planos(nome, descricao, valor_mensalidade_padrao),
           pedidos(
             status_pedido, contrato_liberado, financeiro_status,
