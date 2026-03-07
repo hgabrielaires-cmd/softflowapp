@@ -1073,7 +1073,7 @@ export default function Pedidos() {
           payload.status_pedido = "Aguardando Aprovação de Desconto";
           const { error } = await supabase.from("pedidos").update(payload).eq("id", editingPedido.id);
           if (error) throw error;
-          dispararAutomacaoPedidoStatus(editingPedido.id, editingPedido.status_pedido, "Aguardando Aprovação de Desconto");
+          dispararAutomacaoPedidoStatus(editingPedido.id, editingPedido.status_pedido, "Aguardando Aprovação de Desconto", form.tipo_pedido);
           await supabase.from("solicitacoes_desconto").upsert({
             pedido_id: editingPedido.id,
             vendedor_id: vendedorId,
@@ -1105,7 +1105,7 @@ export default function Pedidos() {
           payload.status_pedido = "Aguardando Financeiro";
           const { error } = await supabase.from("pedidos").update(payload).eq("id", editingPedido.id);
           if (error) throw error;
-          dispararAutomacaoPedidoStatus(editingPedido.id, editingPedido.status_pedido, "Aguardando Financeiro");
+          dispararAutomacaoPedidoStatus(editingPedido.id, editingPedido.status_pedido, "Aguardando Financeiro", form.tipo_pedido);
           toast.success(isReprovado ? "Pedido reenviado para o financeiro!" : "Pedido enviado para o financeiro!");
           await salvarDraftComentarios(editingPedido.id);
         } else {
@@ -1124,7 +1124,7 @@ export default function Pedidos() {
           };
           const { data: novoPedido, error } = await supabase.from("pedidos").insert(insertPayload as any).select().single();
           if (error) throw error;
-          dispararAutomacaoPedidoStatus(novoPedido.id, "Novo", "Aguardando Aprovação de Desconto");
+          dispararAutomacaoPedidoStatus(novoPedido.id, "Novo", "Aguardando Aprovação de Desconto", form.tipo_pedido);
           await salvarDraftComentarios(novoPedido.id);
           await supabase.from("solicitacoes_desconto").insert({
             pedido_id: novoPedido.id,
@@ -1166,7 +1166,7 @@ export default function Pedidos() {
   async function cancelarPedido(pedido: PedidoWithJoins) {
     const { error } = await supabase.from("pedidos").update({ status_pedido: "Cancelado", financeiro_status: "Cancelado", comissao_valor: 0 }).eq("id", pedido.id);
     if (error) { toast.error("Erro ao cancelar pedido"); return; }
-    dispararAutomacaoPedidoStatus(pedido.id, pedido.status_pedido, "Cancelado");
+    dispararAutomacaoPedidoStatus(pedido.id, pedido.status_pedido, "Cancelado", (pedido as any).tipo_pedido);
     toast.success("Pedido cancelado");
     loadData();
   }
@@ -1180,7 +1180,7 @@ export default function Pedidos() {
       financeiro_aprovado_por: null,
     }).eq("id", pedido.id);
     if (error) { toast.error("Erro ao enviar pedido: " + error.message); return; }
-    dispararAutomacaoPedidoStatus(pedido.id, pedido.status_pedido, "Aguardando Financeiro");
+    dispararAutomacaoPedidoStatus(pedido.id, pedido.status_pedido, "Aguardando Financeiro", (pedido as any).tipo_pedido);
     toast.success("Pedido enviado para o financeiro!");
     loadData();
   }

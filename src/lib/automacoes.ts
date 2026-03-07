@@ -7,7 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 export function dispararAutomacaoPedidoStatus(
   pedidoId: string,
   statusAnterior: string,
-  statusNovo: string
+  statusNovo: string,
+  tipoPedido?: string
 ) {
   // Fire and forget
   supabase.functions.invoke("processar-automacoes", {
@@ -16,6 +17,7 @@ export function dispararAutomacaoPedidoStatus(
       pedido_id: pedidoId,
       status_anterior: statusAnterior,
       status_novo: statusNovo,
+      tipo_pedido: tipoPedido || null,
     },
   }).then(({ error }) => {
     if (error) console.error("[Automação] Erro ao disparar:", error);

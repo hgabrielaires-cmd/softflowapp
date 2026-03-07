@@ -74,7 +74,7 @@ serve(async (req) => {
       // Get pedidos stuck in "Aguardando Financeiro"
       const { data: pedidos } = await supabase
         .from("pedidos")
-        .select("id, cliente_id, vendedor_id, filial_id, created_at, updated_at, data_entrada_fila, numero_exibicao, financeiro_status")
+        .select("id, cliente_id, vendedor_id, filial_id, created_at, updated_at, data_entrada_fila, numero_exibicao, financeiro_status, tipo_pedido")
         .eq("status_pedido", "Aguardando Financeiro");
 
       if (pedidos && pedidos.length > 0) {
@@ -153,6 +153,10 @@ serve(async (req) => {
           const horasConfig = automacao.gatilho_config?.horas || 24;
 
           for (const pedido of pedidos) {
+            // Filter by tipo_pedido if configured
+            const cfgTipo = automacao.gatilho_config?.tipo_pedido;
+            if (cfgTipo && cfgTipo !== "qualquer" && pedido.tipo_pedido !== cfgTipo) continue;
+
             const entradaFila = pedido.data_entrada_fila || pedido.updated_at;
             const entradaFilaMs = new Date(entradaFila).getTime();
             const horasParado = (now - entradaFilaMs) / (1000 * 60 * 60);
@@ -304,6 +308,12 @@ serve(async (req) => {
         const matchDe = !cfg.status_de || cfg.status_de === "qualquer" || cfg.status_de === body.status_anterior;
         const matchPara = cfg.status_para === body.status_novo;
 
+        // Filter by tipo_pedido if configured (from body payload or will be checked after loading pedido)
+        const cfgTipo = cfg.tipo_pedido;
+        const bodyTipo = body.tipo_pedido;
+        // If we have both config and body tipo, check now. If body is missing, we'll check after loading pedido.
+        if (cfgTipo && cfgTipo !== "qualquer" && bodyTipo && cfgTipo !== bodyTipo) continue;
+
         if (!matchDe || !matchPara) continue;
 
         // Build recipients and send (same logic as above)
@@ -344,6 +354,11 @@ serve(async (req) => {
           .select("id, numero_exibicao, cliente_id, vendedor_id, plano_id, valor_implantacao, valor_mensalidade, valor_implantacao_original, valor_mensalidade_original, valor_implantacao_final, valor_mensalidade_final, desconto_implantacao_tipo, desconto_implantacao_valor, desconto_mensalidade_tipo, desconto_mensalidade_valor, modulos_adicionais, observacoes, motivo_desconto, pagamento_mensalidade_observacao, pagamento_implantacao_observacao, contrato_id, tipo_pedido, servicos_pedido")
           .eq("id", body.pedido_id)
           .maybeSingle();
+
+        // Secondary tipo_pedido check (fallback when body didn't include it)
+        if (cfgTipo && cfgTipo !== "qualquer" && !bodyTipo && pedido) {
+          if (pedido.tipo_pedido !== cfgTipo) continue;
+        }
 
         let clienteNome = "N/A";
         let vendedorNome = "N/A";

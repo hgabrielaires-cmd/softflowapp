@@ -74,6 +74,14 @@ const PEDIDO_STATUS_OPTIONS = [
   "Desconto Aprovado",
 ];
 
+const TIPO_PEDIDO_OPTIONS = [
+  { value: "", label: "Qualquer tipo" },
+  { value: "Novo", label: "Novo (Contrato Base)" },
+  { value: "Upgrade", label: "Upgrade" },
+  { value: "Aditivo", label: "Módulo Adicional" },
+  { value: "OA", label: "Ordem de Atendimento (OA)" },
+];
+
 const GATILHO_LABELS: Record<string, string> = {
   pedido_status: "Mudança de Status do Pedido",
   tempo_sem_acao_financeiro: "Tempo sem Ação (Financeiro)",
@@ -117,6 +125,7 @@ export default function Automacoes() {
   // Gatilho-specific
   const [statusDe, setStatusDe] = useState("");
   const [statusPara, setStatusPara] = useState("");
+  const [tipoPedido, setTipoPedido] = useState("");
   const [horasSemAcao, setHorasSemAcao] = useState<number>(24);
 
   useEffect(() => {
@@ -150,6 +159,7 @@ export default function Automacoes() {
     setLembreteMaximo(3);
     setStatusDe("");
     setStatusPara("");
+    setTipoPedido("");
     setHorasSemAcao(24);
     setEditingId(null);
   }
@@ -174,6 +184,7 @@ export default function Automacoes() {
     setLembreteMaximo(a.lembrete_maximo || 3);
     setStatusDe(a.gatilho_config?.status_de || "");
     setStatusPara(a.gatilho_config?.status_para || "");
+    setTipoPedido(a.gatilho_config?.tipo_pedido || "");
     setHorasSemAcao(a.gatilho_config?.horas || 24);
     setDialogOpen(true);
   }
@@ -188,9 +199,9 @@ export default function Automacoes() {
 
     let gatilhoConfig: Record<string, any> = {};
     if (gatilhoTipo === "pedido_status") {
-      gatilhoConfig = { status_de: statusDe, status_para: statusPara };
+      gatilhoConfig = { status_de: statusDe, status_para: statusPara, tipo_pedido: tipoPedido || null };
     } else if (gatilhoTipo === "tempo_sem_acao_financeiro") {
-      gatilhoConfig = { modulo: "financeiro", horas: horasSemAcao };
+      gatilhoConfig = { modulo: "financeiro", horas: horasSemAcao, tipo_pedido: tipoPedido || null };
     }
 
     const acaoConfig: Record<string, any> = {
@@ -309,6 +320,9 @@ export default function Automacoes() {
                       {a.gatilho_tipo === "tempo_sem_acao_financeiro" && (
                         <p className="text-xs text-muted-foreground mt-1">{a.gatilho_config?.horas || 24}h sem ação</p>
                       )}
+                      {(a.gatilho_config as any)?.tipo_pedido && (a.gatilho_config as any).tipo_pedido !== "qualquer" && (
+                        <Badge variant="secondary" className="text-[10px] mt-1">{(a.gatilho_config as any).tipo_pedido}</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5">
@@ -380,6 +394,20 @@ export default function Automacoes() {
                 </Select>
               </div>
 
+              {(gatilhoTipo === "pedido_status" || gatilhoTipo === "tempo_sem_acao_financeiro") && (
+                <div className="space-y-2 pl-4 border-l-2 border-muted">
+                  <Label>Tipo de Pedido (modalidade de venda)</Label>
+                  <Select value={tipoPedido} onValueChange={setTipoPedido}>
+                    <SelectTrigger><SelectValue placeholder="Qualquer tipo" /></SelectTrigger>
+                    <SelectContent>
+                      {TIPO_PEDIDO_OPTIONS.map(t => (
+                        <SelectItem key={t.value || "any"} value={t.value || "qualquer"}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Filtra a automação para disparar apenas para o tipo de pedido selecionado.</p>
+                </div>
+              )}
               {gatilhoTipo === "pedido_status" && (
                 <div className="grid grid-cols-2 gap-4 pl-4 border-l-2 border-muted">
                   <div className="space-y-2">
