@@ -697,7 +697,7 @@ export default function Contratos() {
 
   // Reset page when filters change
   useEffect(() => { setCurrentPage(1); }, [filterFilial, filterStatus, filterDe, filterAte]);
-  async function handleEncerrar() {
+   async function handleEncerrar() {
     if (!selected) return;
     setProcessando(true);
     const { error } = await supabase
@@ -717,11 +717,28 @@ export default function Contratos() {
     setOpenEncerrar(false);
     setOpenDetail(false);
 
+    // Se for contrato Base, verificar aditivos vinculados ativos
+    if (selected.tipo === "Base") {
+      const aditivosAtivos = contratos.filter(c => c.contrato_origem_id === selected.id && c.status === "Ativo");
+      if (aditivosAtivos.length > 0) {
+        setContratoBaseCancelado(selected);
+        setAditivosVinculados(aditivosAtivos);
+        setAditivosSelecionados(aditivosAtivos.map(a => a.id)); // pré-seleciona todos
+        setOpenCancelarAditivos(true);
+        return; // não checa projetos ainda — faz depois
+      }
+    }
+
     // Verificar se há projetos ativos no painel de atendimento para este contrato
+    await verificarProjetosAtivos(selected);
+    loadData();
+  }
+
+  async function verificarProjetosAtivos(contrato: Contrato) {
     const { data: projetos } = await supabase
       .from("painel_atendimento")
       .select("id, tipo_operacao, filial_id, clientes(nome_fantasia), contratos(numero_exibicao), planos(nome)")
-      .eq("contrato_id", selected.id)
+      .eq("contrato_id", contrato.id)
       .neq("status_projeto", "cancelado");
 
     if (projetos && projetos.length > 0) {
@@ -729,8 +746,59 @@ export default function Contratos() {
       setCancelarProjetoMotivo("");
       setOpenCancelarProjeto(true);
     }
+  }
 
-    loadData();
+  async function handleCancelarAditivosSelecionados() {
+    setProcessando(true);
+    try {
+      for (const aditivoId of aditivosSelecionados) {
+        const aditivo = aditivosVinculados.find(a => a.id === aditivoId);
+        if (!aditivo) continue;
+
+        await supabase.from("contratos").update({ status: "Encerrado" }).eq("id", aditivoId);
+
+        if (aditivo.pedido_id) {
+          await supabase.from("pedidos").update({ status_pedido: "Cancelado", financeiro_status: "Cancelado" }).eq("id", aditivo.pedido_id);
+        }
+
+        // Cancelar projetos vinculados ao aditivo
+        const { data: projetos } = await supabase
+          .from("painel_atendimento")
+          .select("id")
+          .eq("contrato_id", aditivoId)
+          .neq("status_projeto", "cancelado");
+
+        if (projetos && projetos.length > 0) {
+          const { data: { user } } = await supabase.auth.getUser();
+          for (const p of projetos) {
+            await supabase.from("painel_atendimento").update({ status_projeto: "cancelado" } as any).eq("id", p.id);
+            if (user) {
+              await supabase.from("painel_comentarios").insert({
+                card_id: p.id,
+                criado_por: user.id,
+                texto: `❌ Projeto cancelado automaticamente pelo cancelamento do contrato base ${contratoBaseCancelado?.numero_exibicao || ""}.`,
+              });
+            }
+          }
+        }
+      }
+
+      const qtd = aditivosSelecionados.length;
+      toast.success(`${qtd} contrato(s) vinculado(s) cancelado(s).`);
+    } catch (err: any) {
+      toast.error("Erro ao cancelar aditivos: " + (err.message || ""));
+    } finally {
+      setProcessando(false);
+      setOpenCancelarAditivos(false);
+      setAditivosVinculados([]);
+      setAditivosSelecionados([]);
+      // Agora verificar projetos do contrato base
+      if (contratoBaseCancelado) {
+        await verificarProjetosAtivos(contratoBaseCancelado);
+        setContratoBaseCancelado(null);
+      }
+      loadData();
+    }
   }
 
   async function handleCancelarProjetosVinculados() {
