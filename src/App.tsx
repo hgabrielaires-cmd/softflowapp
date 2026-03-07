@@ -1,3 +1,4 @@
+import { useVersionCheck } from "@/hooks/useVersionCheck";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -38,7 +39,9 @@ import Automacoes from "./pages/Automacoes";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  useVersionCheck();
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -296,6 +299,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
