@@ -308,9 +308,11 @@ serve(async (req) => {
         const matchDe = !cfg.status_de || cfg.status_de === "qualquer" || cfg.status_de === body.status_anterior;
         const matchPara = cfg.status_para === body.status_novo;
 
-        // Filter by tipo_pedido if configured
+        // Filter by tipo_pedido if configured (from body payload or will be checked after loading pedido)
         const cfgTipo = cfg.tipo_pedido;
-        const matchTipo = !cfgTipo || cfgTipo === "qualquer" || cfgTipo === body.tipo_pedido;
+        const bodyTipo = body.tipo_pedido;
+        // If we have both config and body tipo, check now. If body is missing, we'll check after loading pedido.
+        if (cfgTipo && cfgTipo !== "qualquer" && bodyTipo && cfgTipo !== bodyTipo) continue;
 
         if (!matchDe || !matchPara || !matchTipo) continue;
 
