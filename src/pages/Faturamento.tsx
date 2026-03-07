@@ -306,7 +306,7 @@ function FaturasTab() {
     const payload = {
       cliente_id: form.cliente_id,
       contrato_id: form.contrato_id || null,
-      filial_id: filiaisFavoritas[0] || null,
+      filial_id: filialPadraoId || null,
       valor,
       valor_desconto: desconto,
       valor_final: valor - desconto,
