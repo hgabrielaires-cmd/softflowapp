@@ -767,6 +767,8 @@ export default function Contratos() {
   async function handleCancelarAditivosSelecionados() {
     setProcessando(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+
       for (const aditivoId of aditivosSelecionados) {
         const aditivo = aditivosVinculados.find(a => a.id === aditivoId);
         if (!aditivo) continue;
@@ -777,6 +779,24 @@ export default function Contratos() {
           await supabase.from("pedidos").update({ status_pedido: "Cancelado", financeiro_status: "Cancelado" }).eq("id", aditivo.pedido_id);
         }
 
+        // Registrar cancelamento para relatórios
+        if (user) {
+          await supabase.from("contratos_cancelados").insert({
+            contrato_id: aditivo.id,
+            contrato_numero: aditivo.numero_exibicao,
+            contrato_tipo: aditivo.tipo,
+            contrato_base_id: contratoBaseCancelado?.id || null,
+            contrato_base_numero: contratoBaseCancelado?.numero_exibicao || null,
+            cliente_id: aditivo.cliente_id,
+            cliente_nome: aditivo.clientes?.nome_fantasia || null,
+            filial_id: aditivo.pedidos?.filial_id || aditivo.clientes?.filial_id || null,
+            plano_nome: aditivo.planos?.nome || null,
+            tipo_pedido: aditivo.pedidos?.tipo_pedido || null,
+            cancelado_por: user.id,
+            motivo: `Cancelamento vinculado ao contrato base ${contratoBaseCancelado?.numero_exibicao || ""}`,
+          } as any);
+        }
+
         // Cancelar projetos vinculados ao aditivo
         const { data: projetos } = await supabase
           .from("painel_atendimento")
@@ -784,17 +804,14 @@ export default function Contratos() {
           .eq("contrato_id", aditivoId)
           .neq("status_projeto", "cancelado");
 
-        if (projetos && projetos.length > 0) {
-          const { data: { user } } = await supabase.auth.getUser();
+        if (projetos && projetos.length > 0 && user) {
           for (const p of projetos) {
             await supabase.from("painel_atendimento").update({ status_projeto: "cancelado" } as any).eq("id", p.id);
-            if (user) {
-              await supabase.from("painel_comentarios").insert({
-                card_id: p.id,
-                criado_por: user.id,
-                texto: `❌ Projeto cancelado automaticamente pelo cancelamento do contrato base ${contratoBaseCancelado?.numero_exibicao || ""}.`,
-              });
-            }
+            await supabase.from("painel_comentarios").insert({
+              card_id: p.id,
+              criado_por: user.id,
+              texto: `❌ Projeto cancelado automaticamente pelo cancelamento do contrato base ${contratoBaseCancelado?.numero_exibicao || ""}.`,
+            });
           }
         }
       }
