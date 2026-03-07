@@ -153,8 +153,9 @@ serve(async (req) => {
           const horasConfig = automacao.gatilho_config?.horas || 24;
 
           for (const pedido of pedidos) {
-            const updatedAt = new Date(pedido.updated_at).getTime();
-            const horasParado = (now - updatedAt) / (1000 * 60 * 60);
+            const entradaFila = pedido.data_entrada_fila || pedido.updated_at;
+            const entradaFilaMs = new Date(entradaFila).getTime();
+            const horasParado = (now - entradaFilaMs) / (1000 * 60 * 60);
 
             if (horasParado < horasConfig) continue;
 
