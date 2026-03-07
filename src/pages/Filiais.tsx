@@ -126,6 +126,7 @@ export default function Filiais() {
       setRegrasPadraoMensalidade(data.regras_padrao_mensalidade ?? "");
       setCongelarAcao((data as any).congelar_acao ?? "manter");
       setCongelarEtapaId((data as any).congelar_etapa_id ?? null);
+      setMargemVendaIdeal((data as any).margem_venda_ideal ?? 0);
     }
   }
 
