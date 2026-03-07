@@ -734,7 +734,7 @@ serve(async (req) => {
             }
             upLines.push(``);
           }
-          const novaMensalidadeTotal = upgMensFinal + totalAdicionaisBase;
+          const novaMensalidadeTotal = valorPlanoFinal + totalAdicionaisBase;
           upLines.push(`Total Mensalidade: *${fmtCurrency(novaMensalidadeTotal)}*`);
           upLines.push(``);
 
