@@ -126,6 +126,8 @@ export default function Financeiro() {
   const [openValores, setOpenValores] = useState(false);
   const [pedidoPlano, setPedidoPlano] = useState<any>(null);
   const [pedidoModulos, setPedidoModulos] = useState<any[]>([]);
+  const [rentabilidade, setRentabilidade] = useState<{ margem: number; markup: number; lucro: number } | null>(null);
+  const [margemIdeal, setMargemIdeal] = useState<number | null>(null);
 
   const canAccess = isAdmin || isFinanceiro || (menuPerms !== null && menuPerms.has("menu.financeiro"));
 
@@ -353,12 +355,19 @@ export default function Financeiro() {
                             setSelected(pedido);
                             setOpenDetail(true);
                             setAprovadorDesconto(null);
-                            const { data: sol } = await supabase
-                              .from("solicitacoes_desconto")
-                              .select("aprovado_por")
-                              .eq("pedido_id", pedido.id)
-                              .eq("status", "Aprovado")
-                              .maybeSingle();
+                            setRentabilidade(null);
+                            setMargemIdeal(null);
+                            const [{ data: sol }, { data: custosPlano }, { data: custosModulos }, { data: paramFilial }] = await Promise.all([
+                              supabase
+                                .from("solicitacoes_desconto")
+                                .select("aprovado_por")
+                                .eq("pedido_id", pedido.id)
+                                .eq("status", "Aprovado")
+                                .maybeSingle(),
+                              supabase.from("custos").select("*").eq("plano_id", pedido.plano_id).is("modulo_id", null).maybeSingle(),
+                              supabase.from("custos").select("*").not("modulo_id", "is", null),
+                              supabase.from("filial_parametros").select("margem_venda_ideal").eq("filial_id", pedido.filial_id).maybeSingle(),
+                            ]);
                             if (sol?.aprovado_por) {
                               const { data: prof } = await supabase
                                 .from("profiles")
@@ -367,6 +376,29 @@ export default function Financeiro() {
                                 .maybeSingle();
                               setAprovadorDesconto(prof?.full_name || null);
                             }
+                            if (paramFilial) setMargemIdeal(paramFilial.margem_venda_ideal ?? null);
+                            // Calcular rentabilidade
+                            const mensFinal = pedido.valor_mensalidade_final || 0;
+                            let custoTotal = 0;
+                            if (custosPlano) {
+                              const impostoBase = custosPlano.imposto_base === 'venda' ? mensFinal : custosPlano.preco_fornecedor;
+                              const impostoVal = custosPlano.imposto_tipo === '%' ? impostoBase * (custosPlano.imposto_valor / 100) : custosPlano.imposto_valor;
+                              custoTotal += custosPlano.preco_fornecedor + impostoVal + custosPlano.taxa_boleto + custosPlano.despesas_adicionais;
+                            }
+                            const adicionais = Array.isArray(pedido.modulos_adicionais) ? pedido.modulos_adicionais : [];
+                            adicionais.forEach((m: any) => {
+                              const custoMod = (custosModulos || []).find((c: any) => c.modulo_id === m.modulo_id);
+                              if (custoMod) {
+                                const qty = m.quantidade || 1;
+                                const impostoBase = custoMod.imposto_base === 'venda' ? (m.valor_mensalidade_modulo || 0) * qty : custoMod.preco_fornecedor * qty;
+                                const impostoVal = custoMod.imposto_tipo === '%' ? impostoBase * (custoMod.imposto_valor / 100) : custoMod.imposto_valor * qty;
+                                custoTotal += (custoMod.preco_fornecedor * qty) + impostoVal + (custoMod.taxa_boleto * qty) + (custoMod.despesas_adicionais * qty);
+                              }
+                            });
+                            const lucro = mensFinal - custoTotal;
+                            const margem = mensFinal > 0 ? (lucro / mensFinal) * 100 : 0;
+                            const markup = custoTotal > 0 ? (lucro / custoTotal) * 100 : 0;
+                            setRentabilidade({ margem, markup, lucro });
                           }}>
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
@@ -541,6 +573,33 @@ export default function Financeiro() {
                   <span className="font-mono">{selected.comissao_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
                 </div>
               </div>
+
+              {/* Análise de Rentabilidade */}
+              {rentabilidade && (
+                <div className="bg-muted rounded-lg p-3 space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">📊 Análise de Rentabilidade</p>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Margem Bruta</span>
+                    <span className={`font-mono font-semibold ${rentabilidade.margem < 0 || (margemIdeal != null && rentabilidade.margem < margemIdeal) ? "text-destructive" : rentabilidade.margem < 30 ? "text-amber-600" : "text-emerald-600"}`}>
+                      {rentabilidade.margem.toFixed(1)}%
+                      {margemIdeal != null && rentabilidade.margem < margemIdeal && " ⚠️"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Markup</span>
+                    <span className="font-mono font-semibold">{rentabilidade.markup.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-semibold border-t border-border pt-1">
+                    <span>Lucro Bruto</span>
+                    <span className={`font-mono ${rentabilidade.lucro < 0 ? "text-destructive" : "text-emerald-600"}`}>
+                      {rentabilidade.lucro.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </span>
+                  </div>
+                  {margemIdeal != null && (
+                    <p className="text-[10px] text-muted-foreground pt-0.5">Margem ideal da filial: {margemIdeal}%</p>
+                  )}
+                </div>
+              )}
 
               {selected.observacoes && (
                 <div className="bg-muted rounded-lg p-3">
