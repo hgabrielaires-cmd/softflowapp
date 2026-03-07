@@ -247,6 +247,9 @@ export default function Clientes() {
   const [contratosList, setContratosList] = useState<Contrato[]>([]);
   const [pedidosHistorico, setPedidosHistorico] = useState<PedidoHistorico[]>([]);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
+  const [rentabilidadeConsolidada, setRentabilidadeConsolidada] = useState<RentabilidadeConsolidada | null>(null);
+  const [podeVerRentabilidade, setPodeVerRentabilidade] = useState(false);
+  const [margemIdealHistorico, setMargemIdealHistorico] = useState<number | null>(null);
 
   async function fetchData() {
     setLoading(true);
