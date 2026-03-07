@@ -1811,6 +1811,41 @@ Estou à disposição.`;
                 </div>
               </div>
 
+              {/* Contratos vinculados (aditivos do contrato base) */}
+              {(() => {
+                const vinculados = contratos.filter(c => c.contrato_origem_id === selected.id);
+                if (vinculados.length === 0) return null;
+                return (
+                  <div className="border-t border-border pt-4 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Contratos Vinculados</p>
+                    <div className="rounded-lg border border-border divide-y divide-border">
+                      {vinculados.map(v => (
+                        <button
+                          key={v.id}
+                          type="button"
+                          className="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-muted/50 transition-colors cursor-pointer"
+                          onClick={() => { setSelected(v); }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-semibold">{v.numero_exibicao}</span>
+                            {getTipoBadge(v.tipo)}
+                            {v.tipo === "Aditivo" && v.pedidos?.tipo_pedido && (
+                              <span className="text-muted-foreground">
+                                {v.pedidos.tipo_pedido === "Upgrade" ? "↑ Upgrade" : v.pedidos.tipo_pedido === "Aditivo" ? "＋ Módulos" : v.pedidos.tipo_pedido}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {getStatusBadge(v.status)}
+                            <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Dados do pedido vinculado */}
               {selected.pedidos && (() => {
                 const p = selected.pedidos!;
