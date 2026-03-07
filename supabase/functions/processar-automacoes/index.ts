@@ -895,6 +895,7 @@ serve(async (req) => {
             .replace(/\{status\.novo\}/g, body.status_novo || "N/A")
             .replace(/\{margem\.bruta\}/g, margemBrutaStr)
             .replace(/\{margem\.markup\}/g, markupStr)
+            .replace(/\{margem\.lucro\}/g, lucroBrutoStr)
             .replace(/\{saudacao\}/g, getSaudacao());
         };
 
