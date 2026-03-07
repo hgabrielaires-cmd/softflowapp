@@ -125,6 +125,7 @@ export default function Automacoes() {
   // Gatilho-specific
   const [statusDe, setStatusDe] = useState("");
   const [statusPara, setStatusPara] = useState("");
+  const [tipoPedido, setTipoPedido] = useState("");
   const [horasSemAcao, setHorasSemAcao] = useState<number>(24);
 
   useEffect(() => {
