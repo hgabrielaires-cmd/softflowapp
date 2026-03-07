@@ -1383,7 +1383,7 @@ export default function Clientes() {
                       ))}
                     </div>
                   )
-                )
+                )}
               </TabsContent>
             </Tabs>
           )}
