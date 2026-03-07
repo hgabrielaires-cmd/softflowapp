@@ -831,7 +831,7 @@ function NotasFiscaisTab() {
     const payload = {
       cliente_id: form.cliente_id,
       fatura_id: form.fatura_id || null,
-      filial_id: filiaisFavoritas[0] || null,
+      filial_id: filialPadraoId || null,
       numero_nf: form.numero_nf.trim(),
       serie: form.serie || "1",
       valor: Number(form.valor),
