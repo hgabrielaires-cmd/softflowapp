@@ -598,8 +598,14 @@ export default function Clientes() {
   // Dados do historico separados
   const contratosBase = contratosList.filter((c) => c.tipo === "Base");
   const contratosAditivos = contratosList.filter((c) => c.tipo === "Aditivo");
+  // Upgrades/Downgrades vêm da tabela contratos (não pedidos) para refletir status correto
+  const contratosUpgrade = contratosList.filter((c) => c.tipo === "Upgrade");
+  const contratosDowngrade = contratosList.filter((c) => c.tipo === "Downgrade");
+  // Fallback para pedidos caso não existam contratos desse tipo
   const pedidosUpgrade = pedidosHistorico.filter((p) => p.tipo_pedido === "Upgrade");
   const pedidosDowngrade = pedidosHistorico.filter((p) => p.tipo_pedido === "Downgrade");
+  const usarContratosUpgrade = contratosUpgrade.length > 0 || pedidosUpgrade.length === 0;
+  const usarContratosDowngrade = contratosDowngrade.length > 0 || pedidosDowngrade.length === 0;
 
   return (
     <AppLayout>
