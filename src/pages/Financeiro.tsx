@@ -207,7 +207,7 @@ export default function Financeiro() {
       return;
     }
     toast.success("Pedido aprovado! Contrato criado e liberado.");
-    dispararAutomacaoPedidoStatus(pedido.id, "Aguardando Financeiro", "Aprovado Financeiro");
+    dispararAutomacaoPedidoStatus(pedido.id, "Aguardando Financeiro", "Aprovado Financeiro", (pedido as any).tipo_pedido);
     setOpenDetail(false);
     navigate("/contratos");
   }
