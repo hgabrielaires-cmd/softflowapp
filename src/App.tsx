@@ -294,6 +294,14 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/faturamento"
+              element={
+                <ProtectedRoute>
+                  <Faturamento />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
