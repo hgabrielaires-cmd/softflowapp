@@ -271,6 +271,7 @@ export default function Pedidos() {
   const [filialFavoritaId, setFilialFavoritaId] = useState<string | null>(null);
   const [filialParametros, setFilialParametros] = useState<any | null>(null);
   const [zapsignMap, setZapsignMap] = useState<Record<string, string>>({});
+  const [contratoStatusMap, setContratoStatusMap] = useState<Record<string, string>>({});
   const [servicosCatalogo, setServicosCatalogo] = useState<{ id: string; nome: string; valor: number; unidade_medida: string }[]>([]);
   const [servicoBuscaId, setServicoBuscaId] = useState("");
   const [servicoBuscaQtd, setServicoBuscaQtd] = useState("1");
