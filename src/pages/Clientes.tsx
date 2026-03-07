@@ -1327,7 +1327,7 @@ export default function Clientes() {
                       ))}
                     </div>
                   )
-                )
+                )}
               </TabsContent>
 
               {/* Downgrades */}
