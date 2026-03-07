@@ -100,8 +100,18 @@ interface PedidoHistorico {
   valor_mensalidade_final: number;
   valor_total: number;
   created_at: string;
+  plano_id: string;
+  contrato_id: string | null;
   planos?: { nome: string } | null;
   modulos_adicionais?: any[];
+}
+
+interface RentabilidadeConsolidada {
+  receitaMensal: number;
+  custoMensal: number;
+  lucro: number;
+  margem: number;
+  markup: number;
 }
 
 export default function Clientes() {
