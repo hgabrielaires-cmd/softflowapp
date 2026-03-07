@@ -14,6 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
+      automacoes: {
+        Row: {
+          acao_config: Json
+          acao_tipo: string
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          gatilho_config: Json
+          gatilho_tipo: string
+          id: string
+          lembrete_ativo: boolean
+          lembrete_intervalo_horas: number | null
+          lembrete_maximo: number | null
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          acao_config?: Json
+          acao_tipo: string
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          gatilho_config?: Json
+          gatilho_tipo: string
+          id?: string
+          lembrete_ativo?: boolean
+          lembrete_intervalo_horas?: number | null
+          lembrete_maximo?: number | null
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          acao_config?: Json
+          acao_tipo?: string
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          gatilho_config?: Json
+          gatilho_tipo?: string
+          id?: string
+          lembrete_ativo?: boolean
+          lembrete_intervalo_horas?: number | null
+          lembrete_maximo?: number | null
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      automacoes_log: {
+        Row: {
+          automacao_id: string
+          canal: string
+          detalhes: Json
+          executado_em: string
+          id: string
+          nivel: number
+          referencia_id: string
+          referencia_tipo: string
+        }
+        Insert: {
+          automacao_id: string
+          canal: string
+          detalhes?: Json
+          executado_em?: string
+          id?: string
+          nivel?: number
+          referencia_id: string
+          referencia_tipo: string
+        }
+        Update: {
+          automacao_id?: string
+          canal?: string
+          detalhes?: Json
+          executado_em?: string
+          id?: string
+          nivel?: number
+          referencia_id?: string
+          referencia_tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automacoes_log_automacao_id_fkey"
+            columns: ["automacao_id"]
+            isOneToOne: false
+            referencedRelation: "automacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cliente_contatos: {
         Row: {
           ativo: boolean
