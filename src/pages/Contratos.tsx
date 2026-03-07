@@ -1616,9 +1616,13 @@ Estou à disposição.`;
                       {contrato.contrato_origem_id && (() => {
                         const origem = contratos.find(c => c.id === contrato.contrato_origem_id);
                         return origem ? (
-                          <span className="text-[10px] text-muted-foreground font-normal flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleOpenDetail(origem); }}
+                            className="text-[10px] text-primary/70 hover:text-primary font-normal flex items-center gap-0.5 hover:underline cursor-pointer transition-colors"
+                          >
                             ↳ {origem.numero_exibicao}
-                          </span>
+                          </button>
                         ) : null;
                       })()}
                     </TableCell>
