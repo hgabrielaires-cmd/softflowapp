@@ -391,13 +391,48 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     if (!isGestor) return;
     const { data } = await supabase
       .from("solicitacoes_desconto")
-      .select("*, pedidos(cliente_id, valor_implantacao_final, valor_mensalidade_final, clientes(nome_fantasia))")
+      .select("*, pedidos(cliente_id, plano_id, valor_implantacao_final, valor_mensalidade_final, clientes(nome_fantasia))")
       .eq("status", "Aguardando")
       .order("created_at", { ascending: false });
 
     const enriched = await Promise.all((data || []).map(async (sol: any) => {
       const { data: prof } = await supabase.from("profiles").select("full_name").eq("user_id", sol.vendedor_id).single();
-      return { ...sol, profiles: prof };
+
+      // Calcular margem bruta e markup com base nos custos do plano
+      let margemBruta: number | null = null;
+      let markup: number | null = null;
+      const planoId = (sol.pedidos as any)?.plano_id;
+      const mensFinal = Number((sol.pedidos as any)?.valor_mensalidade_final) || 0;
+
+      if (planoId && mensFinal > 0) {
+        const { data: custoData } = await supabase
+          .from("custos")
+          .select("preco_fornecedor, taxa_boleto, imposto_valor, imposto_tipo, imposto_base, despesas_adicionais")
+          .eq("plano_id", planoId)
+          .maybeSingle();
+
+        if (custoData) {
+          const fornecedor = Number(custoData.preco_fornecedor) || 0;
+          const taxaBoleto = Number(custoData.taxa_boleto) || 0;
+          const impostoValor = Number(custoData.imposto_valor) || 0;
+          const despesas = Number(custoData.despesas_adicionais) || 0;
+
+          let imposto = 0;
+          if (custoData.imposto_tipo === "%") {
+            const base = custoData.imposto_base === "venda" ? mensFinal : fornecedor;
+            imposto = base * (impostoValor / 100);
+          } else {
+            imposto = impostoValor;
+          }
+
+          const custoTotal = fornecedor + taxaBoleto + imposto + despesas;
+          const lucroBruto = mensFinal - custoTotal;
+          margemBruta = mensFinal > 0 ? (lucroBruto / mensFinal) * 100 : 0;
+          markup = custoTotal > 0 ? ((mensFinal / custoTotal) - 1) * 100 : 0;
+        }
+      }
+
+      return { ...sol, profiles: prof, _margemBruta: margemBruta, _markup: markup };
     }));
     setSolicitacoes(enriched as SolicitacaoDesconto[]);
   }
