@@ -159,6 +159,7 @@ export default function Automacoes() {
     setLembreteMaximo(3);
     setStatusDe("");
     setStatusPara("");
+    setTipoPedido("");
     setHorasSemAcao(24);
     setEditingId(null);
   }
