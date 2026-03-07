@@ -355,12 +355,19 @@ export default function Financeiro() {
                             setSelected(pedido);
                             setOpenDetail(true);
                             setAprovadorDesconto(null);
-                            const { data: sol } = await supabase
-                              .from("solicitacoes_desconto")
-                              .select("aprovado_por")
-                              .eq("pedido_id", pedido.id)
-                              .eq("status", "Aprovado")
-                              .maybeSingle();
+                            setRentabilidade(null);
+                            setMargemIdeal(null);
+                            const [{ data: sol }, { data: custosPlano }, { data: custosModulos }, { data: paramFilial }] = await Promise.all([
+                              supabase
+                                .from("solicitacoes_desconto")
+                                .select("aprovado_por")
+                                .eq("pedido_id", pedido.id)
+                                .eq("status", "Aprovado")
+                                .maybeSingle(),
+                              supabase.from("custos").select("*").eq("plano_id", pedido.plano_id).is("modulo_id", null).maybeSingle(),
+                              supabase.from("custos").select("*").not("modulo_id", "is", null),
+                              supabase.from("filial_parametros").select("margem_venda_ideal").eq("filial_id", pedido.filial_id).maybeSingle(),
+                            ]);
                             if (sol?.aprovado_por) {
                               const { data: prof } = await supabase
                                 .from("profiles")
@@ -369,6 +376,29 @@ export default function Financeiro() {
                                 .maybeSingle();
                               setAprovadorDesconto(prof?.full_name || null);
                             }
+                            if (paramFilial) setMargemIdeal(paramFilial.margem_venda_ideal ?? null);
+                            // Calcular rentabilidade
+                            const mensFinal = pedido.valor_mensalidade_final || 0;
+                            let custoTotal = 0;
+                            if (custosPlano) {
+                              const impostoBase = custosPlano.imposto_base === 'venda' ? mensFinal : custosPlano.preco_fornecedor;
+                              const impostoVal = custosPlano.imposto_tipo === '%' ? impostoBase * (custosPlano.imposto_valor / 100) : custosPlano.imposto_valor;
+                              custoTotal += custosPlano.preco_fornecedor + impostoVal + custosPlano.taxa_boleto + custosPlano.despesas_adicionais;
+                            }
+                            const adicionais = Array.isArray(pedido.modulos_adicionais) ? pedido.modulos_adicionais : [];
+                            adicionais.forEach((m: any) => {
+                              const custoMod = (custosModulos || []).find((c: any) => c.modulo_id === m.modulo_id);
+                              if (custoMod) {
+                                const qty = m.quantidade || 1;
+                                const impostoBase = custoMod.imposto_base === 'venda' ? (m.valor_mensalidade_modulo || 0) * qty : custoMod.preco_fornecedor * qty;
+                                const impostoVal = custoMod.imposto_tipo === '%' ? impostoBase * (custoMod.imposto_valor / 100) : custoMod.imposto_valor * qty;
+                                custoTotal += (custoMod.preco_fornecedor * qty) + impostoVal + (custoMod.taxa_boleto * qty) + (custoMod.despesas_adicionais * qty);
+                              }
+                            });
+                            const lucro = mensFinal - custoTotal;
+                            const margem = mensFinal > 0 ? (lucro / mensFinal) * 100 : 0;
+                            const markup = custoTotal > 0 ? (lucro / custoTotal) * 100 : 0;
+                            setRentabilidade({ margem, markup, lucro });
                           }}>
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
