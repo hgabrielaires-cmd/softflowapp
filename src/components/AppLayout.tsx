@@ -391,7 +391,7 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     if (!isGestor) return;
     const { data } = await supabase
       .from("solicitacoes_desconto")
-      .select("*, pedidos(cliente_id, plano_id, filial_id, valor_implantacao_final, valor_mensalidade_final, modulos_adicionais, clientes(nome_fantasia))")
+      .select("*, pedidos(cliente_id, plano_id, filial_id, tipo_pedido, contrato_id, valor_implantacao_final, valor_mensalidade_final, modulos_adicionais, clientes(nome_fantasia))")
       .eq("status", "Aguardando")
       .order("created_at", { ascending: false });
 
