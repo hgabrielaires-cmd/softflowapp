@@ -585,7 +585,7 @@ export default function Filiais() {
                 {/* Financeiro */}
                 <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">
                   <h3 className="text-sm font-semibold text-foreground">Financeiro</h3>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1.5">
                       <Label>Parcelas máximas no cartão</Label>
                       <Input
@@ -606,6 +606,18 @@ export default function Filiais() {
                         value={pixDescontoPercentual}
                         onChange={(e) => setPixDescontoPercentual(Number(e.target.value))}
                       />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Margem venda ideal (%)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.01}
+                        value={margemVendaIdeal}
+                        onChange={(e) => setMargemVendaIdeal(Number(e.target.value))}
+                      />
+                      <p className="text-xs text-muted-foreground">Margem mínima esperada na venda de planos.</p>
                     </div>
                   </div>
                 </div>
