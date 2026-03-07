@@ -574,7 +574,33 @@ export default function Financeiro() {
                 </div>
               </div>
 
-              {selected.observacoes && (
+              {/* Análise de Rentabilidade */}
+              {rentabilidade && (
+                <div className="bg-muted rounded-lg p-3 space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">📊 Análise de Rentabilidade</p>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Margem Bruta</span>
+                    <span className={`font-mono font-semibold ${rentabilidade.margem < 0 || (margemIdeal != null && rentabilidade.margem < margemIdeal) ? "text-destructive" : rentabilidade.margem < 30 ? "text-amber-600" : "text-emerald-600"}`}>
+                      {rentabilidade.margem.toFixed(1)}%
+                      {margemIdeal != null && rentabilidade.margem < margemIdeal && " ⚠️"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Markup</span>
+                    <span className="font-mono font-semibold">{rentabilidade.markup.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-semibold border-t border-border pt-1">
+                    <span>Lucro Bruto</span>
+                    <span className={`font-mono ${rentabilidade.lucro < 0 ? "text-destructive" : "text-emerald-600"}`}>
+                      {rentabilidade.lucro.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </span>
+                  </div>
+                  {margemIdeal != null && (
+                    <p className="text-[10px] text-muted-foreground pt-0.5">Margem ideal da filial: {margemIdeal}%</p>
+                  )}
+                </div>
+              )}
+
                 <div className="bg-muted rounded-lg p-3">
                   <p className="text-muted-foreground text-xs mb-1">Observações do vendedor</p>
                   <p className="text-xs">{selected.observacoes}</p>
