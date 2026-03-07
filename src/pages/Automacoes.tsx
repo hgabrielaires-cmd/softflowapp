@@ -184,6 +184,7 @@ export default function Automacoes() {
     setLembreteMaximo(a.lembrete_maximo || 3);
     setStatusDe(a.gatilho_config?.status_de || "");
     setStatusPara(a.gatilho_config?.status_para || "");
+    setTipoPedido(a.gatilho_config?.tipo_pedido || "");
     setHorasSemAcao(a.gatilho_config?.horas || 24);
     setDialogOpen(true);
   }
