@@ -556,7 +556,7 @@ export default function Dashboard() {
 
   // Get filtered pedidos for dialog
   const dialogPedidos = useMemo(() => {
-    if (dialogType === "pedidos") return pedidos;
+    if (dialogType === "pedidos") return pedidos.filter(p => p.status_pedido !== "Cancelado");
     if (dialogType === "upsell") return pedidos.filter(p => p.tipo_pedido === "Aditivo");
     if (dialogType === "upgrade") return pedidos.filter(p => p.tipo_pedido === "Upgrade");
     if (dialogType === "cancelados") return pedidos.filter(p => p.status_pedido === "Cancelado");
