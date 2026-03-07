@@ -1208,11 +1208,11 @@ export default function Clientes() {
                 </TabsTrigger>
                 <TabsTrigger value="upgrades" className="flex-1">
                   <ArrowUpCircle className="h-3.5 w-3.5 mr-1.5" />
-                  Upgrades ({usarContratosUpgrade ? contratosUpgrade.length : pedidosUpgrade.length})
+                  Upgrades ({pedidosUpgrade.length})
                 </TabsTrigger>
                 <TabsTrigger value="downgrades" className="flex-1">
                   <ArrowDownCircle className="h-3.5 w-3.5 mr-1.5" />
-                  Downgrades ({usarContratosDowngrade ? contratosDowngrade.length : pedidosDowngrade.length})
+                  Downgrades ({pedidosDowngrade.length})
                 </TabsTrigger>
               </TabsList>
 
