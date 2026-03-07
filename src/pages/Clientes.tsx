@@ -106,6 +106,7 @@ interface PedidoHistorico {
 
 export default function Clientes() {
   const { roles, profile } = useAuth();
+  const navigate = useNavigate();
   const isAdmin = roles.includes("admin");
   const isFinanceiro = roles.includes("financeiro");
   const isVendedor = roles.includes("vendedor");
