@@ -253,7 +253,7 @@ export default function Dashboard() {
       // Pedidos with client name
       let pedidoQuery = supabase
         .from("pedidos")
-        .select("id, valor_total, valor_implantacao_final, valor_mensalidade_final, desconto_implantacao_valor, desconto_mensalidade_valor, desconto_implantacao_tipo, desconto_mensalidade_tipo, valor_implantacao_original, valor_mensalidade_original, financeiro_status, tipo_pedido, plano_id, contrato_id, modulos_adicionais, cliente_id, comissao_implantacao_valor, comissao_mensalidade_valor, status_pedido, numero_exibicao, clientes(nome_fantasia)")
+        .select("id, valor_total, valor_implantacao_final, valor_mensalidade_final, desconto_implantacao_valor, desconto_mensalidade_valor, desconto_implantacao_tipo, desconto_mensalidade_tipo, valor_implantacao_original, valor_mensalidade_original, financeiro_status, tipo_pedido, plano_id, contrato_id, modulos_adicionais, cliente_id, comissao_implantacao_valor, comissao_mensalidade_valor, status_pedido, numero_exibicao, created_at, clientes(nome_fantasia)")
         .gte("created_at", start.toISOString())
         .lte("created_at", end.toISOString());
 
