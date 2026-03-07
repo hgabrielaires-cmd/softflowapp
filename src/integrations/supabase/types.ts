@@ -340,6 +340,60 @@ export type Database = {
           },
         ]
       }
+      contratos_cancelados: {
+        Row: {
+          cancelado_em: string
+          cancelado_por: string
+          cliente_id: string
+          cliente_nome: string | null
+          contrato_base_id: string | null
+          contrato_base_numero: string | null
+          contrato_id: string
+          contrato_numero: string
+          contrato_tipo: string
+          created_at: string
+          filial_id: string | null
+          id: string
+          motivo: string | null
+          plano_nome: string | null
+          tipo_pedido: string | null
+        }
+        Insert: {
+          cancelado_em?: string
+          cancelado_por: string
+          cliente_id: string
+          cliente_nome?: string | null
+          contrato_base_id?: string | null
+          contrato_base_numero?: string | null
+          contrato_id: string
+          contrato_numero: string
+          contrato_tipo: string
+          created_at?: string
+          filial_id?: string | null
+          id?: string
+          motivo?: string | null
+          plano_nome?: string | null
+          tipo_pedido?: string | null
+        }
+        Update: {
+          cancelado_em?: string
+          cancelado_por?: string
+          cliente_id?: string
+          cliente_nome?: string | null
+          contrato_base_id?: string | null
+          contrato_base_numero?: string | null
+          contrato_id?: string
+          contrato_numero?: string
+          contrato_tipo?: string
+          created_at?: string
+          filial_id?: string | null
+          id?: string
+          motivo?: string | null
+          plano_nome?: string | null
+          tipo_pedido?: string | null
+        }
+        Relationships: []
+      }
       contratos_zapsign: {
         Row: {
           contrato_id: string
