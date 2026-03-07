@@ -1254,9 +1254,14 @@ export default function Clientes() {
                           <p className="text-sm font-medium">{ct.numero_exibicao}</p>
                           <p className="text-xs text-muted-foreground">{fmtDateTime(ct.created_at)}</p>
                         </div>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ct.status === "Ativo" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
-                          {ct.status}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ct.status === "Ativo" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
+                            {ct.status}
+                          </span>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Visualizar aditivo" onClick={() => { setHistoricoOpen(false); navigate("/contratos"); }}>
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
