@@ -304,7 +304,11 @@ serve(async (req) => {
         const matchDe = !cfg.status_de || cfg.status_de === "qualquer" || cfg.status_de === body.status_anterior;
         const matchPara = cfg.status_para === body.status_novo;
 
-        if (!matchDe || !matchPara) continue;
+        // Filter by tipo_pedido if configured
+        const cfgTipo = cfg.tipo_pedido;
+        const matchTipo = !cfgTipo || cfgTipo === "qualquer" || cfgTipo === body.tipo_pedido;
+
+        if (!matchDe || !matchPara || !matchTipo) continue;
 
         // Build recipients and send (same logic as above)
         const recipients: any[] = [];
