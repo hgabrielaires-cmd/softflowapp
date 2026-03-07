@@ -801,39 +801,65 @@ serve(async (req) => {
           descontoDetalhes = detLines.length > 0 ? detLines.join("\n") : "Sem desconto";
         }
 
-        // ─── Calculate margem bruta and markup ───
+        // ─── Calculate margem bruta and markup (mensalidade only, including modules) ───
         let margemBrutaStr = "N/A";
         let markupStr = "N/A";
-        if (pedido?.plano_id) {
+        if (pedido) {
           const mensFinalCalc = Number(pedido.valor_mensalidade_final) || Number(pedido.valor_mensalidade) || 0;
           if (mensFinalCalc > 0) {
-            const { data: custoData } = await supabase
+            // Load ALL custos (plan + modules)
+            const { data: allCustos } = await supabase
               .from("custos")
-              .select("preco_fornecedor, taxa_boleto, imposto_valor, imposto_tipo, imposto_base, despesas_adicionais")
-              .eq("plano_id", pedido.plano_id)
-              .maybeSingle();
+              .select("plano_id, modulo_id, preco_fornecedor, taxa_boleto, imposto_valor, imposto_tipo, imposto_base, despesas_adicionais");
 
-            if (custoData) {
-              const fornecedor = Number(custoData.preco_fornecedor) || 0;
-              const taxaBoleto = Number(custoData.taxa_boleto) || 0;
-              const impostoValor = Number(custoData.imposto_valor) || 0;
-              const despesas = Number(custoData.despesas_adicionais) || 0;
+            const custoPorPlano: Record<string, any> = {};
+            const custoPorModulo: Record<string, any> = {};
+            (allCustos || []).forEach((c: any) => {
+              if (c.plano_id) custoPorPlano[c.plano_id] = c;
+              if (c.modulo_id) custoPorModulo[c.modulo_id] = c;
+            });
 
-              let imposto = 0;
-              if (custoData.imposto_tipo === "%") {
-                const base = custoData.imposto_base === "venda" ? mensFinalCalc : fornecedor;
-                imposto = base * (impostoValor / 100);
-              } else {
-                imposto = impostoValor;
-              }
+            let custoTotalSemImposto = 0;
+            let impostoTotal = 0;
 
-              const custoTotal = fornecedor + taxaBoleto + imposto + despesas;
-              const lucroBruto = mensFinalCalc - custoTotal;
-              const margemBruta = mensFinalCalc > 0 ? (lucroBruto / mensFinalCalc) * 100 : 0;
-              const markupCalc = custoTotal > 0 ? ((mensFinalCalc / custoTotal) - 1) * 100 : 0;
-              margemBrutaStr = margemBruta.toFixed(1) + "%";
-              markupStr = markupCalc.toFixed(1) + "%";
+            // Custo do plano
+            const custoPlano = pedido.plano_id ? custoPorPlano[pedido.plano_id] : null;
+            if (custoPlano) {
+              custoTotalSemImposto += (Number(custoPlano.preco_fornecedor) || 0) + (Number(custoPlano.taxa_boleto) || 0) + (Number(custoPlano.despesas_adicionais) || 0);
             }
+
+            // Custo dos módulos adicionais
+            const mods = pedido.modulos_adicionais
+              ? (typeof pedido.modulos_adicionais === "string" ? JSON.parse(pedido.modulos_adicionais) : pedido.modulos_adicionais)
+              : [];
+            if (Array.isArray(mods)) {
+              for (const mod of mods) {
+                const custoMod = mod.modulo_id ? custoPorModulo[mod.modulo_id] : null;
+                if (custoMod) {
+                  const qty = mod.quantidade || 1;
+                  custoTotalSemImposto += (Number(custoMod.preco_fornecedor) || 0) * qty;
+                  if (custoMod.imposto_tipo === "%" && custoMod.imposto_base === "compra") {
+                    impostoTotal += (Number(custoMod.preco_fornecedor) || 0) * qty * ((Number(custoMod.imposto_valor) || 0) / 100);
+                  }
+                }
+              }
+            }
+
+            // Imposto do plano
+            if (custoPlano?.imposto_tipo === "%" && custoPlano?.imposto_base === "venda") {
+              impostoTotal += mensFinalCalc * ((Number(custoPlano.imposto_valor) || 0) / 100);
+            } else if (custoPlano?.imposto_tipo === "%" && custoPlano?.imposto_base === "compra") {
+              impostoTotal += (Number(custoPlano.preco_fornecedor) || 0) * ((Number(custoPlano.imposto_valor) || 0) / 100);
+            } else if (custoPlano) {
+              impostoTotal += Number(custoPlano.imposto_valor) || 0;
+            }
+
+            const custoFinal = custoTotalSemImposto + impostoTotal;
+            const lucroBruto = mensFinalCalc - custoFinal;
+            const margemBruta = (lucroBruto / mensFinalCalc) * 100;
+            const markupCalc = custoFinal > 0 ? ((mensFinalCalc / custoFinal) - 1) * 100 : 0;
+            margemBrutaStr = margemBruta.toFixed(1) + "%";
+            markupStr = markupCalc.toFixed(1) + "%";
           }
         }
 
