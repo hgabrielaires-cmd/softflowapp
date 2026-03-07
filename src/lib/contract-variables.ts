@@ -25,6 +25,7 @@ export const CONTRACT_VARIABLE_CATEGORIES: VariableCategory[] = [
       { key: "cliente.cep", label: "CEP", example: "01001-000" },
       { key: "cliente.telefone", label: "Telefone", example: "(11) 99999-9999" },
       { key: "cliente.email", label: "E-mail", example: "contato@empresa.com.br" },
+      { key: "cliente.responsavel_nome", label: "Nome Completo do Responsável", example: "José da Silva" },
     ],
   },
   {
