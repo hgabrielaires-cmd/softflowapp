@@ -701,12 +701,10 @@ serve(async (req) => {
           upLines.push(`☑️ *Desconto Solicitado*`);
           upLines.push(``);
           upLines.push(`Novo Plano: *${novoPlanoNome}*`);
+          upLines.push(`Valor do Plano: ${fmtCurrency(novoPlanoValor)}`);
           if (upgDescontoMens > 0) {
-            upLines.push(`Valor: ~${fmtCurrency(novoPlanoValor)}~`);
             upLines.push(`Desconto Solicitado: ${fmtCurrency(upgDescontoMens)}`);
-            upLines.push(`Valor: ${fmtCurrency(upgMensFinal)}`);
-          } else {
-            upLines.push(`Valor: ${fmtCurrency(novoPlanoValor)}`);
+            upLines.push(`Valor Final: *${fmtCurrency(upgMensFinal)}*`);
           }
           upLines.push(``);
 
