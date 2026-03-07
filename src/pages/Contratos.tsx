@@ -700,54 +700,62 @@ export default function Contratos() {
   useEffect(() => { setCurrentPage(1); }, [filterFilial, filterStatus, filterDe, filterAte]);
    async function handleEncerrar() {
     if (!selected) return;
+
+    // Se for contrato Base, verificar aditivos vinculados ANTES de cancelar
+    if (selected.tipo === "Base") {
+      const aditivosAtivos = contratos.filter(c => c.contrato_origem_id === selected.id && c.status === "Ativo");
+      if (aditivosAtivos.length > 0) {
+        setContratoBaseCancelado(selected);
+        setAditivosVinculados(aditivosAtivos);
+        setAditivosSelecionados(aditivosAtivos.map(a => a.id));
+        setOpenEncerrar(false);
+        setOpenCancelarAditivos(true);
+        return; // Não cancela ainda — espera decisão dos aditivos
+      }
+    }
+
+    // Executar cancelamento efetivo
+    await executarCancelamentoContrato(selected, motivoCancelamento || "Cancelamento direto");
+  }
+
+  async function executarCancelamentoContrato(contrato: Contrato, motivo: string) {
     setProcessando(true);
     const { error } = await supabase
       .from("contratos")
       .update({ status: "Encerrado" })
-      .eq("id", selected.id);
+      .eq("id", contrato.id);
     if (error) { toast.error("Erro ao encerrar contrato: " + error.message); setProcessando(false); return; }
     // Cancelar pedido vinculado
-    if (selected.pedido_id) {
+    if (contrato.pedido_id) {
       await supabase
         .from("pedidos")
         .update({ status_pedido: "Cancelado", financeiro_status: "Cancelado" })
-        .eq("id", selected.pedido_id);
+        .eq("id", contrato.pedido_id);
     }
     // Registrar cancelamento para relatórios
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       await supabase.from("contratos_cancelados").insert({
-        contrato_id: selected.id,
-        contrato_numero: selected.numero_exibicao,
-        contrato_tipo: selected.tipo,
-        cliente_id: selected.cliente_id,
-        cliente_nome: selected.clientes?.nome_fantasia || null,
-        filial_id: selected.pedidos?.filial_id || selected.clientes?.filial_id || null,
-        plano_nome: selected.planos?.nome || null,
-        tipo_pedido: selected.pedidos?.tipo_pedido || null,
+        contrato_id: contrato.id,
+        contrato_numero: contrato.numero_exibicao,
+        contrato_tipo: contrato.tipo,
+        cliente_id: contrato.cliente_id,
+        cliente_nome: contrato.clientes?.nome_fantasia || null,
+        filial_id: contrato.pedidos?.filial_id || contrato.clientes?.filial_id || null,
+        plano_nome: contrato.planos?.nome || null,
+        tipo_pedido: contrato.pedidos?.tipo_pedido || null,
         cancelado_por: user.id,
-        motivo: "Cancelamento direto",
+        motivo: motivo,
       } as any);
     }
     setProcessando(false);
     toast.success("Contrato encerrado.");
     setOpenEncerrar(false);
     setOpenDetail(false);
-
-    // Se for contrato Base, verificar aditivos vinculados ativos
-    if (selected.tipo === "Base") {
-      const aditivosAtivos = contratos.filter(c => c.contrato_origem_id === selected.id && c.status === "Ativo");
-      if (aditivosAtivos.length > 0) {
-        setContratoBaseCancelado(selected);
-        setAditivosVinculados(aditivosAtivos);
-        setAditivosSelecionados(aditivosAtivos.map(a => a.id)); // pré-seleciona todos
-        setOpenCancelarAditivos(true);
-        return; // não checa projetos ainda — faz depois
-      }
-    }
+    setMotivoCancelamento("");
 
     // Verificar se há projetos ativos no painel de atendimento para este contrato
-    await verificarProjetosAtivos(selected);
+    await verificarProjetosAtivos(contrato);
     loadData();
   }
 
