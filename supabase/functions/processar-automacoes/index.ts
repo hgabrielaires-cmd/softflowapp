@@ -153,6 +153,10 @@ serve(async (req) => {
           const horasConfig = automacao.gatilho_config?.horas || 24;
 
           for (const pedido of pedidos) {
+            // Filter by tipo_pedido if configured
+            const cfgTipo = automacao.gatilho_config?.tipo_pedido;
+            if (cfgTipo && cfgTipo !== "qualquer" && pedido.tipo_pedido !== cfgTipo) continue;
+
             const entradaFila = pedido.data_entrada_fila || pedido.updated_at;
             const entradaFilaMs = new Date(entradaFila).getTime();
             const horasParado = (now - entradaFilaMs) / (1000 * 60 * 60);
