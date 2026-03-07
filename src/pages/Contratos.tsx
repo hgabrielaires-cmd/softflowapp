@@ -1454,14 +1454,17 @@ export default function Contratos() {
           const valorMensPlanoAnt = planoAnterior?.valor_mensalidade_padrao ?? 0;
           planoValorAnterior = fmtBRL(valorMensPlanoAnt);
 
-          // Buscar TODOS os adicionais existentes do cliente (de pedidos Novo e Módulo Adicional)
-          const todosContratos = contratos.filter(c => 
-            c.cliente_id === contrato.cliente_id && c.id !== contrato.id
+          // Buscar adicionais da hierarquia do contrato de origem (apenas ativos)
+          const contratoBaseId = contrato.contrato_origem_id;
+          const contratosHierarquia = contratos.filter(c => 
+            c.status === "Ativo" &&
+            c.id !== contrato.id &&
+            (c.id === contratoBaseId || c.contrato_origem_id === contratoBaseId)
           );
           const todosAdicionaisExistentes: ModuloAdicionadoItem[] = [];
-          for (const c of todosContratos) {
+          for (const c of contratosHierarquia) {
             const tipoPed = c.pedidos?.tipo_pedido;
-            if (tipoPed === "Novo" || tipoPed === "Módulo Adicional") {
+            if (tipoPed === "Novo" || tipoPed === "Módulo Adicional" || tipoPed === "Aditivo") {
               const mods = (c.pedidos?.modulos_adicionais || []) as ModuloAdicionadoItem[];
               todosAdicionaisExistentes.push(...mods);
             }
