@@ -956,7 +956,7 @@ function NotasFiscaisTab() {
       </div>
 
       {totalPages > 1 && (
-        <TablePagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+        <TablePagination currentPage={page} totalPages={totalPages} totalItems={total} itemsPerPage={PAGE_SIZE} onPageChange={setPage} />
       )}
 
       {/* NF Editor */}
