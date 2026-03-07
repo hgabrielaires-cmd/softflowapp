@@ -183,7 +183,7 @@ function FaturamentoContent() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function FaturasTab() {
-  const { filiaisFavoritas } = useUserFiliais();
+  const { filialPadraoId } = useUserFiliais();
   const [faturas, setFaturas] = useState<Fatura[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
