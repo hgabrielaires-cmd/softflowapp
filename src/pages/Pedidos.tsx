@@ -1124,7 +1124,7 @@ export default function Pedidos() {
           };
           const { data: novoPedido, error } = await supabase.from("pedidos").insert(insertPayload as any).select().single();
           if (error) throw error;
-          dispararAutomacaoPedidoStatus(novoPedido.id, "Novo", "Aguardando Aprovação de Desconto");
+          dispararAutomacaoPedidoStatus(novoPedido.id, "Novo", "Aguardando Aprovação de Desconto", form.tipo_pedido);
           await salvarDraftComentarios(novoPedido.id);
           await supabase.from("solicitacoes_desconto").insert({
             pedido_id: novoPedido.id,
