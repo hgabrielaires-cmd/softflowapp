@@ -696,7 +696,7 @@ export default function Contratos() {
       const q = filterBusca.trim().toLowerCase();
       const nome = (c.clientes?.nome_fantasia || "").toLowerCase();
       const razao = (c.clientes?.razao_social || "").toLowerCase();
-      const apelido = (c.clientes?.apelido || "").toLowerCase();
+      const apelido = ((c.clientes as any)?.apelido || "").toLowerCase();
       const cnpj = (c.clientes?.cnpj_cpf || "").toLowerCase().replace(/\D/g, "");
       const qNum = q.replace(/\D/g, "");
       const numero = (c.numero_exibicao || "").toLowerCase();
