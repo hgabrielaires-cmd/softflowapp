@@ -199,6 +199,7 @@ export default function Contratos() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDe, setFilterDe] = useState("");
   const [filterAte, setFilterAte] = useState("");
+  const [filterBusca, setFilterBusca] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 15;
 
