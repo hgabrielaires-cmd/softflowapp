@@ -1993,6 +1993,7 @@ export type Database = {
           contrato_id: string | null
           contrato_liberado: boolean
           created_at: string
+          data_entrada_fila: string | null
           desconto_implantacao_tipo: string
           desconto_implantacao_valor: number
           desconto_mensalidade_tipo: string
@@ -2049,6 +2050,7 @@ export type Database = {
           contrato_id?: string | null
           contrato_liberado?: boolean
           created_at?: string
+          data_entrada_fila?: string | null
           desconto_implantacao_tipo?: string
           desconto_implantacao_valor?: number
           desconto_mensalidade_tipo?: string
@@ -2105,6 +2107,7 @@ export type Database = {
           contrato_id?: string | null
           contrato_liberado?: boolean
           created_at?: string
+          data_entrada_fila?: string | null
           desconto_implantacao_tipo?: string
           desconto_implantacao_valor?: number
           desconto_mensalidade_tipo?: string
