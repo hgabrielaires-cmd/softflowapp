@@ -779,7 +779,7 @@ export default function Contratos() {
   async function verificarProjetosAtivos(contrato: Contrato) {
     const { data: projetos } = await supabase
       .from("painel_atendimento")
-      .select("id, tipo_operacao, filial_id, clientes(nome_fantasia), contratos(numero_exibicao), planos(nome)")
+      .select("id, tipo_operacao, filial_id, etapa_id, clientes(nome_fantasia), contratos(numero_exibicao), planos(nome), painel_etapas(nome)")
       .eq("contrato_id", contrato.id)
       .neq("status_projeto", "cancelado");
 
