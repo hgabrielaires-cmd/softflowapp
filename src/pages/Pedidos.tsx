@@ -1105,7 +1105,7 @@ export default function Pedidos() {
           payload.status_pedido = "Aguardando Financeiro";
           const { error } = await supabase.from("pedidos").update(payload).eq("id", editingPedido.id);
           if (error) throw error;
-          dispararAutomacaoPedidoStatus(editingPedido.id, editingPedido.status_pedido, "Aguardando Financeiro");
+          dispararAutomacaoPedidoStatus(editingPedido.id, editingPedido.status_pedido, "Aguardando Financeiro", form.tipo_pedido);
           toast.success(isReprovado ? "Pedido reenviado para o financeiro!" : "Pedido enviado para o financeiro!");
           await salvarDraftComentarios(editingPedido.id);
         } else {
