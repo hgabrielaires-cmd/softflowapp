@@ -2350,6 +2350,20 @@ Estou à disposição.`;
                     </span>
                   )}
                 </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0"
+                  title="Visualizar contrato"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleOpenDetail(aditivo);
+                  }}
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
               </label>
             ))}
           </div>
