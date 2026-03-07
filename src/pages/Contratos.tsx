@@ -2333,14 +2333,7 @@ Estou à disposição.`;
       {/* Cancelar Aditivos Vinculados Dialog */}
       <Dialog open={openCancelarAditivos} onOpenChange={(open) => {
         if (!open) {
-          setOpenCancelarAditivos(false);
-          setAditivosVinculados([]);
-          setAditivosSelecionados([]);
-          if (contratoBaseCancelado) {
-            verificarProjetosAtivos(contratoBaseCancelado);
-            setContratoBaseCancelado(null);
-          }
-          loadData();
+          handleManterTodosAtivos();
         }
       }}>
         <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
