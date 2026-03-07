@@ -355,6 +355,11 @@ serve(async (req) => {
           .eq("id", body.pedido_id)
           .maybeSingle();
 
+        // Secondary tipo_pedido check (fallback when body didn't include it)
+        if (cfgTipo && cfgTipo !== "qualquer" && !bodyTipo && pedido) {
+          if (pedido.tipo_pedido !== cfgTipo) continue;
+        }
+
         let clienteNome = "N/A";
         let vendedorNome = "N/A";
         let planoNome = "N/A";
