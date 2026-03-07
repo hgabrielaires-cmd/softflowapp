@@ -630,16 +630,24 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
                       <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
                         {sol.desconto_implantacao_valor > 0 && <p>Implantação: {sol.desconto_implantacao_tipo === "%" ? `${sol.desconto_implantacao_percentual?.toFixed(1)}%` : `R$ ${sol.desconto_implantacao_valor}`} de desconto {impFinal != null && `→ R$ ${impFinal.toFixed(2)}`}</p>}
                         {sol.desconto_mensalidade_valor > 0 && <p>Mensalidade: {sol.desconto_mensalidade_tipo === "%" ? `${sol.desconto_mensalidade_percentual?.toFixed(1)}%` : `R$ ${sol.desconto_mensalidade_valor}`} de desconto {mensFinal != null && `→ R$ ${mensFinal.toFixed(2)}`}</p>}
-                        {(sol as any)._margemBruta != null && (
-                          <div className="mt-1 pt-1 border-t border-border/50 flex gap-3">
-                            <p className={cn("font-medium", (sol as any)._margemBruta < 0 ? "text-destructive" : (sol as any)._margemBruta < 30 ? "text-warning" : "text-emerald-600")}>
-                              Margem: {(sol as any)._margemBruta.toFixed(1)}%
-                            </p>
-                            <p className="text-muted-foreground">
-                              Markup: {(sol as any)._markup?.toFixed(1)}%
-                            </p>
-                          </div>
-                        )}
+                        {(sol as any)._margemBruta != null && (() => {
+                          const margemIdeal = (sol as any)._margemIdeal;
+                          const margem = (sol as any)._margemBruta;
+                          const isAbaixoIdeal = margemIdeal != null && margem < margemIdeal;
+                          return (
+                            <div className="mt-1 pt-1 border-t border-border/50 flex gap-3 flex-wrap">
+                              <p className={cn("font-medium", margem < 0 || isAbaixoIdeal ? "text-destructive" : "text-emerald-600")}>
+                                Margem: {margem.toFixed(1)}%
+                              </p>
+                              <p className="text-muted-foreground">
+                                Markup: {(sol as any)._markup?.toFixed(1)}%
+                              </p>
+                              <p className="text-muted-foreground">
+                                Lucro: R$ {((sol as any)._lucroBruto ?? 0).toFixed(2)}
+                              </p>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
