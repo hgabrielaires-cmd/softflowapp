@@ -391,45 +391,68 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     if (!isGestor) return;
     const { data } = await supabase
       .from("solicitacoes_desconto")
-      .select("*, pedidos(cliente_id, plano_id, valor_implantacao_final, valor_mensalidade_final, clientes(nome_fantasia))")
+      .select("*, pedidos(cliente_id, plano_id, valor_implantacao_final, valor_mensalidade_final, modulos_adicionais, clientes(nome_fantasia))")
       .eq("status", "Aguardando")
       .order("created_at", { ascending: false });
+
+    // Load all custos (plan + modules) in a single query for efficiency
+    const { data: allCustos } = await supabase.from("custos").select("plano_id, modulo_id, preco_fornecedor, taxa_boleto, imposto_valor, imposto_tipo, imposto_base, despesas_adicionais");
+    const custoPorPlano: Record<string, any> = {};
+    const custoPorModulo: Record<string, any> = {};
+    (allCustos || []).forEach((c: any) => {
+      if (c.plano_id) custoPorPlano[c.plano_id] = c;
+      if (c.modulo_id) custoPorModulo[c.modulo_id] = c;
+    });
 
     const enriched = await Promise.all((data || []).map(async (sol: any) => {
       const { data: prof } = await supabase.from("profiles").select("full_name").eq("user_id", sol.vendedor_id).single();
 
-      // Calcular margem bruta e markup com base nos custos do plano
+      // Calcular margem bruta e markup sobre a MENSALIDADE (plano + módulos)
       let margemBruta: number | null = null;
       let markup: number | null = null;
       const planoId = (sol.pedidos as any)?.plano_id;
       const mensFinal = Number((sol.pedidos as any)?.valor_mensalidade_final) || 0;
 
-      if (planoId && mensFinal > 0) {
-        const { data: custoData } = await supabase
-          .from("custos")
-          .select("preco_fornecedor, taxa_boleto, imposto_valor, imposto_tipo, imposto_base, despesas_adicionais")
-          .eq("plano_id", planoId)
-          .maybeSingle();
+      if (mensFinal > 0) {
+        let custoTotalSemImposto = 0;
+        let impostoTotal = 0;
 
-        if (custoData) {
-          const fornecedor = Number(custoData.preco_fornecedor) || 0;
-          const taxaBoleto = Number(custoData.taxa_boleto) || 0;
-          const impostoValor = Number(custoData.imposto_valor) || 0;
-          const despesas = Number(custoData.despesas_adicionais) || 0;
-
-          let imposto = 0;
-          if (custoData.imposto_tipo === "%") {
-            const base = custoData.imposto_base === "venda" ? mensFinal : fornecedor;
-            imposto = base * (impostoValor / 100);
-          } else {
-            imposto = impostoValor;
-          }
-
-          const custoTotal = fornecedor + taxaBoleto + imposto + despesas;
-          const lucroBruto = mensFinal - custoTotal;
-          margemBruta = mensFinal > 0 ? (lucroBruto / mensFinal) * 100 : 0;
-          markup = custoTotal > 0 ? ((mensFinal / custoTotal) - 1) * 100 : 0;
+        // Custo do plano
+        const custoPlano = planoId ? custoPorPlano[planoId] : null;
+        if (custoPlano) {
+          custoTotalSemImposto += (Number(custoPlano.preco_fornecedor) || 0) + (Number(custoPlano.taxa_boleto) || 0) + (Number(custoPlano.despesas_adicionais) || 0);
         }
+
+        // Custo dos módulos adicionais
+        const mods = (sol.pedidos as any)?.modulos_adicionais || [];
+        const modsList = typeof mods === "string" ? JSON.parse(mods) : mods;
+        if (Array.isArray(modsList)) {
+          for (const mod of modsList) {
+            const custoMod = mod.modulo_id ? custoPorModulo[mod.modulo_id] : null;
+            if (custoMod) {
+              const qty = mod.quantidade || 1;
+              custoTotalSemImposto += (Number(custoMod.preco_fornecedor) || 0) * qty;
+              // Imposto por módulo (se sobre compra)
+              if (custoMod.imposto_tipo === "%" && custoMod.imposto_base === "compra") {
+                impostoTotal += (Number(custoMod.preco_fornecedor) || 0) * qty * ((Number(custoMod.imposto_valor) || 0) / 100);
+              }
+            }
+          }
+        }
+
+        // Imposto sobre venda (aplica-se ao total da mensalidade)
+        if (custoPlano?.imposto_tipo === "%" && custoPlano?.imposto_base === "venda") {
+          impostoTotal += mensFinal * ((Number(custoPlano.imposto_valor) || 0) / 100);
+        } else if (custoPlano?.imposto_tipo === "%" && custoPlano?.imposto_base === "compra") {
+          impostoTotal += (Number(custoPlano.preco_fornecedor) || 0) * ((Number(custoPlano.imposto_valor) || 0) / 100);
+        } else if (custoPlano) {
+          impostoTotal += Number(custoPlano.imposto_valor) || 0;
+        }
+
+        const custoFinal = custoTotalSemImposto + impostoTotal;
+        const lucroBruto = mensFinal - custoFinal;
+        margemBruta = (lucroBruto / mensFinal) * 100;
+        markup = custoFinal > 0 ? ((mensFinal / custoFinal) - 1) * 100 : 0;
       }
 
       return { ...sol, profiles: prof, _margemBruta: margemBruta, _markup: markup };
