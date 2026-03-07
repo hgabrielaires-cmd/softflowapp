@@ -774,10 +774,15 @@ export default function Contratos() {
   }
 
   async function handleCancelarAditivosSelecionados() {
+    if (!contratoBaseCancelado) return;
     setProcessando(true);
     try {
+      // Primeiro cancelar o contrato base
+      await executarCancelamentoContrato(contratoBaseCancelado, motivoCancelamento || "Cancelamento direto");
+
       const { data: { user } } = await supabase.auth.getUser();
 
+      // Depois cancelar os aditivos selecionados
       for (const aditivoId of aditivosSelecionados) {
         const aditivo = aditivosVinculados.find(a => a.id === aditivoId);
         if (!aditivo) continue;
@@ -788,7 +793,6 @@ export default function Contratos() {
           await supabase.from("pedidos").update({ status_pedido: "Cancelado", financeiro_status: "Cancelado" }).eq("id", aditivo.pedido_id);
         }
 
-        // Registrar cancelamento para relatórios
         if (user) {
           await supabase.from("contratos_cancelados").insert({
             contrato_id: aditivo.id,
@@ -806,7 +810,6 @@ export default function Contratos() {
           } as any);
         }
 
-        // Cancelar projetos vinculados ao aditivo
         const { data: projetos } = await supabase
           .from("painel_atendimento")
           .select("id")
@@ -825,22 +828,32 @@ export default function Contratos() {
         }
       }
 
-      const qtd = aditivosSelecionados.length;
-      toast.success(`${qtd} contrato(s) vinculado(s) cancelado(s).`);
+      if (aditivosSelecionados.length > 0) {
+        toast.success(`${aditivosSelecionados.length} contrato(s) vinculado(s) cancelado(s).`);
+      }
     } catch (err: any) {
-      toast.error("Erro ao cancelar aditivos: " + (err.message || ""));
+      toast.error("Erro ao cancelar: " + (err.message || ""));
     } finally {
       setProcessando(false);
       setOpenCancelarAditivos(false);
       setAditivosVinculados([]);
       setAditivosSelecionados([]);
-      // Agora verificar projetos do contrato base
-      if (contratoBaseCancelado) {
-        await verificarProjetosAtivos(contratoBaseCancelado);
-        setContratoBaseCancelado(null);
-      }
+      setContratoBaseCancelado(null);
+      setMotivoCancelamento("");
       loadData();
     }
+  }
+
+  async function handleManterTodosAtivos() {
+    if (!contratoBaseCancelado) return;
+    // Cancelar apenas o contrato base, sem tocar nos aditivos
+    await executarCancelamentoContrato(contratoBaseCancelado, motivoCancelamento || "Cancelamento direto");
+    setOpenCancelarAditivos(false);
+    setAditivosVinculados([]);
+    setAditivosSelecionados([]);
+    setContratoBaseCancelado(null);
+    setMotivoCancelamento("");
+    loadData();
   }
 
   async function handleCancelarProjetosVinculados() {
