@@ -779,7 +779,7 @@ export default function Contratos() {
   async function verificarProjetosAtivos(contrato: Contrato) {
     const { data: projetos } = await supabase
       .from("painel_atendimento")
-      .select("id, tipo_operacao, filial_id, clientes(nome_fantasia), contratos(numero_exibicao), planos(nome)")
+      .select("id, tipo_operacao, filial_id, etapa_id, clientes(nome_fantasia), contratos(numero_exibicao), planos(nome), painel_etapas(nome)")
       .eq("contrato_id", contrato.id)
       .neq("status_projeto", "cancelado");
 
@@ -874,7 +874,7 @@ export default function Contratos() {
   }
 
   async function handleCancelarProjetosVinculados() {
-    if (!cancelarProjetoMotivo.trim() || projetosAtivos.length === 0) return;
+    if (projetosAtivos.length === 0) return;
     setProcessando(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -887,7 +887,7 @@ export default function Contratos() {
           contrato_id: selected!.id,
           cliente_id: selected!.cliente_id,
           filial_id: projeto.filial_id,
-          motivo: cancelarProjetoMotivo.trim(),
+          motivo: cancelarProjetoMotivo.trim() || "Cancelamento de contrato",
           cancelado_por: user.id,
           tipo_operacao: projeto.tipo_operacao,
           plano_nome: (projeto.planos as any)?.nome || null,
@@ -895,24 +895,50 @@ export default function Contratos() {
           contrato_numero: (projeto.contratos as any)?.numero_exibicao || null,
         } as any);
 
-        // Atualizar status
+        // Remover do painel (excluir)
+        await supabase
+          .from("painel_atendimento")
+          .delete()
+          .eq("id", projeto.id);
+      }
+
+      toast.success("Projeto(s) removido(s) do painel e salvo(s) em cancelados!");
+    } catch (err: any) {
+      toast.error("Erro ao remover projeto(s): " + (err.message || ""));
+    } finally {
+      setProcessando(false);
+      setOpenCancelarProjeto(false);
+      setCancelarProjetoMotivo("");
+      setProjetosAtivos([]);
+    }
+  }
+
+  async function handleManterProjetoComTagCancelado() {
+    if (projetosAtivos.length === 0) return;
+    setProcessando(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+      const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
+
+      for (const projeto of projetosAtivos) {
+        // Marcar como cancelado (tag) mas manter no painel
         await supabase
           .from("painel_atendimento")
           .update({ status_projeto: "cancelado" } as any)
           .eq("id", projeto.id);
 
         // Comentário
-        const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
         await supabase.from("painel_comentarios").insert({
           card_id: projeto.id,
           criado_por: user.id,
-          texto: `❌ Projeto cancelado via encerramento de contrato por ${autorNome}: ${cancelarProjetoMotivo.trim()}`,
+          texto: `🚫 Contrato cancelado. Projeto marcado como cancelado por ${autorNome}. Nenhuma ação permitida.`,
         });
       }
 
-      toast.success("Projeto(s) cancelado(s) com sucesso!");
+      toast.success("Projeto(s) marcado(s) como cancelado no painel.");
     } catch (err: any) {
-      toast.error("Erro ao cancelar projeto(s): " + (err.message || ""));
+      toast.error("Erro: " + (err.message || ""));
     } finally {
       setProcessando(false);
       setOpenCancelarProjeto(false);
@@ -2320,40 +2346,47 @@ Estou à disposição.`;
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertCircle className="h-5 w-5" />
-              Cancelar Projeto no Painel?
+              Projeto encontrado no Painel
             </DialogTitle>
             <DialogDescription>
-              Foi encontrado projeto(s) ativo(s) no painel de atendimento vinculado(s) a este contrato. Deseja cancelá-lo(s)?
+              Este contrato possui projeto(s) ativo(s) no painel de atendimento. O que deseja fazer?
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             {projetosAtivos.map((p) => (
-              <div key={p.id} className="rounded-md border border-border p-2 text-sm">
-                <span className="font-medium">{(p.clientes as any)?.nome_fantasia}</span>
-                <span className="text-muted-foreground ml-2">— {p.tipo_operacao}</span>
+              <div key={p.id} className="rounded-md border border-border p-3 text-sm space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{(p.clientes as any)?.nome_fantasia}</span>
+                  <Badge variant="outline" className="text-xs">{p.tipo_operacao}</Badge>
+                </div>
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5" />
+                  <span>Etapa atual: <strong className="text-foreground">{(p.painel_etapas as any)?.nome || "Desconhecida"}</strong></span>
+                </div>
               </div>
             ))}
-            <div className="space-y-2">
-              <Label>Motivo do cancelamento *</Label>
-              <Textarea
-                placeholder="Descreva o motivo para cancelar o projeto..."
-                value={cancelarProjetoMotivo}
-                onChange={(e) => setCancelarProjetoMotivo(e.target.value)}
-                rows={3}
-              />
-            </div>
           </div>
-          <div className="flex justify-end gap-2 mt-2">
-            <Button variant="outline" onClick={() => { setOpenCancelarProjeto(false); setCancelarProjetoMotivo(""); setProjetosAtivos([]); }}>
-              Não cancelar
-            </Button>
+          <div className="flex flex-col gap-2 mt-2">
             <Button
               variant="destructive"
               onClick={handleCancelarProjetosVinculados}
-              disabled={!cancelarProjetoMotivo.trim() || processando}
+              disabled={processando}
+              className="w-full"
             >
-              {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Confirmar Cancelamento
+              {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Sim, excluir do painel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleManterProjetoComTagCancelado}
+              disabled={processando}
+              className="w-full border-destructive/30 text-destructive hover:bg-destructive/10"
+            >
+              {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Tag className="h-4 w-4 mr-2" />}
+              Não, manter com tag "Cancelado"
+            </Button>
+            <Button variant="ghost" onClick={() => { setOpenCancelarProjeto(false); setCancelarProjetoMotivo(""); setProjetosAtivos([]); }} className="w-full text-muted-foreground">
+              Ignorar
             </Button>
           </div>
         </DialogContent>
