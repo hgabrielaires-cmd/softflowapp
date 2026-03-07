@@ -838,9 +838,15 @@ serve(async (req) => {
                 const custoMod = mod.modulo_id ? custoPorModulo[mod.modulo_id] : null;
                 if (custoMod) {
                   const qty = mod.quantidade || 1;
-                  custoTotalSemImposto += (Number(custoMod.preco_fornecedor) || 0) * qty;
-                  if (custoMod.imposto_tipo === "%" && custoMod.imposto_base === "compra") {
-                    impostoTotal += (Number(custoMod.preco_fornecedor) || 0) * qty * ((Number(custoMod.imposto_valor) || 0) / 100);
+                  custoTotalSemImposto += ((Number(custoMod.preco_fornecedor) || 0) * qty) + ((Number(custoMod.taxa_boleto) || 0) * qty) + ((Number(custoMod.despesas_adicionais) || 0) * qty);
+                  // Imposto do módulo
+                  if (custoMod.imposto_tipo === "%") {
+                    const impostoBase = custoMod.imposto_base === "venda"
+                      ? (Number(mod.valor_mensalidade_modulo) || 0) * qty
+                      : (Number(custoMod.preco_fornecedor) || 0) * qty;
+                    impostoTotal += impostoBase * ((Number(custoMod.imposto_valor) || 0) / 100);
+                  } else {
+                    impostoTotal += (Number(custoMod.imposto_valor) || 0) * qty;
                   }
                 }
               }
