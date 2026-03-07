@@ -271,6 +271,7 @@ export default function Pedidos() {
   const [filialFavoritaId, setFilialFavoritaId] = useState<string | null>(null);
   const [filialParametros, setFilialParametros] = useState<any | null>(null);
   const [zapsignMap, setZapsignMap] = useState<Record<string, string>>({});
+  const [contratoStatusMap, setContratoStatusMap] = useState<Record<string, string>>({});
   const [servicosCatalogo, setServicosCatalogo] = useState<{ id: string; nome: string; valor: number; unidade_medida: string }[]>([]);
   const [servicoBuscaId, setServicoBuscaId] = useState("");
   const [servicoBuscaQtd, setServicoBuscaQtd] = useState("1");
@@ -670,17 +671,23 @@ export default function Pedidos() {
     if (pedidoIds.length > 0) {
       const { data: contratosData } = await supabase
         .from("contratos")
-        .select("id, pedido_id, contratos_zapsign(status)")
+        .select("id, pedido_id, status_geracao, contratos_zapsign(status)")
         .in("pedido_id", pedidoIds);
       const map: Record<string, string> = {};
+      const statusMap: Record<string, string> = {};
       (contratosData || []).forEach((c: any) => {
         if (c.pedido_id && c.contratos_zapsign?.status) {
           map[c.pedido_id] = c.contratos_zapsign.status;
         }
+        if (c.pedido_id && c.status_geracao) {
+          statusMap[c.pedido_id] = c.status_geracao;
+        }
       });
       setZapsignMap(map);
+      setContratoStatusMap(statusMap);
     } else {
       setZapsignMap({});
+      setContratoStatusMap({});
     }
 
     setLoading(false);
@@ -1528,6 +1535,10 @@ export default function Pedidos() {
                               return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700"><Send className="h-3 w-3" />Aguardando assinatura</span>;
                             }
                             if (contratoLiberado) {
+                              const stGeracao = contratoStatusMap[pedido.id];
+                              if (stGeracao === 'Pendente' || stGeracao === 'Gerando') {
+                                return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700"><Loader2 className="h-3 w-3 animate-spin" />Aguardando geração</span>;
+                              }
                               return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700"><FileText className="h-3 w-3" />Contrato gerado</span>;
                             }
                             if (isAprovado) {
@@ -3060,6 +3071,10 @@ export default function Pedidos() {
                         return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700"><Send className="h-3 w-3" />Aguardando assinatura</span>;
                       }
                       if (vp.contrato_liberado) {
+                        const stGeracao = contratoStatusMap[vp.id];
+                        if (stGeracao === 'Pendente' || stGeracao === 'Gerando') {
+                          return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700"><Loader2 className="h-3 w-3 animate-spin" />Aguardando geração</span>;
+                        }
                         return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700"><FileText className="h-3 w-3" />Contrato gerado</span>;
                       }
                       return (
