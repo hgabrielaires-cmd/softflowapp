@@ -351,7 +351,7 @@ serve(async (req) => {
         // Load pedido details (full data for variable substitution)
         const { data: pedido } = await supabase
           .from("pedidos")
-          .select("id, numero_exibicao, cliente_id, vendedor_id, plano_id, filial_id, valor_implantacao, valor_mensalidade, valor_implantacao_original, valor_mensalidade_original, valor_implantacao_final, valor_mensalidade_final, desconto_implantacao_tipo, desconto_implantacao_valor, desconto_mensalidade_tipo, desconto_mensalidade_valor, modulos_adicionais, observacoes, motivo_desconto, pagamento_mensalidade_observacao, pagamento_implantacao_observacao, contrato_id, tipo_pedido, servicos_pedido, created_at")
+          .select("id, numero_exibicao, cliente_id, vendedor_id, plano_id, filial_id, valor_implantacao, valor_mensalidade, valor_implantacao_original, valor_mensalidade_original, valor_implantacao_final, valor_mensalidade_final, desconto_implantacao_tipo, desconto_implantacao_valor, desconto_mensalidade_tipo, desconto_mensalidade_valor, modulos_adicionais, observacoes, motivo_desconto, pagamento_mensalidade_observacao, pagamento_implantacao_observacao, pagamento_mensalidade_forma, pagamento_implantacao_forma, pagamento_implantacao_parcelas, contrato_id, tipo_pedido, servicos_pedido, created_at")
           .eq("id", body.pedido_id)
           .maybeSingle();
 
@@ -512,6 +512,271 @@ serve(async (req) => {
           espelhoPedido = lines.join("\n");
         }
 
+        // ─── Build {espelho.upgrade} for Upgrade pedidos ───
+        let espelhoUpgrade = "";
+        if (pedido && pedido.tipo_pedido === "Upgrade" && pedido.contrato_id) {
+          const upLines: string[] = [];
+
+          // Fetch base contract with plan info
+          const { data: contratoBase } = await supabase
+            .from("contratos")
+            .select("id, numero_exibicao, plano_id, pedido_id, created_at, cliente_id")
+            .eq("id", pedido.contrato_id)
+            .maybeSingle();
+
+          // Fetch current plan (from base contract)
+          let planoAtualNome = "N/A";
+          let planoAtualValor = 0;
+          if (contratoBase?.plano_id) {
+            const { data: planoAtual } = await supabase
+              .from("planos")
+              .select("nome, valor_mensalidade_padrao, valor_implantacao_padrao")
+              .eq("id", contratoBase.plano_id)
+              .maybeSingle();
+            planoAtualNome = planoAtual?.nome || "N/A";
+            planoAtualValor = Number(planoAtual?.valor_mensalidade_padrao) || 0;
+          }
+
+          // Fetch new plan (from upgrade pedido)
+          let novoPlanoNome = "N/A";
+          let novoPlanoValor = 0;
+          let novoPlanoImplantacao = 0;
+          if (pedido.plano_id) {
+            const { data: novoPlano } = await supabase
+              .from("planos")
+              .select("nome, valor_mensalidade_padrao, valor_implantacao_padrao")
+              .eq("id", pedido.plano_id)
+              .maybeSingle();
+            novoPlanoNome = novoPlano?.nome || "N/A";
+            novoPlanoValor = Number(novoPlano?.valor_mensalidade_padrao) || 0;
+            novoPlanoImplantacao = Number(novoPlano?.valor_implantacao_padrao) || 0;
+          }
+
+          // Fetch base contract's pedido (for original addons, discounts, payment)
+          let pedidoBase: any = null;
+          let adicionaisBaseList: any[] = [];
+          if (contratoBase?.pedido_id) {
+            const { data: pb } = await supabase
+              .from("pedidos")
+              .select("id, modulos_adicionais, valor_implantacao_original, valor_implantacao_final, valor_mensalidade_original, valor_mensalidade_final, motivo_desconto, desconto_implantacao_valor, desconto_mensalidade_valor, desconto_implantacao_tipo, desconto_mensalidade_tipo")
+              .eq("id", contratoBase.pedido_id)
+              .maybeSingle();
+            pedidoBase = pb;
+            if (pb?.modulos_adicionais) {
+              adicionaisBaseList = typeof pb.modulos_adicionais === "string" ? JSON.parse(pb.modulos_adicionais) : pb.modulos_adicionais;
+              if (!Array.isArray(adicionaisBaseList)) adicionaisBaseList = [];
+            }
+          }
+
+          // Also fetch addons from other active aditivo contracts on the same base
+          const { data: aditivosAtivos } = await supabase
+            .from("contratos")
+            .select("pedido_id")
+            .eq("contrato_origem_id", contratoBase?.id)
+            .eq("status", "Ativo")
+            .eq("tipo", "Aditivo");
+
+          if (aditivosAtivos && aditivosAtivos.length > 0) {
+            const aditivoPedidoIds = aditivosAtivos.map((a: any) => a.pedido_id).filter(Boolean);
+            if (aditivoPedidoIds.length > 0) {
+              const { data: pedidosAditivos } = await supabase
+                .from("pedidos")
+                .select("modulos_adicionais")
+                .in("id", aditivoPedidoIds);
+              for (const pa of (pedidosAditivos || [])) {
+                if (pa.modulos_adicionais) {
+                  const mods = typeof pa.modulos_adicionais === "string" ? JSON.parse(pa.modulos_adicionais) : pa.modulos_adicionais;
+                  if (Array.isArray(mods)) adicionaisBaseList.push(...mods);
+                }
+              }
+            }
+          }
+
+          // Calculate "Cliente desde"
+          let clienteDesde = "N/A";
+          if (contratoBase?.created_at) {
+            const dtBase = new Date(contratoBase.created_at);
+            const agora = new Date();
+            const diffMs = agora.getTime() - dtBase.getTime();
+            const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const dtFormatted = dtBase.toLocaleDateString("pt-BR");
+            if (diffDias >= 360) {
+              const anos = Math.floor(diffDias / 365);
+              const diasRestantes = diffDias % 365;
+              clienteDesde = anos === 1
+                ? `${dtFormatted} - 1 ano e ${diasRestantes} dias`
+                : `${dtFormatted} - ${anos} anos e ${diasRestantes} dias`;
+            } else {
+              clienteDesde = `${dtFormatted} - ${diffDias} dias`;
+            }
+          }
+
+          // Calculate total addons
+          let totalAdicionaisBase = 0;
+          const adicionaisFormatted: string[] = [];
+          for (const mod of adicionaisBaseList) {
+            const qty = mod.quantidade || 1;
+            const unitPrice = Number(mod.valor_mensalidade_modulo) || 0;
+            const subtotal = qty * unitPrice;
+            totalAdicionaisBase += subtotal;
+            const modName = mod.nome || "Módulo";
+            if (qty > 1) {
+              adicionaisFormatted.push(`${modName} ${fmtCurrency(unitPrice)} (${qty}x) ${fmtCurrency(subtotal)}`);
+            } else {
+              adicionaisFormatted.push(`${modName} ${fmtCurrency(unitPrice)}`);
+            }
+          }
+
+          // Base contract implantation with discount
+          const implOrigBase = Number(pedidoBase?.valor_implantacao_original) || 0;
+          const implFinalBase = Number(pedidoBase?.valor_implantacao_final) || implOrigBase;
+          const temDescontoImplBase = implOrigBase > 0 && implOrigBase !== implFinalBase;
+
+          // Base contract mensalidade with discount
+          const mensOrigBase = Number(pedidoBase?.valor_mensalidade_original) || planoAtualValor;
+          const mensFinalBase = Number(pedidoBase?.valor_mensalidade_final) || mensOrigBase;
+          const totalMensalidadeAtual = mensFinalBase; // plan + addons already included in final
+          const descontoMensBase = mensOrigBase - mensFinalBase;
+
+          // Upgrade pedido values
+          const upgImplOrig = Number(pedido.valor_implantacao_original) || novoPlanoImplantacao;
+          const upgImplFinal = Number(pedido.valor_implantacao_final) || upgImplOrig;
+          const upgDescontoImpl = upgImplOrig - upgImplFinal;
+          const upgMensOrig = Number(pedido.valor_mensalidade_original) || novoPlanoValor;
+          const upgMensFinal = Number(pedido.valor_mensalidade_final) || upgMensOrig;
+          const upgDescontoMens = upgMensOrig - upgMensFinal;
+
+          // ── Build formatted message ──
+          upLines.push(`Tipo: *Upgrade de Plano*`);
+          upLines.push(``);
+          upLines.push(`Vendedor: *${vendedorNome}*`);
+          upLines.push(`Cliente: *${clienteNome}*`);
+          upLines.push(`Nº Contrato Atual: *${contratoBase?.numero_exibicao || contratoNumero}*`);
+          upLines.push(`Cliente desde: ${clienteDesde}`);
+          upLines.push(``);
+
+          // ☑️ Configuração Atual
+          upLines.push(`☑️ *Configuração Atual*`);
+          upLines.push(``);
+          upLines.push(`Plano: ${planoAtualNome}`);
+          upLines.push(`Valor: ${fmtCurrency(planoAtualValor)}`);
+          upLines.push(``);
+          if (adicionaisFormatted.length > 0) {
+            upLines.push(`Adicionais:`);
+            for (const ad of adicionaisFormatted) {
+              upLines.push(ad);
+            }
+            upLines.push(``);
+          }
+
+          // Implantação base
+          upLines.push(`Implantação:`);
+          if (temDescontoImplBase) {
+            upLines.push(`~${fmtCurrency(implOrigBase)}~ ${fmtCurrency(implFinalBase)}`);
+          } else if (implOrigBase > 0) {
+            upLines.push(fmtCurrency(implOrigBase));
+          } else {
+            upLines.push(fmtCurrency(implFinalBase));
+          }
+          if (pedidoBase?.motivo_desconto && temDescontoImplBase) {
+            upLines.push(``);
+            upLines.push(`*Motivo do desconto do contrato base:*`);
+            upLines.push(pedidoBase.motivo_desconto);
+          }
+          upLines.push(``);
+
+          // Mensalidade total atual
+          upLines.push(`Mensalidade total:`);
+          if (descontoMensBase > 0) {
+            upLines.push(`~${fmtCurrency(mensOrigBase)}~ Desconto: ${fmtCurrency(descontoMensBase)}`);
+            upLines.push(fmtCurrency(mensFinalBase));
+          } else {
+            upLines.push(fmtCurrency(mensFinalBase));
+          }
+          upLines.push(``);
+          upLines.push(`════════════════════`);
+          upLines.push(``);
+
+          // ☑️ Desconto Solicitado
+          upLines.push(`☑️ *Desconto Solicitado*`);
+          upLines.push(``);
+          upLines.push(`Novo Plano: *${novoPlanoNome}*`);
+          if (upgDescontoMens > 0) {
+            upLines.push(`Valor: ~${fmtCurrency(novoPlanoValor)}~`);
+            upLines.push(`Desconto Solicitado: ${fmtCurrency(upgDescontoMens)}`);
+            upLines.push(`Valor: ${fmtCurrency(upgMensFinal)}`);
+          } else {
+            upLines.push(`Valor: ${fmtCurrency(novoPlanoValor)}`);
+          }
+          upLines.push(``);
+
+          // Implantação do upgrade
+          upLines.push(`Implantação:`);
+          upLines.push(`Implantação dos módulos Plano: ${novoPlanoNome}`);
+          if (upgDescontoImpl > 0) {
+            upLines.push(`~${fmtCurrency(upgImplOrig)}~`);
+            upLines.push(`Desconto Solicitado: ${fmtCurrency(upgDescontoImpl)}`);
+            upLines.push(fmtCurrency(upgImplFinal));
+          } else {
+            upLines.push(fmtCurrency(upgImplOrig));
+          }
+          upLines.push(``);
+
+          // ☑️ Nova Configuração (Upgrade)
+          upLines.push(`☑️ *Nova Configuração (Upgrade)*`);
+          upLines.push(``);
+          upLines.push(`Plano: *${novoPlanoNome}*`);
+          upLines.push(`Valor: ${fmtCurrency(upgMensFinal)}`);
+          upLines.push(``);
+          if (adicionaisFormatted.length > 0) {
+            upLines.push(`Adicionais:`);
+            for (const ad of adicionaisFormatted) {
+              upLines.push(ad);
+            }
+            upLines.push(``);
+          }
+          const novaMensalidadeTotal = upgMensFinal + totalAdicionaisBase;
+          upLines.push(`Total Mensalidade: *${fmtCurrency(novaMensalidadeTotal)}*`);
+          upLines.push(``);
+
+          // Forma de pagamento mensalidade
+          if (pedido.pagamento_mensalidade_forma || pedido.pagamento_mensalidade_observacao) {
+            const formaMens = pedido.pagamento_mensalidade_forma || "";
+            const obsMens = pedido.pagamento_mensalidade_observacao || "";
+            upLines.push(`_${[formaMens, obsMens].filter(Boolean).join(" - ")}_`);
+            upLines.push(``);
+          }
+
+          // Diferença a pagar da implantação
+          upLines.push(`Diferença a Pagar da Implantação:`);
+          upLines.push(`*${fmtCurrency(upgImplFinal)}*`);
+          upLines.push(``);
+
+          // Forma de pagamento implantação
+          if (pedido.pagamento_implantacao_forma || pedido.pagamento_implantacao_observacao) {
+            const formaImpl = pedido.pagamento_implantacao_forma || "";
+            const obsImpl = pedido.pagamento_implantacao_observacao || "";
+            const parcImpl = pedido.pagamento_implantacao_parcelas ? `${pedido.pagamento_implantacao_parcelas}x` : "";
+            upLines.push(`_${[formaImpl, parcImpl, obsImpl].filter(Boolean).join(" - ")}_`);
+            upLines.push(``);
+          }
+
+          // Motivo do desconto
+          if (pedido.motivo_desconto) {
+            upLines.push(`*Motivo de desconto:*`);
+            upLines.push(pedido.motivo_desconto);
+            upLines.push(``);
+          }
+
+          // Observações
+          if (pedido.observacoes) {
+            upLines.push(`*Obs:*`);
+            upLines.push(pedido.observacoes);
+          }
+
+          espelhoUpgrade = upLines.join("\n");
+        }
+
         // Build discount detail strings
         const fmtCurrencyVar = (v: any) => {
           const num = Number(v) || 0;
@@ -561,6 +826,7 @@ serve(async (req) => {
             .replace(/\{pedido\.valor_total\}/g, valorTotal)
             .replace(/\{desconto\.detalhes\}/g, descontoDetalhes)
             .replace(/\{espelho\.pedido\}/g, espelhoPedido)
+            .replace(/\{espelho\.upgrade\}/g, espelhoUpgrade)
             .replace(/\{desconto\.motivo\}/g, pedido?.motivo_desconto || "Não informado")
             .replace(/\{status\.anterior\}/g, body.status_anterior || "N/A")
             .replace(/\{status\.novo\}/g, body.status_novo || "N/A")
