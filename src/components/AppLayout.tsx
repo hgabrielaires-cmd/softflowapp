@@ -391,12 +391,19 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     if (!isGestor) return;
     const { data } = await supabase
       .from("solicitacoes_desconto")
-      .select("*, pedidos(cliente_id, plano_id, valor_implantacao_final, valor_mensalidade_final, modulos_adicionais, clientes(nome_fantasia))")
+      .select("*, pedidos(cliente_id, plano_id, filial_id, valor_implantacao_final, valor_mensalidade_final, modulos_adicionais, clientes(nome_fantasia))")
       .eq("status", "Aguardando")
       .order("created_at", { ascending: false });
 
     // Load all custos (plan + modules) in a single query for efficiency
     const { data: allCustos } = await supabase.from("custos").select("plano_id, modulo_id, preco_fornecedor, taxa_boleto, imposto_valor, imposto_tipo, imposto_base, despesas_adicionais");
+
+    // Load filial_parametros for margem_venda_ideal
+    const { data: allFilialParams } = await supabase.from("filial_parametros").select("filial_id, margem_venda_ideal");
+    const margemIdealPorFilial: Record<string, number> = {};
+    (allFilialParams || []).forEach((fp: any) => {
+      margemIdealPorFilial[fp.filial_id] = Number(fp.margem_venda_ideal) || 0;
+    });
     const custoPorPlano: Record<string, any> = {};
     const custoPorModulo: Record<string, any> = {};
     (allCustos || []).forEach((c: any) => {
