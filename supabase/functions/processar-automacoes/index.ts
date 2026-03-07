@@ -385,25 +385,115 @@ serve(async (req) => {
           }
         }
 
-        // Build módulos adicionais text
-        let modulosAdicionaisNovos = "Nenhum";
-        if (pedido?.modulos_adicionais) {
-          try {
-            const mods = typeof pedido.modulos_adicionais === "string" ? JSON.parse(pedido.modulos_adicionais) : pedido.modulos_adicionais;
-            if (Array.isArray(mods) && mods.length > 0) {
-              const modIds = mods.map((m: any) => m.modulo_id || m.id).filter(Boolean);
-              if (modIds.length > 0) {
-                const { data: modulos } = await supabase.from("modulos").select("nome").in("id", modIds);
-                modulosAdicionaisNovos = (modulos || []).map((m: any) => m.nome).join(", ") || "Nenhum";
-              }
-            }
-          } catch { /* keep default */ }
-        }
-
+        // Build espelho do pedido
         const fmtCurrency = (v: any) => {
           const num = Number(v) || 0;
           return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
         };
+
+        let espelhoPedido = "";
+        if (pedido) {
+          const lines: string[] = [];
+
+          // ☑️ Módulos Contratados (do plano)
+          if (pedido.plano_id) {
+            lines.push("☑️ *Módulos Contratados*");
+            lines.push(`Plano *${planoNome}*`);
+
+            const { data: planoModulos } = await supabase
+              .from("plano_modulos")
+              .select("modulo_id, modulos(nome)")
+              .eq("plano_id", pedido.plano_id)
+              .eq("incluso_no_plano", true)
+              .order("ordem");
+
+            if (planoModulos && planoModulos.length > 0) {
+              for (const pm of planoModulos) {
+                const modNome = (pm as any).modulos?.nome || "Módulo";
+                lines.push(`• ${modNome}`);
+              }
+            }
+
+            // Valor base do plano
+            const { data: planoInfo } = await supabase
+              .from("planos")
+              .select("valor_mensalidade_padrao")
+              .eq("id", pedido.plano_id)
+              .maybeSingle();
+            if (planoInfo) {
+              lines.push("");
+              lines.push(`Valor base do plano: ${fmtCurrency(planoInfo.valor_mensalidade_padrao)}`);
+            }
+          }
+
+          // 🔘 ADICIONAIS
+          let totalAdicionais = 0;
+          const mods = pedido.modulos_adicionais
+            ? (typeof pedido.modulos_adicionais === "string" ? JSON.parse(pedido.modulos_adicionais) : pedido.modulos_adicionais)
+            : [];
+
+          if (Array.isArray(mods) && mods.length > 0) {
+            lines.push("");
+            lines.push("🔘 *ADICIONAIS*");
+            for (const mod of mods) {
+              const qty = mod.quantidade || 1;
+              const unitPrice = Number(mod.valor_mensalidade_modulo) || 0;
+              const subtotal = qty * unitPrice;
+              totalAdicionais += subtotal;
+              const modName = mod.nome || "Módulo";
+              if (qty > 1) {
+                lines.push(`✔️ ${modName} (${qty}x ${fmtCurrency(unitPrice)}) - ${fmtCurrency(subtotal)}`);
+              } else {
+                lines.push(`✔️ ${modName} - ${fmtCurrency(unitPrice)}`);
+              }
+            }
+            lines.push(`Total adicionais: ${fmtCurrency(totalAdicionais)}`);
+          }
+
+          // MENSALIDADE TOTAL
+          const mensOriginal = Number(pedido.valor_mensalidade_original) || 0;
+          const mensFinal = Number(pedido.valor_mensalidade_final) || mensOriginal;
+          lines.push("");
+          lines.push("*MENSALIDADE TOTAL*");
+          if (mensOriginal !== mensFinal && mensOriginal > 0) {
+            lines.push(`~${fmtCurrency(mensOriginal)}~ *${fmtCurrency(mensFinal)}*`);
+          } else {
+            lines.push(`*${fmtCurrency(mensFinal)}*`);
+          }
+
+          // Forma de pagamento mensalidade
+          if (pedido.pagamento_mensalidade_observacao || pedido.pagamento_mensalidade_forma) {
+            lines.push("");
+            if (pedido.pagamento_mensalidade_observacao) lines.push(pedido.pagamento_mensalidade_observacao);
+            if (pedido.pagamento_mensalidade_forma) lines.push(pedido.pagamento_mensalidade_forma.toUpperCase());
+          }
+
+          // IMPLANTAÇÃO
+          const implOriginal = Number(pedido.valor_implantacao_original) || 0;
+          const implFinal = Number(pedido.valor_implantacao_final) || implOriginal;
+          lines.push("");
+          lines.push("*IMPLANTAÇÃO E TREINAMENTO*");
+          if (implOriginal !== implFinal && implOriginal > 0) {
+            lines.push(`~${fmtCurrency(implOriginal)}~ *${fmtCurrency(implFinal)}*`);
+          } else {
+            lines.push(`*${fmtCurrency(implFinal)}*`);
+          }
+
+          // Forma pagamento implantação
+          if (pedido.pagamento_implantacao_observacao || pedido.pagamento_implantacao_forma) {
+            if (pedido.pagamento_implantacao_observacao) lines.push(pedido.pagamento_implantacao_observacao);
+            if (pedido.pagamento_implantacao_forma) lines.push(pedido.pagamento_implantacao_forma.toUpperCase());
+          }
+
+          // Observações
+          if (pedido.observacoes) {
+            lines.push("");
+            lines.push("*Observações:*");
+            lines.push(pedido.observacoes);
+          }
+
+          espelhoPedido = lines.join("\n");
+        }
 
         const replaceVars = (text: string, userName?: string) => {
           return text
@@ -413,14 +503,8 @@ serve(async (req) => {
             .replace(/\{vendedor\.nome\}/g, vendedorNome)
             .replace(/\{plano\.nome\}/g, planoNome)
             .replace(/\{contrato\.numero\}/g, contratoNumero)
-            .replace(/\{modulos\.adicionais_novos\}/g, modulosAdicionaisNovos)
-            .replace(/\{valores\.implantacao\}/g, fmtCurrency(pedido?.valor_implantacao_final ?? pedido?.valor_implantacao))
-            .replace(/\{valores\.mensalidade\}/g, fmtCurrency(pedido?.valor_mensalidade_final ?? pedido?.valor_mensalidade))
-            .replace(/\{valores\.mensalidade_atual\}/g, fmtCurrency(pedido?.valor_mensalidade_original ?? pedido?.valor_mensalidade))
-            .replace(/\{valores\.nova_mensalidade\}/g, fmtCurrency(pedido?.valor_mensalidade_final ?? pedido?.valor_mensalidade))
-            .replace(/\{regras\.mensalidade\}/g, pedido?.pagamento_mensalidade_observacao || "Nenhuma")
+            .replace(/\{espelho\.pedido\}/g, espelhoPedido)
             .replace(/\{desconto\.motivo\}/g, pedido?.motivo_desconto || "Não informado")
-            .replace(/\{pedido\.observacoes_geral\}/g, pedido?.observacoes || "Nenhuma")
             .replace(/\{status\.anterior\}/g, body.status_anterior || "N/A")
             .replace(/\{status\.novo\}/g, body.status_novo || "N/A")
             .replace(/\{saudacao\}/g, getSaudacao());
