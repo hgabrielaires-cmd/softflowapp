@@ -1301,57 +1301,32 @@ export default function Clientes() {
 
               {/* Downgrades */}
               <TabsContent value="downgrades" className="mt-3">
-                {usarContratosDowngrade ? (
-                  contratosDowngrade.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">Nenhum downgrade registrado.</p>
-                  ) : (
-                    <div className="rounded-lg border border-border divide-y divide-border">
-                      {contratosDowngrade.map((ct) => (
-                        <div key={ct.id} className="px-4 py-3 flex items-center justify-between">
+                {pedidosDowngrade.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">Nenhum downgrade registrado.</p>
+                ) : (
+                  <div className="rounded-lg border border-border divide-y divide-border">
+                    {pedidosDowngrade.map((p) => (
+                      <div key={p.id} className="px-4 py-3">
+                        <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium">{ct.numero_exibicao}</p>
-                            <p className="text-xs text-muted-foreground">{fmtDateTime(ct.created_at)}</p>
+                            <p className="text-sm font-medium">{p.planos?.nome || "—"}</p>
+                            <p className="text-xs text-muted-foreground">{fmtDateTime(p.created_at)}</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ct.status === "Ativo" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
-                              {ct.status}
-                            </span>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Visualizar downgrade" onClick={() => { setHistoricoOpen(false); navigate("/contratos"); }}>
+                            <div className="text-right space-y-1">
+                              <p className="text-xs font-mono">{fmtBRL(p.valor_total)}</p>
+                              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${p.status_pedido === "Cancelado" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700 border border-amber-200"}`}>
+                                {p.status_pedido === "Cancelado" ? "Cancelado" : "Downgrade"}
+                              </span>
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Visualizar pedido" onClick={() => { setHistoricoOpen(false); navigate("/pedidos"); }}>
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )
-                ) : (
-                  pedidosDowngrade.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">Nenhum downgrade registrado.</p>
-                  ) : (
-                    <div className="rounded-lg border border-border divide-y divide-border">
-                      {pedidosDowngrade.map((p) => (
-                        <div key={p.id} className="px-4 py-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium">{p.planos?.nome || "—"}</p>
-                              <p className="text-xs text-muted-foreground">{fmtDateTime(p.created_at)}</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="text-right space-y-1">
-                                <p className="text-xs font-mono">{fmtBRL(p.valor_total)}</p>
-                                <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${p.status_pedido === "Cancelado" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700 border border-amber-200"}`}>
-                                  {p.status_pedido === "Cancelado" ? "Cancelado" : "Downgrade"}
-                                </span>
-                              </div>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" title="Visualizar pedido" onClick={() => { setHistoricoOpen(false); navigate("/pedidos"); }}>
-                                <Eye className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )
+                      </div>
+                    ))}
+                  </div>
                 )}
               </TabsContent>
             </Tabs>
