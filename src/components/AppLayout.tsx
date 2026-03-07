@@ -391,13 +391,48 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     if (!isGestor) return;
     const { data } = await supabase
       .from("solicitacoes_desconto")
-      .select("*, pedidos(cliente_id, valor_implantacao_final, valor_mensalidade_final, clientes(nome_fantasia))")
+      .select("*, pedidos(cliente_id, plano_id, valor_implantacao_final, valor_mensalidade_final, clientes(nome_fantasia))")
       .eq("status", "Aguardando")
       .order("created_at", { ascending: false });
 
     const enriched = await Promise.all((data || []).map(async (sol: any) => {
       const { data: prof } = await supabase.from("profiles").select("full_name").eq("user_id", sol.vendedor_id).single();
-      return { ...sol, profiles: prof };
+
+      // Calcular margem bruta e markup com base nos custos do plano
+      let margemBruta: number | null = null;
+      let markup: number | null = null;
+      const planoId = (sol.pedidos as any)?.plano_id;
+      const mensFinal = Number((sol.pedidos as any)?.valor_mensalidade_final) || 0;
+
+      if (planoId && mensFinal > 0) {
+        const { data: custoData } = await supabase
+          .from("custos")
+          .select("preco_fornecedor, taxa_boleto, imposto_valor, imposto_tipo, imposto_base, despesas_adicionais")
+          .eq("plano_id", planoId)
+          .maybeSingle();
+
+        if (custoData) {
+          const fornecedor = Number(custoData.preco_fornecedor) || 0;
+          const taxaBoleto = Number(custoData.taxa_boleto) || 0;
+          const impostoValor = Number(custoData.imposto_valor) || 0;
+          const despesas = Number(custoData.despesas_adicionais) || 0;
+
+          let imposto = 0;
+          if (custoData.imposto_tipo === "%") {
+            const base = custoData.imposto_base === "venda" ? mensFinal : fornecedor;
+            imposto = base * (impostoValor / 100);
+          } else {
+            imposto = impostoValor;
+          }
+
+          const custoTotal = fornecedor + taxaBoleto + imposto + despesas;
+          const lucroBruto = mensFinal - custoTotal;
+          margemBruta = mensFinal > 0 ? (lucroBruto / mensFinal) * 100 : 0;
+          markup = custoTotal > 0 ? ((mensFinal / custoTotal) - 1) * 100 : 0;
+        }
+      }
+
+      return { ...sol, profiles: prof, _margemBruta: margemBruta, _markup: markup };
     }));
     setSolicitacoes(enriched as SolicitacaoDesconto[]);
   }
@@ -560,6 +595,16 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
                       <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
                         {sol.desconto_implantacao_valor > 0 && <p>Implantação: {sol.desconto_implantacao_tipo === "%" ? `${sol.desconto_implantacao_percentual?.toFixed(1)}%` : `R$ ${sol.desconto_implantacao_valor}`} de desconto {impFinal != null && `→ R$ ${impFinal.toFixed(2)}`}</p>}
                         {sol.desconto_mensalidade_valor > 0 && <p>Mensalidade: {sol.desconto_mensalidade_tipo === "%" ? `${sol.desconto_mensalidade_percentual?.toFixed(1)}%` : `R$ ${sol.desconto_mensalidade_valor}`} de desconto {mensFinal != null && `→ R$ ${mensFinal.toFixed(2)}`}</p>}
+                        {(sol as any)._margemBruta != null && (
+                          <div className="mt-1 pt-1 border-t border-border/50 flex gap-3">
+                            <p className={cn("font-medium", (sol as any)._margemBruta < 0 ? "text-destructive" : (sol as any)._margemBruta < 30 ? "text-warning" : "text-emerald-600")}>
+                              Margem: {(sol as any)._margemBruta.toFixed(1)}%
+                            </p>
+                            <p className="text-muted-foreground">
+                              Markup: {(sol as any)._markup?.toFixed(1)}%
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
