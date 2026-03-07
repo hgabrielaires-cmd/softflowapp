@@ -157,6 +157,7 @@ export default function Filiais() {
     setRegrasPadraoMensalidade("");
     setCongelarAcao("manter");
     setCongelarEtapaId(null);
+    setMargemVendaIdeal(0);
     loadParametros(filial.id);
     setOpenDialog(true);
   }
