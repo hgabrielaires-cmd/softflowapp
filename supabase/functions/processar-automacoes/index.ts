@@ -74,7 +74,7 @@ serve(async (req) => {
       // Get pedidos stuck in "Aguardando Financeiro"
       const { data: pedidos } = await supabase
         .from("pedidos")
-        .select("id, cliente_id, vendedor_id, filial_id, created_at, updated_at, data_entrada_fila, numero_exibicao, financeiro_status")
+        .select("id, cliente_id, vendedor_id, filial_id, created_at, updated_at, data_entrada_fila, numero_exibicao, financeiro_status, tipo_pedido")
         .eq("status_pedido", "Aguardando Financeiro");
 
       if (pedidos && pedidos.length > 0) {
