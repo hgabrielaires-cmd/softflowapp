@@ -444,6 +444,7 @@ function PlanosTab() {
               <Label>Plano ativo</Label>
             </div>
             <CustoFormFields custoForm={custoForm} setCustoForm={setCustoForm} />
+            <FormacaoPrecoSection custoForm={custoForm} precoVenda={parseFloat(form.valor_mensalidade_padrao) || 0} margemIdeal={margemIdeal} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
