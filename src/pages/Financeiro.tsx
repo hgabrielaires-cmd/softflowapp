@@ -601,6 +601,7 @@ export default function Financeiro() {
                 </div>
               )}
 
+              {selected.observacoes && (
                 <div className="bg-muted rounded-lg p-3">
                   <p className="text-muted-foreground text-xs mb-1">Observações do vendedor</p>
                   <p className="text-xs">{selected.observacoes}</p>
