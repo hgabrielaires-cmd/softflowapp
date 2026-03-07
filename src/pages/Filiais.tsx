@@ -110,6 +110,7 @@ export default function Filiais() {
     setRegrasPadraoMensalidade("");
     setCongelarAcao("manter");
     setCongelarEtapaId(null);
+    setMargemVendaIdeal(0);
   }
 
   function openCreate() {
