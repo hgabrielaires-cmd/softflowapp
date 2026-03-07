@@ -199,6 +199,7 @@ export default function Contratos() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDe, setFilterDe] = useState("");
   const [filterAte, setFilterAte] = useState("");
+  const [filterBusca, setFilterBusca] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 15;
 
@@ -579,7 +580,7 @@ export default function Contratos() {
         .from("contratos")
         .select(`
           *,
-          clientes(nome_fantasia, filial_id, razao_social, cnpj_cpf, inscricao_estadual, cidade, uf, cep, logradouro, numero, complemento, bairro, telefone, email),
+          clientes(nome_fantasia, filial_id, razao_social, cnpj_cpf, inscricao_estadual, cidade, uf, cep, logradouro, numero, complemento, bairro, telefone, email, apelido, responsavel_nome),
           planos(nome, descricao, valor_mensalidade_padrao),
           pedidos(
             status_pedido, contrato_liberado, financeiro_status,
@@ -691,13 +692,29 @@ export default function Contratos() {
     if (filterStatus !== "all" && c.status !== filterStatus) return false;
     if (filterDe && c.created_at < filterDe) return false;
     if (filterAte && c.created_at > filterAte + "T23:59:59") return false;
+    if (filterBusca.trim()) {
+      const q = filterBusca.trim().toLowerCase();
+      const nome = (c.clientes?.nome_fantasia || "").toLowerCase();
+      const razao = (c.clientes?.razao_social || "").toLowerCase();
+      const apelido = ((c.clientes as any)?.apelido || "").toLowerCase();
+      const cnpj = (c.clientes?.cnpj_cpf || "").toLowerCase().replace(/\D/g, "");
+      const qNum = q.replace(/\D/g, "");
+      const numero = (c.numero_exibicao || "").toLowerCase();
+      if (
+        !nome.includes(q) &&
+        !razao.includes(q) &&
+        !apelido.includes(q) &&
+        !numero.includes(q) &&
+        !(qNum && cnpj.includes(qNum))
+      ) return false;
+    }
     return true;
   });
 
   const ativos = filtered.filter((c) => c.status === "Ativo").length;
 
   // Reset page when filters change
-  useEffect(() => { setCurrentPage(1); }, [filterFilial, filterStatus, filterDe, filterAte]);
+  useEffect(() => { setCurrentPage(1); }, [filterFilial, filterStatus, filterDe, filterAte, filterBusca]);
    async function handleEncerrar() {
     if (!selected) return;
 
@@ -1666,6 +1683,15 @@ Estou à disposição.`;
         <div className="bg-card border border-border rounded-xl p-4 space-y-3">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Filter className="h-4 w-4" /> Filtros
+          </div>
+          <div className="relative sm:col-span-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, apelido, CNPJ, razão social ou nº contrato..."
+              value={filterBusca}
+              onChange={(e) => setFilterBusca(e.target.value)}
+              className="pl-9"
+            />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <Select value={filterFilial} onValueChange={setFilterFilial}>
