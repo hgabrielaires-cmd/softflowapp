@@ -1472,6 +1472,7 @@ export default function Clientes() {
                 )}
               </TabsContent>
             </Tabs>
+            </>
           )}
 
           <DialogFooter>
