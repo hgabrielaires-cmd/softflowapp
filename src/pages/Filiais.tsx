@@ -76,6 +76,7 @@ export default function Filiais() {
   const [regrasPadraoMensalidade, setRegrasPadraoMensalidade] = useState("");
   const [congelarAcao, setCongelarAcao] = useState("manter");
   const [congelarEtapaId, setCongelarEtapaId] = useState<string | null>(null);
+  const [margemVendaIdeal, setMargemVendaIdeal] = useState(0);
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
