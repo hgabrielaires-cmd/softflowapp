@@ -724,7 +724,8 @@ serve(async (req) => {
           upLines.push(`☑️ *Nova Configuração (Upgrade)*`);
           upLines.push(``);
           upLines.push(`Plano: *${novoPlanoNome}*`);
-          upLines.push(`Valor: ${fmtCurrency(upgMensFinal)}`);
+          const valorPlanoFinal = novoPlanoValor - upgDescontoMens;
+          upLines.push(`Valor: ${fmtCurrency(valorPlanoFinal)}`);
           upLines.push(``);
           if (adicionaisFormatted.length > 0) {
             upLines.push(`Adicionais:`);
@@ -733,7 +734,7 @@ serve(async (req) => {
             }
             upLines.push(``);
           }
-          const novaMensalidadeTotal = upgMensFinal + totalAdicionaisBase;
+          const novaMensalidadeTotal = valorPlanoFinal + totalAdicionaisBase;
           upLines.push(`Total Mensalidade: *${fmtCurrency(novaMensalidadeTotal)}*`);
           upLines.push(``);
 
