@@ -74,6 +74,14 @@ const PEDIDO_STATUS_OPTIONS = [
   "Desconto Aprovado",
 ];
 
+const TIPO_PEDIDO_OPTIONS = [
+  { value: "", label: "Qualquer tipo" },
+  { value: "Novo", label: "Novo (Contrato Base)" },
+  { value: "Upgrade", label: "Upgrade" },
+  { value: "Aditivo", label: "Módulo Adicional" },
+  { value: "OA", label: "Ordem de Atendimento (OA)" },
+];
+
 const GATILHO_LABELS: Record<string, string> = {
   pedido_status: "Mudança de Status do Pedido",
   tempo_sem_acao_financeiro: "Tempo sem Ação (Financeiro)",
