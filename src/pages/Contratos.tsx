@@ -2266,6 +2266,85 @@ Estou à disposição.`;
         </DialogContent>
       </Dialog>
 
+      {/* Cancelar Aditivos Vinculados Dialog */}
+      <Dialog open={openCancelarAditivos} onOpenChange={(open) => {
+        if (!open) {
+          setOpenCancelarAditivos(false);
+          setAditivosVinculados([]);
+          setAditivosSelecionados([]);
+          if (contratoBaseCancelado) {
+            verificarProjetosAtivos(contratoBaseCancelado);
+            setContratoBaseCancelado(null);
+          }
+          loadData();
+        }
+      }}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              Cancelar contratos vinculados?
+            </DialogTitle>
+            <DialogDescription>
+              O contrato base <strong>{contratoBaseCancelado?.numero_exibicao}</strong> foi cancelado. Existem{" "}
+              <strong>{aditivosVinculados.length}</strong> contrato(s) vinculado(s) ativo(s). Selecione quais deseja cancelar também:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {aditivosVinculados.map((aditivo) => (
+              <label
+                key={aditivo.id}
+                className="flex items-center gap-3 rounded-md border border-border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+              >
+                <Checkbox
+                  checked={aditivosSelecionados.includes(aditivo.id)}
+                  onCheckedChange={(checked) => {
+                    setAditivosSelecionados(prev =>
+                      checked
+                        ? [...prev, aditivo.id]
+                        : prev.filter(id => id !== aditivo.id)
+                    );
+                  }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-semibold text-sm">{aditivo.numero_exibicao}</span>
+                    {getTipoBadge(aditivo.tipo)}
+                  </div>
+                  {aditivo.pedidos?.tipo_pedido && (
+                    <span className="text-xs text-muted-foreground">
+                      {aditivo.pedidos.tipo_pedido === "Upgrade" ? "↑ Upgrade de Plano" : aditivo.pedidos.tipo_pedido === "Aditivo" ? "＋ Módulos Adicionais" : aditivo.pedidos.tipo_pedido === "OA" ? "📋 Ordem de Atendimento" : aditivo.pedidos.tipo_pedido}
+                    </span>
+                  )}
+                </div>
+              </label>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2 mt-2">
+            <Button variant="outline" onClick={() => {
+              setOpenCancelarAditivos(false);
+              setAditivosVinculados([]);
+              setAditivosSelecionados([]);
+              if (contratoBaseCancelado) {
+                verificarProjetosAtivos(contratoBaseCancelado);
+                setContratoBaseCancelado(null);
+              }
+              loadData();
+            }}>
+              Manter todos ativos
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelarAditivosSelecionados}
+              disabled={aditivosSelecionados.length === 0 || processando}
+            >
+              {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Cancelar {aditivosSelecionados.length} selecionado(s)
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* (Old generation popup removed - now unified in ZapSign popup below) */}
 
       {/* ZapSign Detail Dialog */}
