@@ -1066,6 +1066,7 @@ export default function Pedidos() {
           payload.status_pedido = "Aguardando Aprovação de Desconto";
           const { error } = await supabase.from("pedidos").update(payload).eq("id", editingPedido.id);
           if (error) throw error;
+          dispararAutomacaoPedidoStatus(editingPedido.id, editingPedido.status_pedido, "Aguardando Aprovação de Desconto");
           await supabase.from("solicitacoes_desconto").upsert({
             pedido_id: editingPedido.id,
             vendedor_id: vendedorId,
