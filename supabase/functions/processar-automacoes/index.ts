@@ -860,6 +860,7 @@ serve(async (req) => {
             const markupCalc = custoFinal > 0 ? ((mensFinalCalc / custoFinal) - 1) * 100 : 0;
             margemBrutaStr = margemBruta.toFixed(1) + "%";
             markupStr = markupCalc.toFixed(1) + "%";
+            lucroBrutoStr = fmtCurrencyVar(lucroBruto);
           }
         }
 
