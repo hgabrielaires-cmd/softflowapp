@@ -1,0 +1,1 @@
+UPDATE automacoes SET acao_config = jsonb_set(acao_config, '{template_id}', '"cfbe73a3-91b6-4d76-a22e-3f0af9b6a25a"') WHERE id = '599a2a72-7124-416f-8a94-eb3eb7845d6e';
