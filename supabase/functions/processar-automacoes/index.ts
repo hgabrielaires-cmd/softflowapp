@@ -75,7 +75,7 @@ serve(async (req) => {
       const { data: pedidos } = await supabase
         .from("pedidos")
         .select("id, cliente_id, vendedor_id, filial_id, created_at, updated_at, data_entrada_fila, numero_exibicao, financeiro_status")
-        .eq("financeiro_status", "Aguardando Financeiro");
+        .eq("status_pedido", "Aguardando Financeiro");
 
       if (pedidos && pedidos.length > 0) {
         // Load profiles for recipients
