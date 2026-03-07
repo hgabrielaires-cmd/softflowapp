@@ -96,6 +96,7 @@ interface PedidoRow {
   desconto_aprovado_por_nome: string | null;
   status_pedido: string;
   numero_exibicao: string;
+  created_at: string;
 }
 
 interface PlanoInfo {
