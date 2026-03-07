@@ -2357,7 +2357,7 @@ export default function Pedidos() {
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Implantação</p>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
-                        <Label className="text-xs">Forma de pagamento</Label>
+                        <Label className="text-xs">Forma de pagamento <span className="text-destructive">*</span></Label>
                         <Select value={form.pagamento_implantacao_forma} onValueChange={(v) => setForm((f) => ({ ...f, pagamento_implantacao_forma: v }))}>
                           <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                           <SelectContent>
