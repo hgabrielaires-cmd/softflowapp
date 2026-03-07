@@ -3071,6 +3071,10 @@ export default function Pedidos() {
                         return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700"><Send className="h-3 w-3" />Aguardando assinatura</span>;
                       }
                       if (vp.contrato_liberado) {
+                        const stGeracao = contratoStatusMap[vp.id];
+                        if (stGeracao === 'Pendente' || stGeracao === 'Gerando') {
+                          return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700"><Loader2 className="h-3 w-3 animate-spin" />Aguardando geração</span>;
+                        }
                         return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700"><FileText className="h-3 w-3" />Contrato gerado</span>;
                       }
                       return (
