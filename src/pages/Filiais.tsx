@@ -258,6 +258,7 @@ export default function Filiais() {
       regras_padrao_mensalidade: regrasPadraoMensalidade.trim() || null,
       congelar_acao: congelarAcao,
       congelar_etapa_id: congelarAcao === "mover" ? congelarEtapaId : null,
+      margem_venda_ideal: margemVendaIdeal,
     };
     // Check if exists
     const { data: existing } = await supabase.from("filial_parametros").select("id").eq("filial_id", filialId).maybeSingle();
