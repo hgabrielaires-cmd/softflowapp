@@ -228,18 +228,20 @@ function PlanosTab() {
   const [saving, setSaving] = useState(false);
   const [margemIdeal, setMargemIdeal] = useState(0);
 
-  async function fetch() {
+  async function fetchData() {
     setLoading(true);
-    const [{ data: p }, { data: f }] = await Promise.all([
+    const [{ data: p }, { data: f }, { data: params }] = await Promise.all([
       supabase.from("planos").select("*, fornecedores(id, nome_fantasia)").order("ordem").order("nome"),
       supabase.from("fornecedores").select("id, nome_fantasia").eq("ativo", true).order("nome_fantasia"),
+      supabase.from("filial_parametros").select("margem_venda_ideal").limit(1).maybeSingle(),
     ]);
     setPlanos(p || []);
     setFornecedores(f || []);
+    if (params) setMargemIdeal((params as any).margem_venda_ideal ?? 0);
     setLoading(false);
   }
 
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => { fetchData(); }, []);
 
   function openCreate() {
     setEditing(null);
