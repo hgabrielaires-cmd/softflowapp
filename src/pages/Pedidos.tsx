@@ -1180,7 +1180,7 @@ export default function Pedidos() {
       financeiro_aprovado_por: null,
     }).eq("id", pedido.id);
     if (error) { toast.error("Erro ao enviar pedido: " + error.message); return; }
-    dispararAutomacaoPedidoStatus(pedido.id, pedido.status_pedido, "Aguardando Financeiro");
+    dispararAutomacaoPedidoStatus(pedido.id, pedido.status_pedido, "Aguardando Financeiro", (pedido as any).tipo_pedido);
     toast.success("Pedido enviado para o financeiro!");
     loadData();
   }

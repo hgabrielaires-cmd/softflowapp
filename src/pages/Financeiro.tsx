@@ -227,7 +227,7 @@ export default function Financeiro() {
     setProcessando(false);
     if (error) { toast.error("Erro ao reprovar pedido: " + error.message); return; }
     toast.success("Pedido reprovado.");
-    dispararAutomacaoPedidoStatus(selected.id, "Aguardando Financeiro", "Reprovado Financeiro");
+    dispararAutomacaoPedidoStatus(selected.id, "Aguardando Financeiro", "Reprovado Financeiro", (selected as any).tipo_pedido);
     setOpenReprovar(false);
     setOpenDetail(false);
     setMotivoReprova("");
