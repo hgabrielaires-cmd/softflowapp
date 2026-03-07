@@ -74,7 +74,7 @@ serve(async (req) => {
       // Get pedidos stuck in "Aguardando Financeiro"
       const { data: pedidos } = await supabase
         .from("pedidos")
-        .select("id, cliente_id, vendedor_id, filial_id, created_at, updated_at, numero_exibicao, financeiro_status")
+        .select("id, cliente_id, vendedor_id, filial_id, created_at, updated_at, data_entrada_fila, numero_exibicao, financeiro_status")
         .eq("financeiro_status", "Aguardando Financeiro");
 
       if (pedidos && pedidos.length > 0) {
@@ -153,8 +153,9 @@ serve(async (req) => {
           const horasConfig = automacao.gatilho_config?.horas || 24;
 
           for (const pedido of pedidos) {
-            const updatedAt = new Date(pedido.updated_at).getTime();
-            const horasParado = (now - updatedAt) / (1000 * 60 * 60);
+            const entradaFila = pedido.data_entrada_fila || pedido.updated_at;
+            const entradaFilaMs = new Date(entradaFila).getTime();
+            const horasParado = (now - entradaFilaMs) / (1000 * 60 * 60);
 
             if (horasParado < horasConfig) continue;
 

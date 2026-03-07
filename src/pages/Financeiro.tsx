@@ -94,6 +94,7 @@ interface PedidoFila {
   financeiro_aprovado_por: string | null;
   contrato_liberado: boolean;
   observacoes: string | null;
+  data_entrada_fila: string | null;
   created_at: string;
   numero_exibicao?: string;
   clientes?: { nome_fantasia: string } | null;
@@ -343,7 +344,7 @@ export default function Financeiro() {
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {format(new Date(pedido.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                      {format(new Date(pedido.data_entrada_fila || pedido.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
