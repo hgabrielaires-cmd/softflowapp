@@ -2249,7 +2249,7 @@ Estou à disposição.`;
       )}
 
       {/* Encerrar AlertDialog */}
-      <AlertDialog open={openEncerrar} onOpenChange={setOpenEncerrar}>
+      <AlertDialog open={openEncerrar} onOpenChange={(open) => { setOpenEncerrar(open); if (!open) setMotivoCancelamento(""); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Cancelar contrato?</AlertDialogTitle>
@@ -2260,12 +2260,21 @@ Estou à disposição.`;
               ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Motivo do cancelamento</label>
+            <textarea
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[80px]"
+              placeholder="Informe o motivo do cancelamento..."
+              value={motivoCancelamento}
+              onChange={(e) => setMotivoCancelamento(e.target.value)}
+            />
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Voltar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleEncerrar}
-              disabled={processando}
+              disabled={processando || !motivoCancelamento.trim()}
             >
               {processando ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
