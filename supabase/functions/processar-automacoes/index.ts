@@ -351,7 +351,7 @@ serve(async (req) => {
         // Load pedido details (full data for variable substitution)
         const { data: pedido } = await supabase
           .from("pedidos")
-          .select("id, numero_exibicao, cliente_id, vendedor_id, plano_id, valor_implantacao, valor_mensalidade, valor_implantacao_original, valor_mensalidade_original, valor_implantacao_final, valor_mensalidade_final, desconto_implantacao_tipo, desconto_implantacao_valor, desconto_mensalidade_tipo, desconto_mensalidade_valor, modulos_adicionais, observacoes, motivo_desconto, pagamento_mensalidade_observacao, pagamento_implantacao_observacao, contrato_id, tipo_pedido, servicos_pedido")
+          .select("id, numero_exibicao, cliente_id, vendedor_id, plano_id, filial_id, valor_implantacao, valor_mensalidade, valor_implantacao_original, valor_mensalidade_original, valor_implantacao_final, valor_mensalidade_final, desconto_implantacao_tipo, desconto_implantacao_valor, desconto_mensalidade_tipo, desconto_mensalidade_valor, modulos_adicionais, observacoes, motivo_desconto, pagamento_mensalidade_observacao, pagamento_implantacao_observacao, contrato_id, tipo_pedido, servicos_pedido, created_at")
           .eq("id", body.pedido_id)
           .maybeSingle();
 
@@ -364,6 +364,7 @@ serve(async (req) => {
         let vendedorNome = "N/A";
         let planoNome = "N/A";
         let contratoNumero = "N/A";
+        let filialNome = "N/A";
 
         if (pedido) {
           const { data: cliente } = await supabase
@@ -398,6 +399,15 @@ serve(async (req) => {
               .eq("id", pedido.contrato_id)
               .maybeSingle();
             contratoNumero = contrato?.numero_exibicao || "N/A";
+          }
+
+          if (pedido.filial_id) {
+            const { data: filial } = await supabase
+              .from("filiais")
+              .select("nome")
+              .eq("id", pedido.filial_id)
+              .maybeSingle();
+            filialNome = filial?.nome || "N/A";
           }
         }
 
