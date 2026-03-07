@@ -209,6 +209,12 @@ export default function Contratos() {
   const [cancelarProjetoMotivo, setCancelarProjetoMotivo] = useState("");
   const [projetosAtivos, setProjetosAtivos] = useState<any[]>([]);
   const [processando, setProcessando] = useState(false);
+
+  // Cancelar aditivos vinculados
+  const [openCancelarAditivos, setOpenCancelarAditivos] = useState(false);
+  const [aditivosVinculados, setAditivosVinculados] = useState<Contrato[]>([]);
+  const [aditivosSelecionados, setAditivosSelecionados] = useState<string[]>([]);
+  const [contratoBaseCancelado, setContratoBaseCancelado] = useState<Contrato | null>(null);
   const [gerando, setGerando] = useState(false);
   const [gerarSignedUrl, setGerarSignedUrl] = useState<string | null>(null);
   const [zapsignRecords, setZapsignRecords] = useState<Record<string, ZapSignRecord>>({});
@@ -691,7 +697,7 @@ export default function Contratos() {
 
   // Reset page when filters change
   useEffect(() => { setCurrentPage(1); }, [filterFilial, filterStatus, filterDe, filterAte]);
-  async function handleEncerrar() {
+   async function handleEncerrar() {
     if (!selected) return;
     setProcessando(true);
     const { error } = await supabase
@@ -711,11 +717,28 @@ export default function Contratos() {
     setOpenEncerrar(false);
     setOpenDetail(false);
 
+    // Se for contrato Base, verificar aditivos vinculados ativos
+    if (selected.tipo === "Base") {
+      const aditivosAtivos = contratos.filter(c => c.contrato_origem_id === selected.id && c.status === "Ativo");
+      if (aditivosAtivos.length > 0) {
+        setContratoBaseCancelado(selected);
+        setAditivosVinculados(aditivosAtivos);
+        setAditivosSelecionados(aditivosAtivos.map(a => a.id)); // pré-seleciona todos
+        setOpenCancelarAditivos(true);
+        return; // não checa projetos ainda — faz depois
+      }
+    }
+
     // Verificar se há projetos ativos no painel de atendimento para este contrato
+    await verificarProjetosAtivos(selected);
+    loadData();
+  }
+
+  async function verificarProjetosAtivos(contrato: Contrato) {
     const { data: projetos } = await supabase
       .from("painel_atendimento")
       .select("id, tipo_operacao, filial_id, clientes(nome_fantasia), contratos(numero_exibicao), planos(nome)")
-      .eq("contrato_id", selected.id)
+      .eq("contrato_id", contrato.id)
       .neq("status_projeto", "cancelado");
 
     if (projetos && projetos.length > 0) {
@@ -723,8 +746,59 @@ export default function Contratos() {
       setCancelarProjetoMotivo("");
       setOpenCancelarProjeto(true);
     }
+  }
 
-    loadData();
+  async function handleCancelarAditivosSelecionados() {
+    setProcessando(true);
+    try {
+      for (const aditivoId of aditivosSelecionados) {
+        const aditivo = aditivosVinculados.find(a => a.id === aditivoId);
+        if (!aditivo) continue;
+
+        await supabase.from("contratos").update({ status: "Encerrado" }).eq("id", aditivoId);
+
+        if (aditivo.pedido_id) {
+          await supabase.from("pedidos").update({ status_pedido: "Cancelado", financeiro_status: "Cancelado" }).eq("id", aditivo.pedido_id);
+        }
+
+        // Cancelar projetos vinculados ao aditivo
+        const { data: projetos } = await supabase
+          .from("painel_atendimento")
+          .select("id")
+          .eq("contrato_id", aditivoId)
+          .neq("status_projeto", "cancelado");
+
+        if (projetos && projetos.length > 0) {
+          const { data: { user } } = await supabase.auth.getUser();
+          for (const p of projetos) {
+            await supabase.from("painel_atendimento").update({ status_projeto: "cancelado" } as any).eq("id", p.id);
+            if (user) {
+              await supabase.from("painel_comentarios").insert({
+                card_id: p.id,
+                criado_por: user.id,
+                texto: `❌ Projeto cancelado automaticamente pelo cancelamento do contrato base ${contratoBaseCancelado?.numero_exibicao || ""}.`,
+              });
+            }
+          }
+        }
+      }
+
+      const qtd = aditivosSelecionados.length;
+      toast.success(`${qtd} contrato(s) vinculado(s) cancelado(s).`);
+    } catch (err: any) {
+      toast.error("Erro ao cancelar aditivos: " + (err.message || ""));
+    } finally {
+      setProcessando(false);
+      setOpenCancelarAditivos(false);
+      setAditivosVinculados([]);
+      setAditivosSelecionados([]);
+      // Agora verificar projetos do contrato base
+      if (contratoBaseCancelado) {
+        await verificarProjetosAtivos(contratoBaseCancelado);
+        setContratoBaseCancelado(null);
+      }
+      loadData();
+    }
   }
 
   async function handleCancelarProjetosVinculados() {
@@ -2187,6 +2261,85 @@ Estou à disposição.`;
             >
               {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Confirmar Cancelamento
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancelar Aditivos Vinculados Dialog */}
+      <Dialog open={openCancelarAditivos} onOpenChange={(open) => {
+        if (!open) {
+          setOpenCancelarAditivos(false);
+          setAditivosVinculados([]);
+          setAditivosSelecionados([]);
+          if (contratoBaseCancelado) {
+            verificarProjetosAtivos(contratoBaseCancelado);
+            setContratoBaseCancelado(null);
+          }
+          loadData();
+        }
+      }}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              Cancelar contratos vinculados?
+            </DialogTitle>
+            <DialogDescription>
+              O contrato base <strong>{contratoBaseCancelado?.numero_exibicao}</strong> foi cancelado. Existem{" "}
+              <strong>{aditivosVinculados.length}</strong> contrato(s) vinculado(s) ativo(s). Selecione quais deseja cancelar também:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {aditivosVinculados.map((aditivo) => (
+              <label
+                key={aditivo.id}
+                className="flex items-center gap-3 rounded-md border border-border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+              >
+                <Checkbox
+                  checked={aditivosSelecionados.includes(aditivo.id)}
+                  onCheckedChange={(checked) => {
+                    setAditivosSelecionados(prev =>
+                      checked
+                        ? [...prev, aditivo.id]
+                        : prev.filter(id => id !== aditivo.id)
+                    );
+                  }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-semibold text-sm">{aditivo.numero_exibicao}</span>
+                    {getTipoBadge(aditivo.tipo)}
+                  </div>
+                  {aditivo.pedidos?.tipo_pedido && (
+                    <span className="text-xs text-muted-foreground">
+                      {aditivo.pedidos.tipo_pedido === "Upgrade" ? "↑ Upgrade de Plano" : aditivo.pedidos.tipo_pedido === "Aditivo" ? "＋ Módulos Adicionais" : aditivo.pedidos.tipo_pedido === "OA" ? "📋 Ordem de Atendimento" : aditivo.pedidos.tipo_pedido}
+                    </span>
+                  )}
+                </div>
+              </label>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2 mt-2">
+            <Button variant="outline" onClick={() => {
+              setOpenCancelarAditivos(false);
+              setAditivosVinculados([]);
+              setAditivosSelecionados([]);
+              if (contratoBaseCancelado) {
+                verificarProjetosAtivos(contratoBaseCancelado);
+                setContratoBaseCancelado(null);
+              }
+              loadData();
+            }}>
+              Manter todos ativos
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelarAditivosSelecionados}
+              disabled={aditivosSelecionados.length === 0 || processando}
+            >
+              {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Cancelar {aditivosSelecionados.length} selecionado(s)
             </Button>
           </div>
         </DialogContent>
