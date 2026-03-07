@@ -155,25 +155,41 @@ Deno.serve(async (req) => {
     if (contrato.contrato_origem_id) {
       const { data: contratoOrigem } = await supabase
         .from("contratos")
-        .select("numero_exibicao, plano_id, pedido_id, planos(id, nome, descricao, valor_mensalidade_padrao, valor_implantacao_padrao)")
+        .select("id, numero_exibicao, plano_id, pedido_id, planos(id, nome, descricao, valor_mensalidade_padrao, valor_implantacao_padrao)")
         .eq("id", contrato.contrato_origem_id)
         .maybeSingle();
       numeroContratoOrigem = contratoOrigem?.numero_exibicao || "";
       if (contratoOrigem && pedido?.tipo_pedido === "Upgrade") {
         planoAnterior = (contratoOrigem as any).planos;
 
-        // Buscar módulos adicionais que o cliente já tinha (do contrato base e aditivos anteriores)
-        const { data: pedidosAnteriores } = await supabase
-          .from("pedidos")
-          .select("modulos_adicionais, tipo_pedido")
-          .eq("cliente_id", contrato.cliente_id)
-          .in("tipo_pedido", ["Novo", "Módulo Adicional"])
-          .neq("id", pedido?.id || "");
-        
-        if (pedidosAnteriores) {
-          for (const p of pedidosAnteriores) {
-            const mods = (p.modulos_adicionais || []) as any[];
-            modulosAdicionaisExistentes.push(...mods);
+        // Buscar módulos adicionais existentes: apenas do contrato base de origem e seus aditivos
+        // 1. Pedido do contrato base de origem
+        const pedidoIdsOrigem: string[] = [];
+        if (contratoOrigem.pedido_id) pedidoIdsOrigem.push(contratoOrigem.pedido_id);
+
+        // 2. Aditivos vinculados ao contrato base de origem (excluindo o aditivo atual)
+        const { data: aditivosDoBase } = await supabase
+          .from("contratos")
+          .select("pedido_id")
+          .eq("contrato_origem_id", contratoOrigem.id)
+          .neq("id", contrato_id);
+        if (aditivosDoBase) {
+          for (const ad of aditivosDoBase) {
+            if (ad.pedido_id) pedidoIdsOrigem.push(ad.pedido_id);
+          }
+        }
+
+        if (pedidoIdsOrigem.length > 0) {
+          const { data: pedidosAnteriores } = await supabase
+            .from("pedidos")
+            .select("modulos_adicionais")
+            .in("id", pedidoIdsOrigem);
+
+          if (pedidosAnteriores) {
+            for (const p of pedidosAnteriores) {
+              const mods = (p.modulos_adicionais || []) as any[];
+              modulosAdicionaisExistentes.push(...mods);
+            }
           }
         }
       }
