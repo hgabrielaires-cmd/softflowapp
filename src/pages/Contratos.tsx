@@ -1684,6 +1684,15 @@ Estou à disposição.`;
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Filter className="h-4 w-4" /> Filtros
           </div>
+          <div className="relative sm:col-span-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, apelido, CNPJ, razão social ou nº contrato..."
+              value={filterBusca}
+              onChange={(e) => setFilterBusca(e.target.value)}
+              className="pl-9"
+            />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <Select value={filterFilial} onValueChange={setFilterFilial}>
               <SelectTrigger>
