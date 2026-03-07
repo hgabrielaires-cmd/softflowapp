@@ -692,6 +692,22 @@ export default function Contratos() {
     if (filterStatus !== "all" && c.status !== filterStatus) return false;
     if (filterDe && c.created_at < filterDe) return false;
     if (filterAte && c.created_at > filterAte + "T23:59:59") return false;
+    if (filterBusca.trim()) {
+      const q = filterBusca.trim().toLowerCase();
+      const nome = (c.clientes?.nome_fantasia || "").toLowerCase();
+      const razao = (c.clientes?.razao_social || "").toLowerCase();
+      const apelido = (c.clientes?.apelido || "").toLowerCase();
+      const cnpj = (c.clientes?.cnpj_cpf || "").toLowerCase().replace(/\D/g, "");
+      const qNum = q.replace(/\D/g, "");
+      const numero = (c.numero_exibicao || "").toLowerCase();
+      if (
+        !nome.includes(q) &&
+        !razao.includes(q) &&
+        !apelido.includes(q) &&
+        !numero.includes(q) &&
+        !(qNum && cnpj.includes(qNum))
+      ) return false;
+    }
     return true;
   });
 
