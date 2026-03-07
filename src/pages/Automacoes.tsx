@@ -320,6 +320,9 @@ export default function Automacoes() {
                       {a.gatilho_tipo === "tempo_sem_acao_financeiro" && (
                         <p className="text-xs text-muted-foreground mt-1">{a.gatilho_config?.horas || 24}h sem ação</p>
                       )}
+                      {(a.gatilho_config as any)?.tipo_pedido && (a.gatilho_config as any).tipo_pedido !== "qualquer" && (
+                        <Badge variant="secondary" className="text-[10px] mt-1">{(a.gatilho_config as any).tipo_pedido}</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5">
