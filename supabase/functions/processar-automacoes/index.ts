@@ -865,6 +865,8 @@ serve(async (req) => {
             .replace(/\{desconto\.motivo\}/g, pedido?.motivo_desconto || "Não informado")
             .replace(/\{status\.anterior\}/g, body.status_anterior || "N/A")
             .replace(/\{status\.novo\}/g, body.status_novo || "N/A")
+            .replace(/\{margem\.bruta\}/g, margemBrutaStr)
+            .replace(/\{margem\.markup\}/g, markupStr)
             .replace(/\{saudacao\}/g, getSaudacao());
         };
 
