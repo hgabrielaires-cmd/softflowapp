@@ -1303,6 +1303,41 @@ export default function Clientes() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
+            <>
+              {/* Rentabilidade Consolidada */}
+              {podeVerRentabilidade && rentabilidadeConsolidada && (
+                <div className="bg-muted rounded-lg p-4 space-y-2 mb-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">📊 Rentabilidade Consolidada (Mensal)</p>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Receita Mensal</span>
+                      <span className="font-mono font-semibold">{fmtBRL(rentabilidadeConsolidada.receitaMensal)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Custo Mensal</span>
+                      <span className="font-mono font-semibold">{fmtBRL(rentabilidadeConsolidada.custoMensal)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Margem Bruta</span>
+                      <span className={`font-mono font-semibold ${rentabilidadeConsolidada.margem < 0 || (margemIdealHistorico != null && rentabilidadeConsolidada.margem < margemIdealHistorico) ? "text-destructive" : rentabilidadeConsolidada.margem < 30 ? "text-amber-600" : "text-emerald-600"}`}>
+                        {rentabilidadeConsolidada.margem.toFixed(1)}%
+                        {margemIdealHistorico != null && rentabilidadeConsolidada.margem < margemIdealHistorico && " ⚠️"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Markup</span>
+                      <span className="font-mono font-semibold">{rentabilidadeConsolidada.markup.toFixed(1)}%</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-xs font-semibold border-t border-border pt-1.5">
+                    <span>Lucro Bruto</span>
+                    <span className={`font-mono ${rentabilidadeConsolidada.lucro < 0 ? "text-destructive" : "text-emerald-600"}`}>
+                      {fmtBRL(rentabilidadeConsolidada.lucro)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
             <Tabs defaultValue="contratos" className="mt-2">
               <TabsList className="w-full">
                 <TabsTrigger value="contratos" className="flex-1">
