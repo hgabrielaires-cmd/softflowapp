@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/table";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Link, CopyPlus, DollarSign, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Link, CopyPlus, DollarSign, Search, TrendingUp, AlertTriangle } from "lucide-react";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
