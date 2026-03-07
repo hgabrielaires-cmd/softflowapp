@@ -209,6 +209,12 @@ export default function Contratos() {
   const [cancelarProjetoMotivo, setCancelarProjetoMotivo] = useState("");
   const [projetosAtivos, setProjetosAtivos] = useState<any[]>([]);
   const [processando, setProcessando] = useState(false);
+
+  // Cancelar aditivos vinculados
+  const [openCancelarAditivos, setOpenCancelarAditivos] = useState(false);
+  const [aditivosVinculados, setAditivosVinculados] = useState<Contrato[]>([]);
+  const [aditivosSelecionados, setAditivosSelecionados] = useState<string[]>([]);
+  const [contratoBaseCancelado, setContratoBaseCancelado] = useState<Contrato | null>(null);
   const [gerando, setGerando] = useState(false);
   const [gerarSignedUrl, setGerarSignedUrl] = useState<string | null>(null);
   const [zapsignRecords, setZapsignRecords] = useState<Record<string, ZapSignRecord>>({});
