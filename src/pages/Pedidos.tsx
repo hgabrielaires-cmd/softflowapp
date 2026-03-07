@@ -967,6 +967,7 @@ export default function Pedidos() {
     } else {
       if (!form.plano_id) { toast.error("Selecione um plano"); return; }
     }
+    if (!form.pagamento_implantacao_forma) { toast.error("Selecione a forma de pagamento da implantação"); return; }
     setSaving(true);
     try {
       // Garantir que vendedorId nunca seja undefined
