@@ -337,15 +337,18 @@ serve(async (req) => {
 
         const template = automacao.acao_config?.template_id ? templateMap[automacao.acao_config.template_id] : null;
 
-        // Load pedido details
+        // Load pedido details (full data for variable substitution)
         const { data: pedido } = await supabase
           .from("pedidos")
-          .select("id, numero_exibicao, cliente_id, vendedor_id")
+          .select("id, numero_exibicao, cliente_id, vendedor_id, plano_id, valor_implantacao, valor_mensalidade, valor_implantacao_original, valor_mensalidade_original, valor_implantacao_final, valor_mensalidade_final, desconto_implantacao_tipo, desconto_implantacao_valor, desconto_mensalidade_tipo, desconto_mensalidade_valor, modulos_adicionais, observacoes, motivo_desconto, pagamento_mensalidade_observacao, pagamento_implantacao_observacao, contrato_id, tipo_pedido, servicos_pedido")
           .eq("id", body.pedido_id)
           .maybeSingle();
 
         let clienteNome = "N/A";
         let vendedorNome = "N/A";
+        let planoNome = "N/A";
+        let contratoNumero = "N/A";
+
         if (pedido) {
           const { data: cliente } = await supabase
             .from("clientes")
@@ -362,7 +365,45 @@ serve(async (req) => {
               .maybeSingle();
             vendedorNome = vendedor?.full_name || "N/A";
           }
+
+          if (pedido.plano_id) {
+            const { data: plano } = await supabase
+              .from("planos")
+              .select("nome")
+              .eq("id", pedido.plano_id)
+              .maybeSingle();
+            planoNome = plano?.nome || "N/A";
+          }
+
+          if (pedido.contrato_id) {
+            const { data: contrato } = await supabase
+              .from("contratos")
+              .select("numero_exibicao")
+              .eq("id", pedido.contrato_id)
+              .maybeSingle();
+            contratoNumero = contrato?.numero_exibicao || "N/A";
+          }
         }
+
+        // Build módulos adicionais text
+        let modulosAdicionaisNovos = "Nenhum";
+        if (pedido?.modulos_adicionais) {
+          try {
+            const mods = typeof pedido.modulos_adicionais === "string" ? JSON.parse(pedido.modulos_adicionais) : pedido.modulos_adicionais;
+            if (Array.isArray(mods) && mods.length > 0) {
+              const modIds = mods.map((m: any) => m.modulo_id || m.id).filter(Boolean);
+              if (modIds.length > 0) {
+                const { data: modulos } = await supabase.from("modulos").select("nome").in("id", modIds);
+                modulosAdicionaisNovos = (modulos || []).map((m: any) => m.nome).join(", ") || "Nenhum";
+              }
+            }
+          } catch { /* keep default */ }
+        }
+
+        const fmtCurrency = (v: any) => {
+          const num = Number(v) || 0;
+          return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        };
 
         const replaceVars = (text: string, userName?: string) => {
           return text
@@ -370,6 +411,16 @@ serve(async (req) => {
             .replace(/\{cliente\.nome_fantasia\}/g, clienteNome)
             .replace(/\{pedido\.numero\}/g, pedido?.numero_exibicao || "N/A")
             .replace(/\{vendedor\.nome\}/g, vendedorNome)
+            .replace(/\{plano\.nome\}/g, planoNome)
+            .replace(/\{contrato\.numero\}/g, contratoNumero)
+            .replace(/\{modulos\.adicionais_novos\}/g, modulosAdicionaisNovos)
+            .replace(/\{valores\.implantacao\}/g, fmtCurrency(pedido?.valor_implantacao_final ?? pedido?.valor_implantacao))
+            .replace(/\{valores\.mensalidade\}/g, fmtCurrency(pedido?.valor_mensalidade_final ?? pedido?.valor_mensalidade))
+            .replace(/\{valores\.mensalidade_atual\}/g, fmtCurrency(pedido?.valor_mensalidade_original ?? pedido?.valor_mensalidade))
+            .replace(/\{valores\.nova_mensalidade\}/g, fmtCurrency(pedido?.valor_mensalidade_final ?? pedido?.valor_mensalidade))
+            .replace(/\{regras\.mensalidade\}/g, pedido?.pagamento_mensalidade_observacao || "Nenhuma")
+            .replace(/\{desconto\.motivo\}/g, pedido?.motivo_desconto || "Não informado")
+            .replace(/\{pedido\.observacoes_geral\}/g, pedido?.observacoes || "Nenhuma")
             .replace(/\{status\.anterior\}/g, body.status_anterior || "N/A")
             .replace(/\{status\.novo\}/g, body.status_novo || "N/A")
             .replace(/\{saudacao\}/g, getSaudacao());
