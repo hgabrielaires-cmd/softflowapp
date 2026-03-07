@@ -823,10 +823,41 @@ serve(async (req) => {
             let custoTotalSemImposto = 0;
             let impostoTotal = 0;
 
-            // Custo do plano
+            // Helper: calcular custo de um plano
+            const calcPlanoCusto = (cp: any, receitaRef: number) => {
+              if (!cp) return { custo: 0, imposto: 0 };
+              const c = (Number(cp.preco_fornecedor) || 0) + (Number(cp.taxa_boleto) || 0) + (Number(cp.despesas_adicionais) || 0);
+              let imp = 0;
+              if (cp.imposto_tipo === "%" && cp.imposto_base === "venda") {
+                imp = receitaRef * ((Number(cp.imposto_valor) || 0) / 100);
+              } else if (cp.imposto_tipo === "%" && cp.imposto_base === "compra") {
+                imp = (Number(cp.preco_fornecedor) || 0) * ((Number(cp.imposto_valor) || 0) / 100);
+              } else {
+                imp = Number(cp.imposto_valor) || 0;
+              }
+              return { custo: c, imposto: imp };
+            };
+
+            // Custo do plano novo
             const custoPlano = pedido.plano_id ? custoPorPlano[pedido.plano_id] : null;
-            if (custoPlano) {
-              custoTotalSemImposto += (Number(custoPlano.preco_fornecedor) || 0) + (Number(custoPlano.taxa_boleto) || 0) + (Number(custoPlano.despesas_adicionais) || 0);
+            const planoNovo = calcPlanoCusto(custoPlano, mensFinalCalc);
+            custoTotalSemImposto += planoNovo.custo;
+            impostoTotal += planoNovo.imposto;
+
+            // Para Upgrade: subtrair custo do plano anterior
+            const isUpgrade = pedido.tipo_pedido === "Upgrade";
+            if (isUpgrade && pedido.contrato_id) {
+              const { data: contratoBase } = await supabase
+                .from("contratos")
+                .select("plano_id")
+                .eq("id", pedido.contrato_id)
+                .maybeSingle();
+              if (contratoBase?.plano_id) {
+                const custoPlanoAnt = custoPorPlano[contratoBase.plano_id] || null;
+                const planoAnt = calcPlanoCusto(custoPlanoAnt, 0);
+                custoTotalSemImposto -= planoAnt.custo;
+                impostoTotal -= planoAnt.imposto;
+              }
             }
 
             // Custo dos módulos adicionais
@@ -839,7 +870,6 @@ serve(async (req) => {
                 if (custoMod) {
                   const qty = mod.quantidade || 1;
                   custoTotalSemImposto += ((Number(custoMod.preco_fornecedor) || 0) * qty) + ((Number(custoMod.taxa_boleto) || 0) * qty) + ((Number(custoMod.despesas_adicionais) || 0) * qty);
-                  // Imposto do módulo
                   if (custoMod.imposto_tipo === "%") {
                     const impostoBase = custoMod.imposto_base === "venda"
                       ? (Number(mod.valor_mensalidade_modulo) || 0) * qty
@@ -852,16 +882,7 @@ serve(async (req) => {
               }
             }
 
-            // Imposto do plano
-            if (custoPlano?.imposto_tipo === "%" && custoPlano?.imposto_base === "venda") {
-              impostoTotal += mensFinalCalc * ((Number(custoPlano.imposto_valor) || 0) / 100);
-            } else if (custoPlano?.imposto_tipo === "%" && custoPlano?.imposto_base === "compra") {
-              impostoTotal += (Number(custoPlano.preco_fornecedor) || 0) * ((Number(custoPlano.imposto_valor) || 0) / 100);
-            } else if (custoPlano) {
-              impostoTotal += Number(custoPlano.imposto_valor) || 0;
-            }
-
-            const custoFinal = custoTotalSemImposto + impostoTotal;
+            const custoFinal = Math.max(0, custoTotalSemImposto + impostoTotal);
             const lucroBruto = mensFinalCalc - custoFinal;
             const margemBruta = (lucroBruto / mensFinalCalc) * 100;
             const markupCalc = custoFinal > 0 ? ((mensFinalCalc / custoFinal) - 1) * 100 : 0;
