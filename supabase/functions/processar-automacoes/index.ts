@@ -804,6 +804,7 @@ serve(async (req) => {
         // ─── Calculate margem bruta and markup (mensalidade only, including modules) ───
         let margemBrutaStr = "N/A";
         let markupStr = "N/A";
+        let lucroBrutoStr = "N/A";
         if (pedido) {
           const mensFinalCalc = Number(pedido.valor_mensalidade_final) || Number(pedido.valor_mensalidade) || 0;
           if (mensFinalCalc > 0) {
