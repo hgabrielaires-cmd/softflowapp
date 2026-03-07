@@ -334,7 +334,7 @@ function PlanosTab() {
     const { error } = await supabase.from("planos").delete().eq("id", p.id);
     if (error) { toast.error("Erro ao excluir"); return; }
     toast.success("Plano excluído");
-    fetch();
+    fetchData();
   }
 
   async function toggleAtivo(p: any) {
