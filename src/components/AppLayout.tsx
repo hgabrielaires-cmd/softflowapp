@@ -425,10 +425,44 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
         let custoTotalSemImposto = 0;
         let impostoTotal = 0;
 
-        // Custo do plano
+        const tipoPedido = (sol.pedidos as any)?.tipo_pedido;
+        const contratoId = (sol.pedidos as any)?.contrato_id;
+        const isUpgrade = tipoPedido === 'Upgrade';
+
+        // Helper: calcular custo de um plano
+        const calcPlano = (cp: any) => {
+          if (!cp) return { custo: 0, imposto: 0 };
+          const c = (Number(cp.preco_fornecedor) || 0) + (Number(cp.taxa_boleto) || 0) + (Number(cp.despesas_adicionais) || 0);
+          let imp = 0;
+          if (cp.imposto_tipo === "%" && cp.imposto_base === "venda") {
+            imp = mensFinal * ((Number(cp.imposto_valor) || 0) / 100);
+          } else if (cp.imposto_tipo === "%" && cp.imposto_base === "compra") {
+            imp = (Number(cp.preco_fornecedor) || 0) * ((Number(cp.imposto_valor) || 0) / 100);
+          } else if (cp) {
+            imp = Number(cp.imposto_valor) || 0;
+          }
+          return { custo: c, imposto: imp };
+        };
+
+        // Custo do plano novo
         const custoPlano = planoId ? custoPorPlano[planoId] : null;
-        if (custoPlano) {
-          custoTotalSemImposto += (Number(custoPlano.preco_fornecedor) || 0) + (Number(custoPlano.taxa_boleto) || 0) + (Number(custoPlano.despesas_adicionais) || 0);
+        const planoNovo = calcPlano(custoPlano);
+        custoTotalSemImposto += planoNovo.custo;
+        impostoTotal += planoNovo.imposto;
+
+        // Para Upgrade: subtrair custo do plano anterior
+        if (isUpgrade && contratoId) {
+          const { data: contratoBase } = await supabase
+            .from("contratos")
+            .select("plano_id")
+            .eq("id", contratoId)
+            .maybeSingle();
+          if (contratoBase?.plano_id) {
+            const custoPlanoAnt = custoPorPlano[contratoBase.plano_id] || null;
+            const planoAnt = calcPlano(custoPlanoAnt);
+            custoTotalSemImposto -= planoAnt.custo;
+            impostoTotal -= planoAnt.imposto;
+          }
         }
 
         // Custo dos módulos adicionais
@@ -448,16 +482,9 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
           }
         }
 
-        // Imposto sobre venda (aplica-se ao total da mensalidade)
-        if (custoPlano?.imposto_tipo === "%" && custoPlano?.imposto_base === "venda") {
-          impostoTotal += mensFinal * ((Number(custoPlano.imposto_valor) || 0) / 100);
-        } else if (custoPlano?.imposto_tipo === "%" && custoPlano?.imposto_base === "compra") {
-          impostoTotal += (Number(custoPlano.preco_fornecedor) || 0) * ((Number(custoPlano.imposto_valor) || 0) / 100);
-        } else if (custoPlano) {
-          impostoTotal += Number(custoPlano.imposto_valor) || 0;
-        }
+        // Imposto sobre venda do plano já incluído acima via calcPlano
 
-        const custoFinal = custoTotalSemImposto + impostoTotal;
+        const custoFinal = Math.max(0, custoTotalSemImposto + impostoTotal);
         const lucroBruto = mensFinal - custoFinal;
         margemBruta = (lucroBruto / mensFinal) * 100;
         markup = custoFinal > 0 ? ((mensFinal / custoFinal) - 1) * 100 : 0;
