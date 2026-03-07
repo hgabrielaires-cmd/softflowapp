@@ -199,9 +199,9 @@ export default function Automacoes() {
 
     let gatilhoConfig: Record<string, any> = {};
     if (gatilhoTipo === "pedido_status") {
-      gatilhoConfig = { status_de: statusDe, status_para: statusPara };
+      gatilhoConfig = { status_de: statusDe, status_para: statusPara, tipo_pedido: tipoPedido || null };
     } else if (gatilhoTipo === "tempo_sem_acao_financeiro") {
-      gatilhoConfig = { modulo: "financeiro", horas: horasSemAcao };
+      gatilhoConfig = { modulo: "financeiro", horas: horasSemAcao, tipo_pedido: tipoPedido || null };
     }
 
     const acaoConfig: Record<string, any> = {
