@@ -404,6 +404,7 @@ Deno.serve(async (req) => {
       "cliente.cep": cliente?.cep || "",
       "cliente.telefone": cliente?.telefone || "",
       "cliente.email": cliente?.email || "",
+      "cliente.responsavel_nome": cliente?.responsavel_nome || "",
       "contato.nome_decisor": decisor?.nome || "",
       "contato.telefone_decisor": decisor?.telefone || "",
       "contato.email_decisor": decisor?.email || "",
