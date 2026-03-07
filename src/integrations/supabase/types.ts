@@ -558,6 +558,107 @@ export type Database = {
           },
         ]
       }
+      faturas: {
+        Row: {
+          cliente_id: string
+          contrato_id: string | null
+          created_at: string
+          data_emissao: string
+          data_pagamento: string | null
+          data_vencimento: string
+          filial_id: string | null
+          forma_pagamento: string | null
+          gerado_automaticamente: boolean
+          id: string
+          numero_fatura: string
+          observacoes: string | null
+          pedido_id: string | null
+          referencia_ano: number | null
+          referencia_mes: number | null
+          status: string
+          tipo: string
+          updated_at: string
+          valor: number
+          valor_desconto: number
+          valor_final: number
+        }
+        Insert: {
+          cliente_id: string
+          contrato_id?: string | null
+          created_at?: string
+          data_emissao?: string
+          data_pagamento?: string | null
+          data_vencimento: string
+          filial_id?: string | null
+          forma_pagamento?: string | null
+          gerado_automaticamente?: boolean
+          id?: string
+          numero_fatura?: string
+          observacoes?: string | null
+          pedido_id?: string | null
+          referencia_ano?: number | null
+          referencia_mes?: number | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          valor?: number
+          valor_desconto?: number
+          valor_final?: number
+        }
+        Update: {
+          cliente_id?: string
+          contrato_id?: string | null
+          created_at?: string
+          data_emissao?: string
+          data_pagamento?: string | null
+          data_vencimento?: string
+          filial_id?: string | null
+          forma_pagamento?: string | null
+          gerado_automaticamente?: boolean
+          id?: string
+          numero_fatura?: string
+          observacoes?: string | null
+          pedido_id?: string | null
+          referencia_ano?: number | null
+          referencia_mes?: number | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          valor?: number
+          valor_desconto?: number
+          valor_final?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faturas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faturas_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faturas_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faturas_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       filiais: {
         Row: {
           assinatura_url: string | null
@@ -1095,6 +1196,79 @@ export type Database = {
             columns: ["fornecedor_id"]
             isOneToOne: false
             referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notas_fiscais: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          data_emissao: string
+          fatura_id: string | null
+          filial_id: string | null
+          id: string
+          numero_nf: string
+          observacoes: string | null
+          pdf_url: string | null
+          serie: string | null
+          status: string
+          updated_at: string
+          valor: number
+          xml_url: string | null
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          data_emissao?: string
+          fatura_id?: string | null
+          filial_id?: string | null
+          id?: string
+          numero_nf: string
+          observacoes?: string | null
+          pdf_url?: string | null
+          serie?: string | null
+          status?: string
+          updated_at?: string
+          valor?: number
+          xml_url?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          data_emissao?: string
+          fatura_id?: string | null
+          filial_id?: string | null
+          id?: string
+          numero_nf?: string
+          observacoes?: string | null
+          pdf_url?: string | null
+          serie?: string | null
+          status?: string
+          updated_at?: string
+          valor?: number
+          xml_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notas_fiscais_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notas_fiscais_fatura_id_fkey"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "faturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notas_fiscais_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
             referencedColumns: ["id"]
           },
         ]
