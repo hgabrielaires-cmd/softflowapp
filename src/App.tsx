@@ -36,6 +36,7 @@ import DashboardAtendimento from "./pages/DashboardAtendimento";
 import Segmentos from "./pages/Segmentos";
 import Setores from "./pages/Setores";
 import Automacoes from "./pages/Automacoes";
+import Faturamento from "./pages/Faturamento";
 
 const queryClient = new QueryClient();
 
