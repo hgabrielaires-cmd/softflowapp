@@ -704,7 +704,7 @@ serve(async (req) => {
           upLines.push(`Valor do Plano: ${fmtCurrency(novoPlanoValor)}`);
           if (upgDescontoMens > 0) {
             upLines.push(`Desconto Solicitado: ${fmtCurrency(upgDescontoMens)}`);
-            upLines.push(`Valor Final: *${fmtCurrency(upgMensFinal)}*`);
+            upLines.push(`Valor Final: *${fmtCurrency(novoPlanoValor - upgDescontoMens)}*`);
           }
           upLines.push(``);
 
