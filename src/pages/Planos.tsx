@@ -326,7 +326,7 @@ function PlanosTab() {
     toast.success(editing ? "Plano atualizado" : "Plano criado");
     setSaving(false);
     setDialogOpen(false);
-    fetch();
+    fetchData();
   }
 
   async function handleDelete(p: any) {
