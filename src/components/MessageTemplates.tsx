@@ -88,6 +88,21 @@ const VARIAVEIS_DISPONIVEIS = [
   { var: "{link_assinatura}", desc: "Link de assinatura" },
   { var: "{empresa.nome}", desc: "Nome da empresa" },
   { var: "{vendedor.nome}", desc: "Nome do vendedor" },
+  { var: "{espelho.pedido}", desc: "Espelho completo do pedido" },
+  { var: "{espelho.upgrade}", desc: "Espelho detalhado de Upgrade (config atual + desconto + nova config)" },
+  { var: "{desconto.detalhes}", desc: "Detalhamento de descontos aplicados" },
+  { var: "{desconto.motivo}", desc: "Motivo do desconto" },
+  { var: "{pedido.numero}", desc: "Nº do pedido" },
+  { var: "{pedido.tipo}", desc: "Tipo do pedido" },
+  { var: "{pedido.data}", desc: "Data do pedido" },
+  { var: "{pedido.valor_implantacao}", desc: "Valor implantação do pedido" },
+  { var: "{pedido.valor_mensalidade}", desc: "Valor mensalidade do pedido" },
+  { var: "{pedido.valor_total}", desc: "Valor total do pedido" },
+  { var: "{filial.nome}", desc: "Nome da filial" },
+  { var: "{saudacao}", desc: "Saudação automática por horário" },
+  { var: "{usuario.nome}", desc: "Nome do destinatário" },
+  { var: "{status.anterior}", desc: "Status anterior do pedido" },
+  { var: "{status.novo}", desc: "Novo status do pedido" },
 ];
 
 export function MessageTemplates() {
