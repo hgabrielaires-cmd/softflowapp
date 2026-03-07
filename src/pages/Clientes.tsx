@@ -35,7 +35,8 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Building2, Phone, Mail, FileText, ArrowUpCircle, ArrowDownCircle, Package, Loader2, MapPin, AlertCircle, Users, Star, Trash2, Upload } from "lucide-react";
+import { Plus, Search, Pencil, Building2, Phone, Mail, FileText, ArrowUpCircle, ArrowDownCircle, Package, Loader2, MapPin, AlertCircle, Users, Star, Trash2, Upload, Eye } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { ClientePlanViewer } from "@/components/ClientePlanViewer";
 import { ImportClientesDialog } from "@/components/ImportClientesDialog";
 import { TablePagination } from "@/components/TablePagination";
@@ -105,6 +106,7 @@ interface PedidoHistorico {
 
 export default function Clientes() {
   const { roles, profile } = useAuth();
+  const navigate = useNavigate();
   const isAdmin = roles.includes("admin");
   const isFinanceiro = roles.includes("financeiro");
   const isVendedor = roles.includes("vendedor");
@@ -1226,9 +1228,14 @@ export default function Clientes() {
                           <p className="text-sm font-medium">{ct.numero_exibicao}</p>
                           <p className="text-xs text-muted-foreground">{fmtDateTime(ct.created_at)}</p>
                         </div>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ct.status === "Ativo" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
-                          {ct.status}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ct.status === "Ativo" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
+                            {ct.status}
+                          </span>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Visualizar contrato" onClick={() => { setHistoricoOpen(false); navigate("/contratos"); }}>
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1247,9 +1254,14 @@ export default function Clientes() {
                           <p className="text-sm font-medium">{ct.numero_exibicao}</p>
                           <p className="text-xs text-muted-foreground">{fmtDateTime(ct.created_at)}</p>
                         </div>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ct.status === "Ativo" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
-                          {ct.status}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ct.status === "Ativo" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
+                            {ct.status}
+                          </span>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Visualizar aditivo" onClick={() => { setHistoricoOpen(false); navigate("/contratos"); }}>
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1269,11 +1281,16 @@ export default function Clientes() {
                             <p className="text-sm font-medium">{p.planos?.nome || "—"}</p>
                             <p className="text-xs text-muted-foreground">{fmtDateTime(p.created_at)}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-xs font-mono">{fmtBRL(p.valor_total)}</p>
-                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${TIPO_PEDIDO_COLORS[p.tipo_pedido] || "bg-muted text-muted-foreground"}`}>
-                              {p.tipo_pedido}
-                            </span>
+                          <div className="flex items-center gap-2">
+                            <div className="text-right">
+                              <p className="text-xs font-mono">{fmtBRL(p.valor_total)}</p>
+                              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${p.status_pedido === "Cancelado" ? "bg-red-100 text-red-700" : TIPO_PEDIDO_COLORS[p.tipo_pedido] || "bg-muted text-muted-foreground"}`}>
+                                {p.status_pedido === "Cancelado" ? "Cancelado" : p.tipo_pedido}
+                              </span>
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Visualizar pedido" onClick={() => { setHistoricoOpen(false); navigate("/pedidos"); }}>
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -1295,11 +1312,16 @@ export default function Clientes() {
                             <p className="text-sm font-medium">{p.planos?.nome || "—"}</p>
                             <p className="text-xs text-muted-foreground">{fmtDateTime(p.created_at)}</p>
                           </div>
-                          <div className="text-right space-y-1">
-                            <p className="text-xs font-mono">{fmtBRL(p.valor_total)}</p>
-                            <span className="text-xs px-1.5 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 border border-amber-200">
-                              Downgrade
-                            </span>
+                          <div className="flex items-center gap-2">
+                            <div className="text-right space-y-1">
+                              <p className="text-xs font-mono">{fmtBRL(p.valor_total)}</p>
+                              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${p.status_pedido === "Cancelado" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700 border border-amber-200"}`}>
+                                {p.status_pedido === "Cancelado" ? "Cancelado" : "Downgrade"}
+                              </span>
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Visualizar pedido" onClick={() => { setHistoricoOpen(false); navigate("/pedidos"); }}>
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
                           </div>
                         </div>
                       </div>
