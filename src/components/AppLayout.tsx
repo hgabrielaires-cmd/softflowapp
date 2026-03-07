@@ -306,6 +306,9 @@ function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSign
               {!collapsed && (
                 <div className="text-left overflow-hidden flex-1">
                   <p className="text-sidebar-foreground text-sm font-medium truncate leading-tight">{profile?.full_name || "Usuário"}</p>
+                  <p className="text-sidebar-foreground/40 text-[10px] truncate leading-tight mt-0.5">
+                    v{APP_VERSION} • {new Date(APP_BUILD_DATE).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  </p>
                 </div>
               )}
             </button>
