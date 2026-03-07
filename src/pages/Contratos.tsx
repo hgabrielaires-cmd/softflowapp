@@ -712,6 +712,22 @@ export default function Contratos() {
         .update({ status_pedido: "Cancelado", financeiro_status: "Cancelado" })
         .eq("id", selected.pedido_id);
     }
+    // Registrar cancelamento para relatórios
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from("contratos_cancelados").insert({
+        contrato_id: selected.id,
+        contrato_numero: selected.numero_exibicao,
+        contrato_tipo: selected.tipo,
+        cliente_id: selected.cliente_id,
+        cliente_nome: selected.clientes?.nome_fantasia || null,
+        filial_id: selected.pedidos?.filial_id || selected.clientes?.filial_id || null,
+        plano_nome: selected.planos?.nome || null,
+        tipo_pedido: selected.pedidos?.tipo_pedido || null,
+        cancelado_por: user.id,
+        motivo: "Cancelamento direto",
+      } as any);
+    }
     setProcessando(false);
     toast.success("Contrato encerrado.");
     setOpenEncerrar(false);
