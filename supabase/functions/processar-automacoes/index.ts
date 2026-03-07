@@ -415,7 +415,6 @@ serve(async (req) => {
               lines.push("");
               lines.push(`Valor base do plano: ${fmtCurrency(planoInfo.valor_mensalidade_padrao)}`);
             }
-            }
           }
 
           // 🔘 ADICIONAIS
