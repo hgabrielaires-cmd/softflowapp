@@ -226,6 +226,7 @@ function PlanosTab() {
   });
   const [custoForm, setCustoForm] = useState<CustoForm>({ ...CUSTO_EMPTY });
   const [saving, setSaving] = useState(false);
+  const [margemIdeal, setMargemIdeal] = useState(0);
 
   async function fetch() {
     setLoading(true);
