@@ -714,7 +714,7 @@ export default function Contratos() {
   const ativos = filtered.filter((c) => c.status === "Ativo").length;
 
   // Reset page when filters change
-  useEffect(() => { setCurrentPage(1); }, [filterFilial, filterStatus, filterDe, filterAte]);
+  useEffect(() => { setCurrentPage(1); }, [filterFilial, filterStatus, filterDe, filterAte, filterBusca]);
    async function handleEncerrar() {
     if (!selected) return;
 
