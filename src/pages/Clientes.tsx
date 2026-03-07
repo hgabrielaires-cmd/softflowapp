@@ -163,20 +163,22 @@ export default function Clientes() {
   useEffect(() => {
     if (!profile?.user_id) return;
     (async () => {
-      const { data: roles } = await supabase
+      const { data: rolesData } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", profile.user_id);
-      const userRoles = (roles || []).map((r: any) => r.role);
+      const userRoles = (rolesData || []).map((r: any) => r.role);
       const { data: perms } = await supabase
         .from("role_permissions")
         .select("permissao, ativo")
         .in("role", userRoles)
-        .eq("permissao", "acao.importar_clientes")
+        .in("permissao", ["acao.importar_clientes", "acao.ver_rentabilidade_historico"])
         .eq("ativo", true);
-      setPodeImportar((perms || []).length > 0);
+      const permSet = new Set((perms || []).map((p: any) => p.permissao));
+      setPodeImportar(permSet.has("acao.importar_clientes"));
+      setPodeVerRentabilidade(isAdmin || permSet.has("acao.ver_rentabilidade_historico"));
     })();
-  }, [profile?.user_id]);
+  }, [profile?.user_id, isAdmin]);
 
   async function handleCepBlur() {
     const cep = form.cep.replace(/\D/g, "");
