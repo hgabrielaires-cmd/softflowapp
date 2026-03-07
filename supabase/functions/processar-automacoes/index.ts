@@ -314,7 +314,7 @@ serve(async (req) => {
         // If we have both config and body tipo, check now. If body is missing, we'll check after loading pedido.
         if (cfgTipo && cfgTipo !== "qualquer" && bodyTipo && cfgTipo !== bodyTipo) continue;
 
-        if (!matchDe || !matchPara || !matchTipo) continue;
+        if (!matchDe || !matchPara) continue;
 
         // Build recipients and send (same logic as above)
         const recipients: any[] = [];
