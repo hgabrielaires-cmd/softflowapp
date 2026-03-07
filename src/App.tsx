@@ -39,7 +39,9 @@ import Automacoes from "./pages/Automacoes";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  useVersionCheck();
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
