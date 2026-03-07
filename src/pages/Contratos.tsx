@@ -1612,7 +1612,15 @@ Estou à disposição.`;
                 filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((contrato) => (
                   <TableRow key={contrato.id}>
                     <TableCell className="font-mono font-semibold text-sm">
-                      {contrato.numero_exibicao || `#${contrato.numero_registro}`}
+                      <div>{contrato.numero_exibicao || `#${contrato.numero_registro}`}</div>
+                      {contrato.contrato_origem_id && (() => {
+                        const origem = contratos.find(c => c.id === contrato.contrato_origem_id);
+                        return origem ? (
+                          <span className="text-[10px] text-muted-foreground font-normal flex items-center gap-0.5">
+                            ↳ {origem.numero_exibicao}
+                          </span>
+                        ) : null;
+                      })()}
                     </TableCell>
                     <TableCell className="font-medium">
                       {contrato.clientes?.nome_fantasia || "—"}
