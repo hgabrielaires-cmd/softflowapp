@@ -471,6 +471,8 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     }));
     setSolicitacoes(enriched as SolicitacaoDesconto[]);
   }
+
+  async function loadPedidoDetails(pedidoId: string, sol: SolicitacaoDesconto) {
     setLoadingPedido(true);
     try {
       const { data } = await supabase
