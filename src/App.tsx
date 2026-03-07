@@ -282,6 +282,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/automacoes"
+              element={
+                <ProtectedRoute>
+                  <Automacoes />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
