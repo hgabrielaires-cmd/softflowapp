@@ -94,6 +94,7 @@ const VARIAVEIS_DISPONIVEIS = [
   { var: "{desconto.motivo}", desc: "Motivo do desconto" },
   { var: "{margem.bruta}", desc: "Margem bruta % da mensalidade" },
   { var: "{margem.markup}", desc: "Markup % da mensalidade" },
+  { var: "{margem.lucro}", desc: "Lucro bruto R$ da mensalidade" },
   { var: "{pedido.numero}", desc: "Nº do pedido" },
   { var: "{pedido.tipo}", desc: "Tipo do pedido" },
   { var: "{pedido.data}", desc: "Data do pedido" },

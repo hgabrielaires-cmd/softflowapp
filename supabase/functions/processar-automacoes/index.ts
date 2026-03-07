@@ -804,6 +804,7 @@ serve(async (req) => {
         // ─── Calculate margem bruta and markup (mensalidade only, including modules) ───
         let margemBrutaStr = "N/A";
         let markupStr = "N/A";
+        let lucroBrutoStr = "N/A";
         if (pedido) {
           const mensFinalCalc = Number(pedido.valor_mensalidade_final) || Number(pedido.valor_mensalidade) || 0;
           if (mensFinalCalc > 0) {
@@ -860,6 +861,7 @@ serve(async (req) => {
             const markupCalc = custoFinal > 0 ? ((mensFinalCalc / custoFinal) - 1) * 100 : 0;
             margemBrutaStr = margemBruta.toFixed(1) + "%";
             markupStr = markupCalc.toFixed(1) + "%";
+            lucroBrutoStr = fmtCurrencyVar(lucroBruto);
           }
         }
 
@@ -893,6 +895,7 @@ serve(async (req) => {
             .replace(/\{status\.novo\}/g, body.status_novo || "N/A")
             .replace(/\{margem\.bruta\}/g, margemBrutaStr)
             .replace(/\{margem\.markup\}/g, markupStr)
+            .replace(/\{margem\.lucro\}/g, lucroBrutoStr)
             .replace(/\{saudacao\}/g, getSaudacao());
         };
 
