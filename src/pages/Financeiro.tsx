@@ -126,6 +126,8 @@ export default function Financeiro() {
   const [openValores, setOpenValores] = useState(false);
   const [pedidoPlano, setPedidoPlano] = useState<any>(null);
   const [pedidoModulos, setPedidoModulos] = useState<any[]>([]);
+  const [rentabilidade, setRentabilidade] = useState<{ margem: number; markup: number; lucro: number } | null>(null);
+  const [margemIdeal, setMargemIdeal] = useState<number | null>(null);
 
   const canAccess = isAdmin || isFinanceiro || (menuPerms !== null && menuPerms.has("menu.financeiro"));
 
