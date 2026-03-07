@@ -100,8 +100,18 @@ interface PedidoHistorico {
   valor_mensalidade_final: number;
   valor_total: number;
   created_at: string;
+  plano_id: string;
+  contrato_id: string | null;
   planos?: { nome: string } | null;
   modulos_adicionais?: any[];
+}
+
+interface RentabilidadeConsolidada {
+  receitaMensal: number;
+  custoMensal: number;
+  lucro: number;
+  margem: number;
+  markup: number;
 }
 
 export default function Clientes() {
@@ -153,20 +163,22 @@ export default function Clientes() {
   useEffect(() => {
     if (!profile?.user_id) return;
     (async () => {
-      const { data: roles } = await supabase
+      const { data: rolesData } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", profile.user_id);
-      const userRoles = (roles || []).map((r: any) => r.role);
+      const userRoles = (rolesData || []).map((r: any) => r.role);
       const { data: perms } = await supabase
         .from("role_permissions")
         .select("permissao, ativo")
         .in("role", userRoles)
-        .eq("permissao", "acao.importar_clientes")
+        .in("permissao", ["acao.importar_clientes", "acao.ver_rentabilidade_historico"])
         .eq("ativo", true);
-      setPodeImportar((perms || []).length > 0);
+      const permSet = new Set((perms || []).map((p: any) => p.permissao));
+      setPodeImportar(permSet.has("acao.importar_clientes"));
+      setPodeVerRentabilidade(isAdmin || permSet.has("acao.ver_rentabilidade_historico"));
     })();
-  }, [profile?.user_id]);
+  }, [profile?.user_id, isAdmin]);
 
   async function handleCepBlur() {
     const cep = form.cep.replace(/\D/g, "");
@@ -237,6 +249,9 @@ export default function Clientes() {
   const [contratosList, setContratosList] = useState<Contrato[]>([]);
   const [pedidosHistorico, setPedidosHistorico] = useState<PedidoHistorico[]>([]);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
+  const [rentabilidadeConsolidada, setRentabilidadeConsolidada] = useState<RentabilidadeConsolidada | null>(null);
+  const [podeVerRentabilidade, setPodeVerRentabilidade] = useState(false);
+  const [margemIdealHistorico, setMargemIdealHistorico] = useState<number | null>(null);
 
   async function fetchData() {
     setLoading(true);
@@ -337,16 +352,108 @@ export default function Clientes() {
     setClienteHistorico(c);
     setHistoricoOpen(true);
     setLoadingHistorico(true);
+    setRentabilidadeConsolidada(null);
+    setMargemIdealHistorico(null);
     const [{ data: cData }, { data: pData }] = await Promise.all([
       supabase.from("contratos").select("*").eq("cliente_id", c.id).order("created_at", { ascending: false }),
       supabase.from("pedidos")
-        .select("id, tipo_pedido, status_pedido, financeiro_status, valor_implantacao_final, valor_mensalidade_final, valor_total, created_at, modulos_adicionais, planos(nome)")
+        .select("id, tipo_pedido, status_pedido, financeiro_status, valor_implantacao_final, valor_mensalidade_final, valor_total, created_at, modulos_adicionais, plano_id, contrato_id, planos(nome)")
         .eq("cliente_id", c.id)
         .order("created_at", { ascending: false }),
     ]);
-    setContratosList((cData || []) as unknown as Contrato[]);
-    setPedidosHistorico((pData || []) as unknown as PedidoHistorico[]);
+    const contratos = (cData || []) as any[];
+    const pedidos = (pData || []) as PedidoHistorico[];
+    setContratosList(contratos as unknown as Contrato[]);
+    setPedidosHistorico(pedidos);
+
+    // Calcular rentabilidade consolidada se permitido
+    if (podeVerRentabilidade) {
+      try {
+        await calcularRentabilidadeConsolidada(contratos, pedidos, c.filial_id);
+      } catch (e) {
+        console.error("Erro ao calcular rentabilidade:", e);
+      }
+    }
     setLoadingHistorico(false);
+  }
+
+  async function calcularRentabilidadeConsolidada(contratos: any[], pedidos: PedidoHistorico[], filialId: string | null) {
+    // Pegar contratos ativos (Base e Aditivo — excluir OA)
+    const contratosAtivos = contratos.filter((c) => c.status === "Ativo" && c.tipo !== "OA");
+    if (contratosAtivos.length === 0) return;
+
+    // Pegar pedidos aprovados vinculados a contratos ativos, excluindo OA e Serviço
+    const contratoIds = new Set(contratosAtivos.map((c) => c.id));
+    const pedidosRelevantes = pedidos.filter(
+      (p) => p.contrato_id && contratoIds.has(p.contrato_id) &&
+        p.status_pedido !== "Cancelado" &&
+        !["OA", "Serviço"].includes(p.tipo_pedido)
+    );
+
+    // Buscar plano_ids únicos para custos
+    const planoIds = [...new Set(pedidosRelevantes.map((p) => p.plano_id).filter(Boolean))];
+    
+    const [{ data: custosPlanos }, { data: custosModulos }, { data: paramFilial }] = await Promise.all([
+      supabase.from("custos").select("*").in("plano_id", planoIds.length ? planoIds : [""]).is("modulo_id", null),
+      supabase.from("custos").select("*").not("modulo_id", "is", null),
+      filialId ? supabase.from("filial_parametros").select("margem_venda_ideal").eq("filial_id", filialId).maybeSingle() : Promise.resolve({ data: null }),
+    ]);
+
+    if (paramFilial) setMargemIdealHistorico((paramFilial as any)?.margem_venda_ideal ?? null);
+
+    const calcCustoPlano = (cp: any, receitaRef: number) => {
+      if (!cp) return 0;
+      const impostoBase = cp.imposto_base === 'venda' ? receitaRef : cp.preco_fornecedor;
+      const impostoVal = cp.imposto_tipo === '%' ? impostoBase * (cp.imposto_valor / 100) : cp.imposto_valor;
+      return cp.preco_fornecedor + impostoVal + cp.taxa_boleto + cp.despesas_adicionais;
+    };
+
+    let receitaMensalTotal = 0;
+    let custoMensalTotal = 0;
+    const processedPlanos = new Set<string>();
+
+    for (const ped of pedidosRelevantes) {
+      const mensFinal = ped.valor_mensalidade_final || 0;
+      receitaMensalTotal += mensFinal;
+
+      // Custo do plano (apenas uma vez por plano — para Upgrade calcula diferencial)
+      if (ped.tipo_pedido === "Upgrade" && ped.contrato_id) {
+        // Para upgrade, o custo diferencial já está embutido
+        const contrato = contratosAtivos.find((c) => c.id === ped.contrato_id);
+        const planoAnteriorId = contrato?.contrato_origem_id
+          ? contratosAtivos.find((c2) => c2.id === contrato.contrato_origem_id)?.plano_id
+          : null;
+        const custoNovo = (custosPlanos || []).find((c: any) => c.plano_id === ped.plano_id);
+        let custoAnterior: any = null;
+        if (planoAnteriorId) {
+          custoAnterior = (custosPlanos || []).find((c: any) => c.plano_id === planoAnteriorId);
+        }
+        const diff = Math.max(0, calcCustoPlano(custoNovo, mensFinal) - calcCustoPlano(custoAnterior, 0));
+        custoMensalTotal += diff;
+      } else if (!processedPlanos.has(ped.plano_id)) {
+        // Custo do plano base (evitar duplicata)
+        processedPlanos.add(ped.plano_id);
+        const custoPlano = (custosPlanos || []).find((c: any) => c.plano_id === ped.plano_id);
+        custoMensalTotal += calcCustoPlano(custoPlano, mensFinal);
+      }
+
+      // Custo dos módulos adicionais
+      const adicionais = Array.isArray(ped.modulos_adicionais) ? ped.modulos_adicionais : [];
+      adicionais.forEach((m: any) => {
+        const custoMod = (custosModulos || []).find((c: any) => c.modulo_id === m.modulo_id);
+        if (custoMod) {
+          const qty = m.quantidade || 1;
+          const impostoBase = custoMod.imposto_base === 'venda' ? (m.valor_mensalidade_modulo || 0) * qty : custoMod.preco_fornecedor * qty;
+          const impostoVal = custoMod.imposto_tipo === '%' ? impostoBase * (custoMod.imposto_valor / 100) : custoMod.imposto_valor * qty;
+          custoMensalTotal += (custoMod.preco_fornecedor * qty) + impostoVal + (custoMod.taxa_boleto * qty) + (custoMod.despesas_adicionais * qty);
+        }
+      });
+    }
+
+    const lucro = receitaMensalTotal - custoMensalTotal;
+    const margem = receitaMensalTotal > 0 ? (lucro / receitaMensalTotal) * 100 : 0;
+    const markup = custoMensalTotal > 0 ? (lucro / custoMensalTotal) * 100 : 0;
+    setRentabilidadeConsolidada({ receitaMensal: receitaMensalTotal, custoMensal: custoMensalTotal, lucro, margem, markup });
   }
 
   // Contatos
@@ -1196,6 +1303,41 @@ export default function Clientes() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
+            <>
+              {/* Rentabilidade Consolidada */}
+              {podeVerRentabilidade && rentabilidadeConsolidada && (
+                <div className="bg-muted rounded-lg p-4 space-y-2 mb-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">📊 Rentabilidade Consolidada (Mensal)</p>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Receita Mensal</span>
+                      <span className="font-mono font-semibold">{fmtBRL(rentabilidadeConsolidada.receitaMensal)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Custo Mensal</span>
+                      <span className="font-mono font-semibold">{fmtBRL(rentabilidadeConsolidada.custoMensal)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Margem Bruta</span>
+                      <span className={`font-mono font-semibold ${rentabilidadeConsolidada.margem < 0 || (margemIdealHistorico != null && rentabilidadeConsolidada.margem < margemIdealHistorico) ? "text-destructive" : rentabilidadeConsolidada.margem < 30 ? "text-amber-600" : "text-emerald-600"}`}>
+                        {rentabilidadeConsolidada.margem.toFixed(1)}%
+                        {margemIdealHistorico != null && rentabilidadeConsolidada.margem < margemIdealHistorico && " ⚠️"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Markup</span>
+                      <span className="font-mono font-semibold">{rentabilidadeConsolidada.markup.toFixed(1)}%</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-xs font-semibold border-t border-border pt-1.5">
+                    <span>Lucro Bruto</span>
+                    <span className={`font-mono ${rentabilidadeConsolidada.lucro < 0 ? "text-destructive" : "text-emerald-600"}`}>
+                      {fmtBRL(rentabilidadeConsolidada.lucro)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
             <Tabs defaultValue="contratos" className="mt-2">
               <TabsList className="w-full">
                 <TabsTrigger value="contratos" className="flex-1">
@@ -1330,6 +1472,7 @@ export default function Clientes() {
                 )}
               </TabsContent>
             </Tabs>
+            </>
           )}
 
           <DialogFooter>
