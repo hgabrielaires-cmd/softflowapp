@@ -671,17 +671,23 @@ export default function Pedidos() {
     if (pedidoIds.length > 0) {
       const { data: contratosData } = await supabase
         .from("contratos")
-        .select("id, pedido_id, contratos_zapsign(status)")
+        .select("id, pedido_id, status_geracao, contratos_zapsign(status)")
         .in("pedido_id", pedidoIds);
       const map: Record<string, string> = {};
+      const statusMap: Record<string, string> = {};
       (contratosData || []).forEach((c: any) => {
         if (c.pedido_id && c.contratos_zapsign?.status) {
           map[c.pedido_id] = c.contratos_zapsign.status;
         }
+        if (c.pedido_id && c.status_geracao) {
+          statusMap[c.pedido_id] = c.status_geracao;
+        }
       });
       setZapsignMap(map);
+      setContratoStatusMap(statusMap);
     } else {
       setZapsignMap({});
+      setContratoStatusMap({});
     }
 
     setLoading(false);
