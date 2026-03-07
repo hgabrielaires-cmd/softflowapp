@@ -391,6 +391,20 @@ export default function Automacoes() {
                 </Select>
               </div>
 
+              {(gatilhoTipo === "pedido_status" || gatilhoTipo === "tempo_sem_acao_financeiro") && (
+                <div className="space-y-2 pl-4 border-l-2 border-muted">
+                  <Label>Tipo de Pedido (modalidade de venda)</Label>
+                  <Select value={tipoPedido} onValueChange={setTipoPedido}>
+                    <SelectTrigger><SelectValue placeholder="Qualquer tipo" /></SelectTrigger>
+                    <SelectContent>
+                      {TIPO_PEDIDO_OPTIONS.map(t => (
+                        <SelectItem key={t.value || "any"} value={t.value || "qualquer"}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Filtra a automação para disparar apenas para o tipo de pedido selecionado.</p>
+                </div>
+              )}
               {gatilhoTipo === "pedido_status" && (
                 <div className="grid grid-cols-2 gap-4 pl-4 border-l-2 border-muted">
                   <div className="space-y-2">
