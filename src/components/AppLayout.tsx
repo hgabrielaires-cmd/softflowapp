@@ -391,12 +391,19 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     if (!isGestor) return;
     const { data } = await supabase
       .from("solicitacoes_desconto")
-      .select("*, pedidos(cliente_id, plano_id, valor_implantacao_final, valor_mensalidade_final, modulos_adicionais, clientes(nome_fantasia))")
+      .select("*, pedidos(cliente_id, plano_id, filial_id, valor_implantacao_final, valor_mensalidade_final, modulos_adicionais, clientes(nome_fantasia))")
       .eq("status", "Aguardando")
       .order("created_at", { ascending: false });
 
     // Load all custos (plan + modules) in a single query for efficiency
     const { data: allCustos } = await supabase.from("custos").select("plano_id, modulo_id, preco_fornecedor, taxa_boleto, imposto_valor, imposto_tipo, imposto_base, despesas_adicionais");
+
+    // Load filial_parametros for margem_venda_ideal
+    const { data: allFilialParams } = await supabase.from("filial_parametros").select("filial_id, margem_venda_ideal");
+    const margemIdealPorFilial: Record<string, number> = {};
+    (allFilialParams || []).forEach((fp: any) => {
+      margemIdealPorFilial[fp.filial_id] = Number(fp.margem_venda_ideal) || 0;
+    });
     const custoPorPlano: Record<string, any> = {};
     const custoPorModulo: Record<string, any> = {};
     (allCustos || []).forEach((c: any) => {
@@ -410,6 +417,7 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
       // Calcular margem bruta e markup sobre a MENSALIDADE (plano + módulos)
       let margemBruta: number | null = null;
       let markup: number | null = null;
+      let lucroBrutoVal: number | null = null;
       const planoId = (sol.pedidos as any)?.plano_id;
       const mensFinal = Number((sol.pedidos as any)?.valor_mensalidade_final) || 0;
 
@@ -453,9 +461,13 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
         const lucroBruto = mensFinal - custoFinal;
         margemBruta = (lucroBruto / mensFinal) * 100;
         markup = custoFinal > 0 ? ((mensFinal / custoFinal) - 1) * 100 : 0;
+        lucroBrutoVal = lucroBruto;
       }
 
-      return { ...sol, profiles: prof, _margemBruta: margemBruta, _markup: markup };
+      const filialId = (sol.pedidos as any)?.filial_id;
+      const margemIdeal = filialId ? (margemIdealPorFilial[filialId] ?? null) : null;
+
+      return { ...sol, profiles: prof, _margemBruta: margemBruta, _markup: markup, _lucroBruto: lucroBrutoVal, _margemIdeal: margemIdeal };
     }));
     setSolicitacoes(enriched as SolicitacaoDesconto[]);
   }
@@ -618,16 +630,24 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
                       <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
                         {sol.desconto_implantacao_valor > 0 && <p>Implantação: {sol.desconto_implantacao_tipo === "%" ? `${sol.desconto_implantacao_percentual?.toFixed(1)}%` : `R$ ${sol.desconto_implantacao_valor}`} de desconto {impFinal != null && `→ R$ ${impFinal.toFixed(2)}`}</p>}
                         {sol.desconto_mensalidade_valor > 0 && <p>Mensalidade: {sol.desconto_mensalidade_tipo === "%" ? `${sol.desconto_mensalidade_percentual?.toFixed(1)}%` : `R$ ${sol.desconto_mensalidade_valor}`} de desconto {mensFinal != null && `→ R$ ${mensFinal.toFixed(2)}`}</p>}
-                        {(sol as any)._margemBruta != null && (
-                          <div className="mt-1 pt-1 border-t border-border/50 flex gap-3">
-                            <p className={cn("font-medium", (sol as any)._margemBruta < 0 ? "text-destructive" : (sol as any)._margemBruta < 30 ? "text-warning" : "text-emerald-600")}>
-                              Margem: {(sol as any)._margemBruta.toFixed(1)}%
-                            </p>
-                            <p className="text-muted-foreground">
-                              Markup: {(sol as any)._markup?.toFixed(1)}%
-                            </p>
-                          </div>
-                        )}
+                        {(sol as any)._margemBruta != null && (() => {
+                          const margemIdeal = (sol as any)._margemIdeal;
+                          const margem = (sol as any)._margemBruta;
+                          const isAbaixoIdeal = margemIdeal != null && margem < margemIdeal;
+                          return (
+                            <div className="mt-1 pt-1 border-t border-border/50 flex gap-3 flex-wrap">
+                              <p className={cn("font-medium", margem < 0 || isAbaixoIdeal ? "text-destructive" : "text-emerald-600")}>
+                                Margem: {margem.toFixed(1)}%
+                              </p>
+                              <p className="text-muted-foreground">
+                                Markup: {(sol as any)._markup?.toFixed(1)}%
+                              </p>
+                              <p className="text-muted-foreground">
+                                Lucro: R$ {((sol as any)._lucroBruto ?? 0).toFixed(2)}
+                              </p>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
