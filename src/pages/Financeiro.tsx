@@ -94,6 +94,7 @@ interface PedidoFila {
   financeiro_aprovado_por: string | null;
   contrato_liberado: boolean;
   observacoes: string | null;
+  data_entrada_fila: string | null;
   created_at: string;
   numero_exibicao?: string;
   clientes?: { nome_fantasia: string } | null;
