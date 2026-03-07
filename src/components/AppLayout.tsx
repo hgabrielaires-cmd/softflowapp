@@ -460,14 +460,16 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
         const lucroBruto = mensFinal - custoFinal;
         margemBruta = (lucroBruto / mensFinal) * 100;
         markup = custoFinal > 0 ? ((mensFinal / custoFinal) - 1) * 100 : 0;
+        lucroBrutoVal = lucroBruto;
       }
 
-      return { ...sol, profiles: prof, _margemBruta: margemBruta, _markup: markup };
+      const filialId = (sol.pedidos as any)?.filial_id;
+      const margemIdeal = filialId ? (margemIdealPorFilial[filialId] ?? null) : null;
+
+      return { ...sol, profiles: prof, _margemBruta: margemBruta, _markup: markup, _lucroBruto: lucroBrutoVal, _margemIdeal: margemIdeal };
     }));
     setSolicitacoes(enriched as SolicitacaoDesconto[]);
   }
-
-  async function loadPedidoDetails(pedidoId: string, sol: SolicitacaoDesconto) {
     setLoadingPedido(true);
     try {
       const { data } = await supabase
