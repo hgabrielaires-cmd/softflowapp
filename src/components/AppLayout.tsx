@@ -417,6 +417,7 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
       // Calcular margem bruta e markup sobre a MENSALIDADE (plano + módulos)
       let margemBruta: number | null = null;
       let markup: number | null = null;
+      let lucroBrutoVal: number | null = null;
       const planoId = (sol.pedidos as any)?.plano_id;
       const mensFinal = Number((sol.pedidos as any)?.valor_mensalidade_final) || 0;
 
