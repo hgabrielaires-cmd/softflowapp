@@ -128,10 +128,10 @@ function fmtCurrency(val: number) {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function Faturamento() {
-  const { user } = useAuth();
-  const { checkPermission, loading: permLoading } = useMenuPermissions();
+  const { user, roles } = useAuth();
+  const { permissions: menuPerms, loading: permLoading } = useMenuPermissions(roles);
 
-  if (!permLoading && !checkPermission("menu.faturamento")) {
+  if (!permLoading && menuPerms && !menuPerms.has("menu.faturamento")) {
     return <Navigate to="/dashboard" replace />;
   }
 
