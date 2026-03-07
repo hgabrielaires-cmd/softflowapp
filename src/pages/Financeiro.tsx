@@ -380,11 +380,43 @@ export default function Financeiro() {
                             // Calcular rentabilidade
                             const mensFinal = pedido.valor_mensalidade_final || 0;
                             let custoTotal = 0;
-                            if (custosPlano) {
-                              const impostoBase = custosPlano.imposto_base === 'venda' ? mensFinal : custosPlano.preco_fornecedor;
-                              const impostoVal = custosPlano.imposto_tipo === '%' ? impostoBase * (custosPlano.imposto_valor / 100) : custosPlano.imposto_valor;
-                              custoTotal += custosPlano.preco_fornecedor + impostoVal + custosPlano.taxa_boleto + custosPlano.despesas_adicionais;
+
+                            // Helper: calcular custo de um plano a partir dos dados de custos
+                            const calcCustoPlano = (cp: any, receitaRef: number) => {
+                              if (!cp) return 0;
+                              const impostoBase = cp.imposto_base === 'venda' ? receitaRef : cp.preco_fornecedor;
+                              const impostoVal = cp.imposto_tipo === '%' ? impostoBase * (cp.imposto_valor / 100) : cp.imposto_valor;
+                              return cp.preco_fornecedor + impostoVal + cp.taxa_boleto + cp.despesas_adicionais;
+                            };
+
+                            const isUpgrade = pedido.tipo_pedido === 'Upgrade';
+
+                            if (isUpgrade && (pedido as any).contrato_id) {
+                              // Para Upgrade: custo = custo do novo plano - custo do plano anterior
+                              const { data: contratoBase } = await supabase
+                                .from("contratos")
+                                .select("plano_id")
+                                .eq("id", (pedido as any).contrato_id)
+                                .maybeSingle();
+                              const planoAnteriorId = contratoBase?.plano_id;
+                              let custoPlanoAnterior = 0;
+                              if (planoAnteriorId) {
+                                const { data: custosPlanoAnterior } = await supabase
+                                  .from("custos")
+                                  .select("*")
+                                  .eq("plano_id", planoAnteriorId)
+                                  .is("modulo_id", null)
+                                  .maybeSingle();
+                                // Para o plano anterior, usamos a mensalidade anterior como referência de imposto sobre venda
+                                // A mensalidade anterior = mensalidade do novo plano completa - diferencial
+                                custoPlanoAnterior = calcCustoPlano(custosPlanoAnterior, 0);
+                              }
+                              const custoPlanoNovo = calcCustoPlano(custosPlano, mensFinal);
+                              custoTotal = Math.max(0, custoPlanoNovo - custoPlanoAnterior);
+                            } else {
+                              custoTotal = calcCustoPlano(custosPlano, mensFinal);
                             }
+
                             const adicionais = Array.isArray(pedido.modulos_adicionais) ? pedido.modulos_adicionais : [];
                             adicionais.forEach((m: any) => {
                               const custoMod = (custosModulos || []).find((c: any) => c.modulo_id === m.modulo_id);
