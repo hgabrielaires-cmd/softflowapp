@@ -874,7 +874,7 @@ export default function Contratos() {
   }
 
   async function handleCancelarProjetosVinculados() {
-    if (!cancelarProjetoMotivo.trim() || projetosAtivos.length === 0) return;
+    if (projetosAtivos.length === 0) return;
     setProcessando(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -887,7 +887,7 @@ export default function Contratos() {
           contrato_id: selected!.id,
           cliente_id: selected!.cliente_id,
           filial_id: projeto.filial_id,
-          motivo: cancelarProjetoMotivo.trim(),
+          motivo: cancelarProjetoMotivo.trim() || "Cancelamento de contrato",
           cancelado_por: user.id,
           tipo_operacao: projeto.tipo_operacao,
           plano_nome: (projeto.planos as any)?.nome || null,
@@ -895,24 +895,50 @@ export default function Contratos() {
           contrato_numero: (projeto.contratos as any)?.numero_exibicao || null,
         } as any);
 
-        // Atualizar status
+        // Remover do painel (excluir)
+        await supabase
+          .from("painel_atendimento")
+          .delete()
+          .eq("id", projeto.id);
+      }
+
+      toast.success("Projeto(s) removido(s) do painel e salvo(s) em cancelados!");
+    } catch (err: any) {
+      toast.error("Erro ao remover projeto(s): " + (err.message || ""));
+    } finally {
+      setProcessando(false);
+      setOpenCancelarProjeto(false);
+      setCancelarProjetoMotivo("");
+      setProjetosAtivos([]);
+    }
+  }
+
+  async function handleManterProjetoComTagCancelado() {
+    if (projetosAtivos.length === 0) return;
+    setProcessando(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+      const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
+
+      for (const projeto of projetosAtivos) {
+        // Marcar como cancelado (tag) mas manter no painel
         await supabase
           .from("painel_atendimento")
           .update({ status_projeto: "cancelado" } as any)
           .eq("id", projeto.id);
 
         // Comentário
-        const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
         await supabase.from("painel_comentarios").insert({
           card_id: projeto.id,
           criado_por: user.id,
-          texto: `❌ Projeto cancelado via encerramento de contrato por ${autorNome}: ${cancelarProjetoMotivo.trim()}`,
+          texto: `🚫 Contrato cancelado. Projeto marcado como cancelado por ${autorNome}. Nenhuma ação permitida.`,
         });
       }
 
-      toast.success("Projeto(s) cancelado(s) com sucesso!");
+      toast.success("Projeto(s) marcado(s) como cancelado no painel.");
     } catch (err: any) {
-      toast.error("Erro ao cancelar projeto(s): " + (err.message || ""));
+      toast.error("Erro: " + (err.message || ""));
     } finally {
       setProcessando(false);
       setOpenCancelarProjeto(false);
