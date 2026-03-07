@@ -801,6 +801,42 @@ serve(async (req) => {
           descontoDetalhes = detLines.length > 0 ? detLines.join("\n") : "Sem desconto";
         }
 
+        // ─── Calculate margem bruta and markup ───
+        let margemBrutaStr = "N/A";
+        let markupStr = "N/A";
+        if (pedido?.plano_id) {
+          const mensFinalCalc = Number(pedido.valor_mensalidade_final) || Number(pedido.valor_mensalidade) || 0;
+          if (mensFinalCalc > 0) {
+            const { data: custoData } = await supabase
+              .from("custos")
+              .select("preco_fornecedor, taxa_boleto, imposto_valor, imposto_tipo, imposto_base, despesas_adicionais")
+              .eq("plano_id", pedido.plano_id)
+              .maybeSingle();
+
+            if (custoData) {
+              const fornecedor = Number(custoData.preco_fornecedor) || 0;
+              const taxaBoleto = Number(custoData.taxa_boleto) || 0;
+              const impostoValor = Number(custoData.imposto_valor) || 0;
+              const despesas = Number(custoData.despesas_adicionais) || 0;
+
+              let imposto = 0;
+              if (custoData.imposto_tipo === "%") {
+                const base = custoData.imposto_base === "venda" ? mensFinalCalc : fornecedor;
+                imposto = base * (impostoValor / 100);
+              } else {
+                imposto = impostoValor;
+              }
+
+              const custoTotal = fornecedor + taxaBoleto + imposto + despesas;
+              const lucroBruto = mensFinalCalc - custoTotal;
+              const margemBruta = mensFinalCalc > 0 ? (lucroBruto / mensFinalCalc) * 100 : 0;
+              const markupCalc = custoTotal > 0 ? ((mensFinalCalc / custoTotal) - 1) * 100 : 0;
+              margemBrutaStr = margemBruta.toFixed(1) + "%";
+              markupStr = markupCalc.toFixed(1) + "%";
+            }
+          }
+        }
+
         const pedidoData = pedido?.created_at
           ? new Date(pedido.created_at).toLocaleDateString("pt-BR")
           : "N/A";
