@@ -967,6 +967,7 @@ export default function Pedidos() {
     } else {
       if (!form.plano_id) { toast.error("Selecione um plano"); return; }
     }
+    if (!form.pagamento_implantacao_forma) { toast.error("Selecione a forma de pagamento da implantação"); return; }
     setSaving(true);
     try {
       // Garantir que vendedorId nunca seja undefined
@@ -2290,7 +2291,7 @@ export default function Pedidos() {
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Pagamento do Serviço</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Forma de pagamento</Label>
+                      <Label className="text-xs">Forma de pagamento <span className="text-destructive">*</span></Label>
                       <Select value={form.pagamento_implantacao_forma} onValueChange={(v) => setForm((f) => ({ ...f, pagamento_implantacao_forma: v }))}>
                         <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                         <SelectContent>
@@ -2356,7 +2357,7 @@ export default function Pedidos() {
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Implantação</p>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
-                        <Label className="text-xs">Forma de pagamento</Label>
+                        <Label className="text-xs">Forma de pagamento <span className="text-destructive">*</span></Label>
                         <Select value={form.pagamento_implantacao_forma} onValueChange={(v) => setForm((f) => ({ ...f, pagamento_implantacao_forma: v }))}>
                           <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                           <SelectContent>
