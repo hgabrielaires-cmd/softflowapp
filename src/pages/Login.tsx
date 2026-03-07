@@ -146,9 +146,8 @@ export default function Login() {
             </Button>
           </form>
 
-          <p className="text-center text-xs text-muted-foreground mt-8">Acesso restrito. 
-Entre em contato com o administrador para obter acesso.<br />
-            Entre em contato com o administrador para obter acesso.
+          <p className="text-center text-xs text-muted-foreground mt-8">
+            Acesso restrito. Entre em contato com o administrador para obter acesso.
           </p>
 
           <div className="flex items-center justify-center gap-2 mt-6">
