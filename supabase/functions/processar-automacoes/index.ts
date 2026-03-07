@@ -512,6 +512,39 @@ serve(async (req) => {
           espelhoPedido = lines.join("\n");
         }
 
+        // Build discount detail strings
+        const fmtCurrencyVar = (v: any) => {
+          const num = Number(v) || 0;
+          return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        };
+
+        let descontoDetalhes = "";
+        if (pedido) {
+          const detLines: string[] = [];
+          const implOrig = Number(pedido.valor_implantacao_original) || Number(pedido.valor_implantacao) || 0;
+          const implFinal = Number(pedido.valor_implantacao_final) || implOrig;
+          const mensOrig = Number(pedido.valor_mensalidade_original) || Number(pedido.valor_mensalidade) || 0;
+          const mensFinal = Number(pedido.valor_mensalidade_final) || mensOrig;
+
+          if (implOrig !== implFinal) {
+            const descImpl = implOrig - implFinal;
+            detLines.push(`Implantação: ${fmtCurrencyVar(descImpl)} de desconto → ${fmtCurrencyVar(implFinal)}`);
+          }
+          if (mensOrig !== mensFinal) {
+            const descMens = mensOrig - mensFinal;
+            detLines.push(`Mensalidade: ${fmtCurrencyVar(descMens)} de desconto → ${fmtCurrencyVar(mensFinal)}`);
+          }
+          descontoDetalhes = detLines.length > 0 ? detLines.join("\n") : "Sem desconto";
+        }
+
+        const pedidoData = pedido?.created_at
+          ? new Date(pedido.created_at).toLocaleDateString("pt-BR")
+          : "N/A";
+
+        const valorTotal = pedido
+          ? fmtCurrencyVar((Number(pedido.valor_implantacao_final) || Number(pedido.valor_implantacao) || 0) + (Number(pedido.valor_mensalidade_final) || Number(pedido.valor_mensalidade) || 0))
+          : "N/A";
+
         const replaceVars = (text: string, userName?: string) => {
           return text
             .replace(/\{usuario\.nome\}/g, userName || "Usuário")
@@ -520,6 +553,13 @@ serve(async (req) => {
             .replace(/\{vendedor\.nome\}/g, vendedorNome)
             .replace(/\{plano\.nome\}/g, planoNome)
             .replace(/\{contrato\.numero\}/g, contratoNumero)
+            .replace(/\{filial\.nome\}/g, filialNome)
+            .replace(/\{pedido\.tipo\}/g, pedido?.tipo_pedido || "N/A")
+            .replace(/\{pedido\.data\}/g, pedidoData)
+            .replace(/\{pedido\.valor_implantacao\}/g, fmtCurrencyVar(pedido?.valor_implantacao_final || pedido?.valor_implantacao))
+            .replace(/\{pedido\.valor_mensalidade\}/g, fmtCurrencyVar(pedido?.valor_mensalidade_final || pedido?.valor_mensalidade))
+            .replace(/\{pedido\.valor_total\}/g, valorTotal)
+            .replace(/\{desconto\.detalhes\}/g, descontoDetalhes)
             .replace(/\{espelho\.pedido\}/g, espelhoPedido)
             .replace(/\{desconto\.motivo\}/g, pedido?.motivo_desconto || "Não informado")
             .replace(/\{status\.anterior\}/g, body.status_anterior || "N/A")
