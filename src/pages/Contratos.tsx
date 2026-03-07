@@ -2399,16 +2399,7 @@ Estou à disposição.`;
             ))}
           </div>
           <div className="flex justify-end gap-2 mt-2">
-            <Button variant="outline" onClick={() => {
-              setOpenCancelarAditivos(false);
-              setAditivosVinculados([]);
-              setAditivosSelecionados([]);
-              if (contratoBaseCancelado) {
-                verificarProjetosAtivos(contratoBaseCancelado);
-                setContratoBaseCancelado(null);
-              }
-              loadData();
-            }}>
+            <Button variant="outline" onClick={handleManterTodosAtivos} disabled={processando}>
               Manter todos ativos
             </Button>
             <Button
