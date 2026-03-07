@@ -1829,9 +1829,9 @@ Estou à disposição.`;
                           <div className="flex items-center gap-2">
                             <span className="font-mono font-semibold">{v.numero_exibicao}</span>
                             {getTipoBadge(v.tipo)}
-                            {v.tipo === "Aditivo" && v.pedidos?.tipo_pedido && (
+                            {v.pedidos?.tipo_pedido && (
                               <span className="text-muted-foreground">
-                                {v.pedidos.tipo_pedido === "Upgrade" ? "↑ Upgrade" : v.pedidos.tipo_pedido === "Aditivo" ? "＋ Módulos" : v.pedidos.tipo_pedido}
+                                {v.pedidos.tipo_pedido === "Upgrade" ? "↑ Upgrade de Plano" : v.pedidos.tipo_pedido === "Aditivo" ? "＋ Módulos Adicionais" : v.pedidos.tipo_pedido === "OA" ? "📋 Ordem de Atendimento" : v.pedidos.tipo_pedido}
                               </span>
                             )}
                           </div>
