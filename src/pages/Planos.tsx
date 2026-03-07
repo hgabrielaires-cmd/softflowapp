@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/table";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Link, CopyPlus, DollarSign, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Link, CopyPlus, DollarSign, Search, TrendingUp, AlertTriangle } from "lucide-react";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -125,6 +125,81 @@ function CustoFormFields({ custoForm, setCustoForm }: { custoForm: CustoForm; se
   );
 }
 
+// ─── Margin Calculation Helper ──────────────────────────────────────────────
+
+function calcularFormacaoPreco(custoForm: CustoForm, precoVenda: number) {
+  const fornecedor = parseFloat(custoForm.preco_fornecedor) || 0;
+  const taxaBoleto = parseFloat(custoForm.taxa_boleto) || 0;
+  const despesas = parseFloat(custoForm.despesas_adicionais) || 0;
+  const impostoValor = parseFloat(custoForm.imposto_valor) || 0;
+
+  let imposto = 0;
+  if (custoForm.imposto_tipo === "R$") {
+    imposto = impostoValor;
+  } else {
+    // Percentual
+    if (custoForm.imposto_base === "compra") {
+      imposto = fornecedor * (impostoValor / 100);
+    } else {
+      // sobre preço de venda
+      imposto = precoVenda * (impostoValor / 100);
+    }
+  }
+
+  const custoTotal = fornecedor + taxaBoleto + imposto + despesas;
+  const lucroBruto = precoVenda - custoTotal;
+  const margemBruta = precoVenda > 0 ? (lucroBruto / precoVenda) * 100 : 0;
+  const markup = custoTotal > 0 ? ((precoVenda / custoTotal) - 1) * 100 : 0;
+  const custoPercentual = precoVenda > 0 ? (custoTotal / precoVenda) * 100 : 0;
+
+  return { custoTotal, lucroBruto, margemBruta, markup, custoPercentual, imposto };
+}
+
+function FormacaoPrecoSection({ custoForm, precoVenda, margemIdeal }: { custoForm: CustoForm; precoVenda: number; margemIdeal: number }) {
+  const { custoTotal, lucroBruto, margemBruta, markup, custoPercentual } = calcularFormacaoPreco(custoForm, precoVenda);
+  const margemAbaixoIdeal = margemIdeal > 0 && margemBruta < margemIdeal;
+
+  if (precoVenda <= 0 && custoTotal <= 0) return null;
+
+  return (
+    <div className="pt-2 border-t border-border">
+      <div className="flex items-center gap-2 mb-3">
+        <TrendingUp className="h-4 w-4 text-primary" />
+        <p className="text-sm font-semibold text-foreground">Formação de Preço e Margem</p>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-lg border border-border bg-muted/50 p-3 space-y-1">
+          <p className="text-xs text-muted-foreground">Custo Total</p>
+          <p className="text-base font-bold text-foreground">{fmtBRL(custoTotal)}</p>
+          <p className="text-xs text-muted-foreground">{custoPercentual.toFixed(1)}% do preço de venda</p>
+        </div>
+        <div className="rounded-lg border border-border bg-muted/50 p-3 space-y-1">
+          <p className="text-xs text-muted-foreground">Lucro Bruto</p>
+          <p className={`text-base font-bold ${lucroBruto >= 0 ? "text-green-600" : "text-destructive"}`}>{fmtBRL(lucroBruto)}</p>
+        </div>
+        <div className={`rounded-lg border p-3 space-y-1 ${margemAbaixoIdeal ? "border-amber-300 bg-amber-50 dark:bg-amber-950/30" : "border-border bg-muted/50"}`}>
+          <p className="text-xs text-muted-foreground">Margem Bruta</p>
+          <div className="flex items-center gap-2">
+            <p className={`text-base font-bold ${margemAbaixoIdeal ? "text-amber-600" : margemBruta >= 0 ? "text-green-600" : "text-destructive"}`}>
+              {margemBruta.toFixed(2)}%
+            </p>
+            {margemAbaixoIdeal && (
+              <span className="inline-flex items-center gap-1 text-xs text-amber-600 font-medium">
+                <AlertTriangle className="h-3 w-3" />
+                Abaixo do ideal ({margemIdeal.toFixed(1)}%)
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="rounded-lg border border-border bg-muted/50 p-3 space-y-1">
+          <p className="text-xs text-muted-foreground">Markup</p>
+          <p className="text-base font-bold text-foreground">{markup.toFixed(2)}%</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Planos Tab ─────────────────────────────────────────────────────────────────
 
 interface PlanoForm {
@@ -151,19 +226,22 @@ function PlanosTab() {
   });
   const [custoForm, setCustoForm] = useState<CustoForm>({ ...CUSTO_EMPTY });
   const [saving, setSaving] = useState(false);
+  const [margemIdeal, setMargemIdeal] = useState(0);
 
-  async function fetch() {
+  async function fetchData() {
     setLoading(true);
-    const [{ data: p }, { data: f }] = await Promise.all([
+    const [{ data: p }, { data: f }, { data: params }] = await Promise.all([
       supabase.from("planos").select("*, fornecedores(id, nome_fantasia)").order("ordem").order("nome"),
       supabase.from("fornecedores").select("id, nome_fantasia").eq("ativo", true).order("nome_fantasia"),
+      supabase.from("filial_parametros").select("margem_venda_ideal").limit(1).maybeSingle(),
     ]);
     setPlanos(p || []);
     setFornecedores(f || []);
+    if (params) setMargemIdeal((params as any).margem_venda_ideal ?? 0);
     setLoading(false);
   }
 
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => { fetchData(); }, []);
 
   function openCreate() {
     setEditing(null);
@@ -248,7 +326,7 @@ function PlanosTab() {
     toast.success(editing ? "Plano atualizado" : "Plano criado");
     setSaving(false);
     setDialogOpen(false);
-    fetch();
+    fetchData();
   }
 
   async function handleDelete(p: any) {
@@ -256,7 +334,7 @@ function PlanosTab() {
     const { error } = await supabase.from("planos").delete().eq("id", p.id);
     if (error) { toast.error("Erro ao excluir"); return; }
     toast.success("Plano excluído");
-    fetch();
+    fetchData();
   }
 
   async function toggleAtivo(p: any) {
@@ -366,6 +444,7 @@ function PlanosTab() {
               <Label>Plano ativo</Label>
             </div>
             <CustoFormFields custoForm={custoForm} setCustoForm={setCustoForm} />
+            <FormacaoPrecoSection custoForm={custoForm} precoVenda={parseFloat(form.valor_mensalidade_padrao) || 0} margemIdeal={margemIdeal} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>

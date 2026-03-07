@@ -76,6 +76,7 @@ export default function Filiais() {
   const [regrasPadraoMensalidade, setRegrasPadraoMensalidade] = useState("");
   const [congelarAcao, setCongelarAcao] = useState("manter");
   const [congelarEtapaId, setCongelarEtapaId] = useState<string | null>(null);
+  const [margemVendaIdeal, setMargemVendaIdeal] = useState(0);
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
@@ -109,6 +110,7 @@ export default function Filiais() {
     setRegrasPadraoMensalidade("");
     setCongelarAcao("manter");
     setCongelarEtapaId(null);
+    setMargemVendaIdeal(0);
   }
 
   function openCreate() {
@@ -124,6 +126,7 @@ export default function Filiais() {
       setRegrasPadraoMensalidade(data.regras_padrao_mensalidade ?? "");
       setCongelarAcao((data as any).congelar_acao ?? "manter");
       setCongelarEtapaId((data as any).congelar_etapa_id ?? null);
+      setMargemVendaIdeal((data as any).margem_venda_ideal ?? 0);
     }
   }
 
@@ -154,6 +157,7 @@ export default function Filiais() {
     setRegrasPadraoMensalidade("");
     setCongelarAcao("manter");
     setCongelarEtapaId(null);
+    setMargemVendaIdeal(0);
     loadParametros(filial.id);
     setOpenDialog(true);
   }
@@ -254,6 +258,7 @@ export default function Filiais() {
       regras_padrao_mensalidade: regrasPadraoMensalidade.trim() || null,
       congelar_acao: congelarAcao,
       congelar_etapa_id: congelarAcao === "mover" ? congelarEtapaId : null,
+      margem_venda_ideal: margemVendaIdeal,
     };
     // Check if exists
     const { data: existing } = await supabase.from("filial_parametros").select("id").eq("filial_id", filialId).maybeSingle();
@@ -580,7 +585,7 @@ export default function Filiais() {
                 {/* Financeiro */}
                 <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">
                   <h3 className="text-sm font-semibold text-foreground">Financeiro</h3>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1.5">
                       <Label>Parcelas máximas no cartão</Label>
                       <Input
@@ -601,6 +606,18 @@ export default function Filiais() {
                         value={pixDescontoPercentual}
                         onChange={(e) => setPixDescontoPercentual(Number(e.target.value))}
                       />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Margem venda ideal (%)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.01}
+                        value={margemVendaIdeal}
+                        onChange={(e) => setMargemVendaIdeal(Number(e.target.value))}
+                      />
+                      <p className="text-xs text-muted-foreground">Margem mínima esperada na venda de planos.</p>
                     </div>
                   </div>
                 </div>

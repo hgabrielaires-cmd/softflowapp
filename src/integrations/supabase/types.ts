@@ -743,6 +743,7 @@ export type Database = {
           created_at: string
           filial_id: string
           id: string
+          margem_venda_ideal: number
           parcelas_maximas_cartao: number
           pix_desconto_percentual: number
           regras_padrao_implantacao: string | null
@@ -755,6 +756,7 @@ export type Database = {
           created_at?: string
           filial_id: string
           id?: string
+          margem_venda_ideal?: number
           parcelas_maximas_cartao?: number
           pix_desconto_percentual?: number
           regras_padrao_implantacao?: string | null
@@ -767,6 +769,7 @@ export type Database = {
           created_at?: string
           filial_id?: string
           id?: string
+          margem_venda_ideal?: number
           parcelas_maximas_cartao?: number
           pix_desconto_percentual?: number
           regras_padrao_implantacao?: string | null

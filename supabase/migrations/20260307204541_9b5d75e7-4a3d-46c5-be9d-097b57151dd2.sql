@@ -1,0 +1,1 @@
+ALTER TABLE public.filial_parametros ADD COLUMN margem_venda_ideal numeric NOT NULL DEFAULT 0;
