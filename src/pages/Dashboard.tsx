@@ -1066,7 +1066,13 @@ export default function Dashboard() {
                       <div key={p.id} className="rounded-lg border border-border bg-muted/30 overflow-hidden">
                         <div className="flex items-center justify-between p-3 gap-3">
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground truncate">{p.cliente_nome}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-foreground truncate">{p.cliente_nome}</p>
+                              <span className="text-[10px] text-muted-foreground shrink-0">#{p.numero_exibicao}</span>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              {new Date(p.created_at).toLocaleDateString("pt-BR")} às {new Date(p.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
                             <div className="flex items-center gap-3 mt-1">
                               <span className="text-xs text-muted-foreground">
                                 Impl: <span className="font-medium text-foreground">{fmtBRL(p.valor_implantacao_final)}</span>
