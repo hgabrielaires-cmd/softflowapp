@@ -734,7 +734,7 @@ function FaturasResumo({ faturas }: { faturas: Fatura[] }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function NotasFiscaisTab() {
-  const { filiaisFavoritas } = useUserFiliais();
+  const { filialPadraoId } = useUserFiliais();
   const [notas, setNotas] = useState<NotaFiscal[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
