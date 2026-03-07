@@ -110,6 +110,7 @@ const navGroups: NavGroup[] = [
       { icon: <UserCheck className="h-4 w-4" />, label: "CRM", to: "#crm", children: [
         { icon: <ListOrdered className="h-4 w-4" />, label: "Segmentos", to: "/segmentos", permKey: "menu.segmentos" },
       ] },
+      { icon: <Zap className="h-4 w-4" />, label: "Automações", to: "/automacoes", permKey: "menu.automacoes" },
       { icon: <Bell className="h-4 w-4" />, label: "Notificações", to: "/notificacoes", permKey: "menu.notificacoes" },
       { icon: <Plug className="h-4 w-4" />, label: "Integrações", to: "/integracoes", permKey: "menu.integracoes" },
       { icon: <Building2 className="h-4 w-4" />, label: "Setores", to: "/setores", permKey: "menu.setores" },

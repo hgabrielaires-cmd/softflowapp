@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { dispararAutomacaoPedidoStatus } from "@/lib/automacoes";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useMenuPermissions } from "@/hooks/useMenuPermissions";
@@ -205,6 +206,7 @@ export default function Financeiro() {
       return;
     }
     toast.success("Pedido aprovado! Contrato criado e liberado.");
+    dispararAutomacaoPedidoStatus(pedido.id, "Aguardando Financeiro", "Aprovado Financeiro");
     setOpenDetail(false);
     navigate("/contratos");
   }
@@ -224,6 +226,7 @@ export default function Financeiro() {
     setProcessando(false);
     if (error) { toast.error("Erro ao reprovar pedido: " + error.message); return; }
     toast.success("Pedido reprovado.");
+    dispararAutomacaoPedidoStatus(selected.id, "Aguardando Financeiro", "Reprovado Financeiro");
     setOpenReprovar(false);
     setOpenDetail(false);
     setMotivoReprova("");

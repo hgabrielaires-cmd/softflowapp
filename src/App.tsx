@@ -34,6 +34,7 @@ import DashboardFinanceiro from "./pages/DashboardFinanceiro";
 import DashboardAtendimento from "./pages/DashboardAtendimento";
 import Segmentos from "./pages/Segmentos";
 import Setores from "./pages/Setores";
+import Automacoes from "./pages/Automacoes";
 
 const queryClient = new QueryClient();
 
@@ -278,6 +279,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Setores />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/automacoes"
+              element={
+                <ProtectedRoute>
+                  <Automacoes />
                 </ProtectedRoute>
               }
             />

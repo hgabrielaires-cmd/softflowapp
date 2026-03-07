@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.processar-alertas-sla]
 verify_jwt = false
+
+[functions.processar-automacoes]
+verify_jwt = false
