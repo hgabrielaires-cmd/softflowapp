@@ -400,29 +400,21 @@ serve(async (req) => {
             lines.push("☑️ *Módulos Contratados*");
             lines.push(`Plano *${planoNome}*`);
 
-            const { data: planoModulos } = await supabase
-              .from("plano_modulos")
-              .select("modulo_id, modulos(nome)")
-              .eq("plano_id", pedido.plano_id)
-              .eq("incluso_no_plano", true)
-              .order("ordem");
-
-            if (planoModulos && planoModulos.length > 0) {
-              for (const pm of planoModulos) {
-                const modNome = (pm as any).modulos?.nome || "Módulo";
-                lines.push(`• ${modNome}`);
-              }
-            }
-
-            // Valor base do plano
+            // Usar descrição do plano ao invés de listar módulos individuais
             const { data: planoInfo } = await supabase
               .from("planos")
-              .select("valor_mensalidade_padrao")
+              .select("descricao, valor_mensalidade_padrao")
               .eq("id", pedido.plano_id)
               .maybeSingle();
-            if (planoInfo) {
+
+            if (planoInfo?.descricao) {
+              lines.push(planoInfo.descricao);
+            }
+
+            if (planoInfo?.valor_mensalidade_padrao) {
               lines.push("");
               lines.push(`Valor base do plano: ${fmtCurrency(planoInfo.valor_mensalidade_padrao)}`);
+            }
             }
           }
 
