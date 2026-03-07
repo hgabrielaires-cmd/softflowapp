@@ -1,4 +1,5 @@
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, useMemo } from "react";
+import { APP_VERSION, APP_BUILD_DATE } from "@/lib/app-version";
 import { useMenuPermissions } from "@/hooks/useMenuPermissions";
 import iconSoftflow from "@/assets/icon-softflow.png";
 import logoSoftflowBranca from "@/assets/logo-softflow-branca.png";
