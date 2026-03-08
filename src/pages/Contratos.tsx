@@ -1632,6 +1632,7 @@ export default function Contratos() {
         .replace(/\{valores\.implantacao_original\}/g, fmtBRL(impOriginal))
         .replace(/\{valores\.implantacao_com_desconto\}/g, implantacaoComDesconto)
         .replace(/\{valores\.mensalidade\}/g, fmtBRL(pedido?.tipo_pedido === "Upgrade" ? mensalidadeTotalUpgrade : mensFinal))
+        .replace(/\{valores\.mensalidade_upgrade_com_desconto\}/g, mensalidadeUpgradeComDesconto || fmtBRL(pedido?.tipo_pedido === "Upgrade" ? mensalidadeTotalUpgrade : mensFinal))
         .replace(/\{valores\.mensalidade_original\}/g, fmtBRL(mensOriginal))
         .replace(/\{valores\.mensalidade_com_desconto\}/g, mensalidadeComDesconto)
         .replace(/\{valores\.desconto_implantacao\}/g, descontoImpl > 0 ? fmtBRL(descontoImpl) : "")
