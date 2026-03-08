@@ -1526,7 +1526,6 @@ export default function Contratos() {
           novoTotalDescontoTexto = `~${fmtBRL(novoPlanoMens)}~ *${fmtBRL(planoComDesconto)}*`;
         }
       }
-      }
 
       // Variáveis de serviços (OA)
       const servicosPedido = (pedido?.servicos_pedido || []) as any[];
