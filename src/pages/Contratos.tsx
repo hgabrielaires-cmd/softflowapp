@@ -1425,7 +1425,8 @@ export default function Contratos() {
     const modulosTexto = descricaoPlano
       ? descricaoPlano.split(",").map((m: string) => `• ${m.trim()}`).join("\n")
       : "";
-    const valorMensBase = fmtBRL(plano?.valor_mensalidade_padrao ?? 0);
+    const valorMensBaseCheio = plano?.valor_mensalidade_padrao ?? 0;
+    let valorMensBase = fmtBRL(valorMensBaseCheio);
     const adicionais = (pedido?.modulos_adicionais || []) as ModuloAdicionadoItem[];
     const totalAdicionais = adicionais.reduce((s, m) => s + m.valor_mensalidade_modulo * m.quantidade, 0);
     const adicionaisTexto = adicionais.length > 0
@@ -1542,6 +1543,8 @@ export default function Contratos() {
         if (descontoMens > 0) {
           const planoComDesconto = novoPlanoMens - descontoMens;
           planoValorFinal = `~${fmtBRL(novoPlanoMens)}~ Desconto: ${fmtBRL(descontoMens)} — ${fmtBRL(planoComDesconto)}`;
+          // Atualizar também valor_base para mostrar desconto no upgrade
+          valorMensBase = `~${fmtBRL(novoPlanoMens)}~ Desconto: ${fmtBRL(descontoMens)} — ${fmtBRL(planoComDesconto)}`;
           planoDescontoTexto = `⚡ Desconto na mensalidade: ${fmtBRL(descontoMens)}`;
           novoTotalDescontoTexto = `~${fmtBRL(novoPlanoMens)}~ *${fmtBRL(planoComDesconto)}*`;
           // Total com adicionais existentes
