@@ -1512,6 +1512,21 @@ export default function Contratos() {
         }
       }
 
+      // Variáveis de valor do plano com desconto para upgrade
+      let planoValorFinal = fmtBRL(plano?.valor_mensalidade_padrao ?? 0);
+      let planoDescontoTexto = "";
+      let novoTotalDescontoTexto = "";
+      if (pedido?.tipo_pedido === "Upgrade") {
+        const novoPlanoMens = plano?.valor_mensalidade_padrao ?? 0;
+        const descontoMens = (pedido?.valor_mensalidade_original ?? 0) - (pedido?.valor_mensalidade_final ?? 0);
+        if (descontoMens > 0) {
+          const planoComDesconto = novoPlanoMens - descontoMens;
+          planoValorFinal = fmtBRL(planoComDesconto);
+          planoDescontoTexto = `⚡ Desconto na mensalidade: ${fmtBRL(descontoMens)}`;
+          novoTotalDescontoTexto = `~${fmtBRL(novoPlanoMens)}~ *${fmtBRL(planoComDesconto)}*`;
+        }
+      }
+
       // Variáveis de serviços (OA)
       const servicosPedido = (pedido?.servicos_pedido || []) as any[];
       const servicosListaTexto = servicosPedido.length > 0
@@ -1559,6 +1574,9 @@ export default function Contratos() {
         .replace(/\{plano\.nome_anterior\}/g, planoNomeAnterior)
         .replace(/\{plano\.modulos\}/g, modulosTexto)
         .replace(/\{plano\.valor_base\}/g, valorMensBase)
+        .replace(/\{plano\.valor_final\}/g, planoValorFinal)
+        .replace(/\{plano\.desconto_texto\}/g, planoDescontoTexto)
+        .replace(/\{plano\.valor_com_desconto\}/g, novoTotalDescontoTexto || `*${valorMensBase}*`)
         .replace(/\{valores\.plano_anterior\}/g, planoValorAnterior)
         .replace(/\{modulos\.adicionais\}/g, adicionaisBlock)
         .replace(/\{modulos\.adicionais_novos\}/g, adicionaisNovosTexto)
