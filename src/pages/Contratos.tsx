@@ -1509,14 +1509,17 @@ export default function Contratos() {
           const mensOrigBase = pedidoBase?.valor_mensalidade_original != null ? Number(pedidoBase.valor_mensalidade_original) : valorMensPlanoAntCheio;
           const descontoMensBase = mensOrigBase - valorMensPlanoAntReal;
           
-          // planoValorAnterior mostra o valor real que o cliente paga pelo plano
-          // Se há desconto no contrato base, valor_mensalidade_final já inclui plano+adicionais,
-          // então o valor do plano anterior = final - adicionais
+          // planoValorAnterior com formato riscado se houver desconto
           const valorPlanoAntComDesconto = descontoMensBase > 0
             ? valorMensPlanoAntCheio - descontoMensBase
             : valorMensPlanoAntCheio;
-          planoValorAnterior = fmtBRL(valorPlanoAntComDesconto);
-          totalAnterior = fmtBRL(valorPlanoAntComDesconto + totalAdAnt);
+          if (descontoMensBase > 0) {
+            planoValorAnterior = `~${fmtBRL(valorMensPlanoAntCheio)}~ Desconto: ${fmtBRL(descontoMensBase)} — ${fmtBRL(valorPlanoAntComDesconto)}`;
+            totalAnterior = `~${fmtBRL(valorMensPlanoAntCheio + totalAdAnt)}~ ${fmtBRL(valorPlanoAntComDesconto + totalAdAnt)}`;
+          } else {
+            planoValorAnterior = fmtBRL(valorMensPlanoAntCheio);
+            totalAnterior = fmtBRL(valorMensPlanoAntCheio + totalAdAnt);
+          }
 
           // Para upgrade: mensalidade total = novo plano + adicionais existentes - desconto
           if (pedido?.tipo_pedido === "Upgrade") {
