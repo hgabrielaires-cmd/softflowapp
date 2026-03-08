@@ -806,28 +806,30 @@ export default function Pedidos() {
     }
     setModulosJaContratados(modulosExistentes);
     setPlanoAnteriorValores(null);
-    // Mantém o plano atual do contrato para buscar módulos
+    // Usar plano vigente (último upgrade) em vez do plano base
+    const planoIdVigente = planoVigenteId || contratoAtivo.plano_id || "";
     setForm((f) => ({
       ...f,
-      plano_id: contratoAtivo.plano_id || "",
+      plano_id: planoIdVigente,
       tipo_pedido: "Aditivo",
       contrato_id: contratoAtivo.id,
       modulos_adicionais: [], // Começa vazio — só módulos NOVOS
     }));
-    if (contratoAtivo.plano_id) loadPlano(contratoAtivo.plano_id, []);
+    if (planoIdVigente) loadPlano(planoIdVigente, []);
   }
 
   function handleIniciarOA() {
     if (!contratoAtivo) return;
+    const planoIdVigente = planoVigenteId || contratoAtivo.plano_id || "";
     setForm((f) => ({
       ...f,
-      plano_id: contratoAtivo.plano_id || "",
+      plano_id: planoIdVigente,
       tipo_pedido: "OA",
       contrato_id: contratoAtivo.id,
       servicos_pedido: [],
       tipo_atendimento: "",
     }));
-    if (contratoAtivo.plano_id) loadPlano(contratoAtivo.plano_id, []);
+    if (planoIdVigente) loadPlano(planoIdVigente, []);
   }
 
   function handleAdicionarServico() {
