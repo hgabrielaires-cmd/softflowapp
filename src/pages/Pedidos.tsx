@@ -2880,9 +2880,10 @@ export default function Pedidos() {
                 <SelectTrigger><SelectValue placeholder="Selecione o novo plano..." /></SelectTrigger>
                 <SelectContent>
                   {(() => {
-                    const planoAtual = planos.find((p) => p.id === contratoAtivo?.plano_id);
+                    const planoAtualId = planoVigenteId || contratoAtivo?.plano_id;
+                    const planoAtual = planos.find((p) => p.id === planoAtualId);
                     const ordemAtual = planoAtual?.ordem ?? 0;
-                    const planosUpgrade = planos.filter((p) => p.id !== contratoAtivo?.plano_id && p.ordem > ordemAtual);
+                    const planosUpgrade = planos.filter((p) => p.id !== planoAtualId && p.ordem > ordemAtual);
                     return planosUpgrade.length === 0
                       ? <SelectItem value="__none__" disabled>Nenhum plano disponível para upgrade</SelectItem>
                       : planosUpgrade.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>);
