@@ -1477,8 +1477,7 @@ export default function Contratos() {
         if (contratoOrigem) {
           const planoAnterior = contratoOrigem.planos;
           planoNomeAnterior = planoAnterior?.nome || "";
-          const valorMensPlanoAnt = planoAnterior?.valor_mensalidade_padrao ?? 0;
-          planoValorAnterior = fmtBRL(valorMensPlanoAnt);
+          const valorMensPlanoAntCheio = planoAnterior?.valor_mensalidade_padrao ?? 0;
 
           // Buscar adicionais da hierarquia do contrato de origem (apenas ativos)
           const contratoBaseId = contrato.contrato_origem_id;
@@ -1500,7 +1499,24 @@ export default function Contratos() {
             ? todosAdicionaisExistentes.map(m => `• ${m.nome} (${m.quantidade}x) - ${fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}/mês`).join("\n")
             : "Nenhum";
           valorAdicionaisAnteriores = todosAdicionaisExistentes.length > 0 ? fmtBRL(totalAdAnt) : fmtBRL(0);
-          totalAnterior = fmtBRL(valorMensPlanoAnt + totalAdAnt);
+
+          // Usar valor final do pedido base (com desconto) se disponível
+          const pedidoBase = contratoOrigem.pedidos;
+          const valorMensPlanoAntReal = pedidoBase?.valor_mensalidade_final != null
+            ? Number(pedidoBase.valor_mensalidade_final)
+            : valorMensPlanoAntCheio;
+          // Verificar se o pedido base tinha desconto na mensalidade
+          const mensOrigBase = pedidoBase?.valor_mensalidade_original != null ? Number(pedidoBase.valor_mensalidade_original) : valorMensPlanoAntCheio;
+          const descontoMensBase = mensOrigBase - valorMensPlanoAntReal;
+          
+          // planoValorAnterior mostra o valor real que o cliente paga pelo plano
+          // Se há desconto no contrato base, valor_mensalidade_final já inclui plano+adicionais,
+          // então o valor do plano anterior = final - adicionais
+          const valorPlanoAntComDesconto = descontoMensBase > 0
+            ? valorMensPlanoAntCheio - descontoMensBase
+            : valorMensPlanoAntCheio;
+          planoValorAnterior = fmtBRL(valorPlanoAntComDesconto);
+          totalAnterior = fmtBRL(valorPlanoAntComDesconto + totalAdAnt);
 
           // Para upgrade: mensalidade total = novo plano + adicionais existentes - desconto
           if (pedido?.tipo_pedido === "Upgrade") {
