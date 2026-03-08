@@ -1535,14 +1535,39 @@ export default function Contratos() {
       let planoValorFinal = fmtBRL(plano?.valor_mensalidade_padrao ?? 0);
       let planoDescontoTexto = "";
       let novoTotalDescontoTexto = "";
+      let mensalidadeUpgradeComDesconto = "";
       if (pedido?.tipo_pedido === "Upgrade") {
         const novoPlanoMens = plano?.valor_mensalidade_padrao ?? 0;
         const descontoMens = (pedido?.valor_mensalidade_original ?? 0) - (pedido?.valor_mensalidade_final ?? 0);
         if (descontoMens > 0) {
           const planoComDesconto = novoPlanoMens - descontoMens;
-          planoValorFinal = fmtBRL(planoComDesconto);
+          planoValorFinal = `~${fmtBRL(novoPlanoMens)}~ Desconto: ${fmtBRL(descontoMens)} — ${fmtBRL(planoComDesconto)}`;
           planoDescontoTexto = `⚡ Desconto na mensalidade: ${fmtBRL(descontoMens)}`;
           novoTotalDescontoTexto = `~${fmtBRL(novoPlanoMens)}~ *${fmtBRL(planoComDesconto)}*`;
+          // Total com adicionais existentes
+          const totalAdAntUpgrade = contrato.contrato_origem_id
+            ? (() => {
+                const contratoOrigem = contratos.find(c => c.id === contrato.contrato_origem_id);
+                if (!contratoOrigem) return 0;
+                const contratoBaseId = contrato.contrato_origem_id;
+                const contratosHierarquia = contratos.filter(c =>
+                  c.status === "Ativo" && c.id !== contrato.id &&
+                  (c.id === contratoBaseId || c.contrato_origem_id === contratoBaseId)
+                );
+                let total = 0;
+                for (const c of contratosHierarquia) {
+                  const tipoPed = c.pedidos?.tipo_pedido;
+                  if (tipoPed === "Novo" || tipoPed === "Módulo Adicional" || tipoPed === "Aditivo") {
+                    const mods = (c.pedidos?.modulos_adicionais || []) as ModuloAdicionadoItem[];
+                    total += mods.reduce((s, m) => s + m.valor_mensalidade_modulo * m.quantidade, 0);
+                  }
+                }
+                return total;
+              })()
+            : 0;
+          const novoTotalComDesconto = planoComDesconto + totalAdAntUpgrade;
+          const totalSemDesconto = novoPlanoMens + totalAdAntUpgrade;
+          mensalidadeUpgradeComDesconto = `~${fmtBRL(totalSemDesconto)}~ Desconto: ${fmtBRL(descontoMens)} — *${fmtBRL(novoTotalComDesconto)}*`;
         }
       }
 
@@ -1607,6 +1632,7 @@ export default function Contratos() {
         .replace(/\{valores\.implantacao_original\}/g, fmtBRL(impOriginal))
         .replace(/\{valores\.implantacao_com_desconto\}/g, implantacaoComDesconto)
         .replace(/\{valores\.mensalidade\}/g, fmtBRL(pedido?.tipo_pedido === "Upgrade" ? mensalidadeTotalUpgrade : mensFinal))
+        .replace(/\{valores\.mensalidade_upgrade_com_desconto\}/g, mensalidadeUpgradeComDesconto || fmtBRL(pedido?.tipo_pedido === "Upgrade" ? mensalidadeTotalUpgrade : mensFinal))
         .replace(/\{valores\.mensalidade_original\}/g, fmtBRL(mensOriginal))
         .replace(/\{valores\.mensalidade_com_desconto\}/g, mensalidadeComDesconto)
         .replace(/\{valores\.desconto_implantacao\}/g, descontoImpl > 0 ? fmtBRL(descontoImpl) : "")
