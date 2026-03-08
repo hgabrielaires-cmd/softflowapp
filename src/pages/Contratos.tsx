@@ -1476,12 +1476,30 @@ export default function Contratos() {
       if (contrato.contrato_origem_id) {
         const contratoOrigem = contratos.find(c => c.id === contrato.contrato_origem_id);
         if (contratoOrigem) {
-          const planoAnterior = contratoOrigem.planos;
+          // Para upgrade: buscar o plano vigente real (último upgrade ativo, se existir)
+          const contratoBaseId = contrato.contrato_origem_id;
+          let contratoPlanoVigente = contratoOrigem; // fallback: contrato base
+          
+          if (pedido?.tipo_pedido === "Upgrade") {
+            // Buscar último upgrade ativo na hierarquia (excluindo o contrato atual)
+            const upgradesAnteriores = contratos.filter(c =>
+              c.status === "Ativo" &&
+              c.id !== contrato.id &&
+              c.contrato_origem_id === contratoBaseId &&
+              c.pedidos?.tipo_pedido === "Upgrade" &&
+              c.plano_id
+            ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            
+            if (upgradesAnteriores.length > 0) {
+              contratoPlanoVigente = upgradesAnteriores[0];
+            }
+          }
+
+          const planoAnterior = contratoPlanoVigente.planos;
           planoNomeAnterior = planoAnterior?.nome || "";
           const valorMensPlanoAntCheio = planoAnterior?.valor_mensalidade_padrao ?? 0;
 
           // Buscar adicionais da hierarquia do contrato de origem (apenas ativos)
-          const contratoBaseId = contrato.contrato_origem_id;
           const contratosHierarquia = contratos.filter(c => 
             c.status === "Ativo" &&
             c.id !== contrato.id &&
@@ -1501,14 +1519,13 @@ export default function Contratos() {
             : "Nenhum";
           valorAdicionaisAnteriores = todosAdicionaisExistentes.length > 0 ? fmtBRL(totalAdAnt) : fmtBRL(0);
 
-          // Usar valor final do pedido base (com desconto) se disponível
-          const pedidoBase = contratoOrigem.pedidos;
-          const valorMensPlanoAntReal = pedidoBase?.valor_mensalidade_final != null
-            ? Number(pedidoBase.valor_mensalidade_final)
+          // Usar valor final do pedido vigente (com desconto) se disponível
+          const pedidoVigente = contratoPlanoVigente.pedidos;
+          const valorMensPlanoAntReal = pedidoVigente?.valor_mensalidade_final != null
+            ? Number(pedidoVigente.valor_mensalidade_final)
             : valorMensPlanoAntCheio;
-          // Verificar se o pedido base tinha desconto na mensalidade
-          const mensOrigBase = pedidoBase?.valor_mensalidade_original != null ? Number(pedidoBase.valor_mensalidade_original) : valorMensPlanoAntCheio;
-          const descontoMensBase = mensOrigBase - valorMensPlanoAntReal;
+          const mensOrigVigente = pedidoVigente?.valor_mensalidade_original != null ? Number(pedidoVigente.valor_mensalidade_original) : valorMensPlanoAntCheio;
+          const descontoMensBase = mensOrigVigente - valorMensPlanoAntReal;
           
           // planoValorAnterior com formato riscado se houver desconto
           const valorPlanoAntComDesconto = descontoMensBase > 0
