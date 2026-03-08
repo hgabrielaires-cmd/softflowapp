@@ -414,81 +414,143 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     const enriched = await Promise.all((data || []).map(async (sol: any) => {
       const { data: prof } = await supabase.from("profiles").select("full_name").eq("user_id", sol.vendedor_id).single();
 
-      // Calcular margem bruta e markup sobre a MENSALIDADE (plano + módulos)
+      // Calcular margem bruta e markup sobre a MENSALIDADE TOTAL (plano + módulos)
       let margemBruta: number | null = null;
       let markup: number | null = null;
       let lucroBrutoVal: number | null = null;
       const planoId = (sol.pedidos as any)?.plano_id;
-      const mensFinal = Number((sol.pedidos as any)?.valor_mensalidade_final) || 0;
+      const tipoPedido = (sol.pedidos as any)?.tipo_pedido;
+      const contratoId = (sol.pedidos as any)?.contrato_id;
+      const isUpgrade = tipoPedido === 'Upgrade';
 
-      if (mensFinal > 0) {
-        let custoTotalSemImposto = 0;
-        let impostoTotal = 0;
+      // Helper: calcular custo de um item (plano/módulo)
+      const calcCustoItem = (cp: any, receitaRef: number) => {
+        if (!cp) return { custo: 0, imposto: 0 };
+        const c = (Number(cp.preco_fornecedor) || 0) + (Number(cp.taxa_boleto) || 0) + (Number(cp.despesas_adicionais) || 0);
+        let imp = 0;
+        if (cp.imposto_tipo === "%" && cp.imposto_base === "venda") {
+          imp = receitaRef * ((Number(cp.imposto_valor) || 0) / 100);
+        } else if (cp.imposto_tipo === "%" && cp.imposto_base === "compra") {
+          imp = (Number(cp.preco_fornecedor) || 0) * ((Number(cp.imposto_valor) || 0) / 100);
+        } else if (cp) {
+          imp = Number(cp.imposto_valor) || 0;
+        }
+        return { custo: c, imposto: imp };
+      };
 
-        const tipoPedido = (sol.pedidos as any)?.tipo_pedido;
-        const contratoId = (sol.pedidos as any)?.contrato_id;
-        const isUpgrade = tipoPedido === 'Upgrade';
+      if (isUpgrade && planoId && contratoId) {
+        // ── UPGRADE: Rentabilidade COMPLETA da nova configuração ──
+        // 1. Preço cheio do novo plano
+        const { data: planoData } = await supabase
+          .from("planos").select("valor_mensalidade_padrao").eq("id", planoId).maybeSingle();
+        const novoPlanoPreco = Number(planoData?.valor_mensalidade_padrao) || 0;
 
-        // Helper: calcular custo de um plano
-        const calcPlano = (cp: any) => {
-          if (!cp) return { custo: 0, imposto: 0 };
-          const c = (Number(cp.preco_fornecedor) || 0) + (Number(cp.taxa_boleto) || 0) + (Number(cp.despesas_adicionais) || 0);
-          let imp = 0;
-          if (cp.imposto_tipo === "%" && cp.imposto_base === "venda") {
-            imp = mensFinal * ((Number(cp.imposto_valor) || 0) / 100);
-          } else if (cp.imposto_tipo === "%" && cp.imposto_base === "compra") {
-            imp = (Number(cp.preco_fornecedor) || 0) * ((Number(cp.imposto_valor) || 0) / 100);
-          } else if (cp) {
-            imp = Number(cp.imposto_valor) || 0;
-          }
-          return { custo: c, imposto: imp };
-        };
-
-        // Custo do plano novo
-        const custoPlano = planoId ? custoPorPlano[planoId] : null;
-        const planoNovo = calcPlano(custoPlano);
-        custoTotalSemImposto += planoNovo.custo;
-        impostoTotal += planoNovo.imposto;
-
-        // Para Upgrade: subtrair custo do plano anterior
-        if (isUpgrade && contratoId) {
-          const { data: contratoBase } = await supabase
-            .from("contratos")
-            .select("plano_id")
-            .eq("id", contratoId)
-            .maybeSingle();
-          if (contratoBase?.plano_id) {
-            const custoPlanoAnt = custoPorPlano[contratoBase.plano_id] || null;
-            const planoAnt = calcPlano(custoPlanoAnt);
-            custoTotalSemImposto -= planoAnt.custo;
-            impostoTotal -= planoAnt.imposto;
+        // Aplicar desconto da solicitação sobre o preço cheio
+        let novoPlanoFinal = novoPlanoPreco;
+        if (sol.desconto_mensalidade_valor > 0) {
+          if (sol.desconto_mensalidade_tipo === '%') {
+            novoPlanoFinal = novoPlanoPreco * (1 - sol.desconto_mensalidade_valor / 100);
+          } else {
+            novoPlanoFinal = Math.max(0, novoPlanoPreco - sol.desconto_mensalidade_valor);
           }
         }
 
-        // Custo dos módulos adicionais
-        const mods = (sol.pedidos as any)?.modulos_adicionais || [];
-        const modsList = typeof mods === "string" ? JSON.parse(mods) : mods;
-        if (Array.isArray(modsList)) {
-          for (const mod of modsList) {
+        // 2. Buscar módulos ativos da hierarquia do contrato
+        const { data: contratosHierarquia } = await supabase
+          .from("contratos").select("pedido_id")
+          .eq("contrato_origem_id", contratoId).eq("status", "Ativo").in("tipo", ["Aditivo"]);
+
+        let totalModulosMens = 0;
+        const modulosAtivos: any[] = [];
+        if (contratosHierarquia && contratosHierarquia.length > 0) {
+          const pedidoIds = contratosHierarquia.map(c => c.pedido_id).filter(Boolean) as string[];
+          if (pedidoIds.length > 0) {
+            const { data: pedidosAditivos } = await supabase
+              .from("pedidos").select("modulos_adicionais").in("id", pedidoIds);
+            (pedidosAditivos || []).forEach((p: any) => {
+              const mods = typeof p.modulos_adicionais === "string" ? JSON.parse(p.modulos_adicionais) : (p.modulos_adicionais || []);
+              if (Array.isArray(mods)) {
+                mods.forEach((m: any) => {
+                  const qty = m.quantidade || 1;
+                  totalModulosMens += (Number(m.valor_mensalidade_modulo) || 0) * qty;
+                  modulosAtivos.push(m);
+                });
+              }
+            });
+          }
+        }
+
+        const receitaTotal = novoPlanoFinal + totalModulosMens;
+        if (receitaTotal > 0) {
+          let custoTotalSemImposto = 0;
+          let impostoTotal = 0;
+
+          // Custo COMPLETO do novo plano (sem subtrair anterior)
+          const custoPlano = custoPorPlano[planoId] || null;
+          const planoNovo = calcCustoItem(custoPlano, receitaTotal);
+          custoTotalSemImposto += planoNovo.custo;
+          impostoTotal += planoNovo.imposto;
+
+          // Custo de TODOS os módulos ativos da hierarquia
+          for (const mod of modulosAtivos) {
             const custoMod = mod.modulo_id ? custoPorModulo[mod.modulo_id] : null;
             if (custoMod) {
               const qty = mod.quantidade || 1;
-              custoTotalSemImposto += (Number(custoMod.preco_fornecedor) || 0) * qty;
-              // Imposto por módulo (se sobre compra)
+              custoTotalSemImposto += ((Number(custoMod.preco_fornecedor) || 0) + (Number(custoMod.taxa_boleto) || 0) + (Number(custoMod.despesas_adicionais) || 0)) * qty;
               if (custoMod.imposto_tipo === "%" && custoMod.imposto_base === "compra") {
                 impostoTotal += (Number(custoMod.preco_fornecedor) || 0) * qty * ((Number(custoMod.imposto_valor) || 0) / 100);
+              } else if (custoMod.imposto_tipo === "%" && custoMod.imposto_base === "venda") {
+                impostoTotal += (Number(mod.valor_mensalidade_modulo) || 0) * qty * ((Number(custoMod.imposto_valor) || 0) / 100);
+              } else {
+                impostoTotal += (Number(custoMod.imposto_valor) || 0) * qty;
               }
             }
           }
+
+          const custoFinal = Math.max(0, custoTotalSemImposto + impostoTotal);
+          const lucroBruto = receitaTotal - custoFinal;
+          margemBruta = (lucroBruto / receitaTotal) * 100;
+          markup = custoFinal > 0 ? ((receitaTotal / custoFinal) - 1) * 100 : 0;
+          lucroBrutoVal = lucroBruto;
         }
+      } else {
+        // ── NÃO-UPGRADE: lógica original ──
+        const mensFinal = Number((sol.pedidos as any)?.valor_mensalidade_final) || 0;
+        if (mensFinal > 0) {
+          let custoTotalSemImposto = 0;
+          let impostoTotal = 0;
 
-        // Imposto sobre venda do plano já incluído acima via calcPlano
+          const custoPlano = planoId ? custoPorPlano[planoId] : null;
+          const planoNovo = calcCustoItem(custoPlano, mensFinal);
+          custoTotalSemImposto += planoNovo.custo;
+          impostoTotal += planoNovo.imposto;
 
-        const custoFinal = Math.max(0, custoTotalSemImposto + impostoTotal);
-        const lucroBruto = mensFinal - custoFinal;
-        margemBruta = (lucroBruto / mensFinal) * 100;
-        markup = custoFinal > 0 ? ((mensFinal / custoFinal) - 1) * 100 : 0;
-        lucroBrutoVal = lucroBruto;
+          // Custo dos módulos adicionais do pedido
+          const mods = (sol.pedidos as any)?.modulos_adicionais || [];
+          const modsList = typeof mods === "string" ? JSON.parse(mods) : mods;
+          if (Array.isArray(modsList)) {
+            for (const mod of modsList) {
+              const custoMod = mod.modulo_id ? custoPorModulo[mod.modulo_id] : null;
+              if (custoMod) {
+                const qty = mod.quantidade || 1;
+                custoTotalSemImposto += ((Number(custoMod.preco_fornecedor) || 0) + (Number(custoMod.taxa_boleto) || 0) + (Number(custoMod.despesas_adicionais) || 0)) * qty;
+                if (custoMod.imposto_tipo === "%" && custoMod.imposto_base === "compra") {
+                  impostoTotal += (Number(custoMod.preco_fornecedor) || 0) * qty * ((Number(custoMod.imposto_valor) || 0) / 100);
+                } else if (custoMod.imposto_tipo === "%" && custoMod.imposto_base === "venda") {
+                  impostoTotal += (Number(mod.valor_mensalidade_modulo) || 0) * qty * ((Number(custoMod.imposto_valor) || 0) / 100);
+                } else {
+                  impostoTotal += (Number(custoMod.imposto_valor) || 0) * qty;
+                }
+              }
+            }
+          }
+
+          const custoFinal = Math.max(0, custoTotalSemImposto + impostoTotal);
+          const lucroBruto = mensFinal - custoFinal;
+          margemBruta = (lucroBruto / mensFinal) * 100;
+          markup = custoFinal > 0 ? ((mensFinal / custoFinal) - 1) * 100 : 0;
+          lucroBrutoVal = lucroBruto;
+        }
       }
 
       const filialId = (sol.pedidos as any)?.filial_id;
