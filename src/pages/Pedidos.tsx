@@ -732,8 +732,31 @@ export default function Pedidos() {
     await buscarContratoAtivo(clienteId);
   }
 
-  function handleIniciarUpgrade() {
+  // Estado para armazenar o plano vigente real (considerando upgrades anteriores)
+  const [planoVigenteId, setPlanoVigenteId] = useState<string | null>(null);
+
+  async function handleIniciarUpgrade() {
     setUpgradePlanoId("");
+    // Buscar o plano vigente real: se houver um upgrade ativo vinculado ao contrato base, usar esse plano
+    let planoAtualId = contratoAtivo?.plano_id || null;
+    if (contratoAtivo) {
+      const { data: upgradesAtivos } = await supabase
+        .from("contratos")
+        .select("plano_id")
+        .eq("contrato_origem_id", contratoAtivo.id)
+        .eq("status", "Ativo")
+        .eq("tipo", "Aditivo")
+        .not("plano_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (upgradesAtivos && upgradesAtivos.length > 0 && upgradesAtivos[0].plano_id) {
+        // Verificar se esse aditivo é realmente um upgrade (plano diferente do base)
+        if (upgradesAtivos[0].plano_id !== contratoAtivo.plano_id) {
+          planoAtualId = upgradesAtivos[0].plano_id;
+        }
+      }
+    }
+    setPlanoVigenteId(planoAtualId);
     setOpenUpgradeDialog(true);
   }
 
