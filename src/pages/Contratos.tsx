@@ -1543,6 +1543,8 @@ export default function Contratos() {
         if (descontoMens > 0) {
           const planoComDesconto = novoPlanoMens - descontoMens;
           planoValorFinal = `~${fmtBRL(novoPlanoMens)}~ Desconto: ${fmtBRL(descontoMens)} — ${fmtBRL(planoComDesconto)}`;
+          // Atualizar também valor_base para mostrar desconto no upgrade
+          valorMensBase = `~${fmtBRL(novoPlanoMens)}~ Desconto: ${fmtBRL(descontoMens)} — ${fmtBRL(planoComDesconto)}`;
           planoDescontoTexto = `⚡ Desconto na mensalidade: ${fmtBRL(descontoMens)}`;
           novoTotalDescontoTexto = `~${fmtBRL(novoPlanoMens)}~ *${fmtBRL(planoComDesconto)}*`;
           // Total com adicionais existentes
