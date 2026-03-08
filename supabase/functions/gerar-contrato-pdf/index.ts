@@ -160,7 +160,18 @@ Deno.serve(async (req) => {
         .maybeSingle();
       numeroContratoOrigem = contratoOrigem?.numero_exibicao || "";
       if (contratoOrigem && pedido?.tipo_pedido === "Upgrade") {
-        planoAnterior = (contratoOrigem as any).planos;
+        // Buscar o plano vigente real: último upgrade ativo na hierarquia (excluindo o atual)
+        const { data: upgradesAnteriores } = await supabase
+          .from("contratos")
+          .select("plano_id, planos(id, nome, descricao, valor_mensalidade_padrao, valor_implantacao_padrao), pedido_id, pedidos(tipo_pedido, valor_mensalidade_final, valor_mensalidade_original)")
+          .eq("contrato_origem_id", contratoOrigem.id)
+          .eq("status", "Ativo")
+          .neq("id", contrato_id)
+          .not("plano_id", "is", null)
+          .order("created_at", { ascending: false });
+
+        const ultimoUpgrade = (upgradesAnteriores || []).find((u: any) => u.pedidos?.tipo_pedido === "Upgrade");
+        planoAnterior = ultimoUpgrade ? (ultimoUpgrade as any).planos : (contratoOrigem as any).planos;
 
         // Buscar módulos adicionais existentes: apenas do contrato base de origem e seus aditivos
         // 1. Pedido do contrato base de origem
