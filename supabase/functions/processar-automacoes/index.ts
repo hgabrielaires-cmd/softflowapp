@@ -806,8 +806,8 @@ serve(async (req) => {
         let markupStr = "N/A";
         let lucroBrutoStr = "N/A";
         if (pedido) {
-          const mensFinalCalc = Number(pedido.valor_mensalidade_final) || Number(pedido.valor_mensalidade) || 0;
-          if (mensFinalCalc > 0) {
+          let mensFinalCalc = Number(pedido.valor_mensalidade_final) || Number(pedido.valor_mensalidade) || 0;
+          if (mensFinalCalc > 0 || pedido.tipo_pedido === "Upgrade") {
             // Load ALL custos (plan + modules)
             const { data: allCustos } = await supabase
               .from("custos")
@@ -838,38 +838,61 @@ serve(async (req) => {
               return { custo: c, imposto: imp };
             };
 
-            // Custo do plano novo
-            const custoPlano = pedido.plano_id ? custoPorPlano[pedido.plano_id] : null;
-            const planoNovo = calcPlanoCusto(custoPlano, mensFinalCalc);
-            custoTotalSemImposto += planoNovo.custo;
-            impostoTotal += planoNovo.imposto;
-
-            // Para Upgrade: subtrair custo do plano anterior
             const isUpgrade = pedido.tipo_pedido === "Upgrade";
-            if (isUpgrade && pedido.contrato_id) {
-              const { data: contratoBase } = await supabase
-                .from("contratos")
-                .select("plano_id")
-                .eq("id", pedido.contrato_id)
-                .maybeSingle();
-              if (contratoBase?.plano_id) {
-                const custoPlanoAnt = custoPorPlano[contratoBase.plano_id] || null;
-                const planoAnt = calcPlanoCusto(custoPlanoAnt, 0);
-                custoTotalSemImposto -= planoAnt.custo;
-                impostoTotal -= planoAnt.imposto;
-              }
-            }
 
-            // Custo dos módulos adicionais
-            const mods = pedido.modulos_adicionais
-              ? (typeof pedido.modulos_adicionais === "string" ? JSON.parse(pedido.modulos_adicionais) : pedido.modulos_adicionais)
-              : [];
-            if (Array.isArray(mods)) {
-              for (const mod of mods) {
+            if (isUpgrade && pedido.contrato_id && pedido.plano_id) {
+              // UPGRADE: Rentabilidade COMPLETA da nova configuração
+              const { data: planoData } = await supabase
+                .from("planos").select("valor_mensalidade_padrao").eq("id", pedido.plano_id).maybeSingle();
+              const novoPlanoPreco = Number(planoData?.valor_mensalidade_padrao) || 0;
+
+              // Aplicar desconto sobre preço cheio
+              let novoPlanoFinal = novoPlanoPreco;
+              const descMensVal = Number(pedido.desconto_mensalidade_valor) || 0;
+              if (descMensVal > 0) {
+                if (pedido.desconto_mensalidade_tipo === '%') {
+                  novoPlanoFinal = novoPlanoPreco * (1 - descMensVal / 100);
+                } else {
+                  novoPlanoFinal = Math.max(0, novoPlanoPreco - descMensVal);
+                }
+              }
+
+              // Módulos ativos da hierarquia do contrato
+              const { data: contratosHierarquia } = await supabase
+                .from("contratos").select("pedido_id")
+                .eq("contrato_origem_id", pedido.contrato_id).eq("status", "Ativo").in("tipo", ["Aditivo"]);
+
+              let totalModulosMens = 0;
+              const modulosAtivos: any[] = [];
+              if (contratosHierarquia && contratosHierarquia.length > 0) {
+                const pedidoIds = contratosHierarquia.map((c: any) => c.pedido_id).filter(Boolean);
+                if (pedidoIds.length > 0) {
+                  const { data: pedidosAditivos } = await supabase
+                    .from("pedidos").select("modulos_adicionais").in("id", pedidoIds);
+                  (pedidosAditivos || []).forEach((p: any) => {
+                    const mods = typeof p.modulos_adicionais === "string" ? JSON.parse(p.modulos_adicionais) : (p.modulos_adicionais || []);
+                    if (Array.isArray(mods)) mods.forEach((m: any) => {
+                      totalModulosMens += (Number(m.valor_mensalidade_modulo) || 0) * (m.quantidade || 1);
+                      modulosAtivos.push(m);
+                    });
+                  });
+                }
+              }
+
+              mensFinalCalc = novoPlanoFinal + totalModulosMens;
+
+              // Custo COMPLETO do novo plano
+              const custoPlano = custoPorPlano[pedido.plano_id] || null;
+              const planoNovo = calcPlanoCusto(custoPlano, mensFinalCalc);
+              custoTotalSemImposto += planoNovo.custo;
+              impostoTotal += planoNovo.imposto;
+
+              // Custo de TODOS os módulos ativos
+              for (const mod of modulosAtivos) {
                 const custoMod = mod.modulo_id ? custoPorModulo[mod.modulo_id] : null;
                 if (custoMod) {
                   const qty = mod.quantidade || 1;
-                  custoTotalSemImposto += ((Number(custoMod.preco_fornecedor) || 0) * qty) + ((Number(custoMod.taxa_boleto) || 0) * qty) + ((Number(custoMod.despesas_adicionais) || 0) * qty);
+                  custoTotalSemImposto += ((Number(custoMod.preco_fornecedor) || 0) + (Number(custoMod.taxa_boleto) || 0) + (Number(custoMod.despesas_adicionais) || 0)) * qty;
                   if (custoMod.imposto_tipo === "%") {
                     const impostoBase = custoMod.imposto_base === "venda"
                       ? (Number(mod.valor_mensalidade_modulo) || 0) * qty
@@ -880,15 +903,45 @@ serve(async (req) => {
                   }
                 }
               }
+            } else {
+              // NÃO-UPGRADE: lógica original
+              const custoPlano = pedido.plano_id ? custoPorPlano[pedido.plano_id] : null;
+              const planoNovo = calcPlanoCusto(custoPlano, mensFinalCalc);
+              custoTotalSemImposto += planoNovo.custo;
+              impostoTotal += planoNovo.imposto;
+
+              // Custo dos módulos adicionais do pedido
+              const mods = pedido.modulos_adicionais
+                ? (typeof pedido.modulos_adicionais === "string" ? JSON.parse(pedido.modulos_adicionais) : pedido.modulos_adicionais)
+                : [];
+              if (Array.isArray(mods)) {
+                for (const mod of mods) {
+                  const custoMod = mod.modulo_id ? custoPorModulo[mod.modulo_id] : null;
+                  if (custoMod) {
+                    const qty = mod.quantidade || 1;
+                    custoTotalSemImposto += ((Number(custoMod.preco_fornecedor) || 0) + (Number(custoMod.taxa_boleto) || 0) + (Number(custoMod.despesas_adicionais) || 0)) * qty;
+                    if (custoMod.imposto_tipo === "%") {
+                      const impostoBase = custoMod.imposto_base === "venda"
+                        ? (Number(mod.valor_mensalidade_modulo) || 0) * qty
+                        : (Number(custoMod.preco_fornecedor) || 0) * qty;
+                      impostoTotal += impostoBase * ((Number(custoMod.imposto_valor) || 0) / 100);
+                    } else {
+                      impostoTotal += (Number(custoMod.imposto_valor) || 0) * qty;
+                    }
+                  }
+                }
+              }
             }
 
-            const custoFinal = Math.max(0, custoTotalSemImposto + impostoTotal);
-            const lucroBruto = mensFinalCalc - custoFinal;
-            const margemBruta = (lucroBruto / mensFinalCalc) * 100;
-            const markupCalc = custoFinal > 0 ? ((mensFinalCalc / custoFinal) - 1) * 100 : 0;
-            margemBrutaStr = margemBruta.toFixed(1) + "%";
-            markupStr = markupCalc.toFixed(1) + "%";
-            lucroBrutoStr = fmtCurrencyVar(lucroBruto);
+            if (mensFinalCalc > 0) {
+              const custoFinal = Math.max(0, custoTotalSemImposto + impostoTotal);
+              const lucroBruto = mensFinalCalc - custoFinal;
+              const margemBruta = (lucroBruto / mensFinalCalc) * 100;
+              const markupCalc = custoFinal > 0 ? ((mensFinalCalc / custoFinal) - 1) * 100 : 0;
+              margemBrutaStr = margemBruta.toFixed(1) + "%";
+              markupStr = markupCalc.toFixed(1) + "%";
+              lucroBrutoStr = fmtCurrencyVar(lucroBruto);
+            }
           }
         }
 
