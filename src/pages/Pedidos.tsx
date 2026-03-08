@@ -732,20 +732,44 @@ export default function Pedidos() {
     await buscarContratoAtivo(clienteId);
   }
 
-  function handleIniciarUpgrade() {
+  // Estado para armazenar o plano vigente real (considerando upgrades anteriores)
+  const [planoVigenteId, setPlanoVigenteId] = useState<string | null>(null);
+
+  async function handleIniciarUpgrade() {
     setUpgradePlanoId("");
+    // Buscar o plano vigente real: se houver um upgrade ativo vinculado ao contrato base, usar esse plano
+    let planoAtualId = contratoAtivo?.plano_id || null;
+    if (contratoAtivo) {
+      const { data: upgradesAtivos } = await supabase
+        .from("contratos")
+        .select("plano_id")
+        .eq("contrato_origem_id", contratoAtivo.id)
+        .eq("status", "Ativo")
+        .eq("tipo", "Aditivo")
+        .not("plano_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (upgradesAtivos && upgradesAtivos.length > 0 && upgradesAtivos[0].plano_id) {
+        // Verificar se esse aditivo é realmente um upgrade (plano diferente do base)
+        if (upgradesAtivos[0].plano_id !== contratoAtivo.plano_id) {
+          planoAtualId = upgradesAtivos[0].plano_id;
+        }
+      }
+    }
+    setPlanoVigenteId(planoAtualId);
     setOpenUpgradeDialog(true);
   }
 
   async function handleConfirmarUpgrade() {
     if (!upgradePlanoId) { toast.error("Selecione o novo plano"); return; }
     if (!contratoAtivo) return;
-    // Buscar valores do plano anterior para calcular diferença
-    if (contratoAtivo.plano_id) {
+    // Buscar valores do plano anterior (vigente) para calcular diferença
+    const planoAnteriorId = planoVigenteId || contratoAtivo.plano_id;
+    if (planoAnteriorId) {
       const { data: planoAntigo } = await supabase
         .from("planos")
         .select("valor_implantacao_padrao, valor_mensalidade_padrao")
-        .eq("id", contratoAtivo.plano_id)
+        .eq("id", planoAnteriorId)
         .single();
       if (planoAntigo) {
         setPlanoAnteriorValores({
@@ -2856,9 +2880,10 @@ export default function Pedidos() {
                 <SelectTrigger><SelectValue placeholder="Selecione o novo plano..." /></SelectTrigger>
                 <SelectContent>
                   {(() => {
-                    const planoAtual = planos.find((p) => p.id === contratoAtivo?.plano_id);
+                    const planoAtualId = planoVigenteId || contratoAtivo?.plano_id;
+                    const planoAtual = planos.find((p) => p.id === planoAtualId);
                     const ordemAtual = planoAtual?.ordem ?? 0;
-                    const planosUpgrade = planos.filter((p) => p.id !== contratoAtivo?.plano_id && p.ordem > ordemAtual);
+                    const planosUpgrade = planos.filter((p) => p.id !== planoAtualId && p.ordem > ordemAtual);
                     return planosUpgrade.length === 0
                       ? <SelectItem value="__none__" disabled>Nenhum plano disponível para upgrade</SelectItem>
                       : planosUpgrade.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>);
