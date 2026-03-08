@@ -763,12 +763,13 @@ export default function Pedidos() {
   async function handleConfirmarUpgrade() {
     if (!upgradePlanoId) { toast.error("Selecione o novo plano"); return; }
     if (!contratoAtivo) return;
-    // Buscar valores do plano anterior para calcular diferença
-    if (contratoAtivo.plano_id) {
+    // Buscar valores do plano anterior (vigente) para calcular diferença
+    const planoAnteriorId = planoVigenteId || contratoAtivo.plano_id;
+    if (planoAnteriorId) {
       const { data: planoAntigo } = await supabase
         .from("planos")
         .select("valor_implantacao_padrao, valor_mensalidade_padrao")
-        .eq("id", contratoAtivo.plano_id)
+        .eq("id", planoAnteriorId)
         .single();
       if (planoAntigo) {
         setPlanoAnteriorValores({
