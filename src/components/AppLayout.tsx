@@ -922,7 +922,7 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
                   const cardId = selectedNotif.metadata?.card_id;
                   setSelectedNotif(null);
                   setOpen(false);
-                  navigate(`/painel-atendimento?card=${cardId}`);
+                  navigate(`/fila-agendamento?card=${cardId}`);
                 }}
               >
                 <Eye className="h-3.5 w-3.5" /> Visualizar
