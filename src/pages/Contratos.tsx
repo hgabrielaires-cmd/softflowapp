@@ -943,6 +943,9 @@ export default function Contratos() {
       }
 
       toast.success("Projeto(s) marcado(s) como cancelado no painel.");
+
+      // Verificar agendamentos pendentes dos projetos cancelados
+      await verificarAgendamentosProjetos(projetosAtivos.map(p => p.id));
     } catch (err: any) {
       toast.error("Erro: " + (err.message || ""));
     } finally {
