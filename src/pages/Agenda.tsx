@@ -497,6 +497,33 @@ export default function Agenda() {
             {ag.observacao && (
               <p className="text-xs text-muted-foreground mt-1 italic">"{ag.observacao}"</p>
             )}
+            {/* Outras datas agendadas para o mesmo card/contrato */}
+            {outrasDatasMap[ag.card_id]?.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-border/50">
+                <p className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wide">
+                  <CalendarDays className="h-3 w-3 inline mr-1" />
+                  Outras datas agendadas ({outrasDatasMap[ag.card_id].length})
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {outrasDatasMap[ag.card_id].map((od, idx) => (
+                    <Badge
+                      key={idx}
+                      variant="outline"
+                      className={cn(
+                        "text-[11px] font-mono cursor-pointer hover:bg-accent/80 transition-colors",
+                        parseISO(od.data) >= new Date(new Date().setHours(0,0,0,0))
+                          ? "border-primary/30 text-primary"
+                          : "border-border text-muted-foreground"
+                      )}
+                      onClick={() => setSelectedDate(parseISO(od.data))}
+                    >
+                      {format(parseISO(od.data), "dd/MM")}
+                      {od.hora_inicio && ` ${od.hora_inicio.slice(0, 5)}`}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex flex-col items-end gap-2 shrink-0">
             <Badge variant="outline" className="text-xs">
