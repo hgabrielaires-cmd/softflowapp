@@ -307,8 +307,9 @@ export default function Clientes() {
     setDialogOpen(true);
   }
 
-  async function openEdit(c: Cliente) {
+  async function openEdit(c: Cliente, readonly = false) {
     setEditing(c);
+    setViewOnly(readonly);
     const ieIsento = (c as any).inscricao_estadual === "ISENTO";
     setForm({
       nome_fantasia: c.nome_fantasia,
