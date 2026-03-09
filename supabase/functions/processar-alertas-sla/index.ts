@@ -13,9 +13,39 @@ serve(async (req) => {
   }
 
   try {
+    // ── Autenticação: aceita service role, anon key (cron) ou JWT válido ──
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    const isSystemCall = token === serviceRoleKey || token === anonKey;
+
+    if (!isSystemCall) {
+      const tempClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        anonKey,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+      const { error: claimsError } = await tempClient.auth.getClaims(token);
+      if (claimsError) {
+        return new Response(JSON.stringify({ error: "Não autorizado" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      serviceRoleKey
     );
 
     // 1. Get all active etapas with SLA control

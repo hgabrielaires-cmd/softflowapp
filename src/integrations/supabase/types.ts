@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       automacoes: {
         Row: {
           acao_config: Json
@@ -1049,6 +1082,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      login_attempts: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          ip_address: string | null
+          success: boolean
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+        }
+        Relationships: []
       }
       mesas_atendimento: {
         Row: {
@@ -3055,11 +3112,33 @@ export type Database = {
           },
         ]
       }
+      webhook_events: {
+        Row: {
+          event_id: string
+          id: string
+          processed_at: string
+          source: string
+        }
+        Insert: {
+          event_id: string
+          id?: string
+          processed_at?: string
+          source: string
+        }
+        Update: {
+          event_id?: string
+          id?: string
+          processed_at?: string
+          source?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      check_login_blocked: { Args: { p_email: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -3068,6 +3147,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      record_login_attempt: {
+        Args: { p_email: string; p_ip?: string; p_success: boolean }
+        Returns: undefined
+      }
       user_has_filial_access: { Args: { _filial_id: string }; Returns: boolean }
     }
     Enums: {
