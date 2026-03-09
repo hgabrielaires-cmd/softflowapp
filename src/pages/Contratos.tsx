@@ -804,6 +804,7 @@ export default function Contratos() {
       const { data: { user } } = await supabase.auth.getUser();
 
       // Depois cancelar os aditivos selecionados
+      const allCancelledCardIds: string[] = [];
       for (const aditivoId of aditivosSelecionados) {
         const aditivo = aditivosVinculados.find(a => a.id === aditivoId);
         if (!aditivo) continue;
