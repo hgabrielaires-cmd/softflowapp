@@ -136,13 +136,20 @@ export default function Financeiro() {
 
   async function loadData() {
     setLoading(true);
+    let pedidosQuery = supabase
+      .from("pedidos")
+      .select("*, clientes(nome_fantasia), planos(nome), filiais(nome)")
+      .eq("financeiro_status", "Aguardando")
+      .eq("status_pedido", "Aguardando Financeiro")
+      .order("created_at", { ascending: true });
+
+    // Vendedor only sees their own pedidos
+    if (isVendedor && !isAdmin && !isFinanceiro && !isGestor) {
+      pedidosQuery = pedidosQuery.eq("vendedor_id", profile?.user_id);
+    }
+
     const [{ data: pedidosData }, { data: filiaisData }] = await Promise.all([
-      supabase
-        .from("pedidos")
-        .select("*, clientes(nome_fantasia), planos(nome), filiais(nome)")
-        .eq("financeiro_status", "Aguardando")
-        .eq("status_pedido", "Aguardando Financeiro")
-        .order("created_at", { ascending: true }),
+      pedidosQuery,
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
     ]);
     setPedidos((pedidosData || []) as PedidoFila[]);
