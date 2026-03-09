@@ -913,7 +913,9 @@ export default function Clientes() {
             {/* Filial */}
             <div className="space-y-1.5">
               <Label>Filial responsável</Label>
-              <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))} disabled={isVendedor && !canEditExisti!canEditExisting && !crudIncluir                  <SelectValue placeholder="Selecionar filial" />
+              <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))} disabled={!canEditExisting && !crudIncluir}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar filial" />
                 </SelectTrigger>
                 <SelectContent>
                   {filiaisDoUsuario.map((fil) => (
