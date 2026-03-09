@@ -862,9 +862,11 @@ export default function Clientes() {
                             <Eye className="h-3.5 w-3.5" />
                           </Button>
                         )}
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openHistorico(c)} title="Histórico contratual">
-                          <FileText className="h-3.5 w-3.5" />
-                        </Button>
+                        {podeVerHistorico && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openHistorico(c)} title="Histórico contratual">
+                            <FileText className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
