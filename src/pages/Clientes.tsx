@@ -304,7 +304,7 @@ export default function Clientes() {
     setViewOnly(false);
     setCepError("");
     setCnpjError("");
-    const defaultFilial = filialPadraoId || (.filial_id : "");
+    const defaultFilial = filialPadraoId || profile?.filial_id || "";
     setForm({ ...emptyForm, filial_id: defaultFilial });
     setFormContatos([]);
     setShowContatoInlineForm(false);
