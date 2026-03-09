@@ -2510,6 +2510,47 @@ export type Database = {
           },
         ]
       }
+      precos_filial: {
+        Row: {
+          created_at: string
+          filial_id: string
+          id: string
+          referencia_id: string
+          tipo: string
+          updated_at: string
+          valor_implantacao: number
+          valor_mensalidade: number
+        }
+        Insert: {
+          created_at?: string
+          filial_id: string
+          id?: string
+          referencia_id: string
+          tipo: string
+          updated_at?: string
+          valor_implantacao?: number
+          valor_mensalidade?: number
+        }
+        Update: {
+          created_at?: string
+          filial_id?: string
+          id?: string
+          referencia_id?: string
+          tipo?: string
+          updated_at?: string
+          valor_implantacao?: number
+          valor_mensalidade?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "precos_filial_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           acesso_global: boolean
