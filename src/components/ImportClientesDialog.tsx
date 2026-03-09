@@ -39,6 +39,7 @@ interface ImportClientesDialogProps {
 const SYSTEM_FIELDS: { key: string; label: string; required: boolean }[] = [
   { key: "nome_fantasia", label: "Nome Fantasia", required: true },
   { key: "cnpj_cpf", label: "CNPJ / CPF", required: true },
+  { key: "filial", label: "Filial", required: false },
   { key: "razao_social", label: "Razão Social", required: false },
   { key: "apelido", label: "Apelido", required: false },
   { key: "inscricao_estadual", label: "Inscrição Estadual", required: false },
