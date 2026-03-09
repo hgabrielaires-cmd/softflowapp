@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
+import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Calendar } from "@/components/ui/calendar";
@@ -14,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TablePagination } from "@/components/TablePagination";
 import {
   CalendarDays, Clock, User, Building2, Filter, MapPin, ExternalLink,
-  Layers, List, Search, ChevronLeft, ChevronRight,
+  Layers, List, Search, ChevronLeft, ChevronRight, Play, CheckCircle2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -40,6 +41,7 @@ type CalendarMode = "month" | "week";
 export default function Agenda() {
   const { profile, user, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
   // View state
@@ -159,7 +161,7 @@ export default function Agenda() {
       const to = from + ITEMS_PER_PAGE - 1;
 
       let q = supabase.from("painel_agendamentos")
-        .select("id, card_id, atividade_id, checklist_index, data, hora_inicio, hora_fim, observacao, mesa_id, filial_id, etapa_id, titulo, cor_evento, criado_por, created_at");
+        .select("id, card_id, atividade_id, checklist_index, data, hora_inicio, hora_fim, observacao, mesa_id, filial_id, etapa_id, titulo, cor_evento, criado_por, created_at, status, iniciado_em, finalizado_em");
       q = applyBaseFilters(q);
       q = q.gte("data", listPeriodoDe).lte("data", listPeriodoAte);
       q = q.order("data", { ascending: false }).order("hora_inicio", { ascending: true });
@@ -220,6 +222,9 @@ export default function Agenda() {
         const cardEtapaId = card?.etapa_id;
         return {
           ...ag,
+          ag_status: ag.status || 'agendado',
+          ag_iniciado_em: ag.iniciado_em || null,
+          ag_finalizado_em: ag.finalizado_em || null,
           cliente_nome: card?.clientes?.nome_fantasia || "—",
           cliente_cnpj: card?.clientes?.cnpj_cpf || "",
           contrato_numero: card?.contratos?.numero_exibicao || "—",
@@ -234,7 +239,7 @@ export default function Agenda() {
           apontados: aponMap[ag.card_id] || [],
           status_projeto: card?.status_projeto || "ativo",
           pausado: card?.pausado || false,
-          iniciado_em: card?.iniciado_em || null,
+          card_iniciado_em: card?.iniciado_em || null,
           sla_horas: card?.sla_horas || 0,
           tipo_atendimento: card?.tipo_atendimento_local || null,
         };
@@ -277,7 +282,7 @@ export default function Agenda() {
     enabled: activeView === "calendario" && filtersInitialized,
     queryFn: async () => {
       let q = supabase.from("painel_agendamentos")
-        .select("id, card_id, atividade_id, checklist_index, data, hora_inicio, hora_fim, observacao, mesa_id, filial_id, etapa_id, titulo, cor_evento");
+        .select("id, card_id, atividade_id, checklist_index, data, hora_inicio, hora_fim, observacao, mesa_id, filial_id, etapa_id, titulo, cor_evento, status, iniciado_em, finalizado_em");
       q = applyBaseFilters(q);
       q = q.gte("data", calRange.start).lte("data", calRange.end);
       q = q.order("data").order("hora_inicio", { ascending: true });
@@ -332,6 +337,9 @@ export default function Agenda() {
         const cardEtapaId = card?.etapa_id;
         return {
           ...ag,
+          ag_status: ag.status || 'agendado',
+          ag_iniciado_em: ag.iniciado_em || null,
+          ag_finalizado_em: ag.finalizado_em || null,
           cliente_nome: card?.clientes?.nome_fantasia || "—",
           contrato_numero: card?.contratos?.numero_exibicao || "—",
           filial_id: card?.filial_id || "",
@@ -346,7 +354,7 @@ export default function Agenda() {
           tipo_atendimento: card?.tipo_atendimento_local || null,
           status_projeto: card?.status_projeto || "ativo",
           pausado: card?.pausado || false,
-          iniciado_em: card?.iniciado_em || null,
+          card_iniciado_em: card?.iniciado_em || null,
           sla_horas: card?.sla_horas || 0,
         };
       });
@@ -416,15 +424,38 @@ export default function Agenda() {
 
   // ===== SHARED: status helper =====
   const getStatusInfo = (ag: any) => {
+    // Prioridade: status do agendamento (execução)
+    if (ag.ag_status === "finalizado") return { label: "Finalizado", color: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+    if (ag.ag_status === "em_andamento") return { label: "Em Andamento", color: "bg-blue-100 text-blue-700 border-blue-200" };
+    // Fallback: status do projeto/card
     if (ag.status_projeto === "recusado") return { label: "Recusado", color: "bg-destructive/10 text-destructive border-destructive/20" };
     if (ag.pausado) return { label: "Pausado", color: "bg-yellow-100 text-yellow-700 border-yellow-200" };
-    if (ag.iniciado_em && ag.sla_horas > 0) {
-      const horasDecorridas = (Date.now() - new Date(ag.iniciado_em).getTime()) / 3600000;
-      if (horasDecorridas > ag.sla_horas) return { label: "SLA Atrasado", color: "bg-destructive/10 text-destructive border-destructive/20" };
-    }
-    if (ag.iniciado_em) return { label: "Em Andamento", color: "bg-green-100 text-green-700 border-green-200" };
-    return { label: "Aguardando", color: "bg-muted text-muted-foreground border-border" };
+    return { label: "Agendado", color: "bg-muted text-muted-foreground border-border" };
   };
+
+  // ===== Mutation: iniciar/finalizar atendimento na agenda =====
+  const updateAgStatus = useMutation({
+    mutationFn: async ({ agId, newStatus }: { agId: string; newStatus: string }) => {
+      const now = new Date().toISOString();
+      const updateData: any = { status: newStatus };
+      if (newStatus === "em_andamento") {
+        updateData.iniciado_em = now;
+        updateData.iniciado_por = user?.id || null;
+      }
+      if (newStatus === "finalizado") {
+        updateData.finalizado_em = now;
+        updateData.finalizado_por = user?.id || null;
+      }
+      const { error } = await supabase.from("painel_agendamentos").update(updateData).eq("id", agId);
+      if (error) throw error;
+    },
+    onSuccess: (_, { newStatus }) => {
+      toast.success(newStatus === "em_andamento" ? "Atendimento iniciado!" : "Atendimento finalizado!");
+      queryClient.invalidateQueries({ queryKey: ["agenda-cal"] });
+      queryClient.invalidateQueries({ queryKey: ["agenda-list"] });
+    },
+    onError: () => toast.error("Erro ao atualizar status"),
+  });
 
   // ===== RENDER: event card (shared between views) =====
   const renderEventCard = (ag: any, compact = false) => {
@@ -475,9 +506,9 @@ export default function Agenda() {
                 <span className="text-xs font-medium" style={{ color: ag.etapa_atual_cor || undefined }}>
                   Etapa Atual: {ag.etapa_atual_nome}
                 </span>
-                {ag.sla_horas > 0 && ag.iniciado_em && (
+                {ag.sla_horas > 0 && ag.card_iniciado_em && (
                   <Badge variant="outline" className={cn("text-[11px]", (() => {
-                    const horasDecorridas = (Date.now() - new Date(ag.iniciado_em).getTime()) / 3600000;
+                    const horasDecorridas = (Date.now() - new Date(ag.card_iniciado_em).getTime()) / 3600000;
                     return horasDecorridas > ag.sla_horas
                       ? "border-destructive/30 text-destructive"
                       : "border-primary/30 text-primary";
@@ -485,7 +516,7 @@ export default function Agenda() {
                     <Clock className="h-3 w-3 mr-1" />
                     SLA: {ag.sla_horas}h
                     {(() => {
-                      const horasDecorridas = (Date.now() - new Date(ag.iniciado_em).getTime()) / 3600000;
+                      const horasDecorridas = (Date.now() - new Date(ag.card_iniciado_em).getTime()) / 3600000;
                       if (horasDecorridas > ag.sla_horas) {
                         const atraso = Math.round(horasDecorridas - ag.sla_horas);
                         return ` (${atraso}h atrasado)`;
@@ -495,7 +526,7 @@ export default function Agenda() {
                     })()}
                   </Badge>
                 )}
-                {ag.sla_horas > 0 && !ag.iniciado_em && (
+                {ag.sla_horas > 0 && !ag.card_iniciado_em && (
                   <Badge variant="outline" className="text-[11px] border-muted text-muted-foreground">
                     <Clock className="h-3 w-3 mr-1" />
                     SLA: {ag.sla_horas}h
@@ -560,6 +591,28 @@ export default function Agenda() {
               <Building2 className="h-3 w-3 mr-1" />
               {ag.filial_nome}
             </Badge>
+            {/* Botões de ação do atendimento */}
+            {ag.ag_status === "agendado" && (
+              <Button
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={() => updateAgStatus.mutate({ agId: ag.id, newStatus: "em_andamento" })}
+                disabled={updateAgStatus.isPending}
+              >
+                <Play className="h-3 w-3" /> Iniciar Atendimento
+              </Button>
+            )}
+            {ag.ag_status === "em_andamento" && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                onClick={() => updateAgStatus.mutate({ agId: ag.id, newStatus: "finalizado" })}
+                disabled={updateAgStatus.isPending}
+              >
+                <CheckCircle2 className="h-3 w-3" /> Finalizar
+              </Button>
+            )}
             <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => navigate(`/fila-agendamento?card=${ag.card_id}&from=agenda`)}>
               <ExternalLink className="h-3 w-3" /> Abrir Card
             </Button>
