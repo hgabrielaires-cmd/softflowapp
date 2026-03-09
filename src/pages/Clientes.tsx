@@ -621,7 +621,7 @@ export default function Clientes() {
       }
     }
 
-    const payload = {
+    const payload: any = {
       nome_fantasia: form.nome_fantasia.trim(),
       razao_social: form.razao_social.trim(),
       apelido: form.apelido.trim() || null,
@@ -642,8 +642,9 @@ export default function Clientes() {
       ativo: form.ativo,
     };
     if (editing) {
-      const { error } = await supabase.from("clientes").update(payload).eq("id", editing.id);
-      if (error) { toast.error("Erro ao atualizar cliente"); setSaving(false); return; }
+      payload.atualizado_por = profile?.user_id || null;
+      const { error, count } = await supabase.from("clientes").update(payload).eq("id", editing.id);
+      if (error) { toast.error("Erro ao atualizar cliente: " + error.message); setSaving(false); return; }
       // Sincronizar contatos: upsert dos com _id, inserir novos
       for (const ct of formContatos) {
         if (ct._id) {
