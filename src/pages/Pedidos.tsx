@@ -515,8 +515,7 @@ export default function Pedidos() {
   // Qualquer usuário (inclusive admin) é bloqueado se exceder o limite
   const bloqueadoPorDesconto = descontoExcedido;
 
-  // ─── Preços por filial ────────────────────────────────────────────────────
-  const [precosFilialMap, setPrecosFilialMap] = useState<Record<string, { valor_implantacao: number; valor_mensalidade: number }>>({});
+  // precosFilialMap moved above computed values
 
   // ─── Load plano + módulos disponíveis ──────────────────────────────────────
 
