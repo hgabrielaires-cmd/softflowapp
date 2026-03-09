@@ -802,7 +802,7 @@ export default function Clientes() {
                             <Phone className="h-3 w-3" />{c.telefone}
                           </p>
                         )}
-                        {c.email && (
+                        {!vendedorSomenteLeitura && c.email && (
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <Mail className="h-3 w-3" />{c.email}
                           </p>
@@ -819,7 +819,7 @@ export default function Clientes() {
                       {[c.cidade, c.uf].filter(Boolean).join(" / ") || "—"}
                     </TableCell>
                     <TableCell>
-                      {canEdit ? (
+                      {canEdit && !vendedorSomenteLeitura ? (
                         <Switch checked={c.ativo} onCheckedChange={() => toggleAtivo(c)} />
                       ) : (
                         <Badge variant={c.ativo ? "default" : "secondary"}>
@@ -829,9 +829,13 @@ export default function Clientes() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        {canEdit && (
+                        {canEdit && !vendedorSomenteLeitura ? (
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)} title="Editar cliente">
                             <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c, true)} title="Visualizar cliente">
+                            <Eye className="h-3.5 w-3.5" />
                           </Button>
                         )}
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openHistorico(c)} title="Histórico contratual">
