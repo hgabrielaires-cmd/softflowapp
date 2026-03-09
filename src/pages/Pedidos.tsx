@@ -1861,9 +1861,9 @@ export default function Pedidos() {
                   </p>
                   {planoAnteriorValores && planoSelecionado && (
                     <p className="text-xs text-green-700 font-mono">
-                      Diferença Impl: {fmtBRL(Math.max(0, (planoSelecionado.valor_implantacao_padrao ?? 0) - planoAnteriorValores.implantacao))}
+                      Diferença Impl: {fmtBRL(Math.max(0, planoImplFilial - planoAnteriorValores.implantacao))}
                       {" · "}
-                      Diferença Mens: {fmtBRL(Math.max(0, (planoSelecionado.valor_mensalidade_padrao ?? 0) - planoAnteriorValores.mensalidade))}
+                      Diferença Mens: {fmtBRL(Math.max(0, planoMensFilial - planoAnteriorValores.mensalidade))}
                     </p>
                   )}
                 </div>
