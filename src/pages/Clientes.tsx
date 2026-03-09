@@ -1218,7 +1218,7 @@ export default function Clientes() {
                       )}
                     </div>
                   </div>
-                  {canEdit && (
+                  {canEditExisting && (
                     <div className="flex items-center gap-1 shrink-0">
                       <Button
                         variant="ghost" size="icon" className={`h-7 w-7 ${c.decisor ? "text-primary" : "text-muted-foreground"}`}
