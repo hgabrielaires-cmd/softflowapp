@@ -458,8 +458,8 @@ export default function Agenda() {
                 {statusInfo.label}
               </Badge>
               {ag.mesa_nome && ag.mesa_nome !== "—" && (
-                <Badge variant="outline" className="text-xs" style={{ borderColor: ag.mesa_cor || undefined, color: ag.mesa_cor || undefined }}>
-                  <span className="h-2 w-2 rounded-full mr-1 inline-block" style={{ backgroundColor: ag.mesa_cor || "hsl(var(--muted-foreground))" }} />
+                <Badge className="text-xs text-white border-transparent font-medium" style={{ backgroundColor: ag.mesa_cor || "hsl(var(--muted-foreground))" }}>
+                  <span className="h-2 w-2 rounded-full mr-1 inline-block bg-white/30" />
                   {ag.mesa_nome}
                 </Badge>
               )}
