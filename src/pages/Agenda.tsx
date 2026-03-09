@@ -390,6 +390,30 @@ export default function Agenda() {
       });
   }, [calAgendamentos, selectedDate]);
 
+  // Fetch OTHER scheduled dates for cards visible on the selected day
+  const cardIdsDoDia = useMemo(() => [...new Set(agendamentosDoDia.map((ag: any) => ag.card_id))], [agendamentosDoDia]);
+
+  const { data: outrasDatasMap = {} } = useQuery({
+    queryKey: ["agenda-outras-datas", cardIdsDoDia, format(selectedDate, "yyyy-MM-dd")],
+    enabled: cardIdsDoDia.length > 0 && activeView === "calendario",
+    queryFn: async () => {
+      const selectedStr = format(selectedDate, "yyyy-MM-dd");
+      const { data, error } = await supabase
+        .from("painel_agendamentos")
+        .select("card_id, data, hora_inicio, hora_fim")
+        .in("card_id", cardIdsDoDia)
+        .neq("data", selectedStr)
+        .order("data", { ascending: true });
+      if (error) throw error;
+      const map: Record<string, { data: string; hora_inicio: string | null; hora_fim: string | null }[]> = {};
+      (data || []).forEach((r: any) => {
+        if (!map[r.card_id]) map[r.card_id] = [];
+        map[r.card_id].push({ data: r.data, hora_inicio: r.hora_inicio, hora_fim: r.hora_fim });
+      });
+      return map;
+    },
+  }) as { data: Record<string, { data: string; hora_inicio: string | null; hora_fim: string | null }[]> };
+
   // ===== SHARED: status helper =====
   const getStatusInfo = (ag: any) => {
     if (ag.status_projeto === "recusado") return { label: "Recusado", color: "bg-destructive/10 text-destructive border-destructive/20" };
