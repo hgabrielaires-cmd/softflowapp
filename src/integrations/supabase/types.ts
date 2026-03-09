@@ -3142,6 +3142,7 @@ export type Database = {
     }
     Functions: {
       check_login_blocked: { Args: { p_email: string }; Returns: boolean }
+      get_cron_secret: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
