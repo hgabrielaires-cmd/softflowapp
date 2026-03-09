@@ -506,9 +506,9 @@ export default function Agenda() {
                 <span className="text-xs font-medium" style={{ color: ag.etapa_atual_cor || undefined }}>
                   Etapa Atual: {ag.etapa_atual_nome}
                 </span>
-                {ag.sla_horas > 0 && ag.iniciado_em && (
+                {ag.sla_horas > 0 && ag.card_iniciado_em && (
                   <Badge variant="outline" className={cn("text-[11px]", (() => {
-                    const horasDecorridas = (Date.now() - new Date(ag.iniciado_em).getTime()) / 3600000;
+                    const horasDecorridas = (Date.now() - new Date(ag.card_iniciado_em).getTime()) / 3600000;
                     return horasDecorridas > ag.sla_horas
                       ? "border-destructive/30 text-destructive"
                       : "border-primary/30 text-primary";
@@ -516,7 +516,7 @@ export default function Agenda() {
                     <Clock className="h-3 w-3 mr-1" />
                     SLA: {ag.sla_horas}h
                     {(() => {
-                      const horasDecorridas = (Date.now() - new Date(ag.iniciado_em).getTime()) / 3600000;
+                      const horasDecorridas = (Date.now() - new Date(ag.card_iniciado_em).getTime()) / 3600000;
                       if (horasDecorridas > ag.sla_horas) {
                         const atraso = Math.round(horasDecorridas - ag.sla_horas);
                         return ` (${atraso}h atrasado)`;
@@ -526,7 +526,7 @@ export default function Agenda() {
                     })()}
                   </Badge>
                 )}
-                {ag.sla_horas > 0 && !ag.iniciado_em && (
+                {ag.sla_horas > 0 && !ag.card_iniciado_em && (
                   <Badge variant="outline" className="text-[11px] border-muted text-muted-foreground">
                     <Clock className="h-3 w-3 mr-1" />
                     SLA: {ag.sla_horas}h
