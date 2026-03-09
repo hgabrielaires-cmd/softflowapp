@@ -285,10 +285,15 @@ export default function Clientes() {
     ? clientes
     : clientes.filter((c) => c.filial_id && allowedFilialIds.includes(c.filial_id));
 
+  // Apply filial filter selection
+  const clientesFiltradosPorFilialSelecionada = filtroFilialId === "__todas__"
+    ? clientesFiltradosPorFilial
+    : clientesFiltradosPorFilial.filter((c) => c.filial_id === filtroFilialId);
+
   const searchTerm = search.toLowerCase().trim();
   const searchDigits = searchTerm.replace(/\D/g, "");
   const filtered = searchTerm
-    ? clientesFiltradosPorFilial.filter((c) =>
+    ? clientesFiltradosPorFilialSelecionada.filter((c) =>
         c.nome_fantasia.toLowerCase().includes(searchTerm) ||
         (c.razao_social || "").toLowerCase().includes(searchTerm) ||
         ((c as any).apelido || "").toLowerCase().includes(searchTerm) ||
@@ -297,10 +302,10 @@ export default function Clientes() {
         (c.contato_nome || "").toLowerCase().includes(searchTerm) ||
         (c.telefone || "").includes(searchTerm)
       )
-    : clientesFiltradosPorFilial;
+    : clientesFiltradosPorFilialSelecionada;
 
-  // Reset page when search changes
-  useEffect(() => { setCurrentPage(1); }, [search]);
+  // Reset page when search or filter changes
+  useEffect(() => { setCurrentPage(1); }, [search, filtroFilialId]);
 
   function openCreate() {
     setEditing(null);
