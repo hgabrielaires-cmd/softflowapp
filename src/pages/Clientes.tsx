@@ -563,13 +563,13 @@ export default function Clientes() {
     await fetchContatos(clienteContatos.id);
   }
 
-  async function handleDeleteContato(contato: ClienteContato) {
+  async function handleDesativarContato(contato: ClienteContato) {
     if (!clienteContatos) return;
-    const { error } = await supabase.from("cliente_contatos").delete().eq("id", contato.id);
+    const { error } = await supabase.from("cliente_contatos").update({ ativo: false }).eq("id", contato.id);
     if (error) {
-      toast.error("Erro ao excluir contato");
+      toast.error("Erro ao desativar contato: " + error.message);
     } else {
-      toast.success("Contato removido");
+      toast.success("Contato desativado com sucesso");
       await fetchContatos(clienteContatos.id);
     }
   }
