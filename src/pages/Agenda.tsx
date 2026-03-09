@@ -217,7 +217,7 @@ export default function Agenda() {
       // Enrich
       const enriched = (rows || []).map((ag: any) => {
         const card = cardsMap[ag.card_id];
-        const resolvedEtapaId = ag.etapa_id || card?.etapa_id;
+        const cardEtapaId = card?.etapa_id;
         return {
           ...ag,
           cliente_nome: card?.clientes?.nome_fantasia || "—",
@@ -227,8 +227,8 @@ export default function Agenda() {
           atividade_nome: atividadesMap[ag.atividade_id] || "—",
           mesa_nome: ag.mesa_id ? mesasMap[ag.mesa_id]?.nome || "—" : "—",
           mesa_cor: ag.mesa_id ? mesasMap[ag.mesa_id]?.cor || null : null,
-          etapa_nome: resolvedEtapaId ? etapasMap[resolvedEtapaId]?.nome || "—" : "—",
-          etapa_cor: resolvedEtapaId ? etapasMap[resolvedEtapaId]?.cor || null : null,
+          etapa_atual_nome: cardEtapaId ? etapasMap[cardEtapaId]?.nome || "—" : "—",
+          etapa_atual_cor: cardEtapaId ? etapasMap[cardEtapaId]?.cor || null : null,
           responsavel_nome: card?.profiles?.full_name || "—",
           tecnicos: tecMap[ag.card_id] || [],
           apontados: aponMap[ag.card_id] || [],
@@ -329,7 +329,7 @@ export default function Agenda() {
 
       return (rows || []).map((ag: any) => {
         const card = cardsMap[ag.card_id];
-        const resolvedEtapaId = ag.etapa_id || card?.etapa_id;
+        const cardEtapaId = card?.etapa_id;
         return {
           ...ag,
           cliente_nome: card?.clientes?.nome_fantasia || "—",
@@ -339,8 +339,8 @@ export default function Agenda() {
           atividade_nome: atividadesMap[ag.atividade_id] || "—",
           mesa_nome: ag.mesa_id ? mesasMap[ag.mesa_id]?.nome || "—" : "—",
           mesa_cor: ag.mesa_id ? mesasMap[ag.mesa_id]?.cor || null : null,
-          etapa_nome: resolvedEtapaId ? etapasMap[resolvedEtapaId]?.nome || "—" : "—",
-          etapa_cor: resolvedEtapaId ? etapasMap[resolvedEtapaId]?.cor || null : null,
+          etapa_atual_nome: cardEtapaId ? etapasMap[cardEtapaId]?.nome || "—" : "—",
+          etapa_atual_cor: cardEtapaId ? etapasMap[cardEtapaId]?.cor || null : null,
           tecnicos: tecMap[ag.card_id] || [],
           apontados: aponMap[ag.card_id] || [],
           tipo_atendimento: card?.tipo_atendimento_local || null,
@@ -469,8 +469,8 @@ export default function Agenda() {
             </p>
             <p className="text-xs text-muted-foreground">
               Contrato: {ag.contrato_numero} · {ag.atividade_nome}
-              {ag.etapa_nome && ag.etapa_nome !== "—" && (
-                <span className="ml-1 font-medium" style={{ color: ag.etapa_cor || undefined }}> · {ag.etapa_nome}</span>
+              {ag.etapa_atual_nome && ag.etapa_atual_nome !== "—" && (
+                <span className="ml-1 font-medium" style={{ color: ag.etapa_atual_cor || undefined }}> · {ag.etapa_atual_nome}</span>
               )}
             </p>
             {!compact && ag.tecnicos.length > 0 && (
@@ -771,9 +771,9 @@ export default function Agenda() {
                         <Badge variant="outline" className="text-xs font-mono">
                           {format(parseISO(ag.data), "dd/MM/yyyy", { locale: ptBR })}
                         </Badge>
-                        {ag.etapa_nome && ag.etapa_nome !== "—" && (
-                          <Badge variant="outline" className="text-xs" style={{ borderColor: ag.etapa_cor || undefined, color: ag.etapa_cor || undefined }}>
-                            {ag.etapa_nome}
+                        {ag.etapa_atual_nome && ag.etapa_atual_nome !== "—" && (
+                          <Badge variant="outline" className="text-xs" style={{ borderColor: ag.etapa_atual_cor || undefined, color: ag.etapa_atual_cor || undefined }}>
+                            {ag.etapa_atual_nome}
                           </Badge>
                         )}
                       </div>
