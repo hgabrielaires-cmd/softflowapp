@@ -469,10 +469,40 @@ export default function Agenda() {
             </p>
             <p className="text-xs text-muted-foreground">
               Contrato: {ag.contrato_numero} · {ag.atividade_nome}
-              {ag.etapa_atual_nome && ag.etapa_atual_nome !== "—" && (
-                <span className="ml-1 font-medium" style={{ color: ag.etapa_atual_cor || undefined }}> · {ag.etapa_atual_nome}</span>
-              )}
             </p>
+            {ag.etapa_atual_nome && ag.etapa_atual_nome !== "—" && (
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <span className="text-xs font-medium" style={{ color: ag.etapa_atual_cor || undefined }}>
+                  Etapa Atual: {ag.etapa_atual_nome}
+                </span>
+                {ag.sla_horas > 0 && ag.iniciado_em && (
+                  <Badge variant="outline" className={cn("text-[11px]", (() => {
+                    const horasDecorridas = (Date.now() - new Date(ag.iniciado_em).getTime()) / 3600000;
+                    return horasDecorridas > ag.sla_horas
+                      ? "border-destructive/30 text-destructive"
+                      : "border-primary/30 text-primary";
+                  })())}>
+                    <Clock className="h-3 w-3 mr-1" />
+                    SLA: {ag.sla_horas}h
+                    {(() => {
+                      const horasDecorridas = (Date.now() - new Date(ag.iniciado_em).getTime()) / 3600000;
+                      if (horasDecorridas > ag.sla_horas) {
+                        const atraso = Math.round(horasDecorridas - ag.sla_horas);
+                        return ` (${atraso}h atrasado)`;
+                      }
+                      const restante = Math.round(ag.sla_horas - horasDecorridas);
+                      return ` (${restante}h restante)`;
+                    })()}
+                  </Badge>
+                )}
+                {ag.sla_horas > 0 && !ag.iniciado_em && (
+                  <Badge variant="outline" className="text-[11px] border-muted text-muted-foreground">
+                    <Clock className="h-3 w-3 mr-1" />
+                    SLA: {ag.sla_horas}h
+                  </Badge>
+                )}
+              </div>
+            )}
             {!compact && ag.tecnicos.length > 0 && (
               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                 {ag.tecnicos.map((t: any) => (
