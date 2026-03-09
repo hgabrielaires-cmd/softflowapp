@@ -3116,18 +3116,21 @@ export type Database = {
         Row: {
           event_id: string
           id: string
+          ip_address: string | null
           processed_at: string
           source: string
         }
         Insert: {
           event_id: string
           id?: string
+          ip_address?: string | null
           processed_at?: string
           source: string
         }
         Update: {
           event_id?: string
           id?: string
+          ip_address?: string | null
           processed_at?: string
           source?: string
         }
