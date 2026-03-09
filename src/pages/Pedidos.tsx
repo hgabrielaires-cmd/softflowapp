@@ -1988,7 +1988,13 @@ export default function Pedidos() {
               <div className="space-y-1.5">
                 <Label>Filial *</Label>
                 {isAdmin || filiaisDoUsuario.length > 1 ? (
-                  <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))}>
+                  <Select value={form.filial_id} onValueChange={(v) => {
+                    setForm((f) => ({ ...f, filial_id: v }));
+                    // Reload plan prices for the new filial
+                    if (form.plano_id) {
+                      loadPlano(form.plano_id, form.modulos_adicionais, v);
+                    }
+                  }}>
                     <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
                       {(filiaisDoUsuario.length > 0 ? filiaisDoUsuario : todasFiliais).map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
