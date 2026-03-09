@@ -179,6 +179,9 @@ export default function PainelAtendimento() {
   const [cancelarOpen, setCancelarOpen] = useState(false);
   const [cancelarMotivo, setCancelarMotivo] = useState("");
   const [cancelando, setCancelando] = useState(false);
+  const [agendamentosCancelOpen, setAgendamentosCancelOpen] = useState(false);
+  const [agendamentosCancelados, setAgendamentosCancelados] = useState<any[]>([]);
+  const [removendoAgendamentos, setRemovendoAgendamentos] = useState(false);
   const [verPedidoOpen, setVerPedidoOpen] = useState(false);
   const [verPedidoData, setVerPedidoData] = useState<any>(null);
   const [verPedidoLoading, setVerPedidoLoading] = useState(false);
