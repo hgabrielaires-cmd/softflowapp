@@ -670,15 +670,17 @@ export default function Financeiro() {
               {/* Comentários Internos */}
               <PedidoComentarios pedidoId={selected.id} />
             </div>
-            <div className="flex gap-2 pt-2">
-              <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleAprovar(selected)} disabled={processando}>
-                {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                Aprovar
-              </Button>
-              <Button variant="destructive" className="flex-1" onClick={() => { setOpenDetail(false); setOpenReprovar(true); }} disabled={processando}>
-                <XCircle className="h-4 w-4 mr-2" /> Reprovar
-              </Button>
-            </div>
+            {canApprove && (
+              <div className="flex gap-2 pt-2">
+                <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleAprovar(selected)} disabled={processando}>
+                  {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                  Aprovar
+                </Button>
+                <Button variant="destructive" className="flex-1" onClick={() => { setOpenDetail(false); setOpenReprovar(true); }} disabled={processando}>
+                  <XCircle className="h-4 w-4 mr-2" /> Reprovar
+                </Button>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
 
