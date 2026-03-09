@@ -118,14 +118,11 @@ export default function Clientes() {
   const { roles, profile } = useAuth();
   const navigate = useNavigate();
   const isAdmin = roles.includes("admin");
-  const isFinanceiro = roles.includes("financeiro");
-  const isGestor = roles.includes("gestor");
-  const isVendedor = roles.includes("vendedor");
   const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("clientes", roles);
-  // Pode editar registros existentes (admin/gestor/financeiro OU com permissão explícita de edição)
-  const canEditExisting = isAdmin || isFinanceiro || isGestor || crudEditar;
-  // Vendedor sem permissão de edição = somente visualização em registros existentes
-  const vendedorSomenteLeitura = isVendedor && !canEditExisting;
+  // Pode editar registros existentes: admin sempre pode, demais dependem da permissão CRUD dinâmica
+  const canEditExisting = isAdmin || crudEditar;
+  // Sem permissão de edição = somente visualização em registros existentes
+  const vendedorSomenteLeitura = !canEditExisting;
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -307,7 +304,7 @@ export default function Clientes() {
     setViewOnly(false);
     setCepError("");
     setCnpjError("");
-    const defaultFilial = filialPadraoId || (isVendedor && profile?.filial_id ? profile.filial_id : "");
+    const defaultFilial = filialPadraoId || profile?.filial_id || "";
     setForm({ ...emptyForm, filial_id: defaultFilial });
     setFormContatos([]);
     setShowContatoInlineForm(false);
@@ -916,7 +913,7 @@ export default function Clientes() {
             {/* Filial */}
             <div className="space-y-1.5">
               <Label>Filial responsável</Label>
-              <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))} disabled={isVendedor && !isAdmin && !isFinanceiro}>
+              <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))} disabled={!canEditExisting && !crudIncluir}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecionar filial" />
                 </SelectTrigger>
@@ -1042,7 +1039,7 @@ export default function Clientes() {
               </Select>
             </div>
 
-            {(isAdmin || isFinanceiro) && (
+            {canEditExisting && (
               <div className="col-span-2 flex items-center gap-3">
                 <Switch checked={form.ativo} onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))} />
                 <Label>Cliente ativo</Label>
