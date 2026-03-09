@@ -304,7 +304,7 @@ export default function Clientes() {
     setViewOnly(false);
     setCepError("");
     setCnpjError("");
-    const defaultFilial = filialPadraoId || (profile?.filial_id ? profile.filial_id : "");
+    const defaultFilial = filialPadraoId || (l_id ? profile.filial_id : "");
     setForm({ ...emptyForm, filial_id: defaultFilial });
     setFormContatos([]);
     setShowContatoInlineForm(false);
@@ -913,8 +913,7 @@ export default function Clientes() {
             {/* Filial */}
             <div className="space-y-1.5">
               <Label>Filial responsável</Label>
-              <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))} disabled={isVendedor && !isAdmin && !isFinanceiro}>
-                <SelectTrigger>
+              <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))} disabled={isVendedor && !canEditExisting && !crudIncluir     <SelectTrigger>
                   <SelectValue placeholder="Selecionar filial" />
                 </SelectTrigger>
                 <SelectContent>
