@@ -279,7 +279,7 @@ export default function Agenda() {
     enabled: activeView === "calendario" && filtersInitialized,
     queryFn: async () => {
       let q = supabase.from("painel_agendamentos")
-        .select("id, card_id, atividade_id, checklist_index, data, hora_inicio, hora_fim, observacao, mesa_id, filial_id, etapa_id, titulo, cor_evento");
+        .select("id, card_id, atividade_id, checklist_index, data, hora_inicio, hora_fim, observacao, mesa_id, filial_id, etapa_id, titulo, cor_evento, status, iniciado_em:iniciado_em, finalizado_em");
       q = applyBaseFilters(q);
       q = q.gte("data", calRange.start).lte("data", calRange.end);
       q = q.order("data").order("hora_inicio", { ascending: true });
