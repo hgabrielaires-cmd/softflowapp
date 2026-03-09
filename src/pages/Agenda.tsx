@@ -329,7 +329,7 @@ export default function Agenda() {
 
       return (rows || []).map((ag: any) => {
         const card = cardsMap[ag.card_id];
-        const resolvedEtapaId = ag.etapa_id || card?.etapa_id;
+        const cardEtapaId = card?.etapa_id;
         return {
           ...ag,
           cliente_nome: card?.clientes?.nome_fantasia || "—",
@@ -339,8 +339,8 @@ export default function Agenda() {
           atividade_nome: atividadesMap[ag.atividade_id] || "—",
           mesa_nome: ag.mesa_id ? mesasMap[ag.mesa_id]?.nome || "—" : "—",
           mesa_cor: ag.mesa_id ? mesasMap[ag.mesa_id]?.cor || null : null,
-          etapa_nome: resolvedEtapaId ? etapasMap[resolvedEtapaId]?.nome || "—" : "—",
-          etapa_cor: resolvedEtapaId ? etapasMap[resolvedEtapaId]?.cor || null : null,
+          etapa_atual_nome: cardEtapaId ? etapasMap[cardEtapaId]?.nome || "—" : "—",
+          etapa_atual_cor: cardEtapaId ? etapasMap[cardEtapaId]?.cor || null : null,
           tecnicos: tecMap[ag.card_id] || [],
           apontados: aponMap[ag.card_id] || [],
           tipo_atendimento: card?.tipo_atendimento_local || null,
