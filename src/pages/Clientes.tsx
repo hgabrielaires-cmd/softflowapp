@@ -304,7 +304,7 @@ export default function Clientes() {
     setViewOnly(false);
     setCepError("");
     setCnpjError("");
-    const defaultFilial = filialPadraoId || (l_id ? profile.filial_id : "");
+    const defaultFilial = filialPadraoId || (.filial_id : "");
     setForm({ ...emptyForm, filial_id: defaultFilial });
     setFormContatos([]);
     setShowContatoInlineForm(false);
@@ -913,8 +913,7 @@ export default function Clientes() {
             {/* Filial */}
             <div className="space-y-1.5">
               <Label>Filial responsável</Label>
-              <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))} disabled={isVendedor && !canEditExisting && !crudIncluir     <SelectTrigger>
-                  <SelectValue placeholder="Selecionar filial" />
+              <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))} disabled={isVendedor && !canEditExisti!canEditExisting && !crudIncluir                  <SelectValue placeholder="Selecionar filial" />
                 </SelectTrigger>
                 <SelectContent>
                   {filiaisDoUsuario.map((fil) => (
@@ -1038,8 +1037,7 @@ export default function Clientes() {
               </Select>
             </div>
 
-            {(isAdmin || isFinanceiro) && (
-              <div className="col-span-2 flex items-center gap-3">
+            {(isAdmin || isFinancecanEditExistingdiv className="col-span-2 flex items-center gap-3">
                 <Switch checked={form.ativo} onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))} />
                 <Label>Cliente ativo</Label>
               </div>
