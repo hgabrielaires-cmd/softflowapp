@@ -131,7 +131,8 @@ export default function Financeiro() {
   const [rentabilidade, setRentabilidade] = useState<{ margem: number; markup: number; lucro: number } | null>(null);
   const [margemIdeal, setMargemIdeal] = useState<number | null>(null);
 
-  const canAccess = isAdmin || isFinanceiro || (menuPerms !== null && menuPerms.has("menu.financeiro"));
+  const isVendedor = roles.includes("vendedor");
+  const canAccess = isAdmin || isFinanceiro || isGestor || (menuPerms !== null && (menuPerms.has("menu.financeiro") || menuPerms.has("menu.fila_financeiro")));
 
   async function loadData() {
     setLoading(true);
