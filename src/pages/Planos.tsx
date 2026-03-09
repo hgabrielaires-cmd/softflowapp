@@ -589,6 +589,7 @@ function ModulosTab() {
             <div className="flex items-center gap-3"><Switch checked={form.permite_revenda} onCheckedChange={(v) => setForm((f) => ({ ...f, permite_revenda: v }))} /><Label>Vender mais de uma vez</Label></div>
             <div className="space-y-1.5"><Label>Quantidade máxima por contrato</Label><Input type="number" min="1" step="1" value={form.quantidade_maxima} onChange={(e) => setForm((f) => ({ ...f, quantidade_maxima: e.target.value }))} placeholder="Sem limite (deixe vazio)" /></div>
             <CustoFormFields custoForm={custoForm} setCustoForm={setCustoForm} />
+            <PrecosFilialSection tipo="modulo" referenciaId={editing?.id || null} showImplantacao={true} />
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button><Button onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : editing ? "Salvar" : "Criar módulo"}</Button></DialogFooter>
         </DialogContent>
