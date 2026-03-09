@@ -803,18 +803,27 @@ export default function Clientes() {
                     <TableCell className="font-mono text-sm">{c.cnpj_cpf}</TableCell>
                     <TableCell>
                       <div className="space-y-0.5">
-                        {c.contato_nome && (
-                          <p className="text-sm">{c.contato_nome}</p>
-                        )}
-                        {c.telefone && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Phone className="h-3 w-3" />{c.telefone}
-                          </p>
-                        )}
-                        {!vendedorSomenteLeitura && c.email && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Mail className="h-3 w-3" />{c.email}
-                          </p>
+                        {decisoresMap[c.id] ? (
+                          <>
+                            <p className="text-sm flex items-center gap-1">
+                              <Star className="h-3 w-3 text-primary fill-primary" />
+                              {decisoresMap[c.id].nome}
+                            </p>
+                            {decisoresMap[c.id].telefone && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Phone className="h-3 w-3" />{decisoresMap[c.id].telefone}
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {c.contato_nome && <p className="text-sm">{c.contato_nome}</p>}
+                            {c.telefone && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Phone className="h-3 w-3" />{c.telefone}
+                              </p>
+                            )}
+                          </>
                         )}
                       </div>
                     </TableCell>
