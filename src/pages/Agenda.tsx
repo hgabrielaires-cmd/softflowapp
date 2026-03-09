@@ -591,6 +591,28 @@ export default function Agenda() {
               <Building2 className="h-3 w-3 mr-1" />
               {ag.filial_nome}
             </Badge>
+            {/* Botões de ação do atendimento */}
+            {ag.ag_status === "agendado" && (
+              <Button
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={() => updateAgStatus.mutate({ agId: ag.id, newStatus: "em_andamento" })}
+                disabled={updateAgStatus.isPending}
+              >
+                <Play className="h-3 w-3" /> Iniciar Atendimento
+              </Button>
+            )}
+            {ag.ag_status === "em_andamento" && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                onClick={() => updateAgStatus.mutate({ agId: ag.id, newStatus: "finalizado" })}
+                disabled={updateAgStatus.isPending}
+              >
+                <CheckCircle2 className="h-3 w-3" /> Finalizar
+              </Button>
+            )}
             <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => navigate(`/fila-agendamento?card=${ag.card_id}&from=agenda`)}>
               <ExternalLink className="h-3 w-3" /> Abrir Card
             </Button>
