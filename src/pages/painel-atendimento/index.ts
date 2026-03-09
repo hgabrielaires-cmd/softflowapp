@@ -1,5 +1,15 @@
 export { KanbanCard } from "./components/KanbanCard";
 export { usePainelQueries } from "./usePainelQueries";
+export { PausarDialog } from "./components/PausarDialog";
+export { RecusarDialog } from "./components/RecusarDialog";
+export { ResetarDialog } from "./components/ResetarDialog";
+export { CancelarDialog } from "./components/CancelarDialog";
+export { AgendamentosCancelDialog } from "./components/AgendamentosCancelDialog";
+export { ApontamentoDialog } from "./components/ApontamentoDialog";
+export { RetomarDialog } from "./components/RetomarDialog";
+export { VerPedidoDialog } from "./components/VerPedidoDialog";
+export { DetalhesDialog } from "./components/DetalhesDialog";
+export { HistoricoDialog } from "./components/HistoricoDialog";
 export * from "./types";
 export * from "./constants";
 export * from "./helpers";
