@@ -16,9 +16,21 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  async function getClientIp(): Promise<string | null> {
+    try {
+      const res = await fetch("https://api.ipify.org?format=json", { signal: AbortSignal.timeout(3000) });
+      const data = await res.json();
+      return data.ip || null;
+    } catch {
+      return null;
+    }
+  }
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+
+    const clientIp = await getClientIp();
 
     // Proteção contra brute-force: verificar bloqueio
     try {
@@ -34,9 +46,9 @@ export default function Login() {
 
     const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      // Registrar tentativa falhada
+      // Registrar tentativa falhada com IP
       try {
-        await supabase.rpc("record_login_attempt", { p_email: email, p_success: false });
+        await supabase.rpc("record_login_attempt", { p_email: email, p_success: false, p_ip: clientIp });
       } catch (e) {
         console.warn("Erro ao registrar tentativa:", e);
       }
@@ -45,9 +57,9 @@ export default function Login() {
       return;
     }
 
-    // Registrar tentativa bem-sucedida
+    // Registrar tentativa bem-sucedida com IP
     try {
-      await supabase.rpc("record_login_attempt", { p_email: email, p_success: true });
+      await supabase.rpc("record_login_attempt", { p_email: email, p_success: true, p_ip: clientIp });
     } catch (e) {
       console.warn("Erro ao registrar login:", e);
     }

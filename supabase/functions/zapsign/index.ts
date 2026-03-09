@@ -137,10 +137,11 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Registrar evento como processado (dedup)
+      // Registrar evento como processado (dedup) com IP
       await supabaseWh.from("webhook_events").insert({
         source: "zapsign",
         event_id: eventId,
+        ip_address: webhookIp,
       });
 
       console.log(`[ZapSign Webhook] Processado: doc=${docToken}, status=${mappedStatus}`);
