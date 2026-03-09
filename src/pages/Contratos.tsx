@@ -956,6 +956,35 @@ export default function Contratos() {
     }
   }
 
+  async function verificarAgendamentosProjetos(cardIds: string[]) {
+    if (cardIds.length === 0) return;
+    const { data: agendamentos } = await supabase
+      .from("painel_agendamentos")
+      .select("*, painel_atendimento!inner(clientes(nome_fantasia), contratos(numero_exibicao))")
+      .in("card_id", cardIds)
+      .order("data");
+    
+    if (agendamentos && agendamentos.length > 0) {
+      setAgendamentosCancelados(agendamentos);
+      setAgendamentosCancelOpen(true);
+    }
+  }
+
+  async function handleRemoverAgendamentosCancelados() {
+    setRemovendoAgendamentos(true);
+    try {
+      const ids = agendamentosCancelados.map((a: any) => a.id);
+      await supabase.from("painel_agendamentos").delete().in("id", ids);
+      toast.success(`${ids.length} agendamento(s) removido(s)!`);
+    } catch (err: any) {
+      toast.error("Erro ao remover agendamentos: " + (err.message || ""));
+    } finally {
+      setRemovendoAgendamentos(false);
+      setAgendamentosCancelOpen(false);
+      setAgendamentosCancelados([]);
+    }
+  }
+
   // ── Gerar Contrato + Auto ZapSign + WhatsApp ─────────────────────────────────
   async function handleGerarContrato(contrato: Contrato) {
     // Carregar contatos do cliente para WhatsApp (buscar direto para usar localmente)
