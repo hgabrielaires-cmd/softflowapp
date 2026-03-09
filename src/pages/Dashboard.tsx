@@ -798,22 +798,22 @@ export default function Dashboard() {
               </div>
             </div>
             <div className={`transition-opacity ${loading ? "opacity-40" : ""}`}>
-              <div className="flex items-center gap-3">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-chart-1">{loading ? "..." : stats.assinados}</p>
-                  <p className="text-[10px] text-muted-foreground">Assinados</p>
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-center min-w-0 flex-1">
+                  <p className="text-xl font-bold text-chart-1">{loading ? "..." : stats.assinados}</p>
+                  <p className="text-[10px] text-muted-foreground leading-tight">Assinados</p>
                 </div>
-                <div className="h-8 w-px bg-border" />
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-amber-500">{loading ? "..." : stats.pendentes}</p>
-                  <p className="text-[10px] text-muted-foreground">Pendentes</p>
+                <div className="h-8 w-px bg-border shrink-0" />
+                <div className="text-center min-w-0 flex-1">
+                  <p className="text-xl font-bold text-amber-500">{loading ? "..." : stats.pendentes}</p>
+                  <p className="text-[10px] text-muted-foreground leading-tight">Pendentes</p>
                 </div>
                 {stats.cancelados > 0 && (
                   <>
-                    <div className="h-8 w-px bg-border" />
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-destructive">{loading ? "..." : stats.cancelados}</p>
-                      <p className="text-[10px] text-muted-foreground">Cancelados</p>
+                    <div className="h-8 w-px bg-border shrink-0" />
+                    <div className="text-center min-w-0 flex-1">
+                      <p className="text-xl font-bold text-destructive">{loading ? "..." : stats.cancelados}</p>
+                      <p className="text-[10px] text-muted-foreground leading-tight">Cancelados</p>
                     </div>
                   </>
                 )}
