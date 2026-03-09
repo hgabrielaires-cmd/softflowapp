@@ -41,6 +41,7 @@ type CalendarMode = "month" | "week";
 export default function Agenda() {
   const { profile, user, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
   // View state
