@@ -4,17 +4,17 @@ import { AppRole } from "@/lib/supabase-types";
 
 /**
  * Fetches the active menu permissions for the user's roles from role_permissions.
- * Admin always has full access.
- * Returns a Set of permission keys like "menu.pedidos", "menu.clientes", etc.
+ * Admin always has full access (permissions = null).
+ * While loading, non-admin users get an empty Set to avoid flash of all menus.
  */
 export function useMenuPermissions(roles: AppRole[]) {
-  const [permissions, setPermissions] = useState<Set<string> | null>(null);
-  const [loading, setLoading] = useState(true);
   const isAdmin = roles.includes("admin");
+  // Non-admin starts with empty Set (hide everything) until loaded
+  const [permissions, setPermissions] = useState<Set<string> | null>(isAdmin ? null : new Set());
+  const [loading, setLoading] = useState(!isAdmin);
 
   useEffect(() => {
     if (isAdmin) {
-      // Admin has access to everything
       setPermissions(null); // null = unrestricted
       setLoading(false);
       return;
@@ -25,6 +25,10 @@ export function useMenuPermissions(roles: AppRole[]) {
       setLoading(false);
       return;
     }
+
+    // Reset to empty while fetching to prevent flash
+    setPermissions(new Set());
+    setLoading(true);
 
     async function fetch() {
       const { data } = await supabase
