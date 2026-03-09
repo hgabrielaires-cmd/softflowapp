@@ -1039,7 +1039,7 @@ export default function Clientes() {
                   Contatos <span className="text-destructive">*</span>
                   <span className="text-xs font-normal normal-case text-muted-foreground">(obrigatório ao menos 1)</span>
                 </div>
-                {canEdit && !viewOnly && !showContatoInlineForm && (
+                {canEditExisting && !viewOnly && !showContatoInlineForm && (
                   <Button type="button" size="sm" variant="outline" className="gap-1.5 h-7 text-xs"
                     onClick={() => { setEditingInlineIdx(null); setInlineContatoForm(emptyContatoForm); setShowContatoInlineForm(true); }}>
                     <Plus className="h-3 w-3" /> Adicionar contato
