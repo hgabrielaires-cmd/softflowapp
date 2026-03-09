@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
@@ -31,7 +31,7 @@ import {
   GripVertical, ChevronRight, FileText, Package, ArrowUpCircle,
   Wrench, GraduationCap, Layers, Play, AlertTriangle, RefreshCw, ArrowRight, CheckSquare,
   CalendarDays, ThumbsUp, ThumbsDown, Paperclip, Hash, Type, MessageSquare, Info, History, Pencil, MoreHorizontal, XCircle, PauseCircle, UserPlus, Users, Ban, X,
-  Heart, Reply, CornerDownRight, BellRing, BellOff
+  Heart, Reply, CornerDownRight, BellRing, BellOff, Loader2, Trash2
 } from "lucide-react";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { ChecklistItem } from "@/lib/supabase-types";
@@ -179,6 +179,9 @@ export default function PainelAtendimento() {
   const [cancelarOpen, setCancelarOpen] = useState(false);
   const [cancelarMotivo, setCancelarMotivo] = useState("");
   const [cancelando, setCancelando] = useState(false);
+  const [agendamentosCancelOpen, setAgendamentosCancelOpen] = useState(false);
+  const [agendamentosCancelados, setAgendamentosCancelados] = useState<any[]>([]);
+  const [removendoAgendamentos, setRemovendoAgendamentos] = useState(false);
   const [verPedidoOpen, setVerPedidoOpen] = useState(false);
   const [verPedidoData, setVerPedidoData] = useState<any>(null);
   const [verPedidoLoading, setVerPedidoLoading] = useState(false);
@@ -1576,11 +1579,40 @@ export default function PainelAtendimento() {
       toast.success("Projeto cancelado com sucesso!");
       setCancelarOpen(false);
       setCancelarMotivo("");
-      setDetailCard(null);
+
+      // Verificar agendamentos pendentes
+      const { data: agendamentos } = await supabase
+        .from("painel_agendamentos")
+        .select("*, painel_atendimento!inner(clientes(nome_fantasia), contratos(numero_exibicao))")
+        .eq("card_id", detailCard.id)
+        .order("data");
+      
+      if (agendamentos && agendamentos.length > 0) {
+        setAgendamentosCancelados(agendamentos);
+        setAgendamentosCancelOpen(true);
+      } else {
+        setDetailCard(null);
+      }
     } catch (err: any) {
       toast.error("Erro ao cancelar projeto: " + (err.message || ""));
     } finally {
       setCancelando(false);
+    }
+  }
+
+  async function handleRemoverAgendamentosCancelados() {
+    setRemovendoAgendamentos(true);
+    try {
+      const ids = agendamentosCancelados.map(a => a.id);
+      await supabase.from("painel_agendamentos").delete().in("id", ids);
+      toast.success(`${ids.length} agendamento(s) removido(s)!`);
+    } catch (err: any) {
+      toast.error("Erro ao remover agendamentos: " + (err.message || ""));
+    } finally {
+      setRemovendoAgendamentos(false);
+      setAgendamentosCancelOpen(false);
+      setAgendamentosCancelados([]);
+      setDetailCard(null);
     }
   }
 
@@ -4407,6 +4439,50 @@ export default function PainelAtendimento() {
               {cancelando ? "Cancelando..." : "Confirmar Cancelamento"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Agendamentos de Projeto Cancelado Dialog */}
+      <Dialog open={agendamentosCancelOpen} onOpenChange={(open) => { if (!open) { setAgendamentosCancelOpen(false); setAgendamentosCancelados([]); setDetailCard(null); } }}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <CalendarDays className="h-5 w-5" />
+              Compromissos Agendados
+            </DialogTitle>
+            <DialogDescription>
+              Existem {agendamentosCancelados.length} compromisso(s) agendado(s) para este projeto cancelado. Deseja removê-los da agenda?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {agendamentosCancelados.map((ag) => (
+              <div key={ag.id} className="rounded-md border border-border p-2.5 text-sm flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="font-medium">{new Date(ag.data + "T12:00:00").toLocaleDateString("pt-BR")}</span>
+                </div>
+                <span className="text-xs text-muted-foreground truncate max-w-[200px]">{ag.titulo || "Sem título"}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-col gap-2 mt-2">
+            <Button
+              variant="destructive"
+              onClick={handleRemoverAgendamentosCancelados}
+              disabled={removendoAgendamentos}
+              className="w-full"
+            >
+              {removendoAgendamentos ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Remover todos os compromissos
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => { setAgendamentosCancelOpen(false); setAgendamentosCancelados([]); setDetailCard(null); }}
+              className="w-full"
+            >
+              Manter compromissos
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

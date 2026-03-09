@@ -80,6 +80,7 @@ import {
   Trash2,
   Users,
   Tag,
+  CalendarDays,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -211,6 +212,9 @@ export default function Contratos() {
   const [cancelarProjetoMotivo, setCancelarProjetoMotivo] = useState("");
   const [projetosAtivos, setProjetosAtivos] = useState<any[]>([]);
   const [processando, setProcessando] = useState(false);
+  const [agendamentosCancelOpen, setAgendamentosCancelOpen] = useState(false);
+  const [agendamentosCancelados, setAgendamentosCancelados] = useState<any[]>([]);
+  const [removendoAgendamentos, setRemovendoAgendamentos] = useState(false);
 
   // Cancelar aditivos vinculados
   const [openCancelarAditivos, setOpenCancelarAditivos] = useState(false);
@@ -800,6 +804,7 @@ export default function Contratos() {
       const { data: { user } } = await supabase.auth.getUser();
 
       // Depois cancelar os aditivos selecionados
+      const allCancelledCardIds: string[] = [];
       for (const aditivoId of aditivosSelecionados) {
         const aditivo = aditivosVinculados.find(a => a.id === aditivoId);
         if (!aditivo) continue;
@@ -833,6 +838,7 @@ export default function Contratos() {
           .eq("contrato_id", aditivoId)
           .neq("status_projeto", "cancelado");
 
+        const cancelledCardIds: string[] = [];
         if (projetos && projetos.length > 0 && user) {
           for (const p of projetos) {
             await supabase.from("painel_atendimento").update({ status_projeto: "cancelado" } as any).eq("id", p.id);
@@ -841,13 +847,18 @@ export default function Contratos() {
               criado_por: user.id,
               texto: `❌ Projeto cancelado automaticamente pelo cancelamento do contrato base ${contratoBaseCancelado?.numero_exibicao || ""}.`,
             });
+            cancelledCardIds.push(p.id);
           }
         }
+        allCancelledCardIds.push(...cancelledCardIds);
       }
 
       if (aditivosSelecionados.length > 0) {
         toast.success(`${aditivosSelecionados.length} contrato(s) vinculado(s) cancelado(s).`);
       }
+
+      // Verificar agendamentos de todos os projetos cancelados
+      await verificarAgendamentosProjetos(allCancelledCardIds);
     } catch (err: any) {
       toast.error("Erro ao cancelar: " + (err.message || ""));
     } finally {
@@ -903,6 +914,9 @@ export default function Contratos() {
       }
 
       toast.success("Projeto(s) removido(s) do painel e salvo(s) em cancelados!");
+
+      // Verificar agendamentos pendentes dos projetos cancelados
+      await verificarAgendamentosProjetos(projetosAtivos.map(p => p.id));
     } catch (err: any) {
       toast.error("Erro ao remover projeto(s): " + (err.message || ""));
     } finally {
@@ -937,6 +951,9 @@ export default function Contratos() {
       }
 
       toast.success("Projeto(s) marcado(s) como cancelado no painel.");
+
+      // Verificar agendamentos pendentes dos projetos cancelados
+      await verificarAgendamentosProjetos(projetosAtivos.map(p => p.id));
     } catch (err: any) {
       toast.error("Erro: " + (err.message || ""));
     } finally {
@@ -944,6 +961,35 @@ export default function Contratos() {
       setOpenCancelarProjeto(false);
       setCancelarProjetoMotivo("");
       setProjetosAtivos([]);
+    }
+  }
+
+  async function verificarAgendamentosProjetos(cardIds: string[]) {
+    if (cardIds.length === 0) return;
+    const { data: agendamentos } = await supabase
+      .from("painel_agendamentos")
+      .select("*, painel_atendimento!inner(clientes(nome_fantasia), contratos(numero_exibicao))")
+      .in("card_id", cardIds)
+      .order("data");
+    
+    if (agendamentos && agendamentos.length > 0) {
+      setAgendamentosCancelados(agendamentos);
+      setAgendamentosCancelOpen(true);
+    }
+  }
+
+  async function handleRemoverAgendamentosCancelados() {
+    setRemovendoAgendamentos(true);
+    try {
+      const ids = agendamentosCancelados.map((a: any) => a.id);
+      await supabase.from("painel_agendamentos").delete().in("id", ids);
+      toast.success(`${ids.length} agendamento(s) removido(s)!`);
+    } catch (err: any) {
+      toast.error("Erro ao remover agendamentos: " + (err.message || ""));
+    } finally {
+      setRemovendoAgendamentos(false);
+      setAgendamentosCancelOpen(false);
+      setAgendamentosCancelados([]);
     }
   }
 
@@ -2470,6 +2516,52 @@ Estou à disposição.`;
             </Button>
             <Button variant="ghost" onClick={() => { setOpenCancelarProjeto(false); setCancelarProjetoMotivo(""); setProjetosAtivos([]); }} className="w-full text-muted-foreground">
               Ignorar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Agendamentos de Projeto Cancelado Dialog */}
+      <Dialog open={agendamentosCancelOpen} onOpenChange={(open) => { if (!open) { setAgendamentosCancelOpen(false); setAgendamentosCancelados([]); } }}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <CalendarDays className="h-5 w-5" />
+              Compromissos Agendados
+            </DialogTitle>
+            <DialogDescription>
+              Existem {agendamentosCancelados.length} compromisso(s) agendado(s) para o(s) projeto(s) cancelado(s). Deseja removê-los da agenda?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {agendamentosCancelados.map((ag: any) => (
+              <div key={ag.id} className="rounded-md border border-border p-2.5 text-sm flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="font-medium">{new Date(ag.data + "T12:00:00").toLocaleDateString("pt-BR")}</span>
+                </div>
+                <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                  {(ag.painel_atendimento as any)?.clientes?.nome_fantasia || ""} — {(ag.painel_atendimento as any)?.contratos?.numero_exibicao || ""}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-col gap-2 mt-2">
+            <Button
+              variant="destructive"
+              onClick={handleRemoverAgendamentosCancelados}
+              disabled={removendoAgendamentos}
+              className="w-full"
+            >
+              {removendoAgendamentos ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Remover todos os compromissos
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => { setAgendamentosCancelOpen(false); setAgendamentosCancelados([]); }}
+              className="w-full"
+            >
+              Manter compromissos
             </Button>
           </div>
         </DialogContent>
