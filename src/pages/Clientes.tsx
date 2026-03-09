@@ -119,9 +119,12 @@ export default function Clientes() {
   const navigate = useNavigate();
   const isAdmin = roles.includes("admin");
   const isFinanceiro = roles.includes("financeiro");
+  const isGestor = roles.includes("gestor");
   const isVendedor = roles.includes("vendedor");
   const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("clientes", roles);
   const canEdit = crudEditar || crudIncluir;
+  // Vendedor puro (sem permissão CRUD) = somente visualização
+  const vendedorSomenteLeitura = isVendedor && !isAdmin && !isFinanceiro && !isGestor && !canEdit;
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
