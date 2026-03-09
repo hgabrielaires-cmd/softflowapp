@@ -820,7 +820,7 @@ export default function Clientes() {
                       {[c.cidade, c.uf].filter(Boolean).join(" / ") || "—"}
                     </TableCell>
                     <TableCell>
-                      {canEdit && !vendedorSomenteLeitura ? (
+                      {canEditExisting && !vendedorSomenteLeitura ? (
                         <Switch checked={c.ativo} onCheckedChange={() => toggleAtivo(c)} />
                       ) : (
                         <Badge variant={c.ativo ? "default" : "secondary"}>
