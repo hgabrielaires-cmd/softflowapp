@@ -295,6 +295,7 @@ export default function Clientes() {
 
   function openCreate() {
     setEditing(null);
+    setViewOnly(false);
     setCepError("");
     setCnpjError("");
     const defaultFilial = filialPadraoId || (isVendedor && profile?.filial_id ? profile.filial_id : "");
