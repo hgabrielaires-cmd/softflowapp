@@ -661,8 +661,9 @@ export default function Clientes() {
       }
       toast.success("Cliente atualizado com sucesso");
     } else {
+      payload.criado_por = profile?.user_id || null;
       const { data: newCliente, error } = await supabase.from("clientes").insert(payload).select().single();
-      if (error || !newCliente) { toast.error("Erro ao cadastrar cliente"); setSaving(false); return; }
+      if (error || !newCliente) { toast.error("Erro ao cadastrar cliente: " + (error?.message || "")); setSaving(false); return; }
       // Inserir contatos
       for (const ct of formContatos) {
         await supabase.from("cliente_contatos").insert({
