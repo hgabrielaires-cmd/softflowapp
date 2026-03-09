@@ -211,6 +211,9 @@ export default function Contratos() {
   const [cancelarProjetoMotivo, setCancelarProjetoMotivo] = useState("");
   const [projetosAtivos, setProjetosAtivos] = useState<any[]>([]);
   const [processando, setProcessando] = useState(false);
+  const [agendamentosCancelOpen, setAgendamentosCancelOpen] = useState(false);
+  const [agendamentosCancelados, setAgendamentosCancelados] = useState<any[]>([]);
+  const [removendoAgendamentos, setRemovendoAgendamentos] = useState(false);
 
   // Cancelar aditivos vinculados
   const [openCancelarAditivos, setOpenCancelarAditivos] = useState(false);
