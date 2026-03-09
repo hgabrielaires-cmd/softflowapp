@@ -1149,12 +1149,14 @@ export default function Clientes() {
 
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={saving || isQuerying}>
-              {isQuerying ? (
-                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Consultando...</>
-              ) : saving ? "Salvando..." : editing ? "Salvar alterações" : "Cadastrar cliente"}
-            </Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{viewOnly ? "Fechar" : "Cancelar"}</Button>
+            {!viewOnly && (
+              <Button onClick={handleSave} disabled={saving || isQuerying}>
+                {isQuerying ? (
+                  <><Loader2 className="h-4 w-4 animate-spin mr-2" />Consultando...</>
+                ) : saving ? "Salvando..." : editing ? "Salvar alterações" : "Cadastrar cliente"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
