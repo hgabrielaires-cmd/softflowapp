@@ -39,6 +39,7 @@ interface ImportClientesDialogProps {
 const SYSTEM_FIELDS: { key: string; label: string; required: boolean }[] = [
   { key: "nome_fantasia", label: "Nome Fantasia", required: true },
   { key: "cnpj_cpf", label: "CNPJ / CPF", required: true },
+  { key: "filial", label: "Filial", required: false },
   { key: "razao_social", label: "Razão Social", required: false },
   { key: "apelido", label: "Apelido", required: false },
   { key: "inscricao_estadual", label: "Inscrição Estadual", required: false },
@@ -167,6 +168,17 @@ export function ImportClientesDialog({ open, onOpenChange, filialId, onSuccess }
     setImporting(true);
     setStep("importing");
 
+    // Load filiais for name resolution if filial column is mapped
+    let filiaisMap: Record<string, string> = {};
+    if (mapping["filial"]) {
+      const { data: filiaisData } = await supabase.from("filiais").select("id, nome").eq("ativa", true);
+      if (filiaisData) {
+        for (const f of filiaisData) {
+          filiaisMap[f.nome.trim().toUpperCase()] = f.id;
+        }
+      }
+    }
+
     let success = 0;
     let errors = 0;
 
@@ -187,6 +199,16 @@ export function ImportClientesDialog({ open, onOpenChange, filialId, onSuccess }
         continue;
       }
 
+      // Resolve filial: from spreadsheet column or fallback to prop
+      let resolvedFilialId: string | null = filialId || null;
+      const filialNome = getValue("filial");
+      if (filialNome) {
+        const found = filiaisMap[filialNome.toUpperCase()];
+        if (found) {
+          resolvedFilialId = found;
+        }
+      }
+
       const { error } = await supabase.from("clientes").insert({
         nome_fantasia: nomeFant,
         cnpj_cpf: cnpjCpf,
@@ -204,7 +226,7 @@ export function ImportClientesDialog({ open, onOpenChange, filialId, onSuccess }
         bairro: getValue("bairro"),
         cidade: getValue("cidade"),
         uf: getValue("uf"),
-        filial_id: filialId || null,
+        filial_id: resolvedFilialId,
         ativo: true,
       });
       if (error) {
