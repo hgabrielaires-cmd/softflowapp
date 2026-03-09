@@ -1060,6 +1060,9 @@ export default function Clientes() {
                               <Star className="h-2.5 w-2.5 fill-current" /> Decisor
                             </span>
                           )}
+                          {ct.ativo === false && (
+                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">Inativo</span>
+                          )}
                         </div>
                         <div className="flex gap-2 mt-0.5">
                           {ct.cargo && <span className="text-xs text-muted-foreground">{ct.cargo}</span>}
@@ -1078,10 +1081,27 @@ export default function Clientes() {
                             onClick={() => { setEditingInlineIdx(idx); setInlineContatoForm({ nome: ct.nome, cargo: ct.cargo || "", telefone: ct.telefone || "", email: ct.email || "", decisor: ct.decisor, ativo: ct.ativo }); setShowContatoInlineForm(true); }}>
                             <Pencil className="h-3 w-3" />
                           </Button>
-                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
-                            onClick={() => setFormContatos((prev) => prev.filter((_, i) => i !== idx))}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          {ct.ativo !== false ? (
+                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
+                              title="Desativar contato"
+                              onClick={() => {
+                                if (ct._id) {
+                                  // Contato já salvo: marcar como inativo
+                                  setFormContatos((prev) => prev.map((c, i) => i === idx ? { ...c, ativo: false } : c));
+                                } else {
+                                  // Contato novo (não salvo): pode remover
+                                  setFormContatos((prev) => prev.filter((_, i) => i !== idx));
+                                }
+                              }}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          ) : (
+                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-emerald-600 hover:text-emerald-700"
+                              title="Reativar contato"
+                              onClick={() => setFormContatos((prev) => prev.map((c, i) => i === idx ? { ...c, ativo: true } : c))}>
+                              <AlertCircle className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>
