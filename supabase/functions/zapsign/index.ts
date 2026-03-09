@@ -106,11 +106,11 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Mapear status
+      // Mapear status (já validado acima)
       let mappedStatus = "Enviado";
-      if (payload.status === "signed") mappedStatus = "Assinado";
-      else if (payload.status === "canceled" || payload.status === "refused") mappedStatus = "Recusado";
-      else if (payload.status === "pending") mappedStatus = "Pendente";
+      if (rawStatus === "signed") mappedStatus = "Assinado";
+      else if (rawStatus === "canceled" || rawStatus === "refused") mappedStatus = "Recusado";
+      else if (rawStatus === "pending") mappedStatus = "Pendente";
 
       const returnedSigners = (payload.signers || []).map((s: any) => ({
         name: s.name,
