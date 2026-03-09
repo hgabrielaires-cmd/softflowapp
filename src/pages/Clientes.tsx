@@ -1060,6 +1060,9 @@ export default function Clientes() {
                               <Star className="h-2.5 w-2.5 fill-current" /> Decisor
                             </span>
                           )}
+                          {ct.ativo === false && (
+                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">Inativo</span>
+                          )}
                         </div>
                         <div className="flex gap-2 mt-0.5">
                           {ct.cargo && <span className="text-xs text-muted-foreground">{ct.cargo}</span>}
