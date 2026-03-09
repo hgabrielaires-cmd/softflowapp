@@ -1579,7 +1579,20 @@ export default function PainelAtendimento() {
       toast.success("Projeto cancelado com sucesso!");
       setCancelarOpen(false);
       setCancelarMotivo("");
-      setDetailCard(null);
+
+      // Verificar agendamentos pendentes
+      const { data: agendamentos } = await supabase
+        .from("painel_agendamentos")
+        .select("*, painel_atendimento!inner(clientes(nome_fantasia), contratos(numero_exibicao))")
+        .eq("card_id", detailCard.id)
+        .order("data");
+      
+      if (agendamentos && agendamentos.length > 0) {
+        setAgendamentosCancelados(agendamentos);
+        setAgendamentosCancelOpen(true);
+      } else {
+        setDetailCard(null);
+      }
     } catch (err: any) {
       toast.error("Erro ao cancelar projeto: " + (err.message || ""));
     } finally {
