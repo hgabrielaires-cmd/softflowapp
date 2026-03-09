@@ -1364,11 +1364,16 @@ export type Database = {
           data: string
           etapa_id: string | null
           filial_id: string | null
+          finalizado_em: string | null
+          finalizado_por: string | null
           hora_fim: string | null
           hora_inicio: string | null
           id: string
+          iniciado_em: string | null
+          iniciado_por: string | null
           mesa_id: string | null
           observacao: string | null
+          status: string
           titulo: string | null
         }
         Insert: {
@@ -1381,11 +1386,16 @@ export type Database = {
           data: string
           etapa_id?: string | null
           filial_id?: string | null
+          finalizado_em?: string | null
+          finalizado_por?: string | null
           hora_fim?: string | null
           hora_inicio?: string | null
           id?: string
+          iniciado_em?: string | null
+          iniciado_por?: string | null
           mesa_id?: string | null
           observacao?: string | null
+          status?: string
           titulo?: string | null
         }
         Update: {
@@ -1398,11 +1408,16 @@ export type Database = {
           data?: string
           etapa_id?: string | null
           filial_id?: string | null
+          finalizado_em?: string | null
+          finalizado_por?: string | null
           hora_fim?: string | null
           hora_inicio?: string | null
           id?: string
+          iniciado_em?: string | null
+          iniciado_por?: string | null
           mesa_id?: string | null
           observacao?: string | null
+          status?: string
           titulo?: string | null
         }
         Relationships: [
