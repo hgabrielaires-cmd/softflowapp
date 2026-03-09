@@ -1230,14 +1230,16 @@ export default function Clientes() {
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditContato(c)} title="Editar contato">
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      <Button
-                        variant="ghost" size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => handleDeleteContato(c)}
-                        title="Remover contato"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {c.ativo && (
+                        <Button
+                          variant="ghost" size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => handleDesativarContato(c)}
+                          title="Desativar contato"
+                        >
+                          <AlertCircle className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
