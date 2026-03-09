@@ -1078,10 +1078,27 @@ export default function Clientes() {
                             onClick={() => { setEditingInlineIdx(idx); setInlineContatoForm({ nome: ct.nome, cargo: ct.cargo || "", telefone: ct.telefone || "", email: ct.email || "", decisor: ct.decisor, ativo: ct.ativo }); setShowContatoInlineForm(true); }}>
                             <Pencil className="h-3 w-3" />
                           </Button>
-                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
-                            onClick={() => setFormContatos((prev) => prev.filter((_, i) => i !== idx))}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          {ct.ativo !== false ? (
+                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
+                              title="Desativar contato"
+                              onClick={() => {
+                                if (ct._id) {
+                                  // Contato já salvo: marcar como inativo
+                                  setFormContatos((prev) => prev.map((c, i) => i === idx ? { ...c, ativo: false } : c));
+                                } else {
+                                  // Contato novo (não salvo): pode remover
+                                  setFormContatos((prev) => prev.filter((_, i) => i !== idx));
+                                }
+                              }}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          ) : (
+                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-emerald-600 hover:text-emerald-700"
+                              title="Reativar contato"
+                              onClick={() => setFormContatos((prev) => prev.map((c, i) => i === idx ? { ...c, ativo: true } : c))}>
+                              <AlertCircle className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>
