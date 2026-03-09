@@ -118,14 +118,11 @@ export default function Clientes() {
   const { roles, profile } = useAuth();
   const navigate = useNavigate();
   const isAdmin = roles.includes("admin");
-  const isFinanceiro = roles.includes("financeiro");
-  const isGestor = roles.includes("gestor");
-  const isVendedor = roles.includes("vendedor");
   const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("clientes", roles);
-  // Pode editar registros existentes (admin/gestor/financeiro OU com permissão explícita de edição)
-  const canEditExisting = isAdmin || isFinanceiro || isGestor || crudEditar;
-  // Vendedor sem permissão de edição = somente visualização em registros existentes
-  const vendedorSomenteLeitura = isVendedor && !canEditExisting;
+  // Pode editar registros existentes: admin sempre pode, demais dependem da permissão CRUD dinâmica
+  const canEditExisting = isAdmin || crudEditar;
+  // Sem permissão de edição = somente visualização em registros existentes
+  const vendedorSomenteLeitura = !canEditExisting;
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
