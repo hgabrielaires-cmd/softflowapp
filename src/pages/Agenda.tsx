@@ -424,15 +424,38 @@ export default function Agenda() {
 
   // ===== SHARED: status helper =====
   const getStatusInfo = (ag: any) => {
+    // Prioridade: status do agendamento (execução)
+    if (ag.ag_status === "finalizado") return { label: "Finalizado", color: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+    if (ag.ag_status === "em_andamento") return { label: "Em Andamento", color: "bg-blue-100 text-blue-700 border-blue-200" };
+    // Fallback: status do projeto/card
     if (ag.status_projeto === "recusado") return { label: "Recusado", color: "bg-destructive/10 text-destructive border-destructive/20" };
     if (ag.pausado) return { label: "Pausado", color: "bg-yellow-100 text-yellow-700 border-yellow-200" };
-    if (ag.iniciado_em && ag.sla_horas > 0) {
-      const horasDecorridas = (Date.now() - new Date(ag.iniciado_em).getTime()) / 3600000;
-      if (horasDecorridas > ag.sla_horas) return { label: "SLA Atrasado", color: "bg-destructive/10 text-destructive border-destructive/20" };
-    }
-    if (ag.iniciado_em) return { label: "Em Andamento", color: "bg-green-100 text-green-700 border-green-200" };
-    return { label: "Aguardando", color: "bg-muted text-muted-foreground border-border" };
+    return { label: "Agendado", color: "bg-muted text-muted-foreground border-border" };
   };
+
+  // ===== Mutation: iniciar/finalizar atendimento na agenda =====
+  const updateAgStatus = useMutation({
+    mutationFn: async ({ agId, newStatus }: { agId: string; newStatus: string }) => {
+      const now = new Date().toISOString();
+      const updateData: any = { status: newStatus };
+      if (newStatus === "em_andamento") {
+        updateData.iniciado_em = now;
+        updateData.iniciado_por = user?.id || null;
+      }
+      if (newStatus === "finalizado") {
+        updateData.finalizado_em = now;
+        updateData.finalizado_por = user?.id || null;
+      }
+      const { error } = await supabase.from("painel_agendamentos").update(updateData).eq("id", agId);
+      if (error) throw error;
+    },
+    onSuccess: (_, { newStatus }) => {
+      toast.success(newStatus === "em_andamento" ? "Atendimento iniciado!" : "Atendimento finalizado!");
+      queryClient.invalidateQueries({ queryKey: ["agenda-cal"] });
+      queryClient.invalidateQueries({ queryKey: ["agenda-list"] });
+    },
+    onError: () => toast.error("Erro ao atualizar status"),
+  });
 
   // ===== RENDER: event card (shared between views) =====
   const renderEventCard = (ag: any, compact = false) => {
