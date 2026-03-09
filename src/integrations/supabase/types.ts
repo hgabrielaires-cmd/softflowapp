@@ -154,6 +154,7 @@ export type Database = {
         Row: {
           apelido: string | null
           ativo: boolean
+          atualizado_por: string | null
           bairro: string | null
           cep: string | null
           cidade: string | null
@@ -161,6 +162,7 @@ export type Database = {
           complemento: string | null
           contato_nome: string | null
           created_at: string
+          criado_por: string | null
           email: string | null
           filial_id: string | null
           id: string
@@ -172,10 +174,12 @@ export type Database = {
           responsavel_nome: string | null
           telefone: string | null
           uf: string | null
+          updated_at: string
         }
         Insert: {
           apelido?: string | null
           ativo?: boolean
+          atualizado_por?: string | null
           bairro?: string | null
           cep?: string | null
           cidade?: string | null
@@ -183,6 +187,7 @@ export type Database = {
           complemento?: string | null
           contato_nome?: string | null
           created_at?: string
+          criado_por?: string | null
           email?: string | null
           filial_id?: string | null
           id?: string
@@ -194,10 +199,12 @@ export type Database = {
           responsavel_nome?: string | null
           telefone?: string | null
           uf?: string | null
+          updated_at?: string
         }
         Update: {
           apelido?: string | null
           ativo?: boolean
+          atualizado_por?: string | null
           bairro?: string | null
           cep?: string | null
           cidade?: string | null
@@ -205,6 +212,7 @@ export type Database = {
           complemento?: string | null
           contato_nome?: string | null
           created_at?: string
+          criado_por?: string | null
           email?: string | null
           filial_id?: string | null
           id?: string
@@ -216,6 +224,7 @@ export type Database = {
           responsavel_nome?: string | null
           telefone?: string | null
           uf?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
