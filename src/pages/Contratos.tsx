@@ -837,6 +837,7 @@ export default function Contratos() {
           .eq("contrato_id", aditivoId)
           .neq("status_projeto", "cancelado");
 
+        const cancelledCardIds: string[] = [];
         if (projetos && projetos.length > 0 && user) {
           for (const p of projetos) {
             await supabase.from("painel_atendimento").update({ status_projeto: "cancelado" } as any).eq("id", p.id);
@@ -845,13 +846,18 @@ export default function Contratos() {
               criado_por: user.id,
               texto: `❌ Projeto cancelado automaticamente pelo cancelamento do contrato base ${contratoBaseCancelado?.numero_exibicao || ""}.`,
             });
+            cancelledCardIds.push(p.id);
           }
         }
+        allCancelledCardIds.push(...cancelledCardIds);
       }
 
       if (aditivosSelecionados.length > 0) {
         toast.success(`${aditivosSelecionados.length} contrato(s) vinculado(s) cancelado(s).`);
       }
+
+      // Verificar agendamentos de todos os projetos cancelados
+      await verificarAgendamentosProjetos(allCancelledCardIds);
     } catch (err: any) {
       toast.error("Erro ao cancelar: " + (err.message || ""));
     } finally {
