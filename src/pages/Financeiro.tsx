@@ -106,6 +106,8 @@ export default function Financeiro() {
   const { profile, roles, isAdmin } = useAuth();
   const navigate = useNavigate();
   const isFinanceiro = roles.includes("financeiro");
+  const isGestor = roles.includes("gestor");
+  const canApprove = isAdmin || isFinanceiro || isGestor;
   const { permissions: menuPerms } = useMenuPermissions(roles);
   const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais } = useUserFiliais();
 
