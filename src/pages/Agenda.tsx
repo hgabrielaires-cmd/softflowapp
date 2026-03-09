@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TablePagination } from "@/components/TablePagination";
 import {
   CalendarDays, Clock, User, Building2, Filter, MapPin, ExternalLink,
-  Layers, List, Search, ChevronLeft, ChevronRight,
+  Layers, List, Search, ChevronLeft, ChevronRight, Play, CheckCircle2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
