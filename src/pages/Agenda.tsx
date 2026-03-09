@@ -222,6 +222,9 @@ export default function Agenda() {
         const cardEtapaId = card?.etapa_id;
         return {
           ...ag,
+          ag_status: ag.status || 'agendado',
+          ag_iniciado_em: ag.iniciado_em || null,
+          ag_finalizado_em: ag.finalizado_em || null,
           cliente_nome: card?.clientes?.nome_fantasia || "—",
           cliente_cnpj: card?.clientes?.cnpj_cpf || "",
           contrato_numero: card?.contratos?.numero_exibicao || "—",
@@ -236,7 +239,7 @@ export default function Agenda() {
           apontados: aponMap[ag.card_id] || [],
           status_projeto: card?.status_projeto || "ativo",
           pausado: card?.pausado || false,
-          iniciado_em: card?.iniciado_em || null,
+          card_iniciado_em: card?.iniciado_em || null,
           sla_horas: card?.sla_horas || 0,
           tipo_atendimento: card?.tipo_atendimento_local || null,
         };
