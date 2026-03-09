@@ -1153,7 +1153,7 @@ export default function Pedidos() {
           if (error) throw error;
           dispararAutomacaoPedidoStatus(novoPedido.id, "Novo", "Aguardando Aprovação de Desconto", form.tipo_pedido);
           await salvarDraftComentarios(novoPedido.id);
-          await supabase.from("solicitacoes_desconto").insert({
+          const { error: solError } = await supabase.from("solicitacoes_desconto").insert({
             pedido_id: novoPedido.id,
             vendedor_id: vendedorId,
             desconto_implantacao_tipo: form.desconto_implantacao_tipo,
@@ -1164,6 +1164,10 @@ export default function Pedidos() {
             desconto_mensalidade_percentual: descontoMensPerc,
             status: "Aguardando",
           });
+          if (solError) {
+            console.error("Erro ao criar solicitação de desconto:", solError);
+            toast.error("Pedido criado, mas houve erro ao enviar a solicitação de desconto. Contate o administrador.");
+          }
           toast.warning("Desconto acima do seu limite! Solicitação enviada ao gestor de descontos para aprovação.");
         } else {
           const insertPayload = {
