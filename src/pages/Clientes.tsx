@@ -830,7 +830,7 @@ export default function Clientes() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        {canEdit && !vendedorSomenteLeitura ? (
+                        {canEditExisting && !vendedorSomenteLeitura ? (
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)} title="Editar cliente">
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
