@@ -129,6 +129,7 @@ export default function Clientes() {
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [decisoresMap, setDecisoresMap] = useState<Record<string, { nome: string; telefone: string | null }>>({});
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -260,12 +261,19 @@ export default function Clientes() {
 
   async function fetchData() {
     setLoading(true);
-    const [{ data: c }, { data: f }] = await Promise.all([
+    const [{ data: c }, { data: f }, { data: decisores }] = await Promise.all([
       supabase.from("clientes").select("*").order("nome_fantasia"),
       supabase.from("filiais").select("*").order("nome"),
+      supabase.from("cliente_contatos").select("cliente_id, nome, telefone").eq("decisor", true).eq("ativo", true),
     ]);
     setClientes(c || []);
     setFiliais(f || []);
+    // Map: cliente_id -> primeiro decisor ativo
+    const dMap: Record<string, { nome: string; telefone: string | null }> = {};
+    (decisores || []).forEach((d: any) => {
+      if (!dMap[d.cliente_id]) dMap[d.cliente_id] = { nome: d.nome, telefone: d.telefone };
+    });
+    setDecisoresMap(dMap);
     setLoading(false);
   }
 
@@ -795,18 +803,27 @@ export default function Clientes() {
                     <TableCell className="font-mono text-sm">{c.cnpj_cpf}</TableCell>
                     <TableCell>
                       <div className="space-y-0.5">
-                        {c.contato_nome && (
-                          <p className="text-sm">{c.contato_nome}</p>
-                        )}
-                        {c.telefone && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Phone className="h-3 w-3" />{c.telefone}
-                          </p>
-                        )}
-                        {!vendedorSomenteLeitura && c.email && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Mail className="h-3 w-3" />{c.email}
-                          </p>
+                        {decisoresMap[c.id] ? (
+                          <>
+                            <p className="text-sm flex items-center gap-1">
+                              <Star className="h-3 w-3 text-primary fill-primary" />
+                              {decisoresMap[c.id].nome}
+                            </p>
+                            {decisoresMap[c.id].telefone && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Phone className="h-3 w-3" />{decisoresMap[c.id].telefone}
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {c.contato_nome && <p className="text-sm">{c.contato_nome}</p>}
+                            {c.telefone && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Phone className="h-3 w-3" />{c.telefone}
+                              </p>
+                            )}
+                          </>
                         )}
                       </div>
                     </TableCell>
