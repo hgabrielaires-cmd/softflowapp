@@ -119,9 +119,12 @@ export default function Clientes() {
   const navigate = useNavigate();
   const isAdmin = roles.includes("admin");
   const isFinanceiro = roles.includes("financeiro");
+  const isGestor = roles.includes("gestor");
   const isVendedor = roles.includes("vendedor");
   const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("clientes", roles);
   const canEdit = crudEditar || crudIncluir;
+  // Vendedor puro (sem permissão CRUD) = somente visualização
+  const vendedorSomenteLeitura = isVendedor && !isAdmin && !isFinanceiro && !isGestor && !canEdit;
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -131,6 +134,7 @@ export default function Clientes() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 15;
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewOnly, setViewOnly] = useState(false);
   const [editing, setEditing] = useState<Cliente | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -291,6 +295,7 @@ export default function Clientes() {
 
   function openCreate() {
     setEditing(null);
+    setViewOnly(false);
     setCepError("");
     setCnpjError("");
     const defaultFilial = filialPadraoId || (isVendedor && profile?.filial_id ? profile.filial_id : "");
@@ -302,8 +307,9 @@ export default function Clientes() {
     setDialogOpen(true);
   }
 
-  async function openEdit(c: Cliente) {
+  async function openEdit(c: Cliente, readonly = false) {
     setEditing(c);
+    setViewOnly(readonly);
     const ieIsento = (c as any).inscricao_estadual === "ISENTO";
     setForm({
       nome_fantasia: c.nome_fantasia,
@@ -796,7 +802,7 @@ export default function Clientes() {
                             <Phone className="h-3 w-3" />{c.telefone}
                           </p>
                         )}
-                        {c.email && (
+                        {!vendedorSomenteLeitura && c.email && (
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <Mail className="h-3 w-3" />{c.email}
                           </p>
@@ -813,7 +819,7 @@ export default function Clientes() {
                       {[c.cidade, c.uf].filter(Boolean).join(" / ") || "—"}
                     </TableCell>
                     <TableCell>
-                      {canEdit ? (
+                      {canEdit && !vendedorSomenteLeitura ? (
                         <Switch checked={c.ativo} onCheckedChange={() => toggleAtivo(c)} />
                       ) : (
                         <Badge variant={c.ativo ? "default" : "secondary"}>
@@ -823,9 +829,13 @@ export default function Clientes() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        {canEdit && (
+                        {canEdit && !vendedorSomenteLeitura ? (
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)} title="Editar cliente">
                             <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c, true)} title="Visualizar cliente">
+                            <Eye className="h-3.5 w-3.5" />
                           </Button>
                         )}
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openHistorico(c)} title="Histórico contratual">
@@ -851,10 +861,10 @@ export default function Clientes() {
       {/* Dialog criar/editar cliente */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Editar cliente" : "Novo cliente"}</DialogTitle>
+         <DialogHeader>
+            <DialogTitle>{viewOnly ? "Visualizar cliente" : editing ? "Editar cliente" : "Novo cliente"}</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-2">
+          <div className={`grid grid-cols-2 gap-4 py-2 ${viewOnly ? "pointer-events-none opacity-75" : ""}`}>
 
             {/* CNPJ/CPF com busca automatica */}
             <div className="space-y-1.5">
@@ -1028,7 +1038,7 @@ export default function Clientes() {
                   Contatos <span className="text-destructive">*</span>
                   <span className="text-xs font-normal normal-case text-muted-foreground">(obrigatório ao menos 1)</span>
                 </div>
-                {canEdit && !showContatoInlineForm && (
+                {canEdit && !viewOnly && !showContatoInlineForm && (
                   <Button type="button" size="sm" variant="outline" className="gap-1.5 h-7 text-xs"
                     onClick={() => { setEditingInlineIdx(null); setInlineContatoForm(emptyContatoForm); setShowContatoInlineForm(true); }}>
                     <Plus className="h-3 w-3" /> Adicionar contato
@@ -1056,7 +1066,7 @@ export default function Clientes() {
                           {ct.email && <span className="text-xs text-muted-foreground">{ct.email}</span>}
                         </div>
                       </div>
-                      {canEdit && (
+                      {canEdit && !viewOnly && (
                         <div className="flex items-center gap-0.5 shrink-0">
                           <Button type="button" variant="ghost" size="icon" className={`h-6 w-6 ${ct.decisor ? "text-primary" : "text-muted-foreground"}`}
                             title={ct.decisor ? "Remover como decisor" : "Marcar como decisor"}
@@ -1139,12 +1149,14 @@ export default function Clientes() {
 
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={saving || isQuerying}>
-              {isQuerying ? (
-                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Consultando...</>
-              ) : saving ? "Salvando..." : editing ? "Salvar alterações" : "Cadastrar cliente"}
-            </Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{viewOnly ? "Fechar" : "Cancelar"}</Button>
+            {!viewOnly && (
+              <Button onClick={handleSave} disabled={saving || isQuerying}>
+                {isQuerying ? (
+                  <><Loader2 className="h-4 w-4 animate-spin mr-2" />Consultando...</>
+                ) : saving ? "Salvando..." : editing ? "Salvar alterações" : "Cadastrar cliente"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
