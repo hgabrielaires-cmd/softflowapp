@@ -34,6 +34,106 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // ── Webhook ZapSign (público, validado por token secreto) ──
+  const reqUrl = new URL(req.url);
+  if (reqUrl.searchParams.get("action") === "webhook") {
+    try {
+      const webhookToken = reqUrl.searchParams.get("token");
+      const expectedToken = Deno.env.get("ZAPSIGN_WEBHOOK_TOKEN");
+
+      if (!expectedToken) {
+        return new Response(JSON.stringify({ error: "Webhook não configurado" }), {
+          status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!webhookToken || webhookToken !== expectedToken) {
+        console.warn("[ZapSign Webhook] Token inválido recebido");
+        return new Response(JSON.stringify({ error: "Token inválido" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const payload = await req.json();
+      const docToken = payload.token || payload.doc_token;
+
+      if (!docToken || typeof docToken !== "string") {
+        return new Response(JSON.stringify({ error: "Payload inválido: token do documento ausente" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Dedup: verificar se este evento já foi processado
+      const eventId = `${docToken}_${payload.status || "unknown"}`;
+      const supabaseWh = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+
+      const { data: existing } = await supabaseWh
+        .from("webhook_events")
+        .select("id")
+        .eq("source", "zapsign")
+        .eq("event_id", eventId)
+        .maybeSingle();
+
+      if (existing) {
+        console.log(`[ZapSign Webhook] Evento duplicado ignorado: ${eventId}`);
+        return new Response(JSON.stringify({ ok: true, message: "Evento já processado" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Mapear status
+      let mappedStatus = "Enviado";
+      if (payload.status === "signed") mappedStatus = "Assinado";
+      else if (payload.status === "canceled" || payload.status === "refused") mappedStatus = "Recusado";
+      else if (payload.status === "pending") mappedStatus = "Pendente";
+
+      const returnedSigners = (payload.signers || []).map((s: any) => ({
+        name: s.name,
+        email: s.email,
+        token: s.token,
+        status: s.status,
+        sign_url: s.token ? `https://app.zapsign.co/verificar/${s.token}` : null,
+        signed_at: s.signed_at || null,
+      }));
+
+      // Atualizar no banco
+      const updateData: any = { status: mappedStatus };
+      if (returnedSigners.length > 0) updateData.signers = returnedSigners;
+
+      const { error: updateError } = await supabaseWh
+        .from("contratos_zapsign")
+        .update(updateData)
+        .eq("zapsign_doc_token", docToken);
+
+      if (updateError) {
+        console.error("[ZapSign Webhook] Erro ao atualizar:", updateError);
+        return new Response(JSON.stringify({ error: "Erro ao processar webhook" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Registrar evento como processado (dedup)
+      await supabaseWh.from("webhook_events").insert({
+        source: "zapsign",
+        event_id: eventId,
+      });
+
+      console.log(`[ZapSign Webhook] Processado: doc=${docToken}, status=${mappedStatus}`);
+
+      return new Response(JSON.stringify({ ok: true, status: mappedStatus }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (webhookErr) {
+      console.error("[ZapSign Webhook] Erro:", webhookErr);
+      return new Response(JSON.stringify({ error: String(webhookErr) }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
+
   try {
     // ── Autenticação ──
     const authHeader = req.headers.get("Authorization");
