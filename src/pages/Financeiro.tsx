@@ -106,6 +106,8 @@ export default function Financeiro() {
   const { profile, roles, isAdmin } = useAuth();
   const navigate = useNavigate();
   const isFinanceiro = roles.includes("financeiro");
+  const isGestor = roles.includes("gestor");
+  const canApprove = isAdmin || isFinanceiro || isGestor;
   const { permissions: menuPerms } = useMenuPermissions(roles);
   const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais } = useUserFiliais();
 
@@ -129,17 +131,25 @@ export default function Financeiro() {
   const [rentabilidade, setRentabilidade] = useState<{ margem: number; markup: number; lucro: number } | null>(null);
   const [margemIdeal, setMargemIdeal] = useState<number | null>(null);
 
-  const canAccess = isAdmin || isFinanceiro || (menuPerms !== null && menuPerms.has("menu.financeiro"));
+  const isVendedor = roles.includes("vendedor");
+  const canAccess = isAdmin || isFinanceiro || isGestor || (menuPerms !== null && (menuPerms.has("menu.financeiro") || menuPerms.has("menu.fila_financeiro")));
 
   async function loadData() {
     setLoading(true);
+    let pedidosQuery = supabase
+      .from("pedidos")
+      .select("*, clientes(nome_fantasia), planos(nome), filiais(nome)")
+      .eq("financeiro_status", "Aguardando")
+      .eq("status_pedido", "Aguardando Financeiro")
+      .order("created_at", { ascending: true });
+
+    // Vendedor only sees their own pedidos
+    if (isVendedor && !isAdmin && !isFinanceiro && !isGestor) {
+      pedidosQuery = pedidosQuery.eq("vendedor_id", profile?.user_id);
+    }
+
     const [{ data: pedidosData }, { data: filiaisData }] = await Promise.all([
-      supabase
-        .from("pedidos")
-        .select("*, clientes(nome_fantasia), planos(nome), filiais(nome)")
-        .eq("financeiro_status", "Aguardando")
-        .eq("status_pedido", "Aguardando Financeiro")
-        .order("created_at", { ascending: true }),
+      pedidosQuery,
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
     ]);
     setPedidos((pedidosData || []) as PedidoFila[]);
@@ -455,18 +465,22 @@ export default function Financeiro() {
                           }}>
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon"
-                          className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                          title="Aprovar" disabled={processando}
-                          onClick={() => handleAprovar(pedido)}>
-                          <CheckCircle className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive hover:bg-red-50"
-                          title="Reprovar"
-                          onClick={() => { setSelected(pedido); setOpenReprovar(true); }}>
-                          <XCircle className="h-3.5 w-3.5" />
-                        </Button>
+                        {canApprove && (
+                          <>
+                            <Button variant="ghost" size="icon"
+                              className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                              title="Aprovar" disabled={processando}
+                              onClick={() => handleAprovar(pedido)}>
+                              <CheckCircle className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-red-50"
+                              title="Reprovar"
+                              onClick={() => { setSelected(pedido); setOpenReprovar(true); }}>
+                              <XCircle className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -664,15 +678,17 @@ export default function Financeiro() {
               {/* Comentários Internos */}
               <PedidoComentarios pedidoId={selected.id} />
             </div>
-            <div className="flex gap-2 pt-2">
-              <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleAprovar(selected)} disabled={processando}>
-                {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                Aprovar
-              </Button>
-              <Button variant="destructive" className="flex-1" onClick={() => { setOpenDetail(false); setOpenReprovar(true); }} disabled={processando}>
-                <XCircle className="h-4 w-4 mr-2" /> Reprovar
-              </Button>
-            </div>
+            {canApprove && (
+              <div className="flex gap-2 pt-2">
+                <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleAprovar(selected)} disabled={processando}>
+                  {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                  Aprovar
+                </Button>
+                <Button variant="destructive" className="flex-1" onClick={() => { setOpenDetail(false); setOpenReprovar(true); }} disabled={processando}>
+                  <XCircle className="h-4 w-4 mr-2" /> Reprovar
+                </Button>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
 
