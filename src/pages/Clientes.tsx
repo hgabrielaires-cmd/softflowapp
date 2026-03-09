@@ -1066,7 +1066,7 @@ export default function Clientes() {
                           {ct.email && <span className="text-xs text-muted-foreground">{ct.email}</span>}
                         </div>
                       </div>
-                      {canEdit && (
+                      {canEdit && !viewOnly && (
                         <div className="flex items-center gap-0.5 shrink-0">
                           <Button type="button" variant="ghost" size="icon" className={`h-6 w-6 ${ct.decisor ? "text-primary" : "text-muted-foreground"}`}
                             title={ct.decisor ? "Remover como decisor" : "Marcar como decisor"}
