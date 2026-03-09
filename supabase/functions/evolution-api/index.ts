@@ -234,7 +234,8 @@ serve(async (req) => {
           });
         }
 
-        const res = await fetch(`${baseUrl}/message/sendText/${name}`, {
+        // Try sending with the original number first
+        let res = await fetch(`${baseUrl}/message/sendText/${name}`, {
           method: "POST",
           headers,
           body: JSON.stringify({
@@ -243,6 +244,27 @@ serve(async (req) => {
           }),
         });
         result = await res.json();
+
+        // If number not found on WhatsApp and it's a 13-digit BR mobile (55 + DDD + 9 + 8 digits),
+        // retry without the 9th digit (some numbers are registered without it)
+        if (!res.ok && formattedNumber.length === 13 && formattedNumber.startsWith("55")) {
+          const withoutNinth = formattedNumber.slice(0, 4) + formattedNumber.slice(5);
+          console.log(`[Evolution] Retrying without 9th digit: ${withoutNinth}`);
+          const res2 = await fetch(`${baseUrl}/message/sendText/${name}`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              number: withoutNinth,
+              text: text,
+            }),
+          });
+          const result2 = await res2.json();
+          if (res2.ok) {
+            res = res2;
+            result = result2;
+          }
+        }
+
         if (!res.ok) {
           return new Response(JSON.stringify({ error: "Erro ao enviar mensagem", details: result }), {
             status: res.status,
