@@ -573,7 +573,14 @@ export default function Clientes() {
 
   async function handleDesativarContato(contato: ClienteContato) {
     if (!clienteContatos) return;
-    const { error } = await supabase.from("cliente_contatos").update({ ativo: false }).eq("id", contato.id);
+    if (contato.decisor) {
+      const outroDecisorAtivo = contatos.some((c) => c.id !== contato.id && c.ativo && c.decisor);
+      if (!outroDecisorAtivo) {
+        toast.error("Defina um novo contato como decisor antes de desativar este.");
+        return;
+      }
+    }
+    const { error } = await supabase.from("cliente_contatos").update({ ativo: false, decisor: false }).eq("id", contato.id);
     if (error) {
       toast.error("Erro ao desativar contato: " + error.message);
     } else {
