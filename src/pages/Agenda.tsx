@@ -771,9 +771,9 @@ export default function Agenda() {
                         <Badge variant="outline" className="text-xs font-mono">
                           {format(parseISO(ag.data), "dd/MM/yyyy", { locale: ptBR })}
                         </Badge>
-                        {ag.etapa_nome && ag.etapa_nome !== "—" && (
-                          <Badge variant="outline" className="text-xs" style={{ borderColor: ag.etapa_cor || undefined, color: ag.etapa_cor || undefined }}>
-                            {ag.etapa_nome}
+                        {ag.etapa_atual_nome && ag.etapa_atual_nome !== "—" && (
+                          <Badge variant="outline" className="text-xs" style={{ borderColor: ag.etapa_atual_cor || undefined, color: ag.etapa_atual_cor || undefined }}>
+                            {ag.etapa_atual_nome}
                           </Badge>
                         )}
                       </div>
