@@ -861,10 +861,10 @@ export default function Clientes() {
       {/* Dialog criar/editar cliente */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Editar cliente" : "Novo cliente"}</DialogTitle>
+         <DialogHeader>
+            <DialogTitle>{viewOnly ? "Visualizar cliente" : editing ? "Editar cliente" : "Novo cliente"}</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-2">
+          <div className={`grid grid-cols-2 gap-4 py-2 ${viewOnly ? "pointer-events-none opacity-75" : ""}`}>
 
             {/* CNPJ/CPF com busca automatica */}
             <div className="space-y-1.5">
