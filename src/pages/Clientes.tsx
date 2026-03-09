@@ -130,6 +130,7 @@ export default function Clientes() {
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [filtroFilialId, setFiltroFilialId] = useState<string>("__todas__");
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 15;
   const [dialogOpen, setDialogOpen] = useState(false);
