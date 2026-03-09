@@ -337,6 +337,9 @@ export default function Agenda() {
         const cardEtapaId = card?.etapa_id;
         return {
           ...ag,
+          ag_status: ag.status || 'agendado',
+          ag_iniciado_em: ag.iniciado_em || null,
+          ag_finalizado_em: ag.finalizado_em || null,
           cliente_nome: card?.clientes?.nome_fantasia || "—",
           contrato_numero: card?.contratos?.numero_exibicao || "—",
           filial_id: card?.filial_id || "",
@@ -351,7 +354,7 @@ export default function Agenda() {
           tipo_atendimento: card?.tipo_atendimento_local || null,
           status_projeto: card?.status_projeto || "ativo",
           pausado: card?.pausado || false,
-          iniciado_em: card?.iniciado_em || null,
+          card_iniciado_em: card?.iniciado_em || null,
           sla_horas: card?.sla_horas || 0,
         };
       });
