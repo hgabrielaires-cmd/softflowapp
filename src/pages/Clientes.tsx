@@ -129,6 +129,7 @@ export default function Clientes() {
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [decisoresMap, setDecisoresMap] = useState<Record<string, { nome: string; telefone: string | null }>>({});
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
