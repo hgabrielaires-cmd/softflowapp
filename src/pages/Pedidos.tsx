@@ -438,20 +438,28 @@ export default function Pedidos() {
     (acc, s) => acc + s.valor_unitario * s.quantidade, 0
   );
 
+  // Resolve plan prices considering filial overrides
+  const planoImplFilial = form.filial_id && planoSelecionado
+    ? (precosFilialMap[`plano:${planoSelecionado.id}:${form.filial_id}`]?.valor_implantacao ?? planoSelecionado.valor_implantacao_padrao ?? 0)
+    : (planoSelecionado?.valor_implantacao_padrao ?? 0);
+  const planoMensFilial = form.filial_id && planoSelecionado
+    ? (precosFilialMap[`plano:${planoSelecionado.id}:${form.filial_id}`]?.valor_mensalidade ?? planoSelecionado.valor_mensalidade_padrao ?? 0)
+    : (planoSelecionado?.valor_mensalidade_padrao ?? 0);
+
   const valorImplantacaoOriginal = form.tipo_pedido === "OA"
     ? totalServicosOA
     : form.tipo_pedido === "Aditivo"
       ? totalAdicionaisImp // Aditivo: só cobra os módulos novos
       : form.tipo_pedido === "Upgrade" && planoAnteriorValores
-        ? Math.max(0, (planoSelecionado?.valor_implantacao_padrao ?? 0) - planoAnteriorValores.implantacao)
-        : (planoSelecionado?.valor_implantacao_padrao ?? form.valor_implantacao_original) + totalAdicionaisImp;
+        ? Math.max(0, planoImplFilial - planoAnteriorValores.implantacao)
+        : (planoSelecionado ? planoImplFilial : form.valor_implantacao_original) + totalAdicionaisImp;
   const valorMensalidadeOriginal = form.tipo_pedido === "OA"
     ? 0
     : form.tipo_pedido === "Aditivo"
       ? totalAdicionaisMens // Aditivo: só cobra os módulos novos
       : form.tipo_pedido === "Upgrade" && planoAnteriorValores
-        ? Math.max(0, (planoSelecionado?.valor_mensalidade_padrao ?? 0) - planoAnteriorValores.mensalidade)
-        : (planoSelecionado?.valor_mensalidade_padrao ?? form.valor_mensalidade_original) + totalAdicionaisMens;
+        ? Math.max(0, planoMensFilial - planoAnteriorValores.mensalidade)
+        : (planoSelecionado ? planoMensFilial : form.valor_mensalidade_original) + totalAdicionaisMens;
 
   // Aplicar acréscimo primeiro, depois desconto
   const valorImpComAcrescimo = applyAcrescimo(
