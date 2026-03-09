@@ -161,7 +161,7 @@ export default function Agenda() {
       const to = from + ITEMS_PER_PAGE - 1;
 
       let q = supabase.from("painel_agendamentos")
-        .select("id, card_id, atividade_id, checklist_index, data, hora_inicio, hora_fim, observacao, mesa_id, filial_id, etapa_id, titulo, cor_evento, criado_por, created_at, status, iniciado_em:iniciado_em, finalizado_em");
+        .select("id, card_id, atividade_id, checklist_index, data, hora_inicio, hora_fim, observacao, mesa_id, filial_id, etapa_id, titulo, cor_evento, criado_por, created_at, status, iniciado_em, finalizado_em");
       q = applyBaseFilters(q);
       q = q.gte("data", listPeriodoDe).lte("data", listPeriodoAte);
       q = q.order("data", { ascending: false }).order("hora_inicio", { ascending: true });
