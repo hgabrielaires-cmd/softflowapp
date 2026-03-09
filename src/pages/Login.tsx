@@ -19,11 +19,37 @@ export default function Login() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+
+    // Proteção contra brute-force: verificar bloqueio
+    try {
+      const { data: isBlocked } = await supabase.rpc("check_login_blocked", { p_email: email });
+      if (isBlocked) {
+        toast.error("Muitas tentativas de login. Aguarde 5 minutos antes de tentar novamente.");
+        setLoading(false);
+        return;
+      }
+    } catch (e) {
+      console.warn("Erro ao verificar bloqueio de login:", e);
+    }
+
     const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      // Registrar tentativa falhada
+      try {
+        await supabase.rpc("record_login_attempt", { p_email: email, p_success: false });
+      } catch (e) {
+        console.warn("Erro ao registrar tentativa:", e);
+      }
       toast.error("Credenciais inválidas. Verifique seu e-mail e senha.");
       setLoading(false);
       return;
+    }
+
+    // Registrar tentativa bem-sucedida
+    try {
+      await supabase.rpc("record_login_attempt", { p_email: email, p_success: true });
+    } catch (e) {
+      console.warn("Erro ao registrar login:", e);
     }
 
     const userId = authData.user?.id;

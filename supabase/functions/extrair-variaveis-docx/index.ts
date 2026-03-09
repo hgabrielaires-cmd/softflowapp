@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -12,6 +12,31 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // ── Autenticação ──
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const anonClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Token inválido" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Service role client para operações privilegiadas
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -46,7 +71,6 @@ Deno.serve(async (req) => {
     const url = modelo.arquivo_docx_url;
     let storagePath: string | null = null;
 
-    // Tentar extrair o path do storage de signed URL ou public URL
     const pathMatch = url.match(/\/modelos-contrato\/([^?]+)/);
     if (pathMatch) {
       storagePath = decodeURIComponent(pathMatch[1]);
@@ -77,13 +101,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Ler o conteúdo do arquivo como ArrayBuffer
     const buffer = await fileData.arrayBuffer();
     const bytes = new Uint8Array(buffer);
 
-    // Um arquivo DOCX é um ZIP — precisamos extrair o document.xml
-    // Vamos usar uma abordagem simples: converter para texto e buscar os marcadores
-    // O XML interno do DOCX contém o texto, então fazemos uma extração básica
     const text = extractTextFromDocxBytes(bytes);
 
     // Extrair marcadores no padrão #CAMPO#
@@ -117,28 +137,16 @@ Deno.serve(async (req) => {
 
 /**
  * Extrai o texto legível de um DOCX (ZIP) procurando pelo conteúdo XML interno.
- * Faz uma decodificação básica do ZIP para encontrar o document.xml.
  */
 function extractTextFromDocxBytes(bytes: Uint8Array): string {
-  // Converter bytes para string latin-1 para processar o ZIP
-  const raw = Array.from(bytes)
-    .map((b) => String.fromCharCode(b))
-    .join("");
-
-  // Procurar por blocos de texto XML dentro do arquivo ZIP
-  // O DOCX tem document.xml dentro do ZIP, o conteúdo XML é texto ASCII/UTF-8
   const decoder = new TextDecoder("utf-8", { fatal: false });
-
-  // Tentar decodificar como UTF-8 direto (vai funcionar para as partes de texto)
   const textContent = decoder.decode(bytes);
 
-  // Extrair conteúdo das tags XML <w:t> que contém o texto do documento
   const wTags = textContent.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || [];
   const xmlText = wTags.map((tag) => {
     const content = tag.replace(/<[^>]+>/g, "");
     return content;
   }).join(" ");
 
-  // Também incluir o texto bruto para capturar marcadores que podem estar fora das tags
   return xmlText + " " + textContent;
 }
