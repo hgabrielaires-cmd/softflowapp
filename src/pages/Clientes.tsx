@@ -134,6 +134,7 @@ export default function Clientes() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 15;
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewOnly, setViewOnly] = useState(false);
   const [editing, setEditing] = useState<Cliente | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
