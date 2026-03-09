@@ -655,7 +655,7 @@ export default function Pedidos() {
       supabase.from("clientes").select("*").eq("ativo", true).order("nome_fantasia"),
       supabase.from("planos").select("*").eq("ativo", true).order("ordem").order("nome"),
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
-      supabase.from("profiles").select("*").order("full_name"),
+      supabase.from("profiles").select("*").eq("active", true).order("full_name"),
       supabase.from("servicos").select("id, nome, valor, unidade_medida").eq("ativo", true).order("nome"),
     ]);
     const pedidosList = (pedidosData || []) as unknown as PedidoWithJoins[];
