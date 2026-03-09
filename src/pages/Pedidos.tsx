@@ -2243,7 +2243,20 @@ export default function Pedidos() {
                           className={`flex-1 ${descontoImpExcedido ? "border-destructive" : ""}`}
                           placeholder="0"
                         />
-                        <Input readOnly value={fmtBRL(valorImplantacaoFinal)} className="w-36 bg-background font-mono text-sm text-primary font-semibold" />
+                        <Input
+                          type="number" min="0" step="0.01"
+                          value={valorImplantacaoFinal.toFixed(2)}
+                          onChange={(e) => {
+                            const novoFinal = parseFloat(e.target.value) || 0;
+                            const descontoCalc = Math.max(0, valorImpComAcrescimo - novoFinal);
+                            setForm((f) => ({
+                              ...f,
+                              desconto_implantacao_tipo: "R$" as const,
+                              desconto_implantacao_valor: descontoCalc.toFixed(2),
+                            }));
+                          }}
+                          className="w-36 bg-background font-mono text-sm text-primary font-semibold"
+                        />
                       </div>
                     </div>
 
