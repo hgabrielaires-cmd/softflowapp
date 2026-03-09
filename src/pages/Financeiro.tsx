@@ -457,18 +457,22 @@ export default function Financeiro() {
                           }}>
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon"
-                          className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                          title="Aprovar" disabled={processando}
-                          onClick={() => handleAprovar(pedido)}>
-                          <CheckCircle className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive hover:bg-red-50"
-                          title="Reprovar"
-                          onClick={() => { setSelected(pedido); setOpenReprovar(true); }}>
-                          <XCircle className="h-3.5 w-3.5" />
-                        </Button>
+                        {canApprove && (
+                          <>
+                            <Button variant="ghost" size="icon"
+                              className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                              title="Aprovar" disabled={processando}
+                              onClick={() => handleAprovar(pedido)}>
+                              <CheckCircle className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-red-50"
+                              title="Reprovar"
+                              onClick={() => { setSelected(pedido); setOpenReprovar(true); }}>
+                              <XCircle className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
