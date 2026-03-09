@@ -130,6 +130,7 @@ export default function Clientes() {
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [filtroFilialId, setFiltroFilialId] = useState<string>("__todas__");
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 15;
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -284,10 +285,15 @@ export default function Clientes() {
     ? clientes
     : clientes.filter((c) => c.filial_id && allowedFilialIds.includes(c.filial_id));
 
+  // Apply filial filter selection
+  const clientesFiltradosPorFilialSelecionada = filtroFilialId === "__todas__"
+    ? clientesFiltradosPorFilial
+    : clientesFiltradosPorFilial.filter((c) => c.filial_id === filtroFilialId);
+
   const searchTerm = search.toLowerCase().trim();
   const searchDigits = searchTerm.replace(/\D/g, "");
   const filtered = searchTerm
-    ? clientesFiltradosPorFilial.filter((c) =>
+    ? clientesFiltradosPorFilialSelecionada.filter((c) =>
         c.nome_fantasia.toLowerCase().includes(searchTerm) ||
         (c.razao_social || "").toLowerCase().includes(searchTerm) ||
         ((c as any).apelido || "").toLowerCase().includes(searchTerm) ||
@@ -296,10 +302,10 @@ export default function Clientes() {
         (c.contato_nome || "").toLowerCase().includes(searchTerm) ||
         (c.telefone || "").includes(searchTerm)
       )
-    : clientesFiltradosPorFilial;
+    : clientesFiltradosPorFilialSelecionada;
 
-  // Reset page when search changes
-  useEffect(() => { setCurrentPage(1); }, [search]);
+  // Reset page when search or filter changes
+  useEffect(() => { setCurrentPage(1); }, [search, filtroFilialId]);
 
   function openCreate() {
     setEditing(null);
@@ -753,17 +759,33 @@ export default function Clientes() {
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input
-            id="search-clientes"
-            placeholder="Buscar por nome fantasia, razão social, CNPJ ou contato..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-            autoComplete="off"
-          />
+        {/* Search + Filial filter */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative max-w-sm flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              id="search-clientes"
+              placeholder="Buscar por nome fantasia, razão social, CNPJ ou contato..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+              autoComplete="off"
+            />
+          </div>
+          {filiaisDoUsuario.length > 1 && (
+            <Select value={filtroFilialId} onValueChange={setFiltroFilialId}>
+              <SelectTrigger className="w-[220px]">
+                <Building2 className="h-4 w-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Filial" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__todas__">Todas as Filiais</SelectItem>
+                {filiaisDoUsuario.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {/* Table */}
