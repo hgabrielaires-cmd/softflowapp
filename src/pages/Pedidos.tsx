@@ -2289,10 +2289,12 @@ export default function Pedidos() {
                             placeholder="0"
                           />
                           <Input
-                            type="number" min="0" step="0.01"
-                            value={valorMensalidadeFinal.toFixed(2)}
-                            onChange={(e) => {
-                              const novoFinal = parseFloat(e.target.value) || 0;
+                            type="text" inputMode="decimal"
+                            defaultValue={valorMensalidadeFinal.toFixed(2)}
+                            key={`mens-final-${valorMensalidadeFinal.toFixed(2)}`}
+                            onBlur={(e) => {
+                              const raw = e.target.value.replace(",", ".");
+                              const novoFinal = parseFloat(raw) || 0;
                               const descontoCalc = Math.max(0, valorMensComAcrescimo - novoFinal);
                               setForm((f) => ({
                                 ...f,
