@@ -3116,18 +3116,21 @@ export type Database = {
         Row: {
           event_id: string
           id: string
+          ip_address: string | null
           processed_at: string
           source: string
         }
         Insert: {
           event_id: string
           id?: string
+          ip_address?: string | null
           processed_at?: string
           source: string
         }
         Update: {
           event_id?: string
           id?: string
+          ip_address?: string | null
           processed_at?: string
           source?: string
         }
@@ -3139,6 +3142,7 @@ export type Database = {
     }
     Functions: {
       check_login_blocked: { Args: { p_email: string }; Returns: boolean }
+      get_cron_secret: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -24,14 +24,14 @@ serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const cronSecret = Deno.env.get("CRON_SECRET") || "";
 
-    const isSystemCall = token === serviceRoleKey || token === anonKey;
+    const isSystemCall = token === serviceRoleKey || (cronSecret && token === cronSecret);
 
     if (!isSystemCall) {
       const tempClient = createClient(
         Deno.env.get("SUPABASE_URL")!,
-        anonKey,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
         { global: { headers: { Authorization: authHeader } } }
       );
       const { error: claimsError } = await tempClient.auth.getClaims(token);

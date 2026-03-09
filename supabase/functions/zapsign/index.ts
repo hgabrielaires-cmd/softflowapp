@@ -54,17 +54,39 @@ Deno.serve(async (req) => {
         });
       }
 
-      const payload = await req.json();
-      const docToken = payload.token || payload.doc_token;
-
-      if (!docToken || typeof docToken !== "string") {
-        return new Response(JSON.stringify({ error: "Payload inválido: token do documento ausente" }), {
+      let payload: any;
+      try {
+        payload = await req.json();
+      } catch {
+        return new Response(JSON.stringify({ error: "Body não é JSON válido" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
+      const docToken = payload.token || payload.doc_token;
+      if (!docToken || typeof docToken !== "string" || docToken.length > 200) {
+        return new Response(JSON.stringify({ error: "Payload inválido: token do documento ausente ou inválido" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Validar que status é um valor reconhecido
+      const VALID_STATUSES = ["signed", "canceled", "refused", "pending"];
+      const rawStatus = payload.status;
+      if (!rawStatus || typeof rawStatus !== "string" || !VALID_STATUSES.includes(rawStatus)) {
+        console.warn(`[ZapSign Webhook] Status inválido ou ausente: "${rawStatus}"`);
+        return new Response(JSON.stringify({ error: `Status inválido ou ausente: "${rawStatus}". Valores aceitos: ${VALID_STATUSES.join(", ")}` }), {
+          status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Capturar IP de origem do webhook
+      const webhookIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+        || req.headers.get("x-real-ip")
+        || "unknown";
+
       // Dedup: verificar se este evento já foi processado
-      const eventId = `${docToken}_${payload.status || "unknown"}`;
+      const eventId = `${docToken}_${rawStatus}`;
       const supabaseWh = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -84,11 +106,11 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Mapear status
+      // Mapear status (já validado acima)
       let mappedStatus = "Enviado";
-      if (payload.status === "signed") mappedStatus = "Assinado";
-      else if (payload.status === "canceled" || payload.status === "refused") mappedStatus = "Recusado";
-      else if (payload.status === "pending") mappedStatus = "Pendente";
+      if (rawStatus === "signed") mappedStatus = "Assinado";
+      else if (rawStatus === "canceled" || rawStatus === "refused") mappedStatus = "Recusado";
+      else if (rawStatus === "pending") mappedStatus = "Pendente";
 
       const returnedSigners = (payload.signers || []).map((s: any) => ({
         name: s.name,
@@ -115,10 +137,11 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Registrar evento como processado (dedup)
+      // Registrar evento como processado (dedup) com IP
       await supabaseWh.from("webhook_events").insert({
         source: "zapsign",
         event_id: eventId,
+        ip_address: webhookIp,
       });
 
       console.log(`[ZapSign Webhook] Processado: doc=${docToken}, status=${mappedStatus}`);
