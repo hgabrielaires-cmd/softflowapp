@@ -573,7 +573,14 @@ export default function Clientes() {
 
   async function handleDesativarContato(contato: ClienteContato) {
     if (!clienteContatos) return;
-    const { error } = await supabase.from("cliente_contatos").update({ ativo: false }).eq("id", contato.id);
+    if (contato.decisor) {
+      const outroDecisorAtivo = contatos.some((c) => c.id !== contato.id && c.ativo && c.decisor);
+      if (!outroDecisorAtivo) {
+        toast.error("Defina um novo contato como decisor antes de desativar este.");
+        return;
+      }
+    }
+    const { error } = await supabase.from("cliente_contatos").update({ ativo: false, decisor: false }).eq("id", contato.id);
     if (error) {
       toast.error("Erro ao desativar contato: " + error.message);
     } else {
@@ -1102,11 +1109,17 @@ export default function Clientes() {
                             <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
                               title="Desativar contato"
                               onClick={() => {
+                                // Se é decisor, verificar se há outro contato ativo que seja decisor
+                                if (ct.decisor) {
+                                  const outroDecisorAtivo = formContatos.some((c, i) => i !== idx && c.ativo !== false && c.decisor);
+                                  if (!outroDecisorAtivo) {
+                                    toast.error("Defina um novo contato como decisor antes de desativar este.");
+                                    return;
+                                  }
+                                }
                                 if (ct._id) {
-                                  // Contato já salvo: marcar como inativo
-                                  setFormContatos((prev) => prev.map((c, i) => i === idx ? { ...c, ativo: false } : c));
+                                  setFormContatos((prev) => prev.map((c, i) => i === idx ? { ...c, ativo: false, decisor: false } : c));
                                 } else {
-                                  // Contato novo (não salvo): pode remover
                                   setFormContatos((prev) => prev.filter((_, i) => i !== idx));
                                 }
                               }}>
