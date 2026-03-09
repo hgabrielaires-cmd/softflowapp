@@ -1600,6 +1600,22 @@ export default function PainelAtendimento() {
     }
   }
 
+  async function handleRemoverAgendamentosCancelados() {
+    setRemovendoAgendamentos(true);
+    try {
+      const ids = agendamentosCancelados.map(a => a.id);
+      await supabase.from("painel_agendamentos").delete().in("id", ids);
+      toast.success(`${ids.length} agendamento(s) removido(s)!`);
+    } catch (err: any) {
+      toast.error("Erro ao remover agendamentos: " + (err.message || ""));
+    } finally {
+      setRemovendoAgendamentos(false);
+      setAgendamentosCancelOpen(false);
+      setAgendamentosCancelados([]);
+      setDetailCard(null);
+    }
+  }
+
   // ─── Apontamento ─────────────────────────────────────────────────────────
   async function handleApontamento() {
     if (!apontamentoCardId || apontamentoUsuarios.length === 0) return;
