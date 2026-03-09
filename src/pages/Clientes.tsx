@@ -261,12 +261,19 @@ export default function Clientes() {
 
   async function fetchData() {
     setLoading(true);
-    const [{ data: c }, { data: f }] = await Promise.all([
+    const [{ data: c }, { data: f }, { data: decisores }] = await Promise.all([
       supabase.from("clientes").select("*").order("nome_fantasia"),
       supabase.from("filiais").select("*").order("nome"),
+      supabase.from("cliente_contatos").select("cliente_id, nome, telefone").eq("decisor", true).eq("ativo", true),
     ]);
     setClientes(c || []);
     setFiliais(f || []);
+    // Map: cliente_id -> primeiro decisor ativo
+    const dMap: Record<string, { nome: string; telefone: string | null }> = {};
+    (decisores || []).forEach((d: any) => {
+      if (!dMap[d.cliente_id]) dMap[d.cliente_id] = { nome: d.nome, telefone: d.telefone };
+    });
+    setDecisoresMap(dMap);
     setLoading(false);
   }
 
