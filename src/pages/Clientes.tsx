@@ -122,9 +122,10 @@ export default function Clientes() {
   const isGestor = roles.includes("gestor");
   const isVendedor = roles.includes("vendedor");
   const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("clientes", roles);
-  const canEdit = crudEditar || crudIncluir;
-  // Vendedor puro (sem permissão CRUD) = somente visualização
-  const vendedorSomenteLeitura = isVendedor && !isAdmin && !isFinanceiro && !isGestor && !canEdit;
+  // Pode editar registros existentes (admin/gestor/financeiro OU com permissão explícita de edição)
+  const canEditExisting = isAdmin || isFinanceiro || isGestor || crudEditar;
+  // Vendedor sem permissão de edição = somente visualização em registros existentes
+  const vendedorSomenteLeitura = isVendedor && !canEditExisting;
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -819,7 +820,7 @@ export default function Clientes() {
                       {[c.cidade, c.uf].filter(Boolean).join(" / ") || "—"}
                     </TableCell>
                     <TableCell>
-                      {canEdit && !vendedorSomenteLeitura ? (
+                      {canEditExisting && !vendedorSomenteLeitura ? (
                         <Switch checked={c.ativo} onCheckedChange={() => toggleAtivo(c)} />
                       ) : (
                         <Badge variant={c.ativo ? "default" : "secondary"}>
@@ -829,7 +830,7 @@ export default function Clientes() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        {canEdit && !vendedorSomenteLeitura ? (
+                        {canEditExisting && !vendedorSomenteLeitura ? (
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)} title="Editar cliente">
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
@@ -1038,7 +1039,7 @@ export default function Clientes() {
                   Contatos <span className="text-destructive">*</span>
                   <span className="text-xs font-normal normal-case text-muted-foreground">(obrigatório ao menos 1)</span>
                 </div>
-                {canEdit && !viewOnly && !showContatoInlineForm && (
+                {canEditExisting && !viewOnly && !showContatoInlineForm && (
                   <Button type="button" size="sm" variant="outline" className="gap-1.5 h-7 text-xs"
                     onClick={() => { setEditingInlineIdx(null); setInlineContatoForm(emptyContatoForm); setShowContatoInlineForm(true); }}>
                     <Plus className="h-3 w-3" /> Adicionar contato
@@ -1066,7 +1067,7 @@ export default function Clientes() {
                           {ct.email && <span className="text-xs text-muted-foreground">{ct.email}</span>}
                         </div>
                       </div>
-                      {canEdit && !viewOnly && (
+                      {canEditExisting && !viewOnly && (
                         <div className="flex items-center gap-0.5 shrink-0">
                           <Button type="button" variant="ghost" size="icon" className={`h-6 w-6 ${ct.decisor ? "text-primary" : "text-muted-foreground"}`}
                             title={ct.decisor ? "Remover como decisor" : "Marcar como decisor"}
@@ -1171,7 +1172,7 @@ export default function Clientes() {
             </DialogTitle>
           </DialogHeader>
 
-          {canEdit && (
+          {canEditExisting && (
             <div className="flex justify-end">
               <Button size="sm" className="gap-1.5" onClick={openNovoContato}>
                 <Plus className="h-3.5 w-3.5" /> Novo contato
@@ -1217,7 +1218,7 @@ export default function Clientes() {
                       )}
                     </div>
                   </div>
-                  {canEdit && (
+                  {canEditExisting && (
                     <div className="flex items-center gap-1 shrink-0">
                       <Button
                         variant="ghost" size="icon" className={`h-7 w-7 ${c.decisor ? "text-primary" : "text-muted-foreground"}`}
