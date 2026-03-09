@@ -390,6 +390,30 @@ export default function Agenda() {
       });
   }, [calAgendamentos, selectedDate]);
 
+  // Fetch OTHER scheduled dates for cards visible on the selected day
+  const cardIdsDoDia = useMemo(() => [...new Set(agendamentosDoDia.map((ag: any) => ag.card_id))], [agendamentosDoDia]);
+
+  const { data: outrasDatasMap = {} } = useQuery({
+    queryKey: ["agenda-outras-datas", cardIdsDoDia, format(selectedDate, "yyyy-MM-dd")],
+    enabled: cardIdsDoDia.length > 0 && activeView === "calendario",
+    queryFn: async () => {
+      const selectedStr = format(selectedDate, "yyyy-MM-dd");
+      const { data, error } = await supabase
+        .from("painel_agendamentos")
+        .select("card_id, data, hora_inicio, hora_fim")
+        .in("card_id", cardIdsDoDia)
+        .neq("data", selectedStr)
+        .order("data", { ascending: true });
+      if (error) throw error;
+      const map: Record<string, { data: string; hora_inicio: string | null; hora_fim: string | null }[]> = {};
+      (data || []).forEach((r: any) => {
+        if (!map[r.card_id]) map[r.card_id] = [];
+        map[r.card_id].push({ data: r.data, hora_inicio: r.hora_inicio, hora_fim: r.hora_fim });
+      });
+      return map;
+    },
+  }) as { data: Record<string, { data: string; hora_inicio: string | null; hora_fim: string | null }[]> };
+
   // ===== SHARED: status helper =====
   const getStatusInfo = (ag: any) => {
     if (ag.status_projeto === "recusado") return { label: "Recusado", color: "bg-destructive/10 text-destructive border-destructive/20" };
@@ -472,6 +496,33 @@ export default function Agenda() {
             )}
             {ag.observacao && (
               <p className="text-xs text-muted-foreground mt-1 italic">"{ag.observacao}"</p>
+            )}
+            {/* Outras datas agendadas para o mesmo card/contrato */}
+            {outrasDatasMap[ag.card_id]?.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-border/50">
+                <p className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wide">
+                  <CalendarDays className="h-3 w-3 inline mr-1" />
+                  Outras datas agendadas ({outrasDatasMap[ag.card_id].length})
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {outrasDatasMap[ag.card_id].map((od, idx) => (
+                    <Badge
+                      key={idx}
+                      variant="outline"
+                      className={cn(
+                        "text-[11px] font-mono cursor-pointer hover:bg-accent/80 transition-colors",
+                        parseISO(od.data) >= new Date(new Date().setHours(0,0,0,0))
+                          ? "border-primary/30 text-primary"
+                          : "border-border text-muted-foreground"
+                      )}
+                      onClick={() => setSelectedDate(parseISO(od.data))}
+                    >
+                      {format(parseISO(od.data), "dd/MM")}
+                      {od.hora_inicio && ` ${od.hora_inicio.slice(0, 5)}`}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
           <div className="flex flex-col items-end gap-2 shrink-0">
