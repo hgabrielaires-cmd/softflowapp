@@ -34,6 +34,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Link, CopyPlus, DollarSign, Search, TrendingUp, AlertTriangle } from "lucide-react";
+import { PrecosFilialSection } from "@/components/PrecosFilialSection";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
