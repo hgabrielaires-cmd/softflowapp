@@ -1039,7 +1039,8 @@ export default function Clientes() {
               </Select>
             </div>
 
-            {(isAdmin || isFinancecanEditExistingdiv className="col-span-2 flex items-center gap-3">
+            {canEditExisting && (
+              <div className="col-span-2 flex items-center gap-3">
                 <Switch checked={form.ativo} onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))} />
                 <Label>Cliente ativo</Label>
               </div>
