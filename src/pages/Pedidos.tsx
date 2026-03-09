@@ -423,6 +423,9 @@ export default function Pedidos() {
     }
   }
 
+  // ─── Preços por filial ────────────────────────────────────────────────────
+  const [precosFilialMap, setPrecosFilialMap] = useState<Record<string, { valor_implantacao: number; valor_mensalidade: number }>>({});
+
   // ─── Computed values ─────────────────────────────────────────────────────
 
   // Total dos módulos adicionais na lista
@@ -438,20 +441,28 @@ export default function Pedidos() {
     (acc, s) => acc + s.valor_unitario * s.quantidade, 0
   );
 
+  // Resolve plan prices considering filial overrides
+  const planoImplFilial = form.filial_id && planoSelecionado
+    ? (precosFilialMap[`plano:${planoSelecionado.id}:${form.filial_id}`]?.valor_implantacao ?? planoSelecionado.valor_implantacao_padrao ?? 0)
+    : (planoSelecionado?.valor_implantacao_padrao ?? 0);
+  const planoMensFilial = form.filial_id && planoSelecionado
+    ? (precosFilialMap[`plano:${planoSelecionado.id}:${form.filial_id}`]?.valor_mensalidade ?? planoSelecionado.valor_mensalidade_padrao ?? 0)
+    : (planoSelecionado?.valor_mensalidade_padrao ?? 0);
+
   const valorImplantacaoOriginal = form.tipo_pedido === "OA"
     ? totalServicosOA
     : form.tipo_pedido === "Aditivo"
       ? totalAdicionaisImp // Aditivo: só cobra os módulos novos
       : form.tipo_pedido === "Upgrade" && planoAnteriorValores
-        ? Math.max(0, (planoSelecionado?.valor_implantacao_padrao ?? 0) - planoAnteriorValores.implantacao)
-        : (planoSelecionado?.valor_implantacao_padrao ?? form.valor_implantacao_original) + totalAdicionaisImp;
+        ? Math.max(0, planoImplFilial - planoAnteriorValores.implantacao)
+        : (planoSelecionado ? planoImplFilial : form.valor_implantacao_original) + totalAdicionaisImp;
   const valorMensalidadeOriginal = form.tipo_pedido === "OA"
     ? 0
     : form.tipo_pedido === "Aditivo"
       ? totalAdicionaisMens // Aditivo: só cobra os módulos novos
       : form.tipo_pedido === "Upgrade" && planoAnteriorValores
-        ? Math.max(0, (planoSelecionado?.valor_mensalidade_padrao ?? 0) - planoAnteriorValores.mensalidade)
-        : (planoSelecionado?.valor_mensalidade_padrao ?? form.valor_mensalidade_original) + totalAdicionaisMens;
+        ? Math.max(0, planoMensFilial - planoAnteriorValores.mensalidade)
+        : (planoSelecionado ? planoMensFilial : form.valor_mensalidade_original) + totalAdicionaisMens;
 
   // Aplicar acréscimo primeiro, depois desconto
   const valorImpComAcrescimo = applyAcrescimo(
@@ -507,36 +518,58 @@ export default function Pedidos() {
   // Qualquer usuário (inclusive admin) é bloqueado se exceder o limite
   const bloqueadoPorDesconto = descontoExcedido;
 
+  // precosFilialMap moved above computed values
+
   // ─── Load plano + módulos disponíveis ──────────────────────────────────────
 
-  const loadPlano = useCallback(async (planoId: string, modulosAdicionaisExistentes: ModuloAdicionadoItem[] = []) => {
+  const loadPlano = useCallback(async (planoId: string, modulosAdicionaisExistentes: ModuloAdicionadoItem[] = [], filialIdOverride?: string) => {
     if (!planoId) {
       setPlanoSelecionado(null);
       setModulosDisponiveis([]);
+      setPrecosFilialMap({});
       setForm((f) => ({ ...f, valor_implantacao_original: 0, valor_mensalidade_original: 0 }));
       return;
     }
 
     setLoadingModulos(true);
 
-    const [{ data: planoData }, { data: vinculosData }] = await Promise.all([
+    const [{ data: planoData }, { data: vinculosData }, { data: precosData }] = await Promise.all([
       supabase.from("planos").select("*").eq("id", planoId).single(),
       supabase.from("plano_modulos")
         .select("*, modulo:modulos(*)")
         .eq("plano_id", planoId)
         .order("ordem"),
+      supabase.from("precos_filial").select("*").or(`and(tipo.eq.plano,referencia_id.eq.${planoId}),tipo.eq.modulo`),
     ]);
 
     setPlanoSelecionado(planoData);
 
+    // Build precos map: key = "plano:{id}:{filialId}" or "modulo:{id}:{filialId}"
+    const pMap: Record<string, { valor_implantacao: number; valor_mensalidade: number }> = {};
+    (precosData || []).forEach((p: any) => {
+      pMap[`${p.tipo}:${p.referencia_id}:${p.filial_id}`] = {
+        valor_implantacao: p.valor_implantacao,
+        valor_mensalidade: p.valor_mensalidade,
+      };
+    });
+    setPrecosFilialMap(pMap);
+
+    const currentFilialId = filialIdOverride || form.filial_id;
+
+    // Resolve plan prices based on filial
+    const planoPrecoFilial = currentFilialId ? pMap[`plano:${planoId}:${currentFilialId}`] : null;
+    const planoImplantacao = planoPrecoFilial ? planoPrecoFilial.valor_implantacao : (planoData?.valor_implantacao_padrao ?? 0);
+    const planoMensalidade = planoPrecoFilial ? planoPrecoFilial.valor_mensalidade : (planoData?.valor_mensalidade_padrao ?? 0);
+
     const disponiveis: ModuloOpcional[] = [];
     (vinculosData || []).forEach((v: any) => {
       if (v.modulo) {
+        const modPrecoFilial = currentFilialId ? pMap[`modulo:${v.modulo.id}:${currentFilialId}`] : null;
         disponiveis.push({
           id: v.modulo.id,
           nome: v.modulo.nome,
-          valor_implantacao_modulo: v.modulo.valor_implantacao_modulo ?? 0,
-          valor_mensalidade_modulo: v.modulo.valor_mensalidade_modulo ?? 0,
+          valor_implantacao_modulo: modPrecoFilial ? modPrecoFilial.valor_implantacao : (v.modulo.valor_implantacao_modulo ?? 0),
+          valor_mensalidade_modulo: modPrecoFilial ? modPrecoFilial.valor_mensalidade : (v.modulo.valor_mensalidade_modulo ?? 0),
           incluso_no_plano: v.incluso_no_plano,
           permite_revenda: v.modulo.permite_revenda ?? false,
           quantidade_maxima: v.modulo.quantidade_maxima ?? null,
@@ -545,15 +578,24 @@ export default function Pedidos() {
     });
     setModulosDisponiveis(disponiveis);
 
+    // Update module prices in existing adicional list based on filial
+    const updatedModulos = modulosAdicionaisExistentes.map((m) => {
+      const modPrecoFilial = currentFilialId ? pMap[`modulo:${m.modulo_id}:${currentFilialId}`] : null;
+      if (modPrecoFilial) {
+        return { ...m, valor_implantacao_modulo: modPrecoFilial.valor_implantacao, valor_mensalidade_modulo: modPrecoFilial.valor_mensalidade };
+      }
+      return m;
+    });
+
     setForm((f) => ({
       ...f,
-      valor_implantacao_original: planoData?.valor_implantacao_padrao ?? 0,
-      valor_mensalidade_original: planoData?.valor_mensalidade_padrao ?? 0,
-      modulos_adicionais: modulosAdicionaisExistentes,
+      valor_implantacao_original: planoImplantacao,
+      valor_mensalidade_original: planoMensalidade,
+      modulos_adicionais: updatedModulos,
     }));
 
     setLoadingModulos(false);
-  }, []);
+  }, [form.filial_id]);
 
   // ─── Handlers de módulos adicionais ──────────────────────────────────────
 
@@ -1819,9 +1861,9 @@ export default function Pedidos() {
                   </p>
                   {planoAnteriorValores && planoSelecionado && (
                     <p className="text-xs text-green-700 font-mono">
-                      Diferença Impl: {fmtBRL(Math.max(0, (planoSelecionado.valor_implantacao_padrao ?? 0) - planoAnteriorValores.implantacao))}
+                      Diferença Impl: {fmtBRL(Math.max(0, planoImplFilial - planoAnteriorValores.implantacao))}
                       {" · "}
-                      Diferença Mens: {fmtBRL(Math.max(0, (planoSelecionado.valor_mensalidade_padrao ?? 0) - planoAnteriorValores.mensalidade))}
+                      Diferença Mens: {fmtBRL(Math.max(0, planoMensFilial - planoAnteriorValores.mensalidade))}
                     </p>
                   )}
                 </div>
@@ -1956,7 +1998,13 @@ export default function Pedidos() {
               <div className="space-y-1.5">
                 <Label>Filial *</Label>
                 {isAdmin || filiaisDoUsuario.length > 1 ? (
-                  <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))}>
+                  <Select value={form.filial_id} onValueChange={(v) => {
+                    setForm((f) => ({ ...f, filial_id: v }));
+                    // Reload plan prices for the new filial
+                    if (form.plano_id) {
+                      loadPlano(form.plano_id, form.modulos_adicionais, v);
+                    }
+                  }}>
                     <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
                       {(filiaisDoUsuario.length > 0 ? filiaisDoUsuario : todasFiliais).map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
