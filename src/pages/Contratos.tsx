@@ -126,7 +126,7 @@ export default function Contratos() {
   const [filterAte, setFilterAte] = useState("");
   const [filterBusca, setFilterBusca] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 15;
+  
 
   const [selected, setSelected] = useState<Contrato | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
