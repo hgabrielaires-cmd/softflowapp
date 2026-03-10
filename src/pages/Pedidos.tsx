@@ -2434,77 +2434,20 @@ export default function Pedidos() {
       </Dialog>
 
       {/* ─── Dialog Comentário Interno (draft) ────────────────────────────── */}
-      <Dialog open={openComentarioDialog} onOpenChange={setOpenComentarioDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <MessageSquare className="h-4 w-4" /> {editingDraftIdx !== null ? "Editar Comentário" : "Novo Comentário Interno"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Textarea
-              placeholder="Escreva um comentário..."
-              value={draftTexto}
-              onChange={(e) => setDraftTexto(e.target.value)}
-              className="min-h-[80px] text-sm"
-            />
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">Prioridade:</Label>
-              <div className="flex flex-wrap gap-2">
-                {PRIORIDADES_DRAFT.map((p) => (
-                  <button
-                    key={p.value}
-                    type="button"
-                    onClick={() => setDraftPrioridade(p.value)}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border transition-colors ${
-                      draftPrioridade === p.value
-                        ? "border-primary bg-primary/10 font-semibold"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    {p.emoji} {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="text-xs"
-                onClick={() => draftFileRef.current?.click()}
-              >
-                <Paperclip className="h-3.5 w-3.5 mr-1" />
-                {draftArquivo ? draftArquivo.name : "Anexar (máx 11MB)"}
-              </Button>
-              <input
-                type="file"
-                ref={draftFileRef}
-                className="hidden"
-                onChange={handleDraftFileChange}
-              />
-              {draftArquivo && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => { setDraftArquivo(null); if (draftFileRef.current) draftFileRef.current.value = ""; }}
-                >
-                  <Trash2 className="h-3 w-3 text-destructive" />
-                </Button>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpenComentarioDialog(false)}>Cancelar</Button>
-            <Button type="button" onClick={handleAddDraftComentario} disabled={!draftTexto.trim()}>
-              {editingDraftIdx !== null ? "Salvar" : "Adicionar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ComentarioDraftDialog
+        open={openComentarioDialog}
+        onOpenChange={setOpenComentarioDialog}
+        texto={draftTexto}
+        setTexto={setDraftTexto}
+        prioridade={draftPrioridade}
+        setPrioridade={setDraftPrioridade}
+        arquivo={draftArquivo}
+        setArquivo={setDraftArquivo}
+        fileRef={draftFileRef}
+        isEditing={editingDraftIdx !== null}
+        onSave={handleAddDraftComentario}
+        onFileChange={handleDraftFileChange}
+      />
 
       <Dialog open={openClienteDialog} onOpenChange={(open) => { setOpenClienteDialog(open); if (!open) { setClienteContatos([]); setShowContatoClienteForm(false); } }}>
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
