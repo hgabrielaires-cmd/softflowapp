@@ -212,7 +212,7 @@ export default function Usuarios() {
       toast.success(`Usuário ${inviteName} criado com sucesso!`);
       setOpenInvite(false);
       setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteFilialIds([]); setInviteAcessoGlobal(false); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteComissaoServ("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone(""); setInviteIsTecnico(false); setInviteTipoTecnico("interno"); setInviteIsVendedor(false); setInviteMesaIds([]);
-      loadUsers();
+      q.refetchUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
     }
