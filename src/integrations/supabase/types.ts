@@ -1751,6 +1751,7 @@ export type Database = {
           concluido_por: string | null
           created_at: string
           etapa_id: string | null
+          finalizado_em_atraso: boolean | null
           id: string
           iniciado_em: string | null
           iniciado_por: string | null
@@ -1764,6 +1765,7 @@ export type Database = {
           concluido_por?: string | null
           created_at?: string
           etapa_id?: string | null
+          finalizado_em_atraso?: boolean | null
           id?: string
           iniciado_em?: string | null
           iniciado_por?: string | null
@@ -1777,6 +1779,7 @@ export type Database = {
           concluido_por?: string | null
           created_at?: string
           etapa_id?: string | null
+          finalizado_em_atraso?: boolean | null
           id?: string
           iniciado_em?: string | null
           iniciado_por?: string | null

@@ -55,6 +55,7 @@ export interface AtividadeExecucao {
   iniciado_por: string | null;
   concluido_em: string | null;
   concluido_por: string | null;
+  finalizado_em_atraso: boolean;
   created_at: string;
   updated_at: string;
 }
