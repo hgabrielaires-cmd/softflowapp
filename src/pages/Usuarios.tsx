@@ -538,12 +538,12 @@ export default function Usuarios() {
                           <div key={fil.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
                             <span className="text-sm">{fil.nome}</span>
                             <Switch
-                              checked={editFilialIds.includes(f.id)}
+                              checked={f.editFilialIds.includes(fil.id)}
                               onCheckedChange={(checked) => {
                                 if (checked) {
-                                  setEditFilialIds((prev) => [...prev, f.id]);
+                                  f.setEditFilialIds((prev) => [...prev, fil.id]);
                                 } else {
-                                  setEditFilialIds((prev) => prev.filter((id) => id !== f.id));
+                                  f.setEditFilialIds((prev) => prev.filter((id) => id !== fil.id));
                                 }
                               }}
                             />
