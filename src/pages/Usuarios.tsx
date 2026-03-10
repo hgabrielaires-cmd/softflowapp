@@ -366,7 +366,7 @@ export default function Usuarios() {
                 </div>
                 <Switch checked={f.inviteIsTecnico} onCheckedChange={f.setInviteIsTecnico} />
               </div>
-              {inviteIsTecnico && (
+              {f.inviteIsTecnico && (
                 <div className="space-y-2 pl-2 border-l-2 border-primary/30">
                   <Label className="text-xs font-medium">Tipo de Atendimento</Label>
                   <div className="space-y-1.5">
