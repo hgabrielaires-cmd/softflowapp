@@ -996,7 +996,7 @@ export default function Contratos() {
         if (msgTemplate) setLinkedMessageTemplate(msgTemplate);
 
         const signUrl = zData.signers?.[0]?.sign_url || "";
-        const mensagem = gerarTermoAceite(updatedContrato, signUrl, msgTemplate || undefined, contatosLocais);
+        const mensagem = gerarTermoAceite(updatedContrato, buildTermoCtx(), signUrl, msgTemplate || undefined, contatosLocais);
 
         // Verificar se decisor tem telefone
 
