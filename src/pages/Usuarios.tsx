@@ -256,7 +256,7 @@ export default function Usuarios() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Cargo</Label>
-                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
+                <Select value={f.inviteRole} onValueChange={(v) => f.setInviteRole(v as AppRole)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {ALL_ROLES.map((r) => (
