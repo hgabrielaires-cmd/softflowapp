@@ -46,6 +46,7 @@ import {
   formatSLA, calcProgress, isChecklistCompleto,
 } from "./painel-atendimento/helpers";
 import { usePainelQueries } from "./painel-atendimento/usePainelQueries";
+import { usePainelAtividadeActions } from "./painel-atendimento/usePainelAtividadeActions";
 import { KanbanCard } from "./painel-atendimento/components/KanbanCard";
 import { PausarDialog } from "./painel-atendimento/components/PausarDialog";
 import { RecusarDialog } from "./painel-atendimento/components/RecusarDialog";
