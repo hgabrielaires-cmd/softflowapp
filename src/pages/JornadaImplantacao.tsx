@@ -364,7 +364,7 @@ export default function JornadaImplantacao() {
   function closeDialog() {
     setDialogOpen(false);
     setEditing(null);
-    setForm({ ...emptyForm });
+    setForm({ ...emptyJornadaForm });
     setEtapas([]);
   }
 
