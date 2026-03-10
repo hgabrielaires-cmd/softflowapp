@@ -780,7 +780,7 @@ export default function Usuarios() {
                 <div className="space-y-2 pl-2 border-l-2 border-primary/30">
                   <Label className="text-xs font-medium">Tipo de Atendimento</Label>
                   <div className="space-y-1.5">
-                    {[{ value: "interno", label: "Interno" }, { value: "externo", label: "Externo" }, { value: "ambos", label: "Ambos" }].map((opt) => (
+                    {TIPO_TECNICO_OPTIONS.map((opt) => (
                       <div key={opt.value} className="flex items-center justify-between rounded px-2 py-1">
                         <span className="text-xs">{opt.label}</span>
                         <Switch
