@@ -764,7 +764,7 @@ export default function Usuarios() {
                           Permite visualizar os valores financeiros (implantação, mensalidade, etc.) nos detalhes do projeto no painel de atendimento.
                         </p>
                       </div>
-                      <Switch checked={editPermiteVerValoresProjeto} onCheckedChange={setEditPermiteVerValoresProjeto} />
+                      <Switch checked={f.editPermiteVerValoresProjeto} onCheckedChange={f.setEditPermiteVerValoresProjeto} />
                     </div>
                   </div>
                 </TabsContent>
