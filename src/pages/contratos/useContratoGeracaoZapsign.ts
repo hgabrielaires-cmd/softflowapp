@@ -240,6 +240,15 @@ export function useContratoGeracaoZapsign({
         const mensagem = gerarTermoAceite(updatedContrato, buildTermoCtx(), signUrl, msgTemplate || undefined, contatosLocais);
 
         const decisorContato = contatosLocais.find(c => c.decisor) || contatosLocais[0];
+
+        // Fire-and-forget: notificar vendedor via WhatsApp
+        notificarVendedorContratoEnviado(
+          updatedContrato,
+          contatosLocais,
+          signUrl,
+          docTemplate?.message_template_id || undefined
+        );
+
         if (!decisorContato?.telefone) {
           setZapsignPopupStep("done");
           setEnviandoZapsign(false);
