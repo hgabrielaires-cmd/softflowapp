@@ -6,3 +6,4 @@ export { EncerrarContratoDialog } from "./components/EncerrarContratoDialog";
 export { CancelarProjetoDialog } from "./components/CancelarProjetoDialog";
 export { AgendamentosCancelDialog } from "./components/AgendamentosCancelDialog";
 export { CancelarAditivosDialog } from "./components/CancelarAditivosDialog";
+export { ContratoDetailDialog } from "./components/ContratoDetailDialog";
