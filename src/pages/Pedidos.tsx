@@ -792,7 +792,7 @@ export default function Pedidos() {
             financeiro_status: "Aguardando",
             contrato_liberado: false,
           };
-          const { data: novoPedido2, error } = await supabase.from("pedidos").insert(insertPayload as any).select().single();
+          const { data: novoPedido2, error } = await supabase.from("pedidos").insert(insertPayload).select().single();
           if (error) throw error;
           await salvarDraftComentarios(novoPedido2.id);
           toast.success("Pedido criado com sucesso!");
