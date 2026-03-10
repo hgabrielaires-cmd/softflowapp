@@ -1302,7 +1302,20 @@ export default function PainelAtendimento() {
                 )}
                 <Button variant="outline" size="sm" onClick={() => fetchDetalhes(detailCard)}><Info className="h-4 w-4 mr-1" />Detalhes</Button>
                 {(() => { const etapaAtualIdx = etapas.findIndex((e) => e.id === detailCard.etapa_id); if (etapaAtualIdx <= 0) return null; return <Button variant="outline" size="sm" className="bg-amber-500 hover:bg-amber-600 text-white border-amber-500 hover:border-amber-600" onClick={() => fetchHistorico(detailCard)}><History className="h-4 w-4 mr-1" />Histórico</Button>; })()}
-                <Button size="sm" onClick={finalizarEtapa} disabled={!detailCard.iniciado_em || !isChecklistCompleto(checklistEtapa, checklistProgresso) || (checklistEtapa.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, checklistEtapa.map((a: any) => a.id))) || finalizando}><ChevronRight className="h-4 w-4 mr-1" />{finalizando ? "Finalizando..." : "Finalizar Etapa"}</Button>
+                {(() => {
+                  const atividadeIds = checklistEtapa.map((a: any) => a.id);
+                  const atividadesPendentes = atividadeIds.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, atividadeIds);
+                  const checklistIncompleto = !isChecklistCompleto(checklistEtapa, checklistProgresso);
+                  const naoIniciado = !detailCard.iniciado_em;
+                  const bloqueado = naoIniciado || checklistIncompleto || atividadesPendentes || finalizando;
+                  const motivo = naoIniciado ? "Inicie a etapa primeiro" : atividadesPendentes ? "Conclua todas as atividades" : checklistIncompleto ? "Conclua o checklist" : null;
+                  return (
+                    <div className="flex flex-col items-end gap-0.5">
+                      <Button size="sm" onClick={finalizarEtapa} disabled={bloqueado}><ChevronRight className="h-4 w-4 mr-1" />{finalizando ? "Finalizando..." : "Finalizar Etapa"}</Button>
+                      {bloqueado && motivo && <span className="text-[9px] text-destructive">{motivo}</span>}
+                    </div>
+                  );
+                })()}
               </div>
             </DialogFooter>
           )}
