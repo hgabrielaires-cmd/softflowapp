@@ -92,6 +92,7 @@ export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disa
           mesa_id: mesaId || null,
           filial_id: filialId || null,
           etapa_id: etapaId || null,
+          etapa_execucao_id: etapaExecucaoId || null,
           titulo: titulo || null,
           cor_evento: mesaCor || null,
         }))
