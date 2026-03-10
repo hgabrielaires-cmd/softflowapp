@@ -193,7 +193,7 @@ export default function Usuarios() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => toggleActive(user)}>
+                              <AlertDialogAction onClick={() => f.toggleActive(user)}>
                                 Confirmar
                               </AlertDialogAction>
                             </AlertDialogFooter>
