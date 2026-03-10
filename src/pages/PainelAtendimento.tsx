@@ -712,7 +712,7 @@ export default function PainelAtendimento() {
 
   // ─── Drag & Drop ──────────────────────────────────────────────────────────
   function handleDragOver(e: React.DragEvent) { e.preventDefault(); }
-  function handleDrop(etapaId: string) {
+  async function handleDrop(etapaId: string) {
     if (dragCardId) {
       const card = cards.find((c) => c.id === dragCardId);
       if (card && card.etapa_id !== etapaId) {
@@ -725,6 +725,30 @@ export default function PainelAtendimento() {
         const etapaAtual = etapas.find((e) => e.id === card.etapa_id);
         if (etapaAtual && etapaDestino.ordem < etapaAtual.ordem && !podeVoltarEtapa) { toast.error("Você não tem permissão para voltar etapa."); setDragCardId(null); return; }
         if (etapaDestino.nome === "Em Execução" && etapaAtual && etapaAtual.ordem < 2) { toast.error("Complete as etapas obrigatórias antes de mover para 'Em Execução'."); setDragCardId(null); return; }
+
+        // Validate activity completion before advancing forward
+        if (etapaAtual && etapaDestino.ordem > etapaAtual.ordem && card.jornada_id) {
+          try {
+            let resolvedJornadaId = card.jornada_id;
+            if (!resolvedJornadaId && card.plano_id) {
+              const { data: jornada } = await supabase.from("jornadas").select("id").eq("vinculo_tipo", "plano").eq("vinculo_id", card.plano_id).eq("ativo", true).limit(1);
+              resolvedJornadaId = jornada?.[0]?.id || null;
+            }
+            if (resolvedJornadaId) {
+              const { data: jornadaEtapa } = await supabase.from("jornada_etapas").select("id").eq("jornada_id", resolvedJornadaId).eq("nome", etapaAtual.nome).limit(1);
+              if (jornadaEtapa && jornadaEtapa.length > 0) {
+                const { data: atividadesEtapa } = await supabase.from("jornada_atividades").select("id").eq("etapa_id", jornadaEtapa[0].id);
+                const atividadeIds = (atividadesEtapa || []).map((a: any) => a.id);
+                if (atividadeIds.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, card.id, atividadeIds)) {
+                  toast.error("Conclua todas as atividades da etapa antes de avançar.");
+                  setDragCardId(null);
+                  return;
+                }
+              }
+            }
+          } catch { /* allow if validation fails gracefully */ }
+        }
+
         (async () => {
           const dragSla = getSlaEtapaForCard(card, jornadaSlaMap, etapas);
           await registrarSaidaEtapa(card.id, card.etapa_id, dragSla);
