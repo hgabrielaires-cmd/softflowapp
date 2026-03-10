@@ -242,7 +242,6 @@ export function useContratoGeracaoZapsign({
         const decisorContato = contatosLocais.find(c => c.decisor) || contatosLocais[0];
 
         // Fire-and-forget: disparar automação de contrato enviado para assinatura
-        const decisorContato = contatosLocais.find(c => c.decisor) || contatosLocais[0];
         dispararAutomacaoContratoEnviado(
           contrato.id,
           signUrl,
