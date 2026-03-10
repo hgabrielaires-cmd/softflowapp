@@ -546,8 +546,8 @@ export default function Pedidos() {
     let resolvedFilialId = filialPadraoId || filialFavoritaId || profile?.filial_favorita_id || profile?.filial_id || "";
     if (!resolvedFilialId && profile?.user_id) {
       const { data: pData } = await supabase.from("profiles").select("filial_favorita_id, filial_id").eq("user_id", profile.user_id).maybeSingle();
-      resolvedFilialId = (pData as any)?.filial_favorita_id || (pData as any)?.filial_id || "";
-      if ((pData as any)?.filial_favorita_id) setFilialFavoritaId((pData as any).filial_favorita_id);
+      resolvedFilialId = pData?.filial_favorita_id || pData?.filial_id || "";
+      if (pData?.filial_favorita_id) setFilialFavoritaId(pData.filial_favorita_id);
     }
 
     const defaultVendedor = profile?.user_id ?? "";
