@@ -76,6 +76,8 @@ export default function Pedidos() {
     limiteDesconto, setLimiteDesconto, carregarLimitesDesconto,
   } = usePedidosQueries();
 
+  const { savePedido } = usePedidoSave();
+
   const [filialFavoritaId, setFilialFavoritaId] = useState<string | null>(null);
   const [servicoBuscaId, setServicoBuscaId] = useState("");
   const [servicoBuscaQtd, setServicoBuscaQtd] = useState("1");
