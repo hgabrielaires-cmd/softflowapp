@@ -7,6 +7,7 @@ import { Filial } from "@/lib/supabase-types";
 import type { Contrato, ZapSignRecord, ModuloAdicionadoItem } from "./contratos/types";
 import { ITEMS_PER_PAGE, UF_LIST, ZAPSIGN_MSGS, WHATSAPP_MSGS, GERAR_MSGS_CONTRATO, GERAR_MSGS_OA } from "./contratos/constants";
 import { fmtBRL } from "./contratos/helpers";
+import { CadastroRetroativoDialog } from "./contratos/components/CadastroRetroativoDialog";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
