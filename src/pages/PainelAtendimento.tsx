@@ -552,7 +552,14 @@ export default function PainelAtendimento() {
       if (!user) throw new Error("Não autenticado");
       const { data: filialData } = await supabase.from("filiais").select("etapa_inicial_id").eq("id", detailCard.filial_id).single();
       let etapaDestinoId = filialData?.etapa_inicial_id;
-      if (!etapaDestinoId) { const primeiraEtapa = etapas.find(e => e.ativo); if (!primeiraEtapa) { toast.error("Nenhuma etapa ativa encontrada."); setResetando(false); return; } etapaDestinoId = primeiraEtapa.id; }
+      if (etapaDestinoId) {
+        const etapaInicialAtiva = etapas.find(e => e.id === etapaDestinoId && e.ativo);
+        if (!etapaInicialAtiva) { toast.error("A etapa inicial configurada para esta filial está inativa ou não existe. Verifique a configuração."); setResetando(false); return; }
+      } else {
+        const etapasOrdenadas = [...etapas].filter(e => e.ativo).sort((a, b) => a.ordem - b.ordem);
+        if (etapasOrdenadas.length === 0) { toast.error("Nenhuma etapa ativa encontrada para resetar o projeto."); setResetando(false); return; }
+        etapaDestinoId = etapasOrdenadas[0].id;
+      }
       await supabase.from("painel_historico_etapas").delete().eq("card_id", detailCard.id);
       await supabase.from("painel_checklist_progresso").delete().eq("card_id", detailCard.id);
       await supabase.from("painel_agendamentos").delete().eq("card_id", detailCard.id);
