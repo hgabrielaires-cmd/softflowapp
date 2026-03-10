@@ -12,6 +12,7 @@ import { EncerrarContratoDialog } from "./contratos/components/EncerrarContratoD
 import { CancelarProjetoDialog } from "./contratos/components/CancelarProjetoDialog";
 import { AgendamentosCancelDialog } from "./contratos/components/AgendamentosCancelDialog";
 import { CancelarAditivosDialog } from "./contratos/components/CancelarAditivosDialog";
+import { ContratoDetailDialog } from "./contratos/components/ContratoDetailDialog";
 import { ZapsignPopupDialog } from "./contratos/components/ZapsignPopupDialog";
 import { ZapsignDetailDialog } from "./contratos/components/ZapsignDetailDialog";
 import { useContratoGeracaoZapsign } from "./contratos/useContratoGeracaoZapsign";
