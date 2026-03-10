@@ -394,7 +394,16 @@ export default function Pedidos() {
     if (form.filial_id) loadFilialParametros(form.filial_id);
   }, [form.filial_id, loadFilialParametros]);
 
-
+  // Default filial filter from user access
+  useEffect(() => {
+    if (filterFilial === "_init_") {
+      if (profile?.filial_favorita_id) {
+        setFilterFilial(profile.filial_favorita_id);
+      } else {
+        setFilterFilial("all");
+      }
+    }
+  }, [filialPadraoId, profile?.filial_favorita_id]);
 
   async function handleClienteChange(clienteId: string) {
     setForm((f) => ({ ...f, cliente_id: clienteId, plano_id: "", tipo_pedido: "Novo", contrato_id: null }));
