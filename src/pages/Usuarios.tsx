@@ -432,7 +432,7 @@ export default function Usuarios() {
                   </Label>
                   <p className="text-xs text-muted-foreground">Recebe notificações e aprova descontos acima do limite</p>
                 </div>
-                <Switch checked={inviteGestorDesconto} onCheckedChange={setInviteGestorDesconto} />
+                <Switch checked={f.inviteGestorDesconto} onCheckedChange={f.setInviteGestorDesconto} />
               </div>
               <div className="flex items-center justify-between pt-1">
                 <div className="space-y-0.5">
