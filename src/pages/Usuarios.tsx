@@ -274,9 +274,9 @@ export default function Usuarios() {
                     <Globe className="h-3.5 w-3.5" />
                     Acesso global
                   </Label>
-                  <Switch checked={inviteAcessoGlobal} onCheckedChange={(v) => {
-                    setInviteAcessoGlobal(v);
-                    if (v) setInviteFilialIds([]);
+                  <Switch checked={f.inviteAcessoGlobal} onCheckedChange={(v) => {
+                    f.setInviteAcessoGlobal(v);
+                    if (v) f.setInviteFilialIds([]);
                   }} />
                 </div>
               </div>
