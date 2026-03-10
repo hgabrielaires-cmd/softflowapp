@@ -1,10 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
-import { useAuth } from "@/context/AuthContext";
-import { useCrudPermissions } from "@/hooks/useCrudPermissions";
-import { Filial } from "@/lib/supabase-types";
-import type { Contrato, ZapSignRecord } from "./contratos/types";
+import type { Contrato } from "./contratos/types";
 import { ITEMS_PER_PAGE, UF_LIST } from "./contratos/constants";
 import { fmtBRL, type GerarTermoAceiteContext } from "./contratos/helpers";
 import { CadastroRetroativoDialog } from "./contratos/components/CadastroRetroativoDialog";
@@ -16,7 +13,7 @@ import { ContratoDetailDialog } from "./contratos/components/ContratoDetailDialo
 import { ZapsignPopupDialog } from "./contratos/components/ZapsignPopupDialog";
 import { ZapsignDetailDialog } from "./contratos/components/ZapsignDetailDialog";
 import { useContratoGeracaoZapsign } from "./contratos/useContratoGeracaoZapsign";
-import { useUserFiliais } from "@/hooks/useUserFiliais";
+import { useContratosQueries } from "./contratos/useContratosQueries";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
