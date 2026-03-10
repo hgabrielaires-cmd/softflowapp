@@ -261,8 +261,8 @@ export function useContratoGeracaoZapsign({
         setZapsignPopupStep("done");
       } catch (whatsErr: any) {
         console.error("Erro WhatsApp:", whatsErr);
-        setZapsignPopupStep("done");
-        toast.warning("ZapSign enviado! Falha ao enviar WhatsApp: " + (whatsErr.message || ""));
+        setZapsignPopupError("Contrato gerado e enviado para ZapSign, mas o WhatsApp não foi disparado: " + (whatsErr.message || "Erro de conexão"));
+        setZapsignPopupStep("whatsapp_erro");
       }
     } catch (err) {
       console.error("Erro no fluxo:", err);

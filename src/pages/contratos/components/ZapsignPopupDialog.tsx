@@ -134,7 +134,29 @@ export function ZapsignPopupDialog({ open, onOpenChange, step, msgIndex, contrat
             </div>
           )}
 
-          {/* Erro */}
+          {/* WhatsApp falhou mas ZapSign ok */}
+          {step === "whatsapp_erro" && (
+            <div className="flex flex-col items-center gap-4 animate-fade-in">
+              <div className="flex items-center justify-center h-16 w-16 rounded-full bg-amber-500/10 border-2 border-amber-400/40">
+                <XCircle className="h-8 w-8 text-amber-500" />
+              </div>
+              <div className="text-center space-y-2">
+                <p className="font-semibold text-foreground">⚠️ WhatsApp não enviado</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {error}
+                </p>
+              </div>
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Fechar
+              </Button>
+            </div>
+          )}
+
+          {/* Erro geral */}
           {step === "erro" && (
             <div className="flex flex-col items-center gap-4 animate-fade-in">
               <div className="flex items-center justify-center h-16 w-16 rounded-full bg-destructive/10 border-2 border-destructive/30">
