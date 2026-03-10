@@ -241,12 +241,12 @@ export function useContratoGeracaoZapsign({
 
         const decisorContato = contatosLocais.find(c => c.decisor) || contatosLocais[0];
 
-        // Fire-and-forget: notificar vendedor via WhatsApp
-        notificarVendedorContratoEnviado(
-          updatedContrato,
-          contatosLocais,
+        // Fire-and-forget: disparar automação de contrato enviado para assinatura
+        const decisorContato = contatosLocais.find(c => c.decisor) || contatosLocais[0];
+        dispararAutomacaoContratoEnviado(
+          contrato.id,
           signUrl,
-          docTemplate?.message_template_id || undefined
+          decisorContato?.nome || "Decisor"
         );
 
         if (!decisorContato?.telefone) {
