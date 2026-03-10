@@ -15,7 +15,7 @@ interface Props {
 
 export function ZapsignPopupDialog({ open, onOpenChange, step, msgIndex, contratoTipo, error }: Props) {
   const isOA = contratoTipo === "OA";
-  const canClose = step === "done" || step === "erro";
+  const canClose = step === "done" || step === "erro" || step === "whatsapp_erro";
 
   return (
     <Dialog
