@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import type { Contrato } from "./contratos/types";
 import { ITEMS_PER_PAGE, UF_LIST } from "./contratos/constants";
-import { fmtBRL, type GerarTermoAceiteContext } from "./contratos/helpers";
+import { fmtBRL, type GerarTermoAceiteContext, getZapSignStatusBadge, getStatusBadge, getStatusGeracaoBadge, getTipoBadge, getPedidoStatusBadges } from "./contratos/helpers";
 import { CadastroRetroativoDialog } from "./contratos/components/CadastroRetroativoDialog";
 import { EncerrarContratoDialog } from "./contratos/components/EncerrarContratoDialog";
 import { CancelarProjetoDialog } from "./contratos/components/CancelarProjetoDialog";
