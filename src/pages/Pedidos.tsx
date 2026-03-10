@@ -622,7 +622,7 @@ export default function Pedidos() {
     setModuloBuscaId("");
     setModuloBuscaQtd("1");
     setDescontoAtivo(temDesconto);
-    const temAcrescimo = ((pedido as any).acrescimo_implantacao_valor ?? 0) > 0 || ((pedido as any).acrescimo_mensalidade_valor ?? 0) > 0;
+    const temAcrescimo = (pedido.acrescimo_implantacao_valor ?? 0) > 0 || (pedido.acrescimo_mensalidade_valor ?? 0) > 0;
     setAcrescimoAtivo(temAcrescimo);
     setEditingPedido(pedido);
     setOpenDialog(true);
