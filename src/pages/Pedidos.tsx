@@ -75,30 +75,25 @@ export default function Pedidos() {
   const isTecnico = roles.includes("tecnico") && !isAdmin && !isFinanceiro && !isVendedor;
   const canSeeAllBranches = filiaisDoUsuario.length > 1;
 
-  const [pedidos, setPedidos] = useState<PedidoWithJoins[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [planos, setPlanos] = useState<any[]>([]);
-  const [filiais, setFiliais] = useState<Filial[]>([]);
-  const [vendedores, setVendedores] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ─── Data from queries hook ──────────────────────────────────────────────
+  const {
+    pedidos, clientes, planos, filiais, vendedores, servicosCatalogo,
+    loading, zapsignMap, contratoStatusMap, loadData,
+    planoSelecionado, setPlanoSelecionado, modulosDisponiveis, setModulosDisponiveis,
+    precosFilialMap, setPrecosFilialMap, loadingModulos,
+    loadPlano: loadPlanoRaw,
+    filialParametros, loadFilialParametros,
+    contratoAtivo, setContratoAtivo, loadingContrato, buscarContratoAtivo,
+    limiteDesconto, setLimiteDesconto, carregarLimitesDesconto,
+  } = usePedidosQueries();
+
   const [filialFavoritaId, setFilialFavoritaId] = useState<string | null>(null);
-  const [filialParametros, setFilialParametros] = useState<any | null>(null);
-  const [zapsignMap, setZapsignMap] = useState<Record<string, string>>({});
-  const [contratoStatusMap, setContratoStatusMap] = useState<Record<string, string>>({});
-  const [servicosCatalogo, setServicosCatalogo] = useState<{ id: string; nome: string; valor: number; unidade_medida: string }[]>([]);
   const [servicoBuscaId, setServicoBuscaId] = useState("");
   const [servicoBuscaQtd, setServicoBuscaQtd] = useState("1");
-
-  // Módulos disponíveis do plano selecionado (para busca)
-  const [modulosDisponiveis, setModulosDisponiveis] = useState<ModuloOpcional[]>([]);
-  const [loadingModulos, setLoadingModulos] = useState(false);
 
   // Estado do seletor de módulo adicional
   const [moduloBuscaId, setModuloBuscaId] = useState("");
   const [moduloBuscaQtd, setModuloBuscaQtd] = useState("1");
-
-  // Plano selecionado info
-  const [planoSelecionado, setPlanoSelecionado] = useState<any | null>(null);
 
   // Filters
   const [search, setSearch] = useState("");
