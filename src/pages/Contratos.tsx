@@ -18,7 +18,6 @@ import { useCadastroRetroativo } from "./contratos/useCadastroRetroativo";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,19 +51,9 @@ import {
   FilePen,
   FileOutput,
   Download,
-  FileDown,
   RefreshCw,
-  ClipboardCopy,
   ExternalLink,
-  UserPlus,
   Search,
-  Plus,
-  MapPin,
-  AlertCircle,
-  Star,
-  Pencil,
-  Trash2,
-  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
