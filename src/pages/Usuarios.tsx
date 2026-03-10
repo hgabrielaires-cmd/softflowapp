@@ -217,12 +217,12 @@ export default function Usuarios() {
       </div>
 
       {/* ── Create Dialog ── */}
-      <Dialog open={openInvite} onOpenChange={setOpenInvite}>
+      <Dialog open={f.openInvite} onOpenChange={f.setOpenInvite}>
         <DialogContent className="max-w-xl flex flex-col max-h-[90vh]">
           <DialogHeader className="shrink-0">
             <DialogTitle>Criar novo usuário</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleInvite} className="space-y-4 overflow-y-auto flex-1 pr-1">
+          <form onSubmit={f.handleInvite} className="space-y-4 overflow-y-auto flex-1 pr-1">
             <div className="space-y-1.5">
               <Label>Nome completo</Label>
               <Input
