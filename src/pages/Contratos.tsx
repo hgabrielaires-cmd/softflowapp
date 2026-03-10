@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
 import { Filial } from "@/lib/supabase-types";
-import type { Contrato, ZapSignRecord, ModuloAdicionadoItem } from "./contratos/types";
+import type { Contrato, ZapSignRecord } from "./contratos/types";
 import { ITEMS_PER_PAGE, UF_LIST } from "./contratos/constants";
 import { fmtBRL, type GerarTermoAceiteContext } from "./contratos/helpers";
 import { CadastroRetroativoDialog } from "./contratos/components/CadastroRetroativoDialog";
