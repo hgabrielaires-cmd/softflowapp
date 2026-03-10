@@ -542,11 +542,11 @@ export default function Usuarios() {
             </TableBody>
           </Table>
           <TablePagination
-            currentPage={currentPage}
-            totalPages={Math.ceil(filtered.length / ITEMS_PER_PAGE)}
-            totalItems={filtered.length}
-            itemsPerPage={ITEMS_PER_PAGE}
-            onPageChange={setCurrentPage}
+            currentPage={q.currentPage}
+            totalPages={Math.ceil(q.filtered.length / q.ITEMS_PER_PAGE)}
+            totalItems={q.filtered.length}
+            itemsPerPage={q.ITEMS_PER_PAGE}
+            onPageChange={q.setCurrentPage}
           />
         </div>
       </div>
