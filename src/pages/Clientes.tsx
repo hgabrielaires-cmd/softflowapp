@@ -156,63 +156,7 @@ export default function Clientes() {
     }
   }
 
-  // Historico contratual
-  const [historicoOpen, setHistoricoOpen] = useState(false);
-  const [clienteHistorico, setClienteHistorico] = useState<Cliente | null>(null);
-  const [contratosList, setContratosList] = useState<Contrato[]>([]);
-  const [pedidosHistorico, setPedidosHistorico] = useState<PedidoHistorico[]>([]);
-  const [loadingHistorico, setLoadingHistorico] = useState(false);
-  const [rentabilidadeConsolidada, setRentabilidadeConsolidada] = useState<RentabilidadeConsolidada | null>(null);
-  const [podeVerRentabilidade, setPodeVerRentabilidade] = useState(false);
-  const [margemIdealHistorico, setMargemIdealHistorico] = useState<number | null>(null);
 
-  async function fetchData() {
-    setLoading(true);
-    const [{ data: c }, { data: f }, { data: decisores }] = await Promise.all([
-      supabase.from("clientes").select("*").order("nome_fantasia"),
-      supabase.from("filiais").select("*").order("nome"),
-      supabase.from("cliente_contatos").select("cliente_id, nome, telefone").eq("decisor", true).eq("ativo", true),
-    ]);
-    setClientes(c || []);
-    setFiliais(f || []);
-    // Map: cliente_id -> primeiro decisor ativo
-    const dMap: Record<string, { nome: string; telefone: string | null }> = {};
-    (decisores || []).forEach((d: any) => {
-      if (!dMap[d.cliente_id]) dMap[d.cliente_id] = { nome: d.nome, telefone: d.telefone };
-    });
-    setDecisoresMap(dMap);
-    setLoading(false);
-  }
-
-  useEffect(() => { fetchData(); }, []);
-
-  // Filter by user's filiais first
-  const allowedFilialIds = filiaisDoUsuario.map(f => f.id);
-  const clientesFiltradosPorFilial = isGlobal
-    ? clientes
-    : clientes.filter((c) => c.filial_id && allowedFilialIds.includes(c.filial_id));
-
-  // Apply filial filter selection
-  const clientesFiltradosPorFilialSelecionada = filtroFilialId === "__todas__"
-    ? clientesFiltradosPorFilial
-    : clientesFiltradosPorFilial.filter((c) => c.filial_id === filtroFilialId);
-
-  const searchTerm = search.toLowerCase().trim();
-  const searchDigits = searchTerm.replace(/\D/g, "");
-  const filtered = searchTerm
-    ? clientesFiltradosPorFilialSelecionada.filter((c) =>
-        c.nome_fantasia.toLowerCase().includes(searchTerm) ||
-        (c.razao_social || "").toLowerCase().includes(searchTerm) ||
-        ((c as any).apelido || "").toLowerCase().includes(searchTerm) ||
-        (searchDigits.length > 0 && (c.cnpj_cpf || "").replace(/\D/g, "").includes(searchDigits)) ||
-        (c.cnpj_cpf || "").toLowerCase().includes(searchTerm) ||
-        (c.contato_nome || "").toLowerCase().includes(searchTerm) ||
-        (c.telefone || "").includes(searchTerm)
-      )
-    : clientesFiltradosPorFilialSelecionada;
-
-  // Reset page when search or filter changes
-  useEffect(() => { setCurrentPage(1); }, [search, filtroFilialId]);
 
   function openCreate() {
     setEditing(null);
