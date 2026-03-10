@@ -2,3 +2,7 @@ export * from "./types";
 export * from "./constants";
 export * from "./helpers";
 export { CadastroRetroativoDialog } from "./components/CadastroRetroativoDialog";
+export { EncerrarContratoDialog } from "./components/EncerrarContratoDialog";
+export { CancelarProjetoDialog } from "./components/CancelarProjetoDialog";
+export { AgendamentosCancelDialog } from "./components/AgendamentosCancelDialog";
+export { CancelarAditivosDialog } from "./components/CancelarAditivosDialog";
