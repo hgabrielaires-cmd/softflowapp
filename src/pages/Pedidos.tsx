@@ -304,84 +304,24 @@ export default function Pedidos() {
   // Qualquer usuário (inclusive admin) é bloqueado se exceder o limite
   const bloqueadoPorDesconto = descontoExcedido;
 
-  // precosFilialMap moved above computed values
-
-  // ─── Load plano + módulos disponíveis ──────────────────────────────────────
+  // ─── Load plano wrapper (delegates to hook, updates form) ─────────────────
 
   const loadPlano = useCallback(async (planoId: string, modulosAdicionaisExistentes: ModuloAdicionadoItem[] = [], filialIdOverride?: string) => {
-    if (!planoId) {
-      setPlanoSelecionado(null);
-      setModulosDisponiveis([]);
-      setPrecosFilialMap({});
+    const resolvedFilialId = filialIdOverride || form.filial_id;
+    const result = await loadPlanoRaw(planoId, modulosAdicionaisExistentes, resolvedFilialId);
+    if (!result && !planoId) {
       setForm((f) => ({ ...f, valor_implantacao_original: 0, valor_mensalidade_original: 0 }));
       return;
     }
-
-    setLoadingModulos(true);
-
-    const [{ data: planoData }, { data: vinculosData }, { data: precosData }] = await Promise.all([
-      supabase.from("planos").select("*").eq("id", planoId).single(),
-      supabase.from("plano_modulos")
-        .select("*, modulo:modulos(*)")
-        .eq("plano_id", planoId)
-        .order("ordem"),
-      supabase.from("precos_filial").select("*").or(`and(tipo.eq.plano,referencia_id.eq.${planoId}),tipo.eq.modulo`),
-    ]);
-
-    setPlanoSelecionado(planoData);
-
-    // Build precos map: key = "plano:{id}:{filialId}" or "modulo:{id}:{filialId}"
-    const pMap: Record<string, { valor_implantacao: number; valor_mensalidade: number }> = {};
-    (precosData || []).forEach((p: any) => {
-      pMap[`${p.tipo}:${p.referencia_id}:${p.filial_id}`] = {
-        valor_implantacao: p.valor_implantacao,
-        valor_mensalidade: p.valor_mensalidade,
-      };
-    });
-    setPrecosFilialMap(pMap);
-
-    const currentFilialId = filialIdOverride || form.filial_id;
-
-    // Resolve plan prices based on filial
-    const planoPrecoFilial = currentFilialId ? pMap[`plano:${planoId}:${currentFilialId}`] : null;
-    const planoImplantacao = planoPrecoFilial ? planoPrecoFilial.valor_implantacao : (planoData?.valor_implantacao_padrao ?? 0);
-    const planoMensalidade = planoPrecoFilial ? planoPrecoFilial.valor_mensalidade : (planoData?.valor_mensalidade_padrao ?? 0);
-
-    const disponiveis: ModuloOpcional[] = [];
-    (vinculosData || []).forEach((v: any) => {
-      if (v.modulo) {
-        const modPrecoFilial = currentFilialId ? pMap[`modulo:${v.modulo.id}:${currentFilialId}`] : null;
-        disponiveis.push({
-          id: v.modulo.id,
-          nome: v.modulo.nome,
-          valor_implantacao_modulo: modPrecoFilial ? modPrecoFilial.valor_implantacao : (v.modulo.valor_implantacao_modulo ?? 0),
-          valor_mensalidade_modulo: modPrecoFilial ? modPrecoFilial.valor_mensalidade : (v.modulo.valor_mensalidade_modulo ?? 0),
-          incluso_no_plano: v.incluso_no_plano,
-          permite_revenda: v.modulo.permite_revenda ?? false,
-          quantidade_maxima: v.modulo.quantidade_maxima ?? null,
-        });
-      }
-    });
-    setModulosDisponiveis(disponiveis);
-
-    // Update module prices in existing adicional list based on filial
-    const updatedModulos = modulosAdicionaisExistentes.map((m) => {
-      const modPrecoFilial = currentFilialId ? pMap[`modulo:${m.modulo_id}:${currentFilialId}`] : null;
-      if (modPrecoFilial) {
-        return { ...m, valor_implantacao_modulo: modPrecoFilial.valor_implantacao, valor_mensalidade_modulo: modPrecoFilial.valor_mensalidade };
-      }
-      return m;
-    });
-
-    setForm((f) => ({
-      ...f,
-      valor_implantacao_original: planoImplantacao,
-      valor_mensalidade_original: planoMensalidade,
-      modulos_adicionais: updatedModulos,
-    }));
-
-    setLoadingModulos(false);
-  }, [form.filial_id]);
+    if (result) {
+      setForm((f) => ({
+        ...f,
+        valor_implantacao_original: result.planoImplantacao,
+        valor_mensalidade_original: result.planoMensalidade,
+        modulos_adicionais: result.updatedModulos,
+      }));
+    }
+  }, [form.filial_id, loadPlanoRaw]);
 
   // ─── Handlers de módulos adicionais ──────────────────────────────────────
 
