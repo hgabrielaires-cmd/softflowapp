@@ -1014,8 +1014,22 @@ export default function PainelAtendimento() {
                         const statusAtiv = execAtiv?.status || "pendente";
                         const emAtraso = execAtiv?.finalizado_em_atraso === true;
                         return (
-                          <div key={atividade.id} className={cn("rounded-md border p-2", statusAtiv === "concluida" ? "border-primary/30 bg-primary/5" : statusAtiv === "em_andamento" ? "border-accent/50 bg-accent/5" : "border-border/50")}>
+                          <div key={atividade.id} className={cn(
+                            "rounded-md border p-2",
+                            statusAtiv === "concluida" && !emAtraso ? "border-primary/30 bg-primary/5" :
+                            statusAtiv === "concluida" && emAtraso ? "border-destructive/30 bg-destructive/5" :
+                            statusAtiv === "em_andamento" ? "border-accent/50 bg-accent/5" :
+                            "border-border/50"
+                          )}>
                             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                              {/* Status indicator dot */}
+                              <span className={cn(
+                                "h-2 w-2 rounded-full shrink-0",
+                                statusAtiv === "pendente" && "bg-muted-foreground/40",
+                                statusAtiv === "em_andamento" && "bg-accent-foreground animate-pulse",
+                                statusAtiv === "concluida" && !emAtraso && "bg-primary",
+                                statusAtiv === "concluida" && emAtraso && "bg-destructive",
+                              )} />
                               <p className="text-xs font-medium text-foreground">{atividade.nome}</p>
                               {atividade.mesas_atendimento?.nome && <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-1" style={{ backgroundColor: atividade.mesas_atendimento.cor ? `${atividade.mesas_atendimento.cor}15` : undefined, color: atividade.mesas_atendimento.cor || undefined, borderColor: atividade.mesas_atendimento.cor ? `${atividade.mesas_atendimento.cor}40` : undefined }}>{atividade.mesas_atendimento.nome}</Badge>}
                               {atividade.horas_estimadas > 0 && <span className="text-[10px] text-muted-foreground"><Clock className="h-2.5 w-2.5 inline mr-0.5" />{formatSLA(atividade.horas_estimadas)}</span>}
