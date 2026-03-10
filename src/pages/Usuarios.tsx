@@ -534,7 +534,7 @@ export default function Usuarios() {
                     </div>
                     {!f.editAcessoGlobal && (
                       <div className="space-y-2">
-                        {q.filiais.map((f) => (
+                        {q.filiais.map((fil) => (
                           <div key={f.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
                             <span className="text-sm">{f.nome}</span>
                             <Switch
