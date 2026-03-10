@@ -248,8 +248,8 @@ export default function Usuarios() {
                 <Input
                   type="tel"
                   placeholder="(11) 99999-9999"
-                  value={inviteTelefone}
-                  onChange={(e) => setInviteTelefone(e.target.value)}
+                  value={f.inviteTelefone}
+                  onChange={(e) => f.setInviteTelefone(e.target.value)}
                 />
               </div>
             </div>
