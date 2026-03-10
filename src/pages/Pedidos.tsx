@@ -1287,7 +1287,7 @@ export default function Pedidos() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Cancelar pedido?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    O pedido de {(pedido as any).clientes?.nome_fantasia} será cancelado e a comissão zerada.
+                                    O pedido de {pedido.clientes?.nome_fantasia} será cancelado e a comissão zerada.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>

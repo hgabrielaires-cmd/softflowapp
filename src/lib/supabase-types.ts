@@ -32,6 +32,9 @@ export interface Profile {
   comissao_percentual: number | null;
   comissao_implantacao_percentual: number | null;
   comissao_mensalidade_percentual: number | null;
+  comissao_servico_percentual: number | null;
+  desconto_limite_implantacao: number | null;
+  desconto_limite_mensalidade: number | null;
   telefone: string | null;
   acesso_global: boolean;
   created_at: string;
