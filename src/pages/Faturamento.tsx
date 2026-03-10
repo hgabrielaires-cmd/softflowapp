@@ -7,12 +7,7 @@ import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -38,13 +33,10 @@ import {
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
-import type {
-  Fatura, NotaFiscal, FaturaFormState, NotaFiscalFormState,
-} from "@/pages/faturamento";
+import type { Fatura, NotaFiscal, FaturaFormState, NotaFiscalFormState } from "@/pages/faturamento";
 import {
-  STATUS_FATURA, TIPOS_FATURA, FORMAS_PAGAMENTO, PAGE_SIZE,
+  STATUS_FATURA, TIPOS_FATURA, PAGE_SIZE,
   newFaturaFormDefaults, newNotaFiscalFormDefaults,
   useFaturasQueries, useNotasFiscaisQueries,
 } from "@/pages/faturamento";
@@ -54,6 +46,10 @@ import {
   buildFaturaPayload, buildNotaFiscalPayload,
   faturaToFormState,
 } from "@/pages/faturamento";
+
+import { FaturaEditorDialog } from "@/pages/faturamento/components/FaturaEditorDialog";
+import { RegistrarPagamentoDialog } from "@/pages/faturamento/components/RegistrarPagamentoDialog";
+import { NotaFiscalEditorDialog } from "@/pages/faturamento/components/NotaFiscalEditorDialog";
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -327,158 +323,27 @@ function FaturasTab() {
       )}
 
       {/* Editor Dialog */}
-      <Dialog open={openEditor} onOpenChange={setOpenEditor}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Receipt className="h-4 w-4 text-primary" />
-              {editingFatura ? "Editar Fatura" : "Nova Fatura"}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSave} className="flex flex-col gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Cliente *</Label>
-              <Select value={form.cliente_id} onValueChange={(v) => { setForm(f => ({ ...f, cliente_id: v, contrato_id: "" })); q.loadContratos(v); }}>
-                <SelectTrigger className="h-9"><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
-                <SelectContent>
-                  {q.clientes.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {q.contratos.length > 0 && (
-              <div className="space-y-1">
-                <Label className="text-xs">Contrato (opcional)</Label>
-                <Select value={form.contrato_id || "_none"} onValueChange={(v) => setForm(f => ({ ...f, contrato_id: v === "_none" ? "" : v }))}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Nenhum" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">Nenhum</SelectItem>
-                    {q.contratos.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.numero_exibicao}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Tipo</Label>
-                <Select value={form.tipo} onValueChange={(v) => setForm(f => ({ ...f, tipo: v }))}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {TIPOS_FATURA.map(t => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Forma de Pagamento</Label>
-                <Select value={form.forma_pagamento || "_none"} onValueChange={(v) => setForm(f => ({ ...f, forma_pagamento: v === "_none" ? "" : v }))}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">Nenhuma</SelectItem>
-                    {FORMAS_PAGAMENTO.map(fp => (
-                      <SelectItem key={fp.value} value={fp.value}>{fp.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Valor *</Label>
-                <Input type="number" step="0.01" min="0" placeholder="0,00" value={form.valor} onChange={(e) => setForm(f => ({ ...f, valor: e.target.value }))} className="h-9" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Desconto</Label>
-                <Input type="number" step="0.01" min="0" placeholder="0,00" value={form.valor_desconto} onChange={(e) => setForm(f => ({ ...f, valor_desconto: e.target.value }))} className="h-9" />
-              </div>
-            </div>
-
-            {form.valor && Number(form.valor) > 0 && (
-              <div className="text-sm font-medium text-right text-primary">
-                Valor Final: {fmtCurrency(Number(form.valor) - (Number(form.valor_desconto) || 0))}
-              </div>
-            )}
-
-            <div className="space-y-1">
-              <Label className="text-xs">Data de Vencimento *</Label>
-              <Input type="date" value={form.data_vencimento} onChange={(e) => setForm(f => ({ ...f, data_vencimento: e.target.value }))} className="h-9" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Mês Referência</Label>
-                <Select value={form.referencia_mes} onValueChange={(v) => setForm(f => ({ ...f, referencia_mes: v }))}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Mês" /></SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => (
-                      <SelectItem key={i + 1} value={String(i + 1)}>
-                        {format(new Date(2024, i, 1), "MMMM", { locale: ptBR })}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Ano Referência</Label>
-                <Input type="number" min="2020" max="2030" placeholder="2026" value={form.referencia_ano} onChange={(e) => setForm(f => ({ ...f, referencia_ano: e.target.value }))} className="h-9" />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs">Observações</Label>
-              <Textarea placeholder="Observações opcionais..." value={form.observacoes} onChange={(e) => setForm(f => ({ ...f, observacoes: e.target.value }))} className="min-h-[60px]" />
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpenEditor(false)}>Cancelar</Button>
-              <Button type="submit" disabled={saving}>
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingFatura ? "Salvar" : "Criar Fatura"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <FaturaEditorDialog
+        open={openEditor}
+        onOpenChange={setOpenEditor}
+        editingFatura={editingFatura}
+        form={form}
+        setForm={setForm}
+        saving={saving}
+        onSave={handleSave}
+        clientes={q.clientes}
+        contratos={q.contratos}
+        loadContratos={q.loadContratos}
+      />
 
       {/* Registrar Pagamento Dialog */}
-      <Dialog open={!!q.registrarPagamentoId} onOpenChange={() => q.setRegistrarPagamentoId(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-emerald-600" /> Registrar Pagamento
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Data do Pagamento *</Label>
-              <Input type="date" value={q.pagamentoForm.data_pagamento} onChange={(e) => q.setPagamentoForm(f => ({ ...f, data_pagamento: e.target.value }))} className="h-9" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Forma de Pagamento</Label>
-              <Select value={q.pagamentoForm.forma_pagamento || "_none"} onValueChange={(v) => q.setPagamentoForm(f => ({ ...f, forma_pagamento: v === "_none" ? "" : v }))}>
-                <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_none">Nenhuma</SelectItem>
-                  {FORMAS_PAGAMENTO.map(fp => (
-                    <SelectItem key={fp.value} value={fp.value}>{fp.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => q.setRegistrarPagamentoId(null)}>Cancelar</Button>
-              <Button onClick={q.handleRegistrarPagamento}>Confirmar</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <RegistrarPagamentoDialog
+        open={!!q.registrarPagamentoId}
+        onOpenChange={() => q.setRegistrarPagamentoId(null)}
+        pagamentoForm={q.pagamentoForm}
+        setPagamentoForm={q.setPagamentoForm}
+        onConfirm={q.handleRegistrarPagamento}
+      />
 
       {/* Delete Dialog */}
       <AlertDialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
@@ -692,79 +557,18 @@ function NotasFiscaisTab() {
       )}
 
       {/* NF Editor */}
-      <Dialog open={openEditor} onOpenChange={setOpenEditor}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" />
-              {editingNota ? "Editar Nota Fiscal" : "Nova Nota Fiscal"}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSave} className="flex flex-col gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Cliente *</Label>
-              <Select value={form.cliente_id} onValueChange={(v) => { setForm(f => ({ ...f, cliente_id: v, fatura_id: "" })); q.loadFaturasOptions(v); }}>
-                <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {q.clientes.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {q.faturasOptions.length > 0 && (
-              <div className="space-y-1">
-                <Label className="text-xs">Fatura vinculada (opcional)</Label>
-                <Select value={form.fatura_id || "_none"} onValueChange={(v) => setForm(f => ({ ...f, fatura_id: v === "_none" ? "" : v }))}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">Nenhuma</SelectItem>
-                    {q.faturasOptions.map(f => (
-                      <SelectItem key={f.id} value={f.id}>{f.numero_fatura}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Nº da NF *</Label>
-                <Input placeholder="00001" value={form.numero_nf} onChange={(e) => setForm(f => ({ ...f, numero_nf: e.target.value }))} className="h-9" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Série</Label>
-                <Input placeholder="1" value={form.serie} onChange={(e) => setForm(f => ({ ...f, serie: e.target.value }))} className="h-9" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Valor *</Label>
-                <Input type="number" step="0.01" min="0" placeholder="0,00" value={form.valor} onChange={(e) => setForm(f => ({ ...f, valor: e.target.value }))} className="h-9" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Data de Emissão</Label>
-                <Input type="date" value={form.data_emissao} onChange={(e) => setForm(f => ({ ...f, data_emissao: e.target.value }))} className="h-9" />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs">Observações</Label>
-              <Textarea placeholder="Observações opcionais..." value={form.observacoes} onChange={(e) => setForm(f => ({ ...f, observacoes: e.target.value }))} className="min-h-[60px]" />
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpenEditor(false)}>Cancelar</Button>
-              <Button type="submit" disabled={saving}>
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingNota ? "Salvar" : "Registrar NF"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <NotaFiscalEditorDialog
+        open={openEditor}
+        onOpenChange={setOpenEditor}
+        editingNota={editingNota}
+        form={form}
+        setForm={setForm}
+        saving={saving}
+        onSave={handleSave}
+        clientes={q.clientes}
+        faturasOptions={q.faturasOptions}
+        loadFaturasOptions={q.loadFaturasOptions}
+      />
 
       {/* Delete NF */}
       <AlertDialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
