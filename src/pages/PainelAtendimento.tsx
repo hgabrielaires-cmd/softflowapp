@@ -454,7 +454,7 @@ export default function PainelAtendimento() {
         }
         let stageComments: any[] = [];
         if (h.entrada_em && h.saida_em) { const { data: comsByDate } = await supabase.from("painel_comentarios").select("id, texto, criado_por, created_at").eq("card_id", card.id).gte("created_at", h.entrada_em).lte("created_at", h.saida_em).order("created_at", { ascending: true }); stageComments = comsByDate || []; }
-        result.push({ etapa_nome: h.etapa_nome, entrada_em: h.entrada_em, saida_em: h.saida_em, sla_previsto_horas: (h as any).sla_previsto_horas, tempo_real_horas: (h as any).tempo_real_horas, sla_cumprido: (h as any).sla_cumprido, atraso_inicio_horas: (h as any).atraso_inicio_horas, atividades, progressoMap, comentarios: stageComments });
+        result.push({ etapa_nome: h.etapa_nome, entrada_em: h.entrada_em, saida_em: h.saida_em, sla_previsto_horas: h.sla_previsto_horas, tempo_real_horas: h.tempo_real_horas, sla_cumprido: h.sla_cumprido, atraso_inicio_horas: h.atraso_inicio_horas, atividades, progressoMap, comentarios: stageComments });
       }
       setHistoricoData(result);
     } catch { toast.error("Erro ao carregar histórico."); } finally { setHistoricoLoading(false); }
