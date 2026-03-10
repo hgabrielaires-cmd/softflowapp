@@ -442,7 +442,7 @@ export default function Usuarios() {
                   </Label>
                   <p className="text-xs text-muted-foreground">Permite cadastrar clientes com CNPJ já existente no módulo de Clientes</p>
                 </div>
-                <Switch checked={invitePermitirCnpjDuplicado} onCheckedChange={setInvitePermitirCnpjDuplicado} />
+                <Switch checked={f.invitePermitirCnpjDuplicado} onCheckedChange={f.setInvitePermitirCnpjDuplicado} />
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2 shrink-0">
