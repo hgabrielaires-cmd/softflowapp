@@ -161,9 +161,12 @@ export default function JornadaImplantacao() {
         mesas={q.mesas}
         etapas={f.etapas}
         currentEtapaTempId={f.currentEtapaTempId}
+        painelEtapas={q.painelEtapas}
         onAddChecklistItem={f.addChecklistItem}
         onUpdateChecklistText={f.updateChecklistText}
         onUpdateChecklistTipo={f.updateChecklistTipo}
+        onUpdateChecklistMesaId={f.updateChecklistMesaId}
+        onUpdateChecklistEtapaExecucaoId={f.updateChecklistEtapaExecucaoId}
         onRemoveChecklistItem={f.removeChecklistItem}
         onMoveChecklistItem={f.moveChecklistItem}
       />
