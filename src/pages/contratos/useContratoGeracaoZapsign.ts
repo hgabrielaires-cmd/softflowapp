@@ -5,7 +5,7 @@ import type { Contrato, ZapSignRecord } from "./types";
 import { ZAPSIGN_MSGS, WHATSAPP_MSGS, GERAR_MSGS_CONTRATO, GERAR_MSGS_OA } from "./constants";
 import { gerarTermoAceite, type GerarTermoAceiteContext } from "./helpers";
 
-export type ZapsignPopupStep = "gerando" | "zapsign" | "whatsapp" | "done" | "erro";
+export type ZapsignPopupStep = "gerando" | "zapsign" | "whatsapp" | "done" | "erro" | "whatsapp_erro";
 
 interface UseContratoGeracaoZapsignParams {
   selected: Contrato | null;
@@ -261,8 +261,8 @@ export function useContratoGeracaoZapsign({
         setZapsignPopupStep("done");
       } catch (whatsErr: any) {
         console.error("Erro WhatsApp:", whatsErr);
-        setZapsignPopupStep("done");
-        toast.warning("ZapSign enviado! Falha ao enviar WhatsApp: " + (whatsErr.message || ""));
+        setZapsignPopupError("Contrato gerado e enviado para ZapSign, mas o WhatsApp não foi disparado: " + (whatsErr.message || "Erro de conexão"));
+        setZapsignPopupStep("whatsapp_erro");
       }
     } catch (err) {
       console.error("Erro no fluxo:", err);
