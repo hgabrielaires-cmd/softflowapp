@@ -438,32 +438,8 @@ export default function Contratos() {
 
 
 
-  async function syncZapsignStatuses(pendentes: any[], currentMap: Record<string, ZapSignRecord>) {
-    const updatedMap = { ...currentMap };
-    for (const zRec of pendentes) {
-      try {
-        const { data } = await supabase.functions.invoke("zapsign", {
-          body: { action: "status", contrato_id: zRec.contrato_id },
-        });
-        if (data?.skippable) {
-          // Token inválido / documento de outro token - atualizar localmente
-          updatedMap[zRec.contrato_id] = {
-            ...updatedMap[zRec.contrato_id],
-            status: "Token Inválido",
-          };
-        } else if (data?.success && data.status !== zRec.status) {
-          updatedMap[zRec.contrato_id] = {
-            ...updatedMap[zRec.contrato_id],
-            status: data.status,
-            signers: data.signers,
-          };
-        }
-      } catch {
-        // silently skip
-      }
-    }
-    setZapsignRecords(updatedMap);
-  }
+
+
 
   async function loadData() {
     setLoading(true);
