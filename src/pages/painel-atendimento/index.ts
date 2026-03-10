@@ -13,3 +13,4 @@ export { HistoricoDialog } from "./components/HistoricoDialog";
 export * from "./types";
 export * from "./constants";
 export * from "./helpers";
+export { usePainelAtividadeActions } from "./usePainelAtividadeActions";
