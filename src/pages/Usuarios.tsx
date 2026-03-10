@@ -573,7 +573,7 @@ export default function Usuarios() {
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comissão</p>
                           <div className="flex items-center gap-2">
                             <Label className="text-xs text-muted-foreground">Recebe comissão</Label>
-                            <Switch checked={editRecebeComissao} onCheckedChange={setEditRecebeComissao} />
+                            <Switch checked={f.editRecebeComissao} onCheckedChange={f.setEditRecebeComissao} />
                           </div>
                         </div>
                         {editRecebeComissao && (
