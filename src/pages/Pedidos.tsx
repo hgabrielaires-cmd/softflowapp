@@ -209,8 +209,8 @@ export default function Pedidos() {
     }
   }
 
-  // ─── Preços por filial ────────────────────────────────────────────────────
-  const [precosFilialMap, setPrecosFilialMap] = useState<Record<string, { valor_implantacao: number; valor_mensalidade: number }>>({});
+
+
 
   // ─── Computed values ─────────────────────────────────────────────────────
 
