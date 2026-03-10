@@ -411,8 +411,8 @@ export default function Usuarios() {
                   <Label>Desconto máx. implantação (%)</Label>
                   <Input
                     type="number" min="0" max="100" step="0.01" placeholder="0"
-                    value={inviteDescontoLimiteImp}
-                    onChange={(e) => setInviteDescontoLimiteImp(e.target.value)}
+                    value={f.inviteDescontoLimiteImp}
+                    onChange={(e) => f.setInviteDescontoLimiteImp(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
