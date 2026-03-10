@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -16,11 +16,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Eye, GripVertical, Download, Calendar, Paperclip, Hash, ToggleLeft, Type, CheckSquare, ArrowUp, ArrowDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { Jornada, JornadaEtapa, JornadaAtividade, MesaAtendimento, ChecklistItem, ChecklistItemTipo, Filial } from "@/lib/supabase-types";
+import type { Jornada, ChecklistItem, ChecklistItemTipo } from "@/lib/supabase-types";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { LocalEtapa, LocalAtividade } from "@/pages/jornada-implantacao/types";
 import { emptyJornadaForm, emptyEtapaForm, emptyAtividadeForm } from "@/pages/jornada-implantacao/constants";
 import { formatHorasMinutos, calcTotalMinutos, getVinculoLabel, getVinculoItems, mapEtapasToLocal, parseHorasText, decimalToHorasText } from "@/pages/jornada-implantacao/helpers";
+import { useJornadaQueries } from "@/pages/jornada-implantacao/useJornadaQueries";
 
 export default function JornadaImplantacao() {
   const queryClient = useQueryClient();
