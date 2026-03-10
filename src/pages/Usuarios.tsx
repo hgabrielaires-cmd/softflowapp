@@ -61,7 +61,7 @@ export default function Usuarios() {
             <p className="text-sm text-muted-foreground">Gerencie os colaboradores e permissões</p>
           </div>
 
-          <Button className="gap-2" onClick={() => setOpenInvite(true)}>
+          <Button className="gap-2" onClick={() => f.setOpenInvite(true)}>
             <Plus className="h-4 w-4" />
             Novo usuário
           </Button>
