@@ -965,46 +965,70 @@ export default function PainelAtendimento() {
                     <div className="space-y-3">
                       {checklistEtapa.map((atividade: any) => {
                         const items: ChecklistItem[] = Array.isArray(atividade.checklist) ? atividade.checklist : [];
-                        if (items.length === 0) return null;
+                        const execAtiv = getStatusAtividade(atividadeExecucaoMap, detailCard.id, atividade.id);
+                        const statusAtiv = execAtiv?.status || "pendente";
+                        const emAtraso = execAtiv?.finalizado_em_atraso === true;
                         return (
-                          <div key={atividade.id}>
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <p className="text-xs font-medium text-muted-foreground">{atividade.nome}</p>
+                          <div key={atividade.id} className={cn("rounded-md border p-2", statusAtiv === "concluida" ? "border-primary/30 bg-primary/5" : statusAtiv === "em_andamento" ? "border-accent/50 bg-accent/5" : "border-border/50")}>
+                            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                              <p className="text-xs font-medium text-foreground">{atividade.nome}</p>
                               {atividade.mesas_atendimento?.nome && <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-1" style={{ backgroundColor: atividade.mesas_atendimento.cor ? `${atividade.mesas_atendimento.cor}15` : undefined, color: atividade.mesas_atendimento.cor || undefined, borderColor: atividade.mesas_atendimento.cor ? `${atividade.mesas_atendimento.cor}40` : undefined }}>{atividade.mesas_atendimento.nome}</Badge>}
-                              {atividade.horas_estimadas > 0 && <span className="text-[10px] text-muted-foreground ml-auto"><Clock className="h-2.5 w-2.5 inline mr-0.5" />{formatSLA(atividade.horas_estimadas)}</span>}
+                              {atividade.horas_estimadas > 0 && <span className="text-[10px] text-muted-foreground"><Clock className="h-2.5 w-2.5 inline mr-0.5" />{formatSLA(atividade.horas_estimadas)}</span>}
+                              {/* Status badge */}
+                              {statusAtiv === "pendente" && <Badge variant="secondary" className="text-[9px] px-1.5 py-0 ml-auto">Pendente</Badge>}
+                              {statusAtiv === "em_andamento" && <Badge className="text-[9px] px-1.5 py-0 ml-auto bg-accent text-accent-foreground">Em andamento</Badge>}
+                              {statusAtiv === "concluida" && !emAtraso && <Badge className="text-[9px] px-1.5 py-0 ml-auto bg-primary text-primary-foreground">Concluída</Badge>}
+                              {statusAtiv === "concluida" && emAtraso && <Badge variant="destructive" className="text-[9px] px-1.5 py-0 ml-auto gap-0.5"><AlertTriangle className="h-2.5 w-2.5" />Concluída em atraso</Badge>}
                             </div>
-                            <ul className="space-y-1 pl-1">
-                              {items.map((item: ChecklistItem, idx: number) => {
-                                const key = `${atividade.id}_${idx}`;
-                                const prog = checklistProgresso[key] || { concluido: false };
-                                const tipoLabel = CHECKLIST_TIPO_LABELS[item.tipo] || item.tipo;
-                                return (
-                                  <li key={idx} className="flex flex-col gap-0.5 text-xs border-b border-border/30 pb-1.5 last:border-0 last:pb-0">
-                                    <div className="flex items-center gap-2">
-                                      <Checkbox checked={prog.concluido} disabled={!checklistEditMode && !podeEditarChecklist} onCheckedChange={(checked) => saveChecklistItem(atividade.id, idx, { concluido: !!checked })} className="shrink-0" />
-                                      <span className={cn("flex-1", prog.concluido && "line-through text-muted-foreground")}>{item.texto || "(sem texto)"}</span>
-                                      {item.tipo === "sim_nao" && (
-                                        <div className="flex gap-1 shrink-0">
-                                          <Button variant={prog.valor_texto === "sim" ? "default" : "outline"} size="sm" className="h-5 px-1.5 text-[10px]" disabled={!checklistEditMode && !podeEditarChecklist} onClick={() => saveChecklistItem(atividade.id, idx, { valor_texto: prog.valor_texto === "sim" ? "" : "sim" })}>Sim</Button>
-                                          <Button variant={prog.valor_texto === "nao" ? "destructive" : "outline"} size="sm" className="h-5 px-1.5 text-[10px]" disabled={!checklistEditMode && !podeEditarChecklist} onClick={() => saveChecklistItem(atividade.id, idx, { valor_texto: prog.valor_texto === "nao" ? "" : "nao" })}>Não</Button>
+                            {/* Ação iniciar/concluir atividade */}
+                            <div className="flex items-center gap-2 mb-1.5">
+                              {statusAtiv === "pendente" && (
+                                <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => iniciarAtividade(detailCard.id, atividade.id, detailCard.etapa_id)}>
+                                  <Play className="h-3 w-3" />Iniciar
+                                </Button>
+                              )}
+                              {statusAtiv === "em_andamento" && (
+                                <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => concluirAtividade(detailCard.id, atividade.id, detailCard.etapa_id, atividade.horas_estimadas || 0)}>
+                                  <CheckSquare className="h-3 w-3" />Concluir
+                                </Button>
+                              )}
+                              {execAtiv?.iniciado_em && <span className="text-[10px] text-muted-foreground">Início: {new Date(execAtiv.iniciado_em).toLocaleDateString("pt-BR")} {new Date(execAtiv.iniciado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>}
+                              {execAtiv?.concluido_em && <span className="text-[10px] text-muted-foreground">Fim: {new Date(execAtiv.concluido_em).toLocaleDateString("pt-BR")} {new Date(execAtiv.concluido_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>}
+                            </div>
+                            {/* Checklist items */}
+                            {items.length > 0 && (
+                              <ul className="space-y-1 pl-1">
+                                {items.map((item: ChecklistItem, idx: number) => {
+                                  const key = `${atividade.id}_${idx}`;
+                                  const prog = checklistProgresso[key] || { concluido: false };
+                                  return (
+                                    <li key={idx} className="flex flex-col gap-0.5 text-xs border-b border-border/30 pb-1.5 last:border-0 last:pb-0">
+                                      <div className="flex items-center gap-2">
+                                        <Checkbox checked={prog.concluido} disabled={!checklistEditMode && !podeEditarChecklist} onCheckedChange={(checked) => saveChecklistItem(atividade.id, idx, { concluido: !!checked })} className="shrink-0" />
+                                        <span className={cn("flex-1", prog.concluido && "line-through text-muted-foreground")}>{item.texto || "(sem texto)"}</span>
+                                        {item.tipo === "sim_nao" && (
+                                          <div className="flex gap-1 shrink-0">
+                                            <Button variant={prog.valor_texto === "sim" ? "default" : "outline"} size="sm" className="h-5 px-1.5 text-[10px]" disabled={!checklistEditMode && !podeEditarChecklist} onClick={() => saveChecklistItem(atividade.id, idx, { valor_texto: prog.valor_texto === "sim" ? "" : "sim" })}>Sim</Button>
+                                            <Button variant={prog.valor_texto === "nao" ? "destructive" : "outline"} size="sm" className="h-5 px-1.5 text-[10px]" disabled={!checklistEditMode && !podeEditarChecklist} onClick={() => saveChecklistItem(atividade.id, idx, { valor_texto: prog.valor_texto === "nao" ? "" : "nao" })}>Não</Button>
+                                          </div>
+                                        )}
+                                        {(item.tipo as string) === "data" && <Input type="date" className="h-5 w-32 text-[10px] px-1" value={prog.valor_data || ""} disabled={!checklistEditMode && !podeEditarChecklist} onChange={(e) => saveChecklistItem(atividade.id, idx, { valor_data: e.target.value })} />}
+                                        {item.tipo === "texto" && <Input className="h-5 w-40 text-[10px] px-1" placeholder="Valor..." value={prog.valor_texto || ""} disabled={!checklistEditMode && !podeEditarChecklist} onChange={(e) => saveChecklistItem(atividade.id, idx, { valor_texto: e.target.value })} />}
+                                        {detailCard.aponta_tecnico_agenda && prog.concluido && !prog.valor_data && (
+                                           <AgendamentoChecklist cardId={detailCard.id} atividadeId={atividade.id} checklistIndex={idx} etapaId={detailCard.etapa_id} filialId={detailCard.filial_id} mesaId={etapaMesaInfo?.id} mesaCor={etapaMesaInfo?.cor} titulo={item.texto} />
+                                        )}
+                                      </div>
+                                      {prog.concluido && prog.concluido_por_nome && (
+                                        <div className="flex items-center gap-1.5 pl-6 text-[10px] text-muted-foreground">
+                                          <User className="h-2.5 w-2.5" /><span>{prog.concluido_por_nome}</span>
+                                          {prog.concluido_em && <><span>·</span><span>{new Date(prog.concluido_em).toLocaleDateString("pt-BR")} {new Date(prog.concluido_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span></>}
                                         </div>
                                       )}
-                                      {(item.tipo as string) === "data" && <Input type="date" className="h-5 w-32 text-[10px] px-1" value={prog.valor_data || ""} disabled={!checklistEditMode && !podeEditarChecklist} onChange={(e) => saveChecklistItem(atividade.id, idx, { valor_data: e.target.value })} />}
-                                      {item.tipo === "texto" && <Input className="h-5 w-40 text-[10px] px-1" placeholder="Valor..." value={prog.valor_texto || ""} disabled={!checklistEditMode && !podeEditarChecklist} onChange={(e) => saveChecklistItem(atividade.id, idx, { valor_texto: e.target.value })} />}
-                                      {detailCard.aponta_tecnico_agenda && prog.concluido && !prog.valor_data && (
-                                         <AgendamentoChecklist cardId={detailCard.id} atividadeId={atividade.id} checklistIndex={idx} etapaId={detailCard.etapa_id} filialId={detailCard.filial_id} mesaId={etapaMesaInfo?.id} mesaCor={etapaMesaInfo?.cor} titulo={item.texto} />
-                                      )}
-                                    </div>
-                                    {prog.concluido && prog.concluido_por_nome && (
-                                      <div className="flex items-center gap-1.5 pl-6 text-[10px] text-muted-foreground">
-                                        <User className="h-2.5 w-2.5" /><span>{prog.concluido_por_nome}</span>
-                                        {prog.concluido_em && <><span>·</span><span>{new Date(prog.concluido_em).toLocaleDateString("pt-BR")} {new Date(prog.concluido_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span></>}
-                                      </div>
-                                    )}
-                                  </li>
-                                );
-                              })}
-                            </ul>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            )}
                           </div>
                         );
                       })}
