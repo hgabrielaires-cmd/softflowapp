@@ -838,7 +838,7 @@ export default function Pedidos() {
       loadData();
     } catch (err: unknown) {
       console.error("Erro ao salvar pedido:", err);
-      const msg = err instanceof Error ? err.message : (err as any)?.message || "Erro ao salvar pedido";
+      const msg = err instanceof Error ? err.message : "Erro ao salvar pedido";
       toast.error(msg);
     }
     setSaving(false);
