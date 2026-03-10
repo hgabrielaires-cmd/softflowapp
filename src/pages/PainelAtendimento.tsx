@@ -1072,8 +1072,8 @@ export default function PainelAtendimento() {
                     if (!profile?.user_id || !detailCard) return;
                     setSeguindoLoading(true);
                     try {
-                      if (seguindoProjeto) { await (supabase as any).from("painel_seguidores").update({ unfollowed_at: new Date().toISOString() }).eq("card_id", detailCard.id).eq("user_id", profile.user_id); setSeguindoProjeto(false); toast.success("Você parou de seguir este projeto."); }
-                      else { await (supabase as any).from("painel_seguidores").upsert({ card_id: detailCard.id, user_id: profile.user_id, unfollowed_at: null }, { onConflict: "card_id,user_id" }); setSeguindoProjeto(true); toast.success("Agora você está seguindo este projeto!"); }
+                      if (seguindoProjeto) { await supabase.from("painel_seguidores").update({ unfollowed_at: new Date().toISOString() }).eq("card_id", detailCard.id).eq("user_id", profile.user_id); setSeguindoProjeto(false); toast.success("Você parou de seguir este projeto."); }
+                      else { await supabase.from("painel_seguidores").upsert({ card_id: detailCard.id, user_id: profile.user_id, unfollowed_at: null }, { onConflict: "card_id,user_id" }); setSeguindoProjeto(true); toast.success("Agora você está seguindo este projeto!"); }
                     } catch { toast.error("Erro ao atualizar seguimento."); } finally { setSeguindoLoading(false); }
                   }}>
                     {seguindoProjeto ? <><BellOff className="h-3 w-3" />Seguindo</> : <><BellRing className="h-3 w-3" />Seguir</>}
