@@ -646,11 +646,6 @@ export default function Clientes() {
   const filialNome = (id: string | null) => filiais.find((f) => f.id === id)?.nome || "—";
 
 
-  // Dados do historico separados
-  const contratosBase = contratosList.filter((c) => c.tipo === "Base");
-  const contratosAditivos = contratosList.filter((c) => c.tipo === "Aditivo");
-  const pedidosUpgrade = pedidosHistorico.filter((p) => p.tipo_pedido === "Upgrade");
-  const pedidosDowngrade = pedidosHistorico.filter((p) => p.tipo_pedido === "Downgrade");
 
   return (
     <AppLayout>
