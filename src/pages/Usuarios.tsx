@@ -299,7 +299,7 @@ export default function Usuarios() {
                   ))}
                 </div>
               )}
-              {inviteAcessoGlobal && (
+              {f.inviteAcessoGlobal && (
                 <p className="text-xs text-muted-foreground">Este usuário terá acesso a todas as filiais.</p>
               )}
             </div>
