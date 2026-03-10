@@ -227,8 +227,8 @@ export default function Usuarios() {
               <Label>Nome completo</Label>
               <Input
                 placeholder="João da Silva"
-                value={inviteName}
-                onChange={(e) => setInviteName(e.target.value)}
+                value={f.inviteName}
+                onChange={(e) => f.setInviteName(e.target.value)}
                 required
               />
             </div>
