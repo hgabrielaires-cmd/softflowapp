@@ -661,8 +661,8 @@ export default function Pedidos() {
         .eq("user_id", vendedorId)
         .maybeSingle();
 
-      const limiteImp = (vendedorProfile as any)?.desconto_limite_implantacao ?? 100;
-      const limiteMens = (vendedorProfile as any)?.desconto_limite_mensalidade ?? 100;
+      const limiteImp = vendedorProfile?.desconto_limite_implantacao ?? 100;
+      const limiteMens = vendedorProfile?.desconto_limite_mensalidade ?? 100;
 
       // Calcular percentual de desconto aplicado
       const descontoImpPerc = form.desconto_implantacao_tipo === "%"
