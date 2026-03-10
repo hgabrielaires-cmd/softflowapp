@@ -33,18 +33,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Building2, Phone, Mail, FileText, ArrowUpCircle, ArrowDownCircle, Package, Loader2, MapPin, AlertCircle, Users, Star, Trash2, Upload, Eye } from "lucide-react";
+import { Plus, Search, Pencil, Building2, Phone, Loader2, MapPin, AlertCircle, Users, Star, Trash2, Upload, Eye, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { ClientePlanViewer } from "@/components/ClientePlanViewer";
 import { ImportClientesDialog } from "@/components/ImportClientesDialog";
 import { TablePagination } from "@/components/TablePagination";
 import {
-  UF_LIST, emptyForm, emptyContatoForm, ITEMS_PER_PAGE, TIPO_PEDIDO_COLORS,
+  UF_LIST, emptyForm, emptyContatoForm, ITEMS_PER_PAGE,
 } from "@/pages/clientes/constants";
-import { fmtBRL, fmtDateTime } from "@/pages/clientes/helpers";
 import type { ClienteContato, PedidoHistorico, RentabilidadeConsolidada } from "@/pages/clientes/types";
+import { HistoricoContratualDialog } from "@/pages/clientes/components/HistoricoContratualDialog";
+import { ClienteContatosDialog } from "@/pages/clientes/components/ClienteContatosDialog";
+import { ContatoFormDialog } from "@/pages/clientes/components/ContatoFormDialog";
 
 export default function Clientes() {
   const { roles, profile } = useAuth();
@@ -646,11 +646,6 @@ export default function Clientes() {
   const filialNome = (id: string | null) => filiais.find((f) => f.id === id)?.nome || "—";
 
 
-  // Dados do historico separados
-  const contratosBase = contratosList.filter((c) => c.tipo === "Base");
-  const contratosAditivos = contratosList.filter((c) => c.tipo === "Aditivo");
-  const pedidosUpgrade = pedidosHistorico.filter((p) => p.tipo_pedido === "Upgrade");
-  const pedidosDowngrade = pedidosHistorico.filter((p) => p.tipo_pedido === "Downgrade");
 
   return (
     <AppLayout>
@@ -1151,340 +1146,40 @@ export default function Clientes() {
       </Dialog>
 
 
-      <Dialog open={contatosOpen} onOpenChange={setContatosOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Contatos — {clienteContatos?.nome_fantasia}
-            </DialogTitle>
-          </DialogHeader>
+      <ClienteContatosDialog
+        open={contatosOpen}
+        onOpenChange={setContatosOpen}
+        cliente={clienteContatos}
+        contatos={contatos}
+        loading={loadingContatos}
+        canEditExisting={canEditExisting}
+        onNovoContato={openNovoContato}
+        onEditContato={openEditContato}
+        onToggleDecisor={handleToggleDecisor}
+        onDesativarContato={handleDesativarContato}
+      />
 
-          {canEditExisting && (
-            <div className="flex justify-end">
-              <Button size="sm" className="gap-1.5" onClick={openNovoContato}>
-                <Plus className="h-3.5 w-3.5" /> Novo contato
-              </Button>
-            </div>
-          )}
+      <ContatoFormDialog
+        open={contatoDialogOpen}
+        onOpenChange={setContatoDialogOpen}
+        editing={editingContato}
+        form={contatoForm}
+        onFormChange={setContatoForm}
+        onSave={handleSaveContato}
+        saving={savingContato}
+      />
 
-          {loadingContatos ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : contatos.length === 0 ? (
-            <div className="text-center text-muted-foreground py-10 text-sm">
-              Nenhum contato cadastrado. Clique em "Novo contato" para adicionar.
-            </div>
-          ) : (
-            <div className="rounded-lg border border-border divide-y divide-border">
-              {contatos.map((c) => (
-                <div key={c.id} className={`flex items-start gap-3 px-4 py-3 ${!c.ativo ? "opacity-50" : ""}`}>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">{c.nome}</p>
-                      {c.decisor && (
-                        <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                          <Star className="h-2.5 w-2.5 fill-current" /> Decisor
-                        </span>
-                      )}
-                      {!c.ativo && (
-                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">Inativo</span>
-                      )}
-                    </div>
-                    {c.cargo && <p className="text-xs text-muted-foreground">{c.cargo}</p>}
-                    <div className="flex gap-3 mt-1">
-                      {c.telefone && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Phone className="h-3 w-3" />{c.telefone}
-                        </span>
-                      )}
-                      {c.email && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Mail className="h-3 w-3" />{c.email}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {canEditExisting && (
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Button
-                        variant="ghost" size="icon" className={`h-7 w-7 ${c.decisor ? "text-primary" : "text-muted-foreground"}`}
-                        onClick={() => handleToggleDecisor(c)}
-                        title={c.decisor ? "Remover como decisor" : "Marcar como decisor"}
-                      >
-                        <Star className={`h-3.5 w-3.5 ${c.decisor ? "fill-current" : ""}`} />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditContato(c)} title="Editar contato">
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      {c.ativo && (
-                        <Button
-                          variant="ghost" size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive"
-                          onClick={() => handleDesativarContato(c)}
-                          title="Desativar contato"
-                        >
-                          <AlertCircle className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setContatosOpen(false)}>Fechar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog Novo/Editar Contato */}
-      <Dialog open={contatoDialogOpen} onOpenChange={setContatoDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingContato ? "Editar contato" : "Novo contato"}</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-3 py-2">
-            <div className="col-span-2 space-y-1.5">
-              <Label>Nome *</Label>
-              <Input value={contatoForm.nome} onChange={(e) => setContatoForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Nome completo" />
-            </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label>Cargo</Label>
-              <Input value={contatoForm.cargo} onChange={(e) => setContatoForm((f) => ({ ...f, cargo: e.target.value }))} placeholder="Ex: Proprietário, Gerente..." />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Telefone</Label>
-              <Input value={contatoForm.telefone} onChange={(e) => setContatoForm((f) => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>E-mail</Label>
-              <Input type="email" value={contatoForm.email} onChange={(e) => setContatoForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@empresa.com" />
-            </div>
-            <div className="col-span-2 flex items-center gap-3 pt-1">
-              <Checkbox
-                id="decisor"
-                checked={contatoForm.decisor}
-                onCheckedChange={(v) => setContatoForm((f) => ({ ...f, decisor: !!v }))}
-              />
-              <div>
-                <Label htmlFor="decisor" className="cursor-pointer">Decisor</Label>
-                <p className="text-xs text-muted-foreground">Este contato é o tomador de decisão</p>
-              </div>
-            </div>
-            <div className="col-span-2 flex items-center gap-3">
-              <Switch checked={contatoForm.ativo} onCheckedChange={(v) => setContatoForm((f) => ({ ...f, ativo: v }))} />
-              <Label>Contato ativo</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setContatoDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSaveContato} disabled={savingContato}>
-              {savingContato ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {editingContato ? "Salvar" : "Adicionar contato"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog Historico Contratual */}
-      <Dialog open={historicoOpen} onOpenChange={setHistoricoOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Histórico Contratual — {clienteHistorico?.nome_fantasia}
-            </DialogTitle>
-            {clienteHistorico && (
-              <ClientePlanViewer clienteId={clienteHistorico.id} clienteNome={clienteHistorico.nome_fantasia} variant="icon" className="ml-auto shrink-0" />
-            )}
-          </DialogHeader>
-
-          {loadingHistorico ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <>
-              {/* Rentabilidade Consolidada */}
-              {podeVerRentabilidade && rentabilidadeConsolidada && (
-                <div className="bg-muted rounded-lg p-4 space-y-2 mb-3">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">📊 Rentabilidade Consolidada (Mensal)</p>
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Receita Mensal</span>
-                      <span className="font-mono font-semibold">{fmtBRL(rentabilidadeConsolidada.receitaMensal)}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Custo Mensal</span>
-                      <span className="font-mono font-semibold">{fmtBRL(rentabilidadeConsolidada.custoMensal)}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Margem Bruta</span>
-                      <span className={`font-mono font-semibold ${rentabilidadeConsolidada.margem < 0 || (margemIdealHistorico != null && rentabilidadeConsolidada.margem < margemIdealHistorico) ? "text-destructive" : rentabilidadeConsolidada.margem < 30 ? "text-amber-600" : "text-emerald-600"}`}>
-                        {rentabilidadeConsolidada.margem.toFixed(1)}%
-                        {margemIdealHistorico != null && rentabilidadeConsolidada.margem < margemIdealHistorico && " ⚠️"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Markup</span>
-                      <span className="font-mono font-semibold">{rentabilidadeConsolidada.markup.toFixed(1)}%</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between text-xs font-semibold border-t border-border pt-1.5">
-                    <span>Lucro Bruto</span>
-                    <span className={`font-mono ${rentabilidadeConsolidada.lucro < 0 ? "text-destructive" : "text-emerald-600"}`}>
-                      {fmtBRL(rentabilidadeConsolidada.lucro)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-            <Tabs defaultValue="contratos" className="mt-2">
-              <TabsList className="w-full">
-                <TabsTrigger value="contratos" className="flex-1">
-                  <FileText className="h-3.5 w-3.5 mr-1.5" />
-                  Contratos ({contratosBase.length})
-                </TabsTrigger>
-                <TabsTrigger value="aditivos" className="flex-1">
-                  <Package className="h-3.5 w-3.5 mr-1.5" />
-                  Aditivos ({contratosAditivos.length})
-                </TabsTrigger>
-                <TabsTrigger value="upgrades" className="flex-1">
-                  <ArrowUpCircle className="h-3.5 w-3.5 mr-1.5" />
-                  Upgrades ({pedidosUpgrade.length})
-                </TabsTrigger>
-                <TabsTrigger value="downgrades" className="flex-1">
-                  <ArrowDownCircle className="h-3.5 w-3.5 mr-1.5" />
-                  Downgrades ({pedidosDowngrade.length})
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Contratos Base */}
-              <TabsContent value="contratos" className="mt-3">
-                {contratosBase.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">Nenhum contrato base.</p>
-                ) : (
-                  <div className="rounded-lg border border-border divide-y divide-border">
-                    {contratosBase.map((ct) => (
-                      <div key={ct.id} className="px-4 py-3 flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium">{ct.numero_exibicao}</p>
-                          <p className="text-xs text-muted-foreground">{fmtDateTime(ct.created_at)}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ct.status === "Ativo" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
-                            {ct.status}
-                          </span>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Visualizar contrato" onClick={() => { setHistoricoOpen(false); navigate("/contratos"); }}>
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* Aditivos */}
-              <TabsContent value="aditivos" className="mt-3">
-                {contratosAditivos.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">Nenhum termo aditivo.</p>
-                ) : (
-                  <div className="rounded-lg border border-border divide-y divide-border">
-                    {contratosAditivos.map((ct) => (
-                      <div key={ct.id} className="px-4 py-3 flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium">{ct.numero_exibicao}</p>
-                          <p className="text-xs text-muted-foreground">{fmtDateTime(ct.created_at)}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ct.status === "Ativo" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
-                            {ct.status}
-                          </span>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Visualizar aditivo" onClick={() => { setHistoricoOpen(false); navigate("/contratos"); }}>
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* Upgrades */}
-              <TabsContent value="upgrades" className="mt-3">
-                {pedidosUpgrade.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">Nenhum upgrade registrado.</p>
-                ) : (
-                  <div className="rounded-lg border border-border divide-y divide-border">
-                    {pedidosUpgrade.map((p) => (
-                      <div key={p.id} className="px-4 py-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium">{p.planos?.nome || "—"}</p>
-                            <p className="text-xs text-muted-foreground">{fmtDateTime(p.created_at)}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="text-right">
-                              <p className="text-xs font-mono">{fmtBRL(p.valor_total)}</p>
-                              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${p.status_pedido === "Cancelado" ? "bg-red-100 text-red-700" : TIPO_PEDIDO_COLORS[p.tipo_pedido] || "bg-muted text-muted-foreground"}`}>
-                                {p.status_pedido === "Cancelado" ? "Cancelado" : p.tipo_pedido}
-                              </span>
-                            </div>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Visualizar pedido" onClick={() => { setHistoricoOpen(false); navigate("/pedidos"); }}>
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* Downgrades */}
-              <TabsContent value="downgrades" className="mt-3">
-                {pedidosDowngrade.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">Nenhum downgrade registrado.</p>
-                ) : (
-                  <div className="rounded-lg border border-border divide-y divide-border">
-                    {pedidosDowngrade.map((p) => (
-                      <div key={p.id} className="px-4 py-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium">{p.planos?.nome || "—"}</p>
-                            <p className="text-xs text-muted-foreground">{fmtDateTime(p.created_at)}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="text-right space-y-1">
-                              <p className="text-xs font-mono">{fmtBRL(p.valor_total)}</p>
-                              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${p.status_pedido === "Cancelado" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700 border border-amber-200"}`}>
-                                {p.status_pedido === "Cancelado" ? "Cancelado" : "Downgrade"}
-                              </span>
-                            </div>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Visualizar pedido" onClick={() => { setHistoricoOpen(false); navigate("/pedidos"); }}>
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
-            </>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setHistoricoOpen(false)}>Fechar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <HistoricoContratualDialog
+        open={historicoOpen}
+        onOpenChange={setHistoricoOpen}
+        cliente={clienteHistorico}
+        contratosList={contratosList}
+        pedidosHistorico={pedidosHistorico}
+        loading={loadingHistorico}
+        podeVerRentabilidade={podeVerRentabilidade}
+        rentabilidadeConsolidada={rentabilidadeConsolidada}
+        margemIdealHistorico={margemIdealHistorico}
+      />
 
       <ImportClientesDialog
         open={importOpen}
