@@ -346,8 +346,8 @@ export default function Usuarios() {
                         <Label className="text-xs">Serviço (%)</Label>
                         <Input
                           type="number" min="0" max="100" step="0.01" placeholder="5"
-                          value={inviteComissaoServ}
-                          onChange={(e) => setInviteComissaoServ(e.target.value)}
+                          value={f.inviteComissaoServ}
+                          onChange={(e) => f.setInviteComissaoServ(e.target.value)}
                         />
                       </div>
                     </div>
