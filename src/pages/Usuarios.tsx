@@ -751,7 +751,7 @@ export default function Usuarios() {
                           Permite cancelar projetos no painel de atendimento, registrando o motivo no relatório de projetos cancelados.
                         </p>
                       </div>
-                      <Switch checked={editPermiteCancelarProjeto} onCheckedChange={setEditPermiteCancelarProjeto} />
+                      <Switch checked={f.editPermiteCancelarProjeto} onCheckedChange={f.setEditPermiteCancelarProjeto} />
                     </div>
                     <div className="border-t border-border" />
                     <div className="flex items-center justify-between">
