@@ -219,130 +219,19 @@ export default function Clientes() {
     setDialogOpen(true);
   }
 
-  async function openHistorico(c: Cliente) {
-    setClienteHistorico(c);
-    setHistoricoOpen(true);
-    setLoadingHistorico(true);
-    setRentabilidadeConsolidada(null);
-    setMargemIdealHistorico(null);
-    const [{ data: cData }, { data: pData }] = await Promise.all([
-      supabase.from("contratos").select("*").eq("cliente_id", c.id).order("created_at", { ascending: false }),
-      supabase.from("pedidos")
-        .select("id, tipo_pedido, status_pedido, financeiro_status, valor_implantacao_final, valor_mensalidade_final, valor_total, created_at, modulos_adicionais, plano_id, contrato_id, planos(nome)")
-        .eq("cliente_id", c.id)
-        .order("created_at", { ascending: false }),
-    ]);
-    const contratos = (cData || []) as any[];
-    const pedidos = (pData || []) as PedidoHistorico[];
-    setContratosList(contratos as unknown as Contrato[]);
-    setPedidosHistorico(pedidos);
-
-    // Calcular rentabilidade consolidada se permitido
-    if (podeVerRentabilidade) {
-      try {
-        await calcularRentabilidadeConsolidada(contratos, pedidos, c.filial_id);
-      } catch (e) {
-        console.error("Erro ao calcular rentabilidade:", e);
-      }
-    }
-    setLoadingHistorico(false);
-  }
-
-  async function calcularRentabilidadeConsolidada(contratos: any[], pedidos: PedidoHistorico[], filialId: string | null) {
-    // Pegar contratos ativos (Base e Aditivo — excluir OA)
-    const contratosAtivos = contratos.filter((c) => c.status === "Ativo" && c.tipo !== "OA");
-    if (contratosAtivos.length === 0) return;
-
-    // Pegar pedidos aprovados vinculados a contratos ativos, excluindo OA e Serviço
-    const contratoIds = new Set(contratosAtivos.map((c) => c.id));
-    const pedidosRelevantes = pedidos.filter(
-      (p) => p.contrato_id && contratoIds.has(p.contrato_id) &&
-        p.status_pedido !== "Cancelado" &&
-        !["OA", "Serviço"].includes(p.tipo_pedido)
-    );
-
-    // Buscar plano_ids únicos para custos
-    const planoIds = [...new Set(pedidosRelevantes.map((p) => p.plano_id).filter(Boolean))];
-    
-    const [{ data: custosPlanos }, { data: custosModulos }, { data: paramFilial }] = await Promise.all([
-      supabase.from("custos").select("*").in("plano_id", planoIds.length ? planoIds : [""]).is("modulo_id", null),
-      supabase.from("custos").select("*").not("modulo_id", "is", null),
-      filialId ? supabase.from("filial_parametros").select("margem_venda_ideal").eq("filial_id", filialId).maybeSingle() : Promise.resolve({ data: null }),
-    ]);
-
-    if (paramFilial) setMargemIdealHistorico((paramFilial as any)?.margem_venda_ideal ?? null);
-
-    const calcCustoPlano = (cp: any, receitaRef: number) => {
-      if (!cp) return 0;
-      const impostoBase = cp.imposto_base === 'venda' ? receitaRef : cp.preco_fornecedor;
-      const impostoVal = cp.imposto_tipo === '%' ? impostoBase * (cp.imposto_valor / 100) : cp.imposto_valor;
-      return cp.preco_fornecedor + impostoVal + cp.taxa_boleto + cp.despesas_adicionais;
-    };
-
-    let receitaMensalTotal = 0;
-    let custoMensalTotal = 0;
-    const processedPlanos = new Set<string>();
-
-    for (const ped of pedidosRelevantes) {
-      const mensFinal = ped.valor_mensalidade_final || 0;
-      receitaMensalTotal += mensFinal;
-
-      // Custo do plano (apenas uma vez por plano — para Upgrade calcula diferencial)
-      if (ped.tipo_pedido === "Upgrade" && ped.contrato_id) {
-        // Para upgrade, o custo diferencial já está embutido
-        const contrato = contratosAtivos.find((c) => c.id === ped.contrato_id);
-        const planoAnteriorId = contrato?.contrato_origem_id
-          ? contratosAtivos.find((c2) => c2.id === contrato.contrato_origem_id)?.plano_id
-          : null;
-        const custoNovo = (custosPlanos || []).find((c: any) => c.plano_id === ped.plano_id);
-        let custoAnterior: any = null;
-        if (planoAnteriorId) {
-          custoAnterior = (custosPlanos || []).find((c: any) => c.plano_id === planoAnteriorId);
-        }
-        const diff = Math.max(0, calcCustoPlano(custoNovo, mensFinal) - calcCustoPlano(custoAnterior, 0));
-        custoMensalTotal += diff;
-      } else if (!processedPlanos.has(ped.plano_id)) {
-        // Custo do plano base (evitar duplicata)
-        processedPlanos.add(ped.plano_id);
-        const custoPlano = (custosPlanos || []).find((c: any) => c.plano_id === ped.plano_id);
-        custoMensalTotal += calcCustoPlano(custoPlano, mensFinal);
-      }
-
-      // Custo dos módulos adicionais
-      const adicionais = Array.isArray(ped.modulos_adicionais) ? ped.modulos_adicionais : [];
-      adicionais.forEach((m: any) => {
-        const custoMod = (custosModulos || []).find((c: any) => c.modulo_id === m.modulo_id);
-        if (custoMod) {
-          const qty = m.quantidade || 1;
-          const impostoBase = custoMod.imposto_base === 'venda' ? (m.valor_mensalidade_modulo || 0) * qty : custoMod.preco_fornecedor * qty;
-          const impostoVal = custoMod.imposto_tipo === '%' ? impostoBase * (custoMod.imposto_valor / 100) : custoMod.imposto_valor * qty;
-          custoMensalTotal += (custoMod.preco_fornecedor * qty) + impostoVal + (custoMod.taxa_boleto * qty) + (custoMod.despesas_adicionais * qty);
-        }
-      });
-    }
-
-    const lucro = receitaMensalTotal - custoMensalTotal;
-    const margem = receitaMensalTotal > 0 ? (lucro / receitaMensalTotal) * 100 : 0;
-    const markup = custoMensalTotal > 0 ? (lucro / custoMensalTotal) * 100 : 0;
-    setRentabilidadeConsolidada({ receitaMensal: receitaMensalTotal, custoMensal: custoMensalTotal, lucro, margem, markup });
-  }
-
   // Contatos
   async function openContatos(c: Cliente) {
     setClienteContatos(c);
     setContatosOpen(true);
-    await fetchContatos(c.id);
+    await loadContatos(c.id);
   }
 
-  async function fetchContatos(clienteId: string) {
+  async function loadContatos(clienteId: string) {
     setLoadingContatos(true);
-    const { data } = await supabase
-      .from("cliente_contatos")
-      .select("*")
-      .eq("cliente_id", clienteId)
-      .order("decisor", { ascending: false })
-      .order("nome");
-    setContatos((data || []) as ClienteContato[]);
+    const data = await fetchContatos(clienteId);
+    setContatos(data);
+    setLoadingContatos(false);
+  }
     setLoadingContatos(false);
   }
 
