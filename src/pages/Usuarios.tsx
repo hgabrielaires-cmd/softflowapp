@@ -314,7 +314,7 @@ export default function Usuarios() {
                 </div>
                 <Switch checked={f.inviteIsVendedor} onCheckedChange={f.setInviteIsVendedor} />
               </div>
-              {inviteIsVendedor && (
+              {f.inviteIsVendedor && (
                 <>
                   <div className="border-t border-border" />
                   <div className="flex items-center justify-between">
