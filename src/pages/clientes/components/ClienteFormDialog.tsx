@@ -43,7 +43,7 @@ interface ClienteFormDialogProps {
   handleSave: () => void;
   canEditExisting: boolean;
   crudIncluir: boolean;
-  filiaisDoUsuario: Filial[];
+  filiaisDoUsuario: { id: string; nome: string }[];
   formContatos: InlineContato[];
   setFormContatos: React.Dispatch<React.SetStateAction<InlineContato[]>>;
   showContatoInlineForm: boolean;
