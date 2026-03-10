@@ -1321,7 +1321,7 @@ export default function Contratos() {
         .limit(1)
         .maybeSingle();
 
-      const mensagem = gerarTermoAceite(contrato, signUrl, undefined, (contatos || []) as any);
+      const mensagem = gerarTermoAceite(contrato, buildTermoCtx(), signUrl, undefined, (contatos || []) as any);
 
       const { error } = await supabase.functions.invoke("evolution-api", {
         body: {
