@@ -232,8 +232,6 @@ export default function Clientes() {
     setContatos(data);
     setLoadingContatos(false);
   }
-    setLoadingContatos(false);
-  }
 
   function openNovoContato() {
     setEditingContato(null);
