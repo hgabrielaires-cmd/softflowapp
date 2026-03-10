@@ -164,7 +164,7 @@ export default function Usuarios() {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => handleReenviarBoasVindas(user)}
+                          onClick={() => f.handleReenviarBoasVindas(user)}
                           title="Reenviar boas-vindas (WhatsApp)"
                         >
                           <Send className="h-3.5 w-3.5 text-muted-foreground" />
