@@ -149,6 +149,8 @@ export default function PainelAtendimento() {
     podeVisualizarSeguidores, podeResetarProjeto, podeCancelarProjeto, podeVerValoresProjeto,
   } = permissions;
 
+  const { iniciarAtividade, concluirAtividade, getStatusAtividade, todasAtividadesConcluidas } = usePainelAtividadeActions();
+
   // Auto-refresh atrasado status every 60s
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60_000);
