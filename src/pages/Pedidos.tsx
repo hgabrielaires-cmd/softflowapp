@@ -1169,18 +1169,18 @@ export default function Pedidos() {
                    const canCancel = (isAdmin || crudExcluir) && pedido.status_pedido !== "Cancelado" && !temContratoVigente;
 
                   const vendedorNome = vendedores.find((v) => v.user_id === pedido.vendedor_id)?.full_name || "—";
-                  const filialNome = (pedido as any).filiais?.nome || filiais.find(f => f.id === pedido.filial_id)?.nome || "—";
-                  const impFinal = pedido.valor_implantacao_final ?? pedido.valor_implantacao;
-                  const mensFinal = pedido.valor_mensalidade_final ?? pedido.valor_mensalidade;
-                  return (
-                    <TableRow key={pedido.id} className={isReprovado ? "bg-destructive/5" : undefined}>
-                      <TableCell className="font-mono text-xs font-semibold text-primary">{(pedido as any).numero_exibicao || "—"}</TableCell>
-                      <TableCell className="font-medium">{(pedido as any).clientes?.nome_fantasia || "—"}</TableCell>
-                      {canSeeAllBranches && <TableCell className="text-sm text-muted-foreground">{filialNome}</TableCell>}
-                      {canSeeAllBranches && <TableCell className="text-sm text-muted-foreground">{vendedorNome}</TableCell>}
-                      <TableCell className="text-right font-mono text-sm">{(pedido as any).tipo_pedido === "OA" ? "—" : fmtBRL(impFinal)}</TableCell>
-                      <TableCell className="text-right font-mono text-sm">{(pedido as any).tipo_pedido === "OA" ? "—" : fmtBRL(mensFinal)}</TableCell>
-                      <TableCell className="text-right font-mono text-sm">{(pedido as any).tipo_pedido === "OA" ? fmtBRL(pedido.valor_total) : "—"}</TableCell>
+                   const filialNome = pedido.filiais?.nome || filiais.find(f => f.id === pedido.filial_id)?.nome || "—";
+                   const impFinal = pedido.valor_implantacao_final ?? pedido.valor_implantacao;
+                   const mensFinal = pedido.valor_mensalidade_final ?? pedido.valor_mensalidade;
+                   return (
+                     <TableRow key={pedido.id} className={isReprovado ? "bg-destructive/5" : undefined}>
+                       <TableCell className="font-mono text-xs font-semibold text-primary">{pedido.numero_exibicao || "—"}</TableCell>
+                       <TableCell className="font-medium">{pedido.clientes?.nome_fantasia || "—"}</TableCell>
+                       {canSeeAllBranches && <TableCell className="text-sm text-muted-foreground">{filialNome}</TableCell>}
+                       {canSeeAllBranches && <TableCell className="text-sm text-muted-foreground">{vendedorNome}</TableCell>}
+                       <TableCell className="text-right font-mono text-sm">{pedido.tipo_pedido === "OA" ? "—" : fmtBRL(impFinal)}</TableCell>
+                       <TableCell className="text-right font-mono text-sm">{pedido.tipo_pedido === "OA" ? "—" : fmtBRL(mensFinal)}</TableCell>
+                       <TableCell className="text-right font-mono text-sm">{pedido.tipo_pedido === "OA" ? fmtBRL(pedido.valor_total) : "—"}</TableCell>
                       <TableCell className="text-right font-mono text-sm font-semibold">{fmtBRL(pedido.valor_total)}</TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[pedido.status_pedido] || "bg-muted text-muted-foreground"}`}>
