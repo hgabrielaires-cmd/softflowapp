@@ -950,7 +950,7 @@ export default function PainelAtendimento() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <CheckSquare className="h-4 w-4 text-primary" />
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Checklist da Etapa</p>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Atividades da Etapa</p>
                       </div>
                       <div className="flex items-center gap-2">
                         {podeEditarChecklist && (
