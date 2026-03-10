@@ -394,22 +394,7 @@ export default function Pedidos() {
     if (form.filial_id) loadFilialParametros(form.filial_id);
   }, [form.filial_id, loadFilialParametros]);
 
-  // ─── Buscar contrato ativo do cliente ─────────────────────────────────────
 
-  async function buscarContratoAtivo(clienteId: string) {
-    if (!clienteId) { setContratoAtivo(null); return; }
-    setLoadingContrato(true);
-    const { data } = await supabase
-      .from("contratos")
-      .select("*")
-      .eq("cliente_id", clienteId)
-      .eq("status", "Ativo")
-      .eq("tipo", "Base")
-      .order("created_at", { ascending: false })
-      .limit(1);
-    setContratoAtivo(data && data.length > 0 ? (data[0] as unknown as Contrato) : null);
-    setLoadingContrato(false);
-  }
 
   async function handleClienteChange(clienteId: string) {
     setForm((f) => ({ ...f, cliente_id: clienteId, plano_id: "", tipo_pedido: "Novo", contrato_id: null }));
