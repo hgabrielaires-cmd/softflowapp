@@ -65,10 +65,9 @@ import { TablePagination } from "@/components/TablePagination";
 export default function Contratos() {
   const queries = useContratosQueries();
   const {
-    isAdmin, roles, profile, isFinanceiro,
-    canManage, crudIncluir, crudEditar, crudExcluir,
-    podeCadastroRetroativo, podeRegerarContrato,
-    filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais,
+    profile,
+    canManage, podeCadastroRetroativo, podeRegerarContrato,
+    filiaisDoUsuario, todasFiliais,
     contratos, setContratos,
     filiais, filialParametros, profilesMap,
     contatosCliente, setContatosCliente,
@@ -118,7 +117,7 @@ export default function Contratos() {
     buildTermoCtx,
   });
   const {
-    zapsignRecords, gerando, gerarSignedUrl, enviandoZapsign,
+    zapsignRecords, gerando,
     reenviandoWhatsapp, enviandoWhatsapp, syncingStatuses,
     openZapsignDetail, setOpenZapsignDetail,
     zapsignDetailContrato, setZapsignDetailContrato,
