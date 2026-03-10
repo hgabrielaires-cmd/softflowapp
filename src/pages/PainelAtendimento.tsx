@@ -1028,7 +1028,7 @@ export default function PainelAtendimento() {
                               {atividade.mesas_atendimento?.nome && <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-1" style={{ backgroundColor: atividade.mesas_atendimento.cor ? `${atividade.mesas_atendimento.cor}15` : undefined, color: atividade.mesas_atendimento.cor || undefined, borderColor: atividade.mesas_atendimento.cor ? `${atividade.mesas_atendimento.cor}40` : undefined }}>{atividade.mesas_atendimento.nome}</Badge>}
                               {atividade.horas_estimadas > 0 && <span className="text-[10px] text-muted-foreground"><Clock className="h-2.5 w-2.5 inline mr-0.5" />{formatSLA(atividade.horas_estimadas)}</span>}
                               {/* Action button + Status badge — grouped to the right */}
-                              <div className="flex items-center gap-1.5 ml-auto">
+                              <div className="flex flex-col items-end gap-1 ml-auto">
                                 {statusAtiv === "pendente" && (
                                   <Button size="sm" className="h-8 text-xs px-3 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => iniciarAtividade(detailCard.id, atividade.id, detailCard.etapa_id)}>
                                     <Play className="h-4 w-4" />Iniciar
@@ -1293,26 +1293,24 @@ export default function PainelAtendimento() {
             </div>
           )}
           {detailCard && (
-            <DialogFooter className="border-t pt-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {!isChecklistCompleto(checklistEtapa, checklistProgresso) && <p className="text-[10px] text-muted-foreground">Complete todos os itens do checklist para finalizar</p>}
-                {isChecklistCompleto(checklistEtapa, checklistProgresso) && checklistEtapa.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, checklistEtapa.map((a: any) => a.id)) && <p className="text-[10px] text-amber-600 font-medium">Conclua todas as atividades da etapa para finalizar</p>}
-              </div>
-              <div className="flex items-center gap-2">
-                {(podePausarProjeto || podeRecusarProjeto || podeGerenciarApontamento || podeResetarProjeto) && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="gap-1.5"><MoreHorizontal className="h-4 w-4" />Ações</Button></DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      {podeGerenciarApontamento && <DropdownMenuItem className="gap-2" onClick={() => { setApontamentoCardId(detailCard.id); setApontamentoOpen(true); }}><UserPlus className="h-4 w-4" />Apontamento</DropdownMenuItem>}
-                      {podePausarProjeto && !detailCard.pausado && <DropdownMenuItem className="gap-2 text-amber-600 focus:text-amber-600" onClick={() => setPausarOpen(true)}><PauseCircle className="h-4 w-4" />Pausar Projeto</DropdownMenuItem>}
-                      {podeRecusarProjeto && !detailCard.pausado && <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive" onClick={() => setRecusarOpen(true)}><XCircle className="h-4 w-4" />Recusar Projeto</DropdownMenuItem>}
-                      {podeResetarProjeto && <DropdownMenuItem className="gap-2 text-orange-600 focus:text-orange-600" onClick={() => setResetarOpen(true)}><RefreshCw className="h-4 w-4" />Resetar Projeto</DropdownMenuItem>}
-                      {podeCancelarProjeto && detailCard.status_projeto !== "cancelado" && <DropdownMenuItem className="gap-2 text-red-600 focus:text-red-600" onClick={() => setCancelarOpen(true)}><Ban className="h-4 w-4" />Cancelar Projeto</DropdownMenuItem>}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-                <Button variant="outline" size="sm" onClick={() => fetchDetalhes(detailCard)}><Info className="h-4 w-4 mr-1" />Detalhes</Button>
-                {(() => { const etapaAtualIdx = etapas.findIndex((e) => e.id === detailCard.etapa_id); if (etapaAtualIdx <= 0) return null; return <Button variant="outline" size="sm" className="bg-amber-500 hover:bg-amber-600 text-white border-amber-500 hover:border-amber-600" onClick={() => fetchHistorico(detailCard)}><History className="h-4 w-4 mr-1" />Histórico</Button>; })()}
+            <DialogFooter className="border-t pt-3 flex flex-col gap-2">
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  {(podePausarProjeto || podeRecusarProjeto || podeGerenciarApontamento || podeResetarProjeto) && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="gap-1.5"><MoreHorizontal className="h-4 w-4" />Ações</Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {podeGerenciarApontamento && <DropdownMenuItem className="gap-2" onClick={() => { setApontamentoCardId(detailCard.id); setApontamentoOpen(true); }}><UserPlus className="h-4 w-4" />Apontamento</DropdownMenuItem>}
+                        {podePausarProjeto && !detailCard.pausado && <DropdownMenuItem className="gap-2 text-amber-600 focus:text-amber-600" onClick={() => setPausarOpen(true)}><PauseCircle className="h-4 w-4" />Pausar Projeto</DropdownMenuItem>}
+                        {podeRecusarProjeto && !detailCard.pausado && <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive" onClick={() => setRecusarOpen(true)}><XCircle className="h-4 w-4" />Recusar Projeto</DropdownMenuItem>}
+                        {podeResetarProjeto && <DropdownMenuItem className="gap-2 text-orange-600 focus:text-orange-600" onClick={() => setResetarOpen(true)}><RefreshCw className="h-4 w-4" />Resetar Projeto</DropdownMenuItem>}
+                        {podeCancelarProjeto && detailCard.status_projeto !== "cancelado" && <DropdownMenuItem className="gap-2 text-red-600 focus:text-red-600" onClick={() => setCancelarOpen(true)}><Ban className="h-4 w-4" />Cancelar Projeto</DropdownMenuItem>}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                  <Button variant="outline" size="sm" onClick={() => fetchDetalhes(detailCard)}><Info className="h-4 w-4 mr-1" />Detalhes</Button>
+                  {(() => { const etapaAtualIdx = etapas.findIndex((e) => e.id === detailCard.etapa_id); if (etapaAtualIdx <= 0) return null; return <Button variant="outline" size="sm" className="bg-amber-500 hover:bg-amber-600 text-white border-amber-500 hover:border-amber-600" onClick={() => fetchHistorico(detailCard)}><History className="h-4 w-4 mr-1" />Histórico</Button>; })()}
+                </div>
                 {(() => {
                   const atividadeIds = checklistEtapa.map((a: any) => a.id);
                   const atividadesPendentes = atividadeIds.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, atividadeIds);
@@ -1327,6 +1325,8 @@ export default function PainelAtendimento() {
                   );
                 })()}
               </div>
+              {!isChecklistCompleto(checklistEtapa, checklistProgresso) && <p className="text-[10px] text-muted-foreground text-right">Complete todos os itens do checklist para finalizar</p>}
+              {isChecklistCompleto(checklistEtapa, checklistProgresso) && checklistEtapa.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, checklistEtapa.map((a: any) => a.id)) && <p className="text-[10px] text-amber-600 font-medium text-right">Conclua todas as atividades da etapa para finalizar</p>}
             </DialogFooter>
           )}
         </DialogContent>
