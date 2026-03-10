@@ -1031,7 +1031,7 @@ export default function Pedidos() {
   // ─── Filtering ────────────────────────────────────────────────────────────
 
   const filtered = pedidos.filter((p) => {
-    const clienteNome = (p as any).clientes?.nome_fantasia?.toLowerCase() || "";
+    const clienteNome = p.clientes?.nome_fantasia?.toLowerCase() || "";
     if (search && !clienteNome.includes(search.toLowerCase())) return false;
     if (filterFilial !== "all" && filterFilial !== "_init_" && p.filial_id !== filterFilial) return false;
     if (filterStatus !== "all" && p.status_pedido !== filterStatus) return false;
