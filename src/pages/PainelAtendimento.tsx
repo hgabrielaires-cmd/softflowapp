@@ -937,16 +937,10 @@ export default function PainelAtendimento() {
                   </div>
                 )}
                 <div className="flex items-center gap-3">
-                  {detailCard.pausado ? (
+                  {detailCard.pausado && (
                     <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={(e) => { e.stopPropagation(); setRetomarOpen(true); }}><Play className="h-4 w-4 mr-1" />Retomar Projeto</Button>
-                  ) : detailCard.iniciado_em ? (
-                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" disabled><Play className="h-4 w-4 mr-1" />Em andamento</Button>
-                  ) : (
-                    <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={(e) => { e.stopPropagation(); iniciarAtendimento.mutate(detailCard.id); setDetailCard({ ...detailCard, iniciado_em: new Date().toISOString() }); }} disabled={iniciarAtendimento.isPending}><Play className="h-4 w-4 mr-1" />{iniciarAtendimento.isPending ? "Iniciando..." : "Iniciar Etapa"}</Button>
                   )}
                   {detailCard.iniciado_em && <span className="text-xs text-muted-foreground">Iniciado em {new Date(detailCard.iniciado_em).toLocaleDateString("pt-BR")} às {new Date(detailCard.iniciado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>}
-                  {!detailCard.iniciado_em && isInicioAtrasado(detailCard, etapas) && <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" />Tarefa Atrasada</Badge>}
-                  {!detailCard.iniciado_em && (() => { const tempo = getTempoRestante(detailCard, etapas); return tempo ? <span className="flex items-center gap-1 text-xs text-amber-600 font-medium"><Clock className="h-3 w-3" />Vence em {tempo}h</span> : null; })()}
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs mb-1">Progresso do Projeto</p>
@@ -1301,8 +1295,8 @@ export default function PainelAtendimento() {
           {detailCard && (
             <DialogFooter className="border-t pt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {!isChecklistCompleto(checklistEtapa, checklistProgresso) && detailCard.iniciado_em && <p className="text-[10px] text-muted-foreground">Complete todos os itens do checklist para finalizar</p>}
-                {isChecklistCompleto(checklistEtapa, checklistProgresso) && checklistEtapa.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, checklistEtapa.map((a: any) => a.id)) && detailCard.iniciado_em && <p className="text-[10px] text-amber-600 font-medium">Conclua todas as atividades da etapa para finalizar</p>}
+                {!isChecklistCompleto(checklistEtapa, checklistProgresso) && <p className="text-[10px] text-muted-foreground">Complete todos os itens do checklist para finalizar</p>}
+                {isChecklistCompleto(checklistEtapa, checklistProgresso) && checklistEtapa.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, checklistEtapa.map((a: any) => a.id)) && <p className="text-[10px] text-amber-600 font-medium">Conclua todas as atividades da etapa para finalizar</p>}
               </div>
               <div className="flex items-center gap-2">
                 {(podePausarProjeto || podeRecusarProjeto || podeGerenciarApontamento || podeResetarProjeto) && (
@@ -1323,12 +1317,11 @@ export default function PainelAtendimento() {
                   const atividadeIds = checklistEtapa.map((a: any) => a.id);
                   const atividadesPendentes = atividadeIds.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, atividadeIds);
                   const checklistIncompleto = !isChecklistCompleto(checklistEtapa, checklistProgresso);
-                  const naoIniciado = !detailCard.iniciado_em;
-                  const bloqueado = naoIniciado || checklistIncompleto || atividadesPendentes || finalizando;
-                  const motivo = naoIniciado ? "Inicie a etapa primeiro" : atividadesPendentes ? "Conclua todas as atividades" : checklistIncompleto ? "Conclua o checklist" : null;
+                  const bloqueado = checklistIncompleto || atividadesPendentes || finalizando;
+                  const motivo = atividadesPendentes ? "Conclua todas as atividades" : checklistIncompleto ? "Conclua o checklist" : null;
                   return (
                     <div className="flex flex-col items-end gap-0.5">
-                      <Button size="sm" onClick={finalizarEtapa} disabled={bloqueado}><ChevronRight className="h-4 w-4 mr-1" />{finalizando ? "Finalizando..." : "Finalizar Etapa"}</Button>
+                      <Button size="sm" className="h-9 px-4" onClick={finalizarEtapa} disabled={bloqueado}><ChevronRight className="h-4 w-4 mr-1" />{finalizando ? "Finalizando..." : "Finalizar Etapa"}</Button>
                       {bloqueado && motivo && <span className="text-[9px] text-destructive">{motivo}</span>}
                     </div>
                   );
