@@ -55,6 +55,7 @@ interface Profile {
 const GATILHO_TIPOS = [
   { value: "pedido_status", label: "Pedido muda de status" },
   { value: "tempo_sem_acao_financeiro", label: "Pedido parado na fila do Financeiro" },
+  { value: "contrato_enviado_assinatura", label: "Contrato enviado para assinatura" },
   { value: "contrato_cancelamento", label: "Contrato cancelado" },
   { value: "card_etapa", label: "Card muda de etapa no Painel" },
 ];
@@ -85,6 +86,7 @@ const TIPO_PEDIDO_OPTIONS = [
 const GATILHO_LABELS: Record<string, string> = {
   pedido_status: "Mudança de Status do Pedido",
   tempo_sem_acao_financeiro: "Tempo sem Ação (Financeiro)",
+  contrato_enviado_assinatura: "Contrato Enviado p/ Assinatura",
   contrato_cancelamento: "Cancelamento de Contrato",
   card_etapa: "Mudança de Etapa no Painel",
 };
@@ -202,13 +204,15 @@ export default function Automacoes() {
       gatilhoConfig = { status_de: statusDe, status_para: statusPara, tipo_pedido: tipoPedido || null };
     } else if (gatilhoTipo === "tempo_sem_acao_financeiro") {
       gatilhoConfig = { modulo: "financeiro", horas: horasSemAcao, tipo_pedido: tipoPedido || null };
+    } else if (gatilhoTipo === "contrato_enviado_assinatura") {
+      gatilhoConfig = { destinatario: "vendedor" };
     }
 
     const acaoConfig: Record<string, any> = {
       template_id: templateId || null,
-      destinatario_tipo: destinatarioTipo,
-      destinatario_valor: destinatarioRole || null,
-      usuario_ids: usuarioIds,
+      destinatario_tipo: gatilhoTipo === "contrato_enviado_assinatura" ? "vendedor" : destinatarioTipo,
+      destinatario_valor: gatilhoTipo === "contrato_enviado_assinatura" ? null : (destinatarioRole || null),
+      usuario_ids: gatilhoTipo === "contrato_enviado_assinatura" ? [] : usuarioIds,
     };
 
     const payload = {
@@ -319,6 +323,9 @@ export default function Automacoes() {
                       )}
                       {a.gatilho_tipo === "tempo_sem_acao_financeiro" && (
                         <p className="text-xs text-muted-foreground mt-1">{a.gatilho_config?.horas || 24}h sem ação</p>
+                      )}
+                      {a.gatilho_tipo === "contrato_enviado_assinatura" && (
+                        <p className="text-xs text-muted-foreground mt-1">→ Vendedor do pedido</p>
                       )}
                       {(a.gatilho_config as any)?.tipo_pedido && (a.gatilho_config as any).tipo_pedido !== "qualquer" && (
                         <Badge variant="secondary" className="text-[10px] mt-1">{(a.gatilho_config as any).tipo_pedido}</Badge>
@@ -443,6 +450,18 @@ export default function Automacoes() {
                   <p className="text-xs text-muted-foreground">O alerta será disparado quando o pedido ficar na fila do financeiro por esse tempo sem ser processado.</p>
                 </div>
               )}
+
+              {gatilhoTipo === "contrato_enviado_assinatura" && (
+                <div className="pl-4 border-l-2 border-muted space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Dispara quando um contrato é enviado para assinatura via ZapSign.
+                    O destinatário é <strong>sempre o vendedor</strong> do pedido vinculado ao contrato.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Variáveis disponíveis: <code>{"{vendedor.nome}"}</code>, <code>{"{cliente.nome_fantasia}"}</code>, <code>{"{contrato.numero}"}</code>, <code>{"{decisor.nome}"}</code>, <code>{"{contrato.sign_url}"}</code>
+                  </p>
+                </div>
+              )}
             </div>
 
             <Separator />
@@ -490,16 +509,24 @@ export default function Automacoes() {
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label>Destinatários</Label>
-                <Select value={destinatarioTipo} onValueChange={setDestinatarioTipo}>
-                  <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="role">Por perfil (role)</SelectItem>
-                    <SelectItem value="usuarios">Usuários específicos</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {gatilhoTipo === "contrato_enviado_assinatura" ? (
+                <div className="pl-4 border-l-2 border-muted">
+                  <p className="text-sm text-muted-foreground">
+                    Destinatário fixo: <strong>Vendedor do pedido</strong> vinculado ao contrato.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Destinatários</Label>
+                  <Select value={destinatarioTipo} onValueChange={setDestinatarioTipo}>
+                    <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="role">Por perfil (role)</SelectItem>
+                      <SelectItem value="usuarios">Usuários específicos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {destinatarioTipo === "role" && (
                 <div className="space-y-2 pl-4 border-l-2 border-muted">

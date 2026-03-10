@@ -1079,63 +1079,68 @@ serve(async (req) => {
       }
     }
 
-    // ─── Process: Lembretes 24h para vendedores (contratos aguardando assinatura) ───
-    try {
-      const now24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data: lembretesPendentes } = await supabase
-        .from("contratos_vendedor_lembretes")
-        .select("*")
-        .eq("lembrete_24h_enviado", false)
-        .lt("enviado_em", now24h);
+    // ─── Process: contrato_enviado_assinatura (event-driven) ───
+    if (body?.evento === "contrato_enviado_assinatura") {
+      const contratoAssinaturaAutos = automacoes.filter((a: any) => a.gatilho_tipo === "contrato_enviado_assinatura");
 
-      if (lembretesPendentes && lembretesPendentes.length > 0) {
-        // Verificar quais contratos ainda estão pendentes de assinatura
-        const contratoIds = lembretesPendentes.map((l: any) => l.contrato_id);
-        const { data: zapsignRecords } = await supabase
-          .from("contratos_zapsign")
-          .select("contrato_id, status")
-          .in("contrato_id", contratoIds);
+      for (const automacao of contratoAssinaturaAutos) {
+        const template = automacao.acao_config?.template_id ? templateMap[automacao.acao_config.template_id] : null;
+        if (!template) { console.warn(`[AUTO] Automação ${automacao.nome}: sem template configurado`); continue; }
 
-        const zStatusMap: Record<string, string> = {};
-        (zapsignRecords || []).forEach((z: any) => { zStatusMap[z.contrato_id] = z.status; });
+        // Load contrato + pedido + cliente + vendedor
+        const { data: contrato } = await supabase
+          .from("contratos")
+          .select("id, numero_exibicao, cliente_id, pedido_id")
+          .eq("id", body.contrato_id)
+          .maybeSingle();
+        if (!contrato?.pedido_id) continue;
 
-        // WhatsApp config
-        const whatsappCfg = whatsappEnabled ? whatsappConfig : null;
+        const { data: pedido } = await supabase
+          .from("pedidos")
+          .select("vendedor_id, filial_id")
+          .eq("id", contrato.pedido_id)
+          .maybeSingle();
+        if (!pedido?.vendedor_id) continue;
 
-        for (const lembrete of lembretesPendentes) {
-          const zStatus = zStatusMap[lembrete.contrato_id];
-          // Se já assinou, marcar lembrete como enviado (cancelar)
-          if (zStatus === "Assinado" || zStatus === "signed") {
-            await supabase.from("contratos_vendedor_lembretes")
-              .update({ lembrete_24h_enviado: true, lembrete_24h_em: new Date().toISOString() })
-              .eq("id", lembrete.id);
-            console.log(`[LEMBRETE] Contrato ${lembrete.contrato_numero} já assinado, lembrete cancelado.`);
-            continue;
-          }
+        const { data: vendedorProfile } = await supabase
+          .from("profiles")
+          .select("full_name, telefone, user_id")
+          .eq("user_id", pedido.vendedor_id)
+          .maybeSingle();
+        if (!vendedorProfile?.telefone) {
+          console.warn(`[AUTO] Vendedor sem telefone para contrato ${contrato.numero_exibicao}`);
+          continue;
+        }
 
-          // Buscar telefone do vendedor
-          const { data: vendedorProfile } = await supabase
-            .from("profiles")
-            .select("full_name, telefone")
-            .eq("user_id", lembrete.vendedor_user_id)
-            .maybeSingle();
+        const { data: cliente } = await supabase
+          .from("clientes")
+          .select("nome_fantasia")
+          .eq("id", contrato.cliente_id)
+          .maybeSingle();
 
-          if (!vendedorProfile?.telefone) {
-            console.warn(`[LEMBRETE] Vendedor sem telefone para contrato ${lembrete.contrato_numero}`);
-            await supabase.from("contratos_vendedor_lembretes")
-              .update({ lembrete_24h_enviado: true, lembrete_24h_em: new Date().toISOString() })
-              .eq("id", lembrete.id);
-            continue;
-          }
+        const clienteNome = cliente?.nome_fantasia || "N/A";
+        const decisorNome = body.decisor_nome || "Decisor";
+        const signUrl = body.sign_url || "";
 
-          const msgLembrete = `Oi, ${vendedorProfile.full_name}, tudo bem?\n\nPassando para acompanhar o contrato nº ${lembrete.contrato_numero} da ${lembrete.cliente_nome}. Notei que o @${lembrete.decisor_nome} ainda não conseguiu assinar.\n\nSurgiu alguma dúvida ou houve algum problema técnico com o link? Se precisar de qualquer ajuda para explicar algum ponto ou agilizar o processo por aqui, é só me dar um alô.\n\nSegue o link novamente para facilitar:\n🔗 ${lembrete.sign_url || "Link indisponível"}\n\nVamos tentar fechar isso hoje para não perdermos o cronograma?`;
+        const replaceVars = (text: string) => {
+          return text
+            .replace(/\{vendedor\.nome\}/g, vendedorProfile.full_name || "Vendedor")
+            .replace(/\{cliente\.nome_fantasia\}/g, clienteNome)
+            .replace(/\{contrato\.numero\}/g, contrato.numero_exibicao || "N/A")
+            .replace(/\{decisor\.nome\}/g, decisorNome)
+            .replace(/\{contrato\.sign_url\}/g, signUrl)
+            .replace(/\{saudacao\}/g, getSaudacao());
+        };
 
-          if (whatsappCfg) {
+        // Enviar WhatsApp para o vendedor
+        if (automacao.acao_tipo === "whatsapp" || automacao.acao_tipo === "whatsapp_e_notificacao") {
+          if (whatsappEnabled) {
+            const text = replaceVars(template.conteudo);
             let formattedNumber = vendedorProfile.telefone.replace(/\D/g, "");
             if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
             if (!formattedNumber.startsWith("55")) formattedNumber = "55" + formattedNumber;
 
-            let baseUrl = whatsappCfg.server_url!.replace(/\/+$/, "");
+            let baseUrl = whatsappConfig!.server_url!.replace(/\/+$/, "");
             try {
               const parsed = new URL(baseUrl);
               if (parsed.protocol === "https:" && parsed.port && parsed.port !== "443") {
@@ -1143,26 +1148,193 @@ serve(async (req) => {
               }
             } catch { /* keep */ }
 
+            const resolvedSetorId = template?.setor_id || null;
+            const instanceName = resolvedSetorId ? (setorInstanceMap[resolvedSetorId] || "Softflow_WhatsApp") : "Softflow_WhatsApp";
+
             try {
-              await fetch(`${baseUrl}/message/sendText/Softflow_WhatsApp`, {
+              await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", apikey: whatsappCfg.token! },
-                body: JSON.stringify({ number: formattedNumber, text: msgLembrete }),
+                headers: { "Content-Type": "application/json", apikey: whatsappConfig!.token! },
+                body: JSON.stringify({ number: formattedNumber, text }),
               });
-              console.log(`[LEMBRETE] WhatsApp 24h enviado para ${vendedorProfile.full_name} (contrato ${lembrete.contrato_numero})`);
+              console.log(`[AUTO] WhatsApp contrato enviado → ${vendedorProfile.full_name}`);
             } catch (err) {
-              console.error(`[LEMBRETE] Erro WhatsApp 24h:`, err);
+              console.error(`[AUTO] Erro WhatsApp contrato:`, err);
             }
           }
+        }
 
-          await supabase.from("contratos_vendedor_lembretes")
-            .update({ lembrete_24h_enviado: true, lembrete_24h_em: new Date().toISOString() })
-            .eq("id", lembrete.id);
-          totalProcessed++;
+        // Registrar lembrete para acompanhamento (cron)
+        try {
+          await supabase.from("contratos_vendedor_lembretes").upsert({
+            contrato_id: contrato.id,
+            vendedor_user_id: pedido.vendedor_id,
+            cliente_nome: clienteNome,
+            contrato_numero: contrato.numero_exibicao,
+            decisor_nome: decisorNome,
+            sign_url: signUrl,
+          }, { onConflict: "contrato_id" });
+        } catch (err) {
+          console.error(`[AUTO] Erro ao registrar lembrete:`, err);
+        }
+
+        // Log
+        await supabase.from("automacoes_log").insert({
+          automacao_id: automacao.id,
+          referencia_tipo: "contrato",
+          referencia_id: contrato.id,
+          canal: automacao.acao_tipo,
+          nivel: 1,
+          detalhes: {
+            evento: "contrato_enviado_assinatura",
+            vendedor: vendedorProfile.full_name,
+            cliente: clienteNome,
+            contrato_numero: contrato.numero_exibicao,
+          },
+        });
+        totalProcessed++;
+      }
+    }
+
+    // ─── Process: Lembretes de contratos aguardando assinatura (cron) ───
+    try {
+      const contratoAssinaturaAutos = automacoes.filter(
+        (a: any) => a.gatilho_tipo === "contrato_enviado_assinatura" && a.lembrete_ativo
+      );
+
+      if (contratoAssinaturaAutos.length > 0) {
+        const { data: lembretesPendentes } = await supabase
+          .from("contratos_vendedor_lembretes")
+          .select("*")
+          .eq("lembrete_24h_enviado", false);
+
+        if (lembretesPendentes && lembretesPendentes.length > 0) {
+          const contratoIds = lembretesPendentes.map((l: any) => l.contrato_id);
+          const { data: zapsignRecords } = await supabase
+            .from("contratos_zapsign")
+            .select("contrato_id, status")
+            .in("contrato_id", contratoIds);
+          const zStatusMap: Record<string, string> = {};
+          (zapsignRecords || []).forEach((z: any) => { zStatusMap[z.contrato_id] = z.status; });
+
+          // Get existing logs for level tracking
+          const relevantAutoIds = contratoAssinaturaAutos.map((a: any) => a.id);
+          const { data: existingLogs } = await supabase
+            .from("automacoes_log")
+            .select("automacao_id, referencia_id, nivel, executado_em")
+            .in("automacao_id", relevantAutoIds)
+            .in("referencia_id", contratoIds)
+            .eq("referencia_tipo", "contrato");
+
+          for (const lembrete of lembretesPendentes) {
+            const zStatus = zStatusMap[lembrete.contrato_id];
+            if (zStatus === "Assinado" || zStatus === "signed") {
+              await supabase.from("contratos_vendedor_lembretes")
+                .update({ lembrete_24h_enviado: true, lembrete_24h_em: new Date().toISOString() })
+                .eq("id", lembrete.id);
+              console.log(`[LEMBRETE] Contrato ${lembrete.contrato_numero} assinado, lembrete cancelado.`);
+              continue;
+            }
+
+            for (const automacao of contratoAssinaturaAutos) {
+              const intervaloHoras = automacao.lembrete_intervalo_horas || 24;
+              const maxLembretes = automacao.lembrete_maximo || 3;
+              const template = automacao.acao_config?.template_id ? templateMap[automacao.acao_config.template_id] : null;
+
+              // Check logs for this automacao + contrato
+              const logs = (existingLogs || []).filter(
+                (l: any) => l.automacao_id === automacao.id && l.referencia_id === lembrete.contrato_id
+              );
+              const maxNivel = logs.length > 0 ? Math.max(...logs.map((l: any) => l.nivel)) : 0;
+
+              if (maxNivel >= maxLembretes + 1) {
+                // Already sent max reminders (+1 for initial), mark as done
+                await supabase.from("contratos_vendedor_lembretes")
+                  .update({ lembrete_24h_enviado: true, lembrete_24h_em: new Date().toISOString() })
+                  .eq("id", lembrete.id);
+                continue;
+              }
+
+              // Check if enough time passed since last log
+              const lastLog = logs.sort((a: any, b: any) => new Date(b.executado_em).getTime() - new Date(a.executado_em).getTime())[0];
+              const lastTime = lastLog ? new Date(lastLog.executado_em).getTime() : new Date(lembrete.enviado_em).getTime();
+              const horasSinceLast = (now - lastTime) / (1000 * 60 * 60);
+
+              if (horasSinceLast < intervaloHoras) continue;
+
+              // Get vendedor profile
+              const { data: vendedorProfile } = await supabase
+                .from("profiles")
+                .select("full_name, telefone")
+                .eq("user_id", lembrete.vendedor_user_id)
+                .maybeSingle();
+
+              if (!vendedorProfile?.telefone) {
+                await supabase.from("contratos_vendedor_lembretes")
+                  .update({ lembrete_24h_enviado: true, lembrete_24h_em: new Date().toISOString() })
+                  .eq("id", lembrete.id);
+                continue;
+              }
+
+              const currentNivel = maxNivel + 1;
+
+              // Use lembrete template if available, else use the same template
+              if (template && whatsappEnabled) {
+                const text = template.conteudo
+                  .replace(/\{vendedor\.nome\}/g, vendedorProfile.full_name || "Vendedor")
+                  .replace(/\{cliente\.nome_fantasia\}/g, lembrete.cliente_nome)
+                  .replace(/\{contrato\.numero\}/g, lembrete.contrato_numero)
+                  .replace(/\{decisor\.nome\}/g, lembrete.decisor_nome)
+                  .replace(/\{contrato\.sign_url\}/g, lembrete.sign_url || "Link indisponível")
+                  .replace(/\{saudacao\}/g, getSaudacao());
+
+                let formattedNumber = vendedorProfile.telefone.replace(/\D/g, "");
+                if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
+                if (!formattedNumber.startsWith("55")) formattedNumber = "55" + formattedNumber;
+
+                let baseUrl = whatsappConfig!.server_url!.replace(/\/+$/, "");
+                try {
+                  const parsed = new URL(baseUrl);
+                  if (parsed.protocol === "https:" && parsed.port && parsed.port !== "443") {
+                    baseUrl = baseUrl.replace(/^https:/, "http:");
+                  }
+                } catch { /* keep */ }
+
+                const resolvedSetorId = template?.setor_id || null;
+                const instanceName = resolvedSetorId ? (setorInstanceMap[resolvedSetorId] || "Softflow_WhatsApp") : "Softflow_WhatsApp";
+
+                try {
+                  await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", apikey: whatsappConfig!.token! },
+                    body: JSON.stringify({ number: formattedNumber, text }),
+                  });
+                  console.log(`[LEMBRETE] WhatsApp lembrete #${currentNivel} → ${vendedorProfile.full_name} (${lembrete.contrato_numero})`);
+                } catch (err) {
+                  console.error(`[LEMBRETE] Erro WhatsApp:`, err);
+                }
+              }
+
+              // Log execution
+              await supabase.from("automacoes_log").insert({
+                automacao_id: automacao.id,
+                referencia_tipo: "contrato",
+                referencia_id: lembrete.contrato_id,
+                canal: automacao.acao_tipo,
+                nivel: currentNivel,
+                detalhes: {
+                  evento: "contrato_lembrete_assinatura",
+                  vendedor: vendedorProfile.full_name,
+                  contrato_numero: lembrete.contrato_numero,
+                },
+              });
+              totalProcessed++;
+            }
+          }
         }
       }
     } catch (err) {
-      console.error("[LEMBRETE] Erro ao processar lembretes 24h:", err);
+      console.error("[LEMBRETE] Erro ao processar lembretes:", err);
     }
 
     console.log(`[AUTO] Processamento concluído: ${totalProcessed} automações disparadas.`);
