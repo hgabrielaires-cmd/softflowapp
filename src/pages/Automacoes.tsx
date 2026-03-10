@@ -461,8 +461,6 @@ export default function Automacoes() {
                 </div>
               )}
             </div>
-              )}
-            </div>
 
             <Separator />
 
