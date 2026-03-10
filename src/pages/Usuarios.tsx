@@ -680,9 +680,9 @@ export default function Usuarios() {
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label className="text-sm font-medium">Status</Label>
-                      <p className="text-xs text-muted-foreground">{editActive ? "Usuário ativo no sistema" : "Usuário sem acesso ao sistema"}</p>
+                      <p className="text-xs text-muted-foreground">{f.editActive ? "Usuário ativo no sistema" : "Usuário sem acesso ao sistema"}</p>
                     </div>
-                    <Switch checked={editActive} onCheckedChange={setEditActive} />
+                    <Switch checked={f.editActive} onCheckedChange={f.setEditActive} />
                   </div>
                 </TabsContent>
 
