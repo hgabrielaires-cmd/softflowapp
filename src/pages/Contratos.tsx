@@ -188,7 +188,7 @@ export default function Contratos() {
   const [retroClienteSearchFocused, setRetroClienteSearchFocused] = useState(false);
 
   // Novo cliente inline no retroativo
-  const UF_LIST = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+  
   const emptyRetroClienteForm = { nome_fantasia: "", razao_social: "", cnpj_cpf: "", contato_nome: "", telefone: "", email: "", cidade: "", uf: "", cep: "", logradouro: "", numero: "", complemento: "", bairro: "" };
   const [openRetroClienteDialog, setOpenRetroClienteDialog] = useState(false);
   const [retroClienteForm, setRetroClienteForm] = useState(emptyRetroClienteForm);
