@@ -725,7 +725,7 @@ export default function Usuarios() {
                           Permite enviar o resumo do espelho do cliente via WhatsApp diretamente pelo sistema.
                         </p>
                       </div>
-                      <Switch checked={editPermiteEnviarEspelho} onCheckedChange={setEditPermiteEnviarEspelho} />
+                      <Switch checked={f.editPermiteEnviarEspelho} onCheckedChange={f.setEditPermiteEnviarEspelho} />
                     </div>
                     <div className="border-t border-border" />
                     <div className="flex items-center justify-between">
