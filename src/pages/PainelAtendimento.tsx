@@ -558,7 +558,7 @@ export default function PainelAtendimento() {
       await supabase.from("painel_agendamentos").delete().eq("card_id", detailCard.id);
       const etapaDestino = etapas.find(e => e.id === etapaDestinoId);
       await registrarEntradaEtapa(detailCard.id, etapaDestinoId!, etapaDestino?.nome || "Etapa Inicial");
-      const { error } = await supabase.from("painel_atendimento").update({ etapa_id: etapaDestinoId, iniciado_em: null, iniciado_por: null, pausado: false, pausado_em: null, pausado_por: null, pausado_motivo: null, status_projeto: "ativo", etapa_origem_id: null } as any).eq("id", detailCard.id);
+      const { error } = await supabase.from("painel_atendimento").update({ etapa_id: etapaDestinoId, iniciado_em: null, iniciado_por: null, pausado: false, pausado_em: null, pausado_por: null, pausado_motivo: null, status_projeto: "ativo", etapa_origem_id: null }).eq("id", detailCard.id);
       if (error) throw error;
       const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
       await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, etapa_id: etapaDestinoId, criado_por: user.id, texto: `🔄 Projeto resetado por ${autorNome}: ${resetarMotivo.trim()}` });
