@@ -48,12 +48,20 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus, Tag, ArrowUpCircle, FileText, AlertCircle, Eye, Users, Star, Trash2, MapPin, Send, MessageSquare, Paperclip, Download } from "lucide-react";
 import { ClientePlanViewer } from "@/components/ClientePlanViewer";
-import { PedidoComentarios } from "@/components/PedidoComentarios";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TablePagination } from "@/components/TablePagination";
+
+// ─── Extracted modules ────────────────────────────────────────────────────────
+import type { PedidoWithJoins, FormState, ModuloOpcional, ModuloAdicionadoItem, ServicoAdicionadoItem, DraftComentario, ClienteFormState, ClienteContatoInline } from "./pedidos/types";
+import { UF_LIST, emptyClienteForm, STATUS_OPTIONS, STATUS_COLORS, FIN_STATUS_COLORS, emptyForm, PRIORIDADES_DRAFT, PRIORIDADE_MAP_DRAFT, MAX_FILE_SIZE_DRAFT, ITEMS_PER_PAGE } from "./pedidos/constants";
+import { fmtBRL, applyDesconto, applyAcrescimo } from "./pedidos/helpers";
+import { VisualizarPedidoDialog } from "./pedidos/components/VisualizarPedidoDialog";
+import { ClienteRapidoDialog } from "./pedidos/components/ClienteRapidoDialog";
+import { ComentarioDraftDialog } from "./pedidos/components/ComentarioDraftDialog";
+import { UpgradePlanoDialog } from "./pedidos/components/UpgradePlanoDialog";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
