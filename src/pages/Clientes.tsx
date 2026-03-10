@@ -443,15 +443,10 @@ export default function Clientes() {
     fetchData();
   }
 
-  async function toggleAtivo(c: Cliente) {
-    const { error } = await supabase.from("clientes").update({ ativo: !c.ativo }).eq("id", c.id);
-    if (error) { toast.error("Erro ao atualizar status"); return; }
-    setClientes((prev) => prev.map((x) => x.id === c.id ? { ...x, ativo: !x.ativo } : x));
+  async function handleToggleAtivo(c: Cliente) {
+    const ok = await toggleAtivo(c);
+    if (!ok) toast.error("Erro ao atualizar status");
   }
-
-  const filialNome = (id: string | null) => filiais.find((f) => f.id === id)?.nome || "—";
-
-
 
   return (
     <AppLayout>
