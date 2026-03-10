@@ -237,6 +237,8 @@ export interface ChecklistItem {
   texto: string;
   concluido: boolean;
   tipo: ChecklistItemTipo;
+  mesa_id?: string | null;
+  etapa_execucao_id?: string | null;
 }
 
 export interface JornadaAtividade {
