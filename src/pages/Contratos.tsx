@@ -77,8 +77,6 @@ import {
   Pencil,
   Trash2,
   Users,
-  Tag,
-  CalendarDays,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
