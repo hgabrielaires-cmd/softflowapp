@@ -151,3 +151,40 @@ export function checkDescontoValoresMudaram(
     form.desconto_mensalidade_tipo !== editingPedido.desconto_mensalidade_tipo
   );
 }
+
+// ─── Solicitação de desconto payload ──────────────────────────────────────
+
+export interface SolicitacaoDescontoData {
+  pedido_id: string;
+  vendedor_id: string;
+  descontoImpPerc: number;
+  descontoMensPerc: number;
+}
+
+export function buildSolicitacaoDescontoPayload(
+  form: FormState,
+  data: SolicitacaoDescontoData,
+) {
+  return {
+    pedido_id: data.pedido_id,
+    vendedor_id: data.vendedor_id,
+    desconto_implantacao_tipo: form.desconto_implantacao_tipo,
+    desconto_implantacao_valor: parseFloat(form.desconto_implantacao_valor) || 0,
+    desconto_mensalidade_tipo: form.desconto_mensalidade_tipo,
+    desconto_mensalidade_valor: parseFloat(form.desconto_mensalidade_valor) || 0,
+    desconto_implantacao_percentual: data.descontoImpPerc,
+    desconto_mensalidade_percentual: data.descontoMensPerc,
+    status: "Aguardando" as const,
+  };
+}
+
+// ─── Payload helpers for status reset ─────────────────────────────────────
+
+export function applyFinanceiroReset(payload: PedidoInsert, statusPedido: string): void {
+  payload.financeiro_status = "Aguardando";
+  payload.financeiro_motivo = null;
+  payload.financeiro_aprovado_em = null;
+  payload.financeiro_aprovado_por = null;
+  payload.contrato_liberado = false;
+  payload.status_pedido = statusPedido;
+}
