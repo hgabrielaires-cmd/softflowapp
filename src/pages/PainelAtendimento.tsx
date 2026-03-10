@@ -356,7 +356,7 @@ export default function PainelAtendimento() {
       const { data: histOpen } = await supabase.from("painel_historico_etapas").select("id, entrada_em").eq("card_id", cardId).is("saida_em", null).order("entrada_em", { ascending: false }).limit(1);
       if (histOpen && histOpen.length > 0) {
         const atrasoInicioHoras = Math.round(((now.getTime() - new Date(histOpen[0].entrada_em).getTime()) / (1000 * 60 * 60)) * 100) / 100;
-        await supabase.from("painel_historico_etapas").update({ atraso_inicio_horas: atrasoInicioHoras } as any).eq("id", histOpen[0].id);
+        await supabase.from("painel_historico_etapas").update({ atraso_inicio_horas: atrasoInicioHoras }).eq("id", histOpen[0].id);
       }
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] }); toast.success("Atendimento iniciado! Você é o responsável."); },
