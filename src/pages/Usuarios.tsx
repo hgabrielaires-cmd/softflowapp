@@ -144,7 +144,7 @@ export default function Usuarios() {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => openEditDialog(user)}
+                          onClick={() => f.openEditDialog(user)}
                           title="Editar usuário"
                         >
                           <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
