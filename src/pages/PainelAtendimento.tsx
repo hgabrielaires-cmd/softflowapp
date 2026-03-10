@@ -697,14 +697,20 @@ export default function PainelAtendimento() {
     if (dragCardId) {
       const card = cards.find((c) => c.id === dragCardId);
       if (card && card.etapa_id !== etapaId) {
-        const etapaAtual = etapas.find((e) => e.id === card.etapa_id);
         const etapaDestino = etapas.find((e) => e.id === etapaId);
-        if (etapaAtual && etapaDestino && etapaDestino.ordem < etapaAtual.ordem && !podeVoltarEtapa) { toast.error("Você não tem permissão para voltar etapa."); setDragCardId(null); return; }
-        if (etapaDestino?.nome === "Em Execução" && etapaAtual && etapaAtual.ordem < 2) { toast.error("Complete as etapas obrigatórias antes de mover para 'Em Execução'."); setDragCardId(null); return; }
+        if (!etapaDestino || !etapaDestino.ativo) {
+          toast.error("Etapa de destino inválida ou inativa. Movimento cancelado.");
+          setDragCardId(null);
+          return;
+        }
+        const etapaAtual = etapas.find((e) => e.id === card.etapa_id);
+        if (etapaAtual && etapaDestino.ordem < etapaAtual.ordem && !podeVoltarEtapa) { toast.error("Você não tem permissão para voltar etapa."); setDragCardId(null); return; }
+        if (etapaDestino.nome === "Em Execução" && etapaAtual && etapaAtual.ordem < 2) { toast.error("Complete as etapas obrigatórias antes de mover para 'Em Execução'."); setDragCardId(null); return; }
         (async () => {
           const dragSla = getSlaEtapaForCard(card, jornadaSlaMap, etapas);
           await registrarSaidaEtapa(card.id, card.etapa_id, dragSla);
-          if (etapaDestino) { await registrarEntradaEtapa(card.id, etapaId, etapaDestino.nome); notificarSeguidoresAvanco(card.id, etapaDestino.nome, card.clientes?.apelido || card.clientes?.nome_fantasia || "Projeto"); }
+          await registrarEntradaEtapa(card.id, etapaId, etapaDestino.nome);
+          notificarSeguidoresAvanco(card.id, etapaDestino.nome, card.clientes?.apelido || card.clientes?.nome_fantasia || "Projeto");
         })();
         moverCard.mutate({ cardId: dragCardId, etapaId });
       }
