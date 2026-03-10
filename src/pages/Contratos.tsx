@@ -2332,216 +2332,52 @@ Estou à disposição.`;
       )}
 
       {/* Encerrar AlertDialog */}
-      <AlertDialog open={openEncerrar} onOpenChange={(open) => { setOpenEncerrar(open); if (!open) setMotivoCancelamento(""); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancelar contrato?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação cancelará o contrato{" "}
-              <strong>{selected?.numero_exibicao}</strong> do cliente{" "}
-              <strong>{selected?.clientes?.nome_fantasia}</strong>. Esta ação não pode
-              ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Motivo do cancelamento</label>
-            <textarea
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[80px]"
-              placeholder="Informe o motivo do cancelamento..."
-              value={motivoCancelamento}
-              onChange={(e) => setMotivoCancelamento(e.target.value)}
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Voltar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleEncerrar}
-              disabled={processando || !motivoCancelamento.trim()}
-            >
-              {processando ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : null}
-              Confirmar Cancelamento
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <EncerrarContratoDialog
+        open={openEncerrar}
+        onOpenChange={setOpenEncerrar}
+        contratoNumero={selected?.numero_exibicao}
+        clienteNome={selected?.clientes?.nome_fantasia}
+        motivoCancelamento={motivoCancelamento}
+        setMotivoCancelamento={setMotivoCancelamento}
+        onConfirm={handleEncerrar}
+        processando={processando}
+      />
 
       {/* Cancelar Projeto vinculado Dialog */}
-      <Dialog open={openCancelarProjeto} onOpenChange={(open) => { if (!open) { setOpenCancelarProjeto(false); setCancelarProjetoMotivo(""); setProjetosAtivos([]); } }}>
-        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-5 w-5" />
-              Projeto encontrado no Painel
-            </DialogTitle>
-            <DialogDescription>
-              Este contrato possui projeto(s) ativo(s) no painel de atendimento. O que deseja fazer?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            {projetosAtivos.map((p) => (
-              <div key={p.id} className="rounded-md border border-border p-3 text-sm space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{(p.clientes as any)?.nome_fantasia}</span>
-                  <Badge variant="outline" className="text-xs">{p.tipo_operacao}</Badge>
-                </div>
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5" />
-                  <span>Etapa atual: <strong className="text-foreground">{(p.painel_etapas as any)?.nome || "Desconhecida"}</strong></span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-col gap-2 mt-2">
-            <Button
-              variant="destructive"
-              onClick={handleCancelarProjetosVinculados}
-              disabled={processando}
-              className="w-full"
-            >
-              {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
-              Sim, excluir do painel
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleManterProjetoComTagCancelado}
-              disabled={processando}
-              className="w-full border-destructive/30 text-destructive hover:bg-destructive/10"
-            >
-              {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Tag className="h-4 w-4 mr-2" />}
-              Não, manter com tag "Cancelado"
-            </Button>
-            <Button variant="ghost" onClick={() => { setOpenCancelarProjeto(false); setCancelarProjetoMotivo(""); setProjetosAtivos([]); }} className="w-full text-muted-foreground">
-              Ignorar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CancelarProjetoDialog
+        open={openCancelarProjeto}
+        onOpenChange={setOpenCancelarProjeto}
+        projetosAtivos={projetosAtivos}
+        processando={processando}
+        onExcluirProjetos={handleCancelarProjetosVinculados}
+        onManterComTag={handleManterProjetoComTagCancelado}
+        onIgnorar={() => { setOpenCancelarProjeto(false); setCancelarProjetoMotivo(""); setProjetosAtivos([]); }}
+      />
 
       {/* Agendamentos de Projeto Cancelado Dialog */}
-      <Dialog open={agendamentosCancelOpen} onOpenChange={(open) => { if (!open) { setAgendamentosCancelOpen(false); setAgendamentosCancelados([]); } }}>
-        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-600">
-              <CalendarDays className="h-5 w-5" />
-              Compromissos Agendados
-            </DialogTitle>
-            <DialogDescription>
-              Existem {agendamentosCancelados.length} compromisso(s) agendado(s) para o(s) projeto(s) cancelado(s). Deseja removê-los da agenda?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 max-h-60 overflow-y-auto">
-            {agendamentosCancelados.map((ag: any) => (
-              <div key={ag.id} className="rounded-md border border-border p-2.5 text-sm flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="font-medium">{new Date(ag.data + "T12:00:00").toLocaleDateString("pt-BR")}</span>
-                </div>
-                <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                  {(ag.painel_atendimento as any)?.clientes?.nome_fantasia || ""} — {(ag.painel_atendimento as any)?.contratos?.numero_exibicao || ""}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-col gap-2 mt-2">
-            <Button
-              variant="destructive"
-              onClick={handleRemoverAgendamentosCancelados}
-              disabled={removendoAgendamentos}
-              className="w-full"
-            >
-              {removendoAgendamentos ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
-              Remover todos os compromissos
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => { setAgendamentosCancelOpen(false); setAgendamentosCancelados([]); }}
-              className="w-full"
-            >
-              Manter compromissos
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AgendamentosCancelDialog
+        open={agendamentosCancelOpen}
+        onOpenChange={setAgendamentosCancelOpen}
+        agendamentos={agendamentosCancelados}
+        removendo={removendoAgendamentos}
+        onRemover={handleRemoverAgendamentosCancelados}
+        onManter={() => { setAgendamentosCancelOpen(false); setAgendamentosCancelados([]); }}
+      />
 
       {/* Cancelar Aditivos Vinculados Dialog */}
-      <Dialog open={openCancelarAditivos} onOpenChange={(open) => {
-        if (!open) {
-          handleManterTodosAtivos();
-        }
-      }}>
-        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-5 w-5" />
-              Cancelar contratos vinculados?
-            </DialogTitle>
-            <DialogDescription>
-              O contrato base <strong>{contratoBaseCancelado?.numero_exibicao}</strong> foi cancelado. Existem{" "}
-              <strong>{aditivosVinculados.length}</strong> contrato(s) vinculado(s) ativo(s). Selecione quais deseja cancelar também:
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 max-h-60 overflow-y-auto">
-            {aditivosVinculados.map((aditivo) => (
-              <label
-                key={aditivo.id}
-                className="flex items-center gap-3 rounded-md border border-border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
-              >
-                <Checkbox
-                  checked={aditivosSelecionados.includes(aditivo.id)}
-                  onCheckedChange={(checked) => {
-                    setAditivosSelecionados(prev =>
-                      checked
-                        ? [...prev, aditivo.id]
-                        : prev.filter(id => id !== aditivo.id)
-                    );
-                  }}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-semibold text-sm">{aditivo.numero_exibicao}</span>
-                    {getTipoBadge(aditivo.tipo)}
-                  </div>
-                  {aditivo.pedidos?.tipo_pedido && (
-                    <span className="text-xs text-muted-foreground">
-                      {aditivo.pedidos.tipo_pedido === "Upgrade" ? "↑ Upgrade de Plano" : aditivo.pedidos.tipo_pedido === "Aditivo" ? "＋ Módulos Adicionais" : aditivo.pedidos.tipo_pedido === "OA" ? "📋 Ordem de Atendimento" : aditivo.pedidos.tipo_pedido}
-                    </span>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 shrink-0"
-                  title="Visualizar contrato"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleOpenDetail(aditivo);
-                  }}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-              </label>
-            ))}
-          </div>
-          <div className="flex justify-end gap-2 mt-2">
-            <Button variant="outline" onClick={handleManterTodosAtivos} disabled={processando}>
-              Manter todos ativos
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleCancelarAditivosSelecionados}
-              disabled={aditivosSelecionados.length === 0 || processando}
-            >
-              {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Cancelar {aditivosSelecionados.length} selecionado(s)
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CancelarAditivosDialog
+        open={openCancelarAditivos}
+        onOpenChange={setOpenCancelarAditivos}
+        contratoBaseCancelado={contratoBaseCancelado}
+        aditivosVinculados={aditivosVinculados}
+        aditivosSelecionados={aditivosSelecionados}
+        setAditivosSelecionados={setAditivosSelecionados}
+        processando={processando}
+        onManterTodos={handleManterTodosAtivos}
+        onCancelarSelecionados={handleCancelarAditivosSelecionados}
+        getTipoBadge={getTipoBadge}
+        onOpenDetail={handleOpenDetail}
+      />
 
       {/* (Old generation popup removed - now unified in ZapSign popup below) */}
 
