@@ -616,7 +616,7 @@ export default function Usuarios() {
                         </Label>
                         <p className="text-xs text-muted-foreground">Realiza atendimentos técnicos e pode ser apontado para agenda</p>
                       </div>
-                      <Switch checked={editIsTecnico} onCheckedChange={setEditIsTecnico} />
+                      <Switch checked={f.editIsTecnico} onCheckedChange={f.setEditIsTecnico} />
                     </div>
                     {editIsTecnico && (
                       <div className="space-y-2 pl-2 border-l-2 border-primary/30">
