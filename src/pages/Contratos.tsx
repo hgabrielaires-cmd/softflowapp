@@ -6,7 +6,7 @@ import { useCrudPermissions } from "@/hooks/useCrudPermissions";
 import { Filial } from "@/lib/supabase-types";
 import type { Contrato, ZapSignRecord, ModuloAdicionadoItem } from "./contratos/types";
 import { ITEMS_PER_PAGE, UF_LIST, ZAPSIGN_MSGS, WHATSAPP_MSGS, GERAR_MSGS_CONTRATO, GERAR_MSGS_OA } from "./contratos/constants";
-import { fmtBRL } from "./contratos/helpers";
+import { fmtBRL, gerarTermoAceite, type GerarTermoAceiteContext } from "./contratos/helpers";
 import { CadastroRetroativoDialog } from "./contratos/components/CadastroRetroativoDialog";
 import { EncerrarContratoDialog } from "./contratos/components/EncerrarContratoDialog";
 import { CancelarProjetoDialog } from "./contratos/components/CancelarProjetoDialog";
