@@ -668,6 +668,13 @@ export default function PainelAtendimento() {
     if (!detailCard) return;
     setFinalizando(true);
     try {
+      // Validar se todas as atividades da etapa estão concluídas
+      const atividadeIds = checklistEtapa.map((a: any) => a.id);
+      if (atividadeIds.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, atividadeIds)) {
+        toast.error("Conclua todas as atividades da etapa antes de finalizar.");
+        setFinalizando(false);
+        return;
+      }
       const etapasOrdenadas = [...etapas].sort((a, b) => a.ordem - b.ordem);
       const etapaAtualIdx = etapasOrdenadas.findIndex((e) => e.id === detailCard.etapa_id);
       if (etapaAtualIdx === -1) { toast.error("Etapa atual não encontrada na lista de etapas ativas. Verifique a configuração."); return; }
@@ -678,6 +685,7 @@ export default function PainelAtendimento() {
       const { error } = await supabase.from("painel_atendimento").update({ etapa_id: proximaEtapa.id, iniciado_em: null, iniciado_por: null }).eq("id", detailCard.id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+      queryClient.invalidateQueries({ queryKey: ["painel_atividade_execucao"] });
       toast.success(`Avançado para etapa: ${proximaEtapa.nome}`);
       const clienteNomeNotif = detailCard.clientes?.apelido || detailCard.clientes?.nome_fantasia || "Projeto";
       notificarSeguidoresAvanco(detailCard.id, proximaEtapa.nome, clienteNomeNotif);
