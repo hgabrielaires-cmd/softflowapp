@@ -1,85 +1,92 @@
-# Arquitetura SoftFlow — Padrão Oficial
-
-> Este documento é a referência obrigatória para toda criação ou refatoração de módulos no SoftFlow.
+Este documento é a referência obrigatória para toda criação ou refatoração de módulos no SoftFlow.
 
 ---
 
 ## 1. Estrutura de Diretório por Módulo
 
-```
 src/pages/<modulo>/
-├── index.ts              # Barrel exports
-├── types.ts              # Interfaces e tipos do domínio
-├── constants.ts          # Constantes, enums, opções de select
-├── helpers.ts            # Funções puras (formatação, cálculo, validação)
-├── use<Modulo>Queries.ts # Hook(s) de leitura (useQuery)
-├── use<Modulo>Form.ts    # Hook de mutações, estados de formulário, lógica de save
+├── index.ts
+├── types.ts
+├── constants.ts
+├── helpers.ts
+├── use<Modulo>Queries.ts
+├── use<Modulo>Form.ts
 └── components/
-    ├── <Dialog>Dialog.tsx # Cada diálogo grande em arquivo próprio
-    └── <Widget>.tsx       # Componentes visuais reutilizáveis do módulo
-```
+    ├── Dialog.tsx
+    └── Component.tsx
 
 ---
 
 ## 2. Responsabilidades
 
-| Camada | O que vai aqui | O que NÃO vai aqui |
-|---|---|---|
-| **Página principal** (`<Modulo>.tsx`) | Layout, filtros, tabela, paginação, wiring de dialogs | Queries, mutations, regras de negócio, JSX de dialogs |
-| **types.ts** | Interfaces de domínio, form states, props de componentes | Lógica, imports de Supabase |
-| **constants.ts** | Arrays de opções, ITEMS_PER_PAGE, mapas de labels | Lógica computada |
-| **helpers.ts** | Funções puras: formatação, cálculo, validação, badges | Chamadas ao banco, side effects |
-| **useXxxQueries.ts** | `useQuery` para leitura, derivações com `useMemo` | Mutations, estados de UI |
-| **useXxxForm.ts** | `useMutation`, estados de formulário, handlers de save | Renderização, JSX |
-| **components/*.tsx** | Dialogs, cards, widgets visuais isolados | Queries diretas, regras de negócio |
+Página principal (.tsx)
+Layout, filtros, tabela, paginação, wiring de dialogs.
+
+Não deve conter:
+queries, mutations, regras de negócio ou JSX de dialogs.
+
+types.ts
+Interfaces e tipos de domínio.
+
+constants.ts
+Constantes e enums.
+
+helpers.ts
+Funções puras.
+
+useQueries
+Hooks de leitura (useQuery).
+
+useForm
+Hooks de mutação e controle de formulário.
+
+components
+Componentes visuais e dialogs.
 
 ---
 
 ## 3. Regras Invioláveis
 
-1. **Página principal ≤ 500 linhas** — se passar, extrair.
-2. **Nenhum `useQuery`/`useMutation` no JSX** da página — sempre em hooks.
-3. **Nenhum `as any`** em operações de banco — tipar corretamente.
-4. **Dialogs > 100 linhas** viram componente em `components/`.
-5. **Regras de negócio sensíveis** (preço, permissão, validação) ficam em helpers ou hooks, nunca inline no JSX.
-6. **Barrel exports** (`index.ts`) obrigatório para cada módulo.
-7. **Design tokens** — usar variáveis semânticas do Tailwind (`bg-primary`, `text-muted-foreground`), nunca cores diretas.
-8. **Imports do Supabase** — sempre via `@/integrations/supabase/client`. Nunca editar `client.ts` ou `types.ts`.
+1. Página principal ≤ 500 linhas.
+2. Nenhum useQuery ou useMutation no JSX da página.
+3. Nenhum "as any" em queries de banco.
+4. Dialogs > 100 linhas devem virar componente.
+5. Regras de negócio nunca ficam no JSX.
+6. Barrel export obrigatório (index.ts).
+7. Usar tokens do Tailwind, nunca cores fixas.
+8. Supabase sempre via "@/integrations/supabase/client".
 
 ---
 
-## 4. Checklist de Entrega
+## 4. Regra de Crescimento de Arquivo
 
-Ao concluir qualquer módulo, informar:
+Se um arquivo ultrapassar:
 
-- [ ] Arquivos criados e alterados
-- [ ] Linhas antes → depois (arquivo principal)
-- [ ] Build limpo (`npm run build`)
-- [ ] Typecheck limpo
-- [ ] Módulo estabilizado (sim/não)
+600 linhas → refatorar
+800 linhas → dividir obrigatoriamente
 
----
-
-## 5. Módulos Já Estabilizados
-
-| Módulo | Antes | Depois | Redução |
-|---|---|---|---|
-| PainelAtendimento | ~4.800 | ~1.200 | 75% |
-| Pedidos | ~2.100 | ~490 | 77% |
-| Contratos | ~3.386 | ~846 | 75% |
-| Clientes | ~1.582 | ~290 | 82% |
-| JornadaImplantacao | ~1.257 | ~203 | 84% |
-| Usuarios | ~1.246 | ~228 | 82% |
-| Faturamento | ~1.054 | ~490 | 53% |
+Nenhuma página deve ultrapassar 1000 linhas.
 
 ---
 
-## 6. Próximos Candidatos (por complexidade)
+## 5. Padrão de Hooks
 
-1. **Planos.tsx** (~903 linhas)
-2. **Dashboard.tsx**
-3. **Agenda.tsx**
+use<Modulo>Queries
+use<Modulo>Form
+use<Modulo>Actions
 
 ---
 
-*Última atualização: 2026-03-10*
+## 6. Checklist de Entrega
+
+Sempre informar:
+
+• arquivos criados
+• arquivos alterados
+• linhas antes/depois
+• build status
+• módulo estabilizado
+
+---
+
+Este documento define o padrão oficial de arquitetura do SoftFlow.
