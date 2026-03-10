@@ -428,7 +428,7 @@ export default function Usuarios() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {q.loading ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
