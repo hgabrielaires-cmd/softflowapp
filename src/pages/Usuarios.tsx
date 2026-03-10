@@ -364,7 +364,7 @@ export default function Usuarios() {
                   </Label>
                   <p className="text-xs text-muted-foreground">Realiza atendimentos técnicos e pode ser apontado para agenda</p>
                 </div>
-                <Switch checked={inviteIsTecnico} onCheckedChange={setInviteIsTecnico} />
+                <Switch checked={f.inviteIsTecnico} onCheckedChange={f.setInviteIsTecnico} />
               </div>
               {inviteIsTecnico && (
                 <div className="space-y-2 pl-2 border-l-2 border-primary/30">
