@@ -101,3 +101,53 @@ export function buildPedidoPayload(
     pagamento_implantacao_observacao: form.pagamento_implantacao_observacao || null,
   };
 }
+
+// ─── Discount approval check ─────────────────────────────────────────────
+
+export interface DescontoAprovacaoResult {
+  descontoImpPerc: number;
+  descontoMensPerc: number;
+  precisaAprovacao: boolean;
+}
+
+export function checkDescontoAprovacao(
+  form: FormState,
+  descontoAtivo: boolean,
+  valorImplantacaoOriginal: number,
+  valorMensalidadeOriginal: number,
+  limiteImplantacao: number,
+  limiteMensalidade: number,
+): DescontoAprovacaoResult {
+  const descontoImpPerc = form.desconto_implantacao_tipo === "%"
+    ? parseFloat(form.desconto_implantacao_valor) || 0
+    : valorImplantacaoOriginal > 0
+      ? ((parseFloat(form.desconto_implantacao_valor) || 0) / valorImplantacaoOriginal) * 100
+      : 0;
+
+  const descontoMensPerc = form.desconto_mensalidade_tipo === "%"
+    ? parseFloat(form.desconto_mensalidade_valor) || 0
+    : valorMensalidadeOriginal > 0
+      ? ((parseFloat(form.desconto_mensalidade_valor) || 0) / valorMensalidadeOriginal) * 100
+      : 0;
+
+  const precisaAprovacaoImp = descontoAtivo && descontoImpPerc > 0 && descontoImpPerc > limiteImplantacao;
+  const precisaAprovacaoMens = descontoAtivo && descontoMensPerc > 0 && descontoMensPerc > limiteMensalidade;
+
+  return {
+    descontoImpPerc,
+    descontoMensPerc,
+    precisaAprovacao: precisaAprovacaoImp || precisaAprovacaoMens,
+  };
+}
+
+export function checkDescontoValoresMudaram(
+  form: FormState,
+  editingPedido: { desconto_implantacao_valor?: number; desconto_mensalidade_valor?: number; desconto_implantacao_tipo?: string; desconto_mensalidade_tipo?: string },
+): boolean {
+  return (
+    (parseFloat(form.desconto_implantacao_valor) || 0) !== (editingPedido.desconto_implantacao_valor ?? 0) ||
+    (parseFloat(form.desconto_mensalidade_valor) || 0) !== (editingPedido.desconto_mensalidade_valor ?? 0) ||
+    form.desconto_implantacao_tipo !== editingPedido.desconto_implantacao_tipo ||
+    form.desconto_mensalidade_tipo !== editingPedido.desconto_mensalidade_tipo
+  );
+}
