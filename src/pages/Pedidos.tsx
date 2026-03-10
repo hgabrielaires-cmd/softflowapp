@@ -142,12 +142,6 @@ export default function Pedidos() {
    const [clienteContatos, setClienteContatos] = useState<ClienteContatoInline[]>([]);
 
   // Draft comments (antes de salvar pedido)
-  interface DraftComentario {
-    texto: string;
-    prioridade: string;
-    arquivo: File | null;
-    arquivo_nome: string | null;
-  }
   const [draftComentarios, setDraftComentarios] = useState<DraftComentario[]>([]);
   const [openComentarioDialog, setOpenComentarioDialog] = useState(false);
   const [draftTexto, setDraftTexto] = useState("");
