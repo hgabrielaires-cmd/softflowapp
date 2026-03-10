@@ -543,21 +543,8 @@ export default function Pedidos() {
 
   // ─── Open create/edit ─────────────────────────────────────────────────────
 
-  async function carregarLimitesDesconto(vendedorUserId: string) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("desconto_limite_implantacao, desconto_limite_mensalidade")
-      .eq("user_id", vendedorUserId)
-      .single();
-    if (data) {
-      setLimiteDesconto({
-        implantacao: (data as any).desconto_limite_implantacao ?? 100,
-        mensalidade: (data as any).desconto_limite_mensalidade ?? 100,
-      });
-    } else {
-      setLimiteDesconto({ implantacao: 100, mensalidade: 100 });
-    }
-  }
+
+
 
   async function openCreate() {
     const defaultImp = (profile as any)?.comissao_implantacao_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
