@@ -457,12 +457,12 @@ export default function Usuarios() {
       </Dialog>
 
       {/* ── Edit Dialog ── */}
-      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+      <Dialog open={f.openEdit} onOpenChange={f.setOpenEdit}>
         <DialogContent className="max-w-xl flex flex-col max-h-[90vh]">
           <DialogHeader className="shrink-0">
             <DialogTitle>Editar usuário</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleEdit} className="flex-1 overflow-hidden flex flex-col">
+          <form onSubmit={f.handleEdit} className="flex-1 overflow-hidden flex flex-col">
             <Tabs defaultValue="dados" className="flex-1 flex flex-col overflow-hidden">
               <TabsList className="shrink-0 mb-3">
                 <TabsTrigger value="dados" className="gap-1.5">
