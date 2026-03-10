@@ -44,7 +44,7 @@ import { TablePagination } from "@/components/TablePagination";
 // ─── Extracted modules ────────────────────────────────────────────────────────
 import type { PedidoWithJoins, FormState, ModuloOpcional, ModuloAdicionadoItem, ServicoAdicionadoItem, DraftComentario, ClienteFormState, ClienteContatoInline } from "./pedidos/types";
 import { emptyClienteForm, STATUS_OPTIONS, STATUS_COLORS, FIN_STATUS_COLORS, emptyForm, PRIORIDADE_MAP_DRAFT, MAX_FILE_SIZE_DRAFT } from "./pedidos/constants";
-import { fmtBRL, applyDesconto, applyAcrescimo, validatePedidoForm, buildPedidoPayload } from "./pedidos/helpers";
+import { fmtBRL, applyDesconto, applyAcrescimo, validatePedidoForm, buildPedidoPayload, checkDescontoAprovacao, checkDescontoValoresMudaram } from "./pedidos/helpers";
 import { VisualizarPedidoDialog } from "./pedidos/components/VisualizarPedidoDialog";
 import { ClienteRapidoDialog } from "./pedidos/components/ClienteRapidoDialog";
 import { ComentarioDraftDialog } from "./pedidos/components/ComentarioDraftDialog";
@@ -658,17 +658,9 @@ export default function Pedidos() {
       const limiteImp = vendedorProfile?.desconto_limite_implantacao ?? 100;
       const limiteMens = vendedorProfile?.desconto_limite_mensalidade ?? 100;
 
-      // Calcular percentual de desconto aplicado
-      const descontoImpPerc = form.desconto_implantacao_tipo === "%"
-        ? parseFloat(form.desconto_implantacao_valor) || 0
-        : valorImplantacaoOriginal > 0 ? ((parseFloat(form.desconto_implantacao_valor) || 0) / valorImplantacaoOriginal) * 100 : 0;
-      const descontoMensPerc = form.desconto_mensalidade_tipo === "%"
-        ? parseFloat(form.desconto_mensalidade_valor) || 0
-        : valorMensalidadeOriginal > 0 ? ((parseFloat(form.desconto_mensalidade_valor) || 0) / valorMensalidadeOriginal) * 100 : 0;
-
-      const precisaAprovacaoImp = descontoAtivo && descontoImpPerc > 0 && descontoImpPerc > limiteImp;
-      const precisaAprovacaoMens = descontoAtivo && descontoMensPerc > 0 && descontoMensPerc > limiteMens;
-      const precisaAprovacao = precisaAprovacaoImp || precisaAprovacaoMens;
+      const { descontoImpPerc, descontoMensPerc, precisaAprovacao } = checkDescontoAprovacao(
+        form, descontoAtivo, valorImplantacaoOriginal, valorMensalidadeOriginal, limiteImp, limiteMens,
+      );
 
       const payload = buildPedidoPayload(form, {
         valorImplantacaoOriginal,
@@ -691,20 +683,7 @@ export default function Pedidos() {
         const wasAwaitingDesconto = editingPedido.status_pedido === "Aguardando Aprovação de Desconto";
         const wasDescontoAprovado = editingPedido.status_pedido === "Desconto Aprovado";
 
-        // Verificar se os valores de desconto mudaram em relação ao pedido original
-        const descontoImpValorNovo = parseFloat(form.desconto_implantacao_valor) || 0;
-        const descontoMensValorNovo = parseFloat(form.desconto_mensalidade_valor) || 0;
-        const descontoImpValorOriginal = editingPedido.desconto_implantacao_valor ?? 0;
-        const descontoMensValorOriginal = editingPedido.desconto_mensalidade_valor ?? 0;
-        const descontoImpTipoOriginal = editingPedido.desconto_implantacao_tipo;
-        const descontoMensTipoOriginal = editingPedido.desconto_mensalidade_tipo;
-        const descontoValoresMudaram =
-          descontoImpValorNovo !== descontoImpValorOriginal ||
-          descontoMensValorNovo !== descontoMensValorOriginal ||
-          form.desconto_implantacao_tipo !== descontoImpTipoOriginal ||
-          form.desconto_mensalidade_tipo !== descontoMensTipoOriginal;
-
-        // Se desconto já foi aprovado e os valores não mudaram, não reenviar para aprovação
+        const descontoValoresMudaram = checkDescontoValoresMudaram(form, editingPedido);
         const descontoJaAprovadoSemMudanca = wasDescontoAprovado && precisaAprovacao && !descontoValoresMudaram;
 
         if (precisaAprovacao && !descontoJaAprovadoSemMudanca) {
