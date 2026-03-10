@@ -57,7 +57,7 @@ export default function Usuarios() {
   const [filiaisLoaded, setFiliaisLoaded] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 15;
+  
   
 
   // Create dialog
