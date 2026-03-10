@@ -1250,7 +1250,7 @@ export default function PainelAtendimento() {
                 )}
                 <Button variant="outline" size="sm" onClick={() => fetchDetalhes(detailCard)}><Info className="h-4 w-4 mr-1" />Detalhes</Button>
                 {(() => { const etapaAtualIdx = etapas.findIndex((e) => e.id === detailCard.etapa_id); if (etapaAtualIdx <= 0) return null; return <Button variant="outline" size="sm" className="bg-amber-500 hover:bg-amber-600 text-white border-amber-500 hover:border-amber-600" onClick={() => fetchHistorico(detailCard)}><History className="h-4 w-4 mr-1" />Histórico</Button>; })()}
-                <Button size="sm" onClick={finalizarEtapa} disabled={!detailCard.iniciado_em || !isChecklistCompleto(checklistEtapa, checklistProgresso) || finalizando}><ChevronRight className="h-4 w-4 mr-1" />{finalizando ? "Finalizando..." : "Finalizar Etapa"}</Button>
+                <Button size="sm" onClick={finalizarEtapa} disabled={!detailCard.iniciado_em || !isChecklistCompleto(checklistEtapa, checklistProgresso) || (checklistEtapa.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, checklistEtapa.map((a: any) => a.id))) || finalizando}><ChevronRight className="h-4 w-4 mr-1" />{finalizando ? "Finalizando..." : "Finalizar Etapa"}</Button>
               </div>
             </DialogFooter>
           )}
