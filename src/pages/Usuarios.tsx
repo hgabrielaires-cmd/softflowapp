@@ -500,8 +500,8 @@ export default function Usuarios() {
                       <Input
                         type="tel"
                         placeholder="(11) 99999-9999"
-                        value={editTelefone}
-                        onChange={(e) => setEditTelefone(e.target.value)}
+                        value={f.editTelefone}
+                        onChange={(e) => f.setEditTelefone(e.target.value)}
                       />
                     </div>
                   </div>
