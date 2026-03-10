@@ -62,10 +62,7 @@ import { VisualizarPedidoDialog } from "./pedidos/components/VisualizarPedidoDia
 import { ClienteRapidoDialog } from "./pedidos/components/ClienteRapidoDialog";
 import { ComentarioDraftDialog } from "./pedidos/components/ComentarioDraftDialog";
 import { UpgradePlanoDialog } from "./pedidos/components/UpgradePlanoDialog";
-
-// Types, constants, and helpers are now in src/pages/pedidos/
-
-// Helpers imported from ./pedidos/helpers
+import { usePedidosQueries } from "./pedidos/usePedidosQueries";
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -78,30 +75,25 @@ export default function Pedidos() {
   const isTecnico = roles.includes("tecnico") && !isAdmin && !isFinanceiro && !isVendedor;
   const canSeeAllBranches = filiaisDoUsuario.length > 1;
 
-  const [pedidos, setPedidos] = useState<PedidoWithJoins[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [planos, setPlanos] = useState<any[]>([]);
-  const [filiais, setFiliais] = useState<Filial[]>([]);
-  const [vendedores, setVendedores] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ─── Data from queries hook ──────────────────────────────────────────────
+  const {
+    pedidos, clientes, planos, filiais, vendedores, servicosCatalogo,
+    loading, zapsignMap, contratoStatusMap, loadData,
+    planoSelecionado, setPlanoSelecionado, modulosDisponiveis, setModulosDisponiveis,
+    precosFilialMap, setPrecosFilialMap, loadingModulos,
+    loadPlano: loadPlanoRaw,
+    filialParametros, loadFilialParametros,
+    contratoAtivo, setContratoAtivo, loadingContrato, buscarContratoAtivo,
+    limiteDesconto, setLimiteDesconto, carregarLimitesDesconto,
+  } = usePedidosQueries();
+
   const [filialFavoritaId, setFilialFavoritaId] = useState<string | null>(null);
-  const [filialParametros, setFilialParametros] = useState<any | null>(null);
-  const [zapsignMap, setZapsignMap] = useState<Record<string, string>>({});
-  const [contratoStatusMap, setContratoStatusMap] = useState<Record<string, string>>({});
-  const [servicosCatalogo, setServicosCatalogo] = useState<{ id: string; nome: string; valor: number; unidade_medida: string }[]>([]);
   const [servicoBuscaId, setServicoBuscaId] = useState("");
   const [servicoBuscaQtd, setServicoBuscaQtd] = useState("1");
-
-  // Módulos disponíveis do plano selecionado (para busca)
-  const [modulosDisponiveis, setModulosDisponiveis] = useState<ModuloOpcional[]>([]);
-  const [loadingModulos, setLoadingModulos] = useState(false);
 
   // Estado do seletor de módulo adicional
   const [moduloBuscaId, setModuloBuscaId] = useState("");
   const [moduloBuscaQtd, setModuloBuscaQtd] = useState("1");
-
-  // Plano selecionado info
-  const [planoSelecionado, setPlanoSelecionado] = useState<any | null>(null);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -122,12 +114,8 @@ export default function Pedidos() {
   const [acrescimoAtivo, setAcrescimoAtivo] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Limites de desconto do vendedor atual
-  const [limiteDesconto, setLimiteDesconto] = useState<{ implantacao: number; mensalidade: number } | null>(null);
 
-  // Contrato ativo do cliente selecionado
-  const [contratoAtivo, setContratoAtivo] = useState<Contrato | null>(null);
-  const [loadingContrato, setLoadingContrato] = useState(false);
+
   // Modal de upgrade
   const [openUpgradeDialog, setOpenUpgradeDialog] = useState(false);
   // Módulos já contratados (para Aditivo — excluir do seletor)
@@ -154,12 +142,6 @@ export default function Pedidos() {
    const [clienteContatos, setClienteContatos] = useState<ClienteContatoInline[]>([]);
 
   // Draft comments (antes de salvar pedido)
-  interface DraftComentario {
-    texto: string;
-    prioridade: string;
-    arquivo: File | null;
-    arquivo_nome: string | null;
-  }
   const [draftComentarios, setDraftComentarios] = useState<DraftComentario[]>([]);
   const [openComentarioDialog, setOpenComentarioDialog] = useState(false);
   const [draftTexto, setDraftTexto] = useState("");
@@ -168,21 +150,6 @@ export default function Pedidos() {
   const draftFileRef = useRef<HTMLInputElement>(null);
   const [editingDraftIdx, setEditingDraftIdx] = useState<number | null>(null);
 
-  const PRIORIDADES_DRAFT = [
-    { value: "normal", label: "Normal", emoji: "🟢" },
-    { value: "medio", label: "Médio", emoji: "🟡" },
-    { value: "urgente", label: "Urgente", emoji: "🔴" },
-    { value: "prioridade", label: "Alta Prioridade", emoji: "⚡" },
-  ] as const;
-
-  const PRIORIDADE_MAP_DRAFT: Record<string, { label: string; emoji: string }> = {
-    normal: { label: "Normal", emoji: "🟢" },
-    medio: { label: "Médio", emoji: "🟡" },
-    urgente: { label: "Urgente", emoji: "🔴" },
-    prioridade: { label: "Alta Prioridade", emoji: "⚡" },
-  };
-
-  const MAX_FILE_SIZE_DRAFT = 11 * 1024 * 1024;
 
   function handleAddDraftComentario() {
     if (!draftTexto.trim()) { toast.error("Digite um comentário."); return; }
@@ -236,8 +203,8 @@ export default function Pedidos() {
     }
   }
 
-  // ─── Preços por filial ────────────────────────────────────────────────────
-  const [precosFilialMap, setPrecosFilialMap] = useState<Record<string, { valor_implantacao: number; valor_mensalidade: number }>>({});
+
+
 
   // ─── Computed values ─────────────────────────────────────────────────────
 
@@ -331,84 +298,24 @@ export default function Pedidos() {
   // Qualquer usuário (inclusive admin) é bloqueado se exceder o limite
   const bloqueadoPorDesconto = descontoExcedido;
 
-  // precosFilialMap moved above computed values
-
-  // ─── Load plano + módulos disponíveis ──────────────────────────────────────
+  // ─── Load plano wrapper (delegates to hook, updates form) ─────────────────
 
   const loadPlano = useCallback(async (planoId: string, modulosAdicionaisExistentes: ModuloAdicionadoItem[] = [], filialIdOverride?: string) => {
-    if (!planoId) {
-      setPlanoSelecionado(null);
-      setModulosDisponiveis([]);
-      setPrecosFilialMap({});
+    const resolvedFilialId = filialIdOverride || form.filial_id;
+    const result = await loadPlanoRaw(planoId, modulosAdicionaisExistentes, resolvedFilialId);
+    if (!result && !planoId) {
       setForm((f) => ({ ...f, valor_implantacao_original: 0, valor_mensalidade_original: 0 }));
       return;
     }
-
-    setLoadingModulos(true);
-
-    const [{ data: planoData }, { data: vinculosData }, { data: precosData }] = await Promise.all([
-      supabase.from("planos").select("*").eq("id", planoId).single(),
-      supabase.from("plano_modulos")
-        .select("*, modulo:modulos(*)")
-        .eq("plano_id", planoId)
-        .order("ordem"),
-      supabase.from("precos_filial").select("*").or(`and(tipo.eq.plano,referencia_id.eq.${planoId}),tipo.eq.modulo`),
-    ]);
-
-    setPlanoSelecionado(planoData);
-
-    // Build precos map: key = "plano:{id}:{filialId}" or "modulo:{id}:{filialId}"
-    const pMap: Record<string, { valor_implantacao: number; valor_mensalidade: number }> = {};
-    (precosData || []).forEach((p: any) => {
-      pMap[`${p.tipo}:${p.referencia_id}:${p.filial_id}`] = {
-        valor_implantacao: p.valor_implantacao,
-        valor_mensalidade: p.valor_mensalidade,
-      };
-    });
-    setPrecosFilialMap(pMap);
-
-    const currentFilialId = filialIdOverride || form.filial_id;
-
-    // Resolve plan prices based on filial
-    const planoPrecoFilial = currentFilialId ? pMap[`plano:${planoId}:${currentFilialId}`] : null;
-    const planoImplantacao = planoPrecoFilial ? planoPrecoFilial.valor_implantacao : (planoData?.valor_implantacao_padrao ?? 0);
-    const planoMensalidade = planoPrecoFilial ? planoPrecoFilial.valor_mensalidade : (planoData?.valor_mensalidade_padrao ?? 0);
-
-    const disponiveis: ModuloOpcional[] = [];
-    (vinculosData || []).forEach((v: any) => {
-      if (v.modulo) {
-        const modPrecoFilial = currentFilialId ? pMap[`modulo:${v.modulo.id}:${currentFilialId}`] : null;
-        disponiveis.push({
-          id: v.modulo.id,
-          nome: v.modulo.nome,
-          valor_implantacao_modulo: modPrecoFilial ? modPrecoFilial.valor_implantacao : (v.modulo.valor_implantacao_modulo ?? 0),
-          valor_mensalidade_modulo: modPrecoFilial ? modPrecoFilial.valor_mensalidade : (v.modulo.valor_mensalidade_modulo ?? 0),
-          incluso_no_plano: v.incluso_no_plano,
-          permite_revenda: v.modulo.permite_revenda ?? false,
-          quantidade_maxima: v.modulo.quantidade_maxima ?? null,
-        });
-      }
-    });
-    setModulosDisponiveis(disponiveis);
-
-    // Update module prices in existing adicional list based on filial
-    const updatedModulos = modulosAdicionaisExistentes.map((m) => {
-      const modPrecoFilial = currentFilialId ? pMap[`modulo:${m.modulo_id}:${currentFilialId}`] : null;
-      if (modPrecoFilial) {
-        return { ...m, valor_implantacao_modulo: modPrecoFilial.valor_implantacao, valor_mensalidade_modulo: modPrecoFilial.valor_mensalidade };
-      }
-      return m;
-    });
-
-    setForm((f) => ({
-      ...f,
-      valor_implantacao_original: planoImplantacao,
-      valor_mensalidade_original: planoMensalidade,
-      modulos_adicionais: updatedModulos,
-    }));
-
-    setLoadingModulos(false);
-  }, [form.filial_id]);
+    if (result) {
+      setForm((f) => ({
+        ...f,
+        valor_implantacao_original: result.planoImplantacao,
+        valor_mensalidade_original: result.planoMensalidade,
+        modulos_adicionais: result.updatedModulos,
+      }));
+    }
+  }, [form.filial_id, loadPlanoRaw]);
 
   // ─── Handlers de módulos adicionais ──────────────────────────────────────
 
@@ -469,7 +376,6 @@ export default function Pedidos() {
     }));
     loadPlano(planoId, []);
   }
-
   // ─── Filial favorita ──────────────────────────────────────────────────────
 
   // Use filialPadraoId from hook as filialFavoritaId
@@ -477,78 +383,10 @@ export default function Pedidos() {
     if (filialPadraoId) setFilialFavoritaId(filialPadraoId);
   }, [filialPadraoId]);
 
-  // ─── Buscar parâmetros da filial ──────────────────────────────────────────
-
-  async function loadFilialParametros(filialId: string) {
-    if (!filialId) { setFilialParametros(null); return; }
-    const { data } = await supabase
-      .from("filial_parametros")
-      .select("*")
-      .eq("filial_id", filialId)
-      .maybeSingle();
-    setFilialParametros(data || null);
-  }
-
   // Atualiza parametros quando filial muda no form
   useEffect(() => {
     if (form.filial_id) loadFilialParametros(form.filial_id);
-  }, [form.filial_id]);
-
-
-
-  async function loadData() {
-    setLoading(true);
-    const [
-      { data: pedidosData },
-      { data: clientesData },
-      { data: planosData },
-      { data: filiaisData },
-      { data: vendedoresData },
-      { data: servicosData },
-    ] = await Promise.all([
-      supabase.from("pedidos").select("*, clientes(nome_fantasia), planos(nome), filiais(nome)").order("created_at", { ascending: false }),
-      supabase.from("clientes").select("*").eq("ativo", true).order("nome_fantasia"),
-      supabase.from("planos").select("*").eq("ativo", true).order("ordem").order("nome"),
-      supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
-      supabase.from("profiles").select("*").eq("active", true).order("full_name"),
-      supabase.from("servicos").select("id, nome, valor, unidade_medida").eq("ativo", true).order("nome"),
-    ]);
-    const pedidosList = (pedidosData || []) as unknown as PedidoWithJoins[];
-    setPedidos(pedidosList);
-    setClientes((clientesData || []) as Cliente[]);
-    setPlanos(planosData || []);
-    setFiliais((filiaisData || []) as Filial[]);
-    setVendedores((vendedoresData || []) as Profile[]);
-    setServicosCatalogo((servicosData || []) as any[]);
-
-    // Buscar status ZapSign para pedidos — via contratos.pedido_id → contratos_zapsign
-    const pedidoIds = pedidosList.map(p => p.id);
-    if (pedidoIds.length > 0) {
-      const { data: contratosData } = await supabase
-        .from("contratos")
-        .select("id, pedido_id, status_geracao, contratos_zapsign(status)")
-        .in("pedido_id", pedidoIds);
-      const map: Record<string, string> = {};
-      const statusMap: Record<string, string> = {};
-      (contratosData || []).forEach((c: any) => {
-        if (c.pedido_id && c.contratos_zapsign?.status) {
-          map[c.pedido_id] = c.contratos_zapsign.status;
-        }
-        if (c.pedido_id && c.status_geracao) {
-          statusMap[c.pedido_id] = c.status_geracao;
-        }
-      });
-      setZapsignMap(map);
-      setContratoStatusMap(statusMap);
-    } else {
-      setZapsignMap({});
-      setContratoStatusMap({});
-    }
-
-    setLoading(false);
-  }
-
-  useEffect(() => { loadData(); }, []);
+  }, [form.filial_id, loadFilialParametros]);
 
   // Default filial filter from user access
   useEffect(() => {
@@ -560,23 +398,6 @@ export default function Pedidos() {
       }
     }
   }, [filialPadraoId, profile?.filial_favorita_id]);
-
-  // ─── Buscar contrato ativo do cliente ─────────────────────────────────────
-
-  async function buscarContratoAtivo(clienteId: string) {
-    if (!clienteId) { setContratoAtivo(null); return; }
-    setLoadingContrato(true);
-    const { data } = await supabase
-      .from("contratos")
-      .select("*")
-      .eq("cliente_id", clienteId)
-      .eq("status", "Ativo")
-      .eq("tipo", "Base")
-      .order("created_at", { ascending: false })
-      .limit(1);
-    setContratoAtivo(data && data.length > 0 ? (data[0] as unknown as Contrato) : null);
-    setLoadingContrato(false);
-  }
 
   async function handleClienteChange(clienteId: string) {
     setForm((f) => ({ ...f, cliente_id: clienteId, plano_id: "", tipo_pedido: "Novo", contrato_id: null }));
@@ -725,21 +546,8 @@ export default function Pedidos() {
 
   // ─── Open create/edit ─────────────────────────────────────────────────────
 
-  async function carregarLimitesDesconto(vendedorUserId: string) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("desconto_limite_implantacao, desconto_limite_mensalidade")
-      .eq("user_id", vendedorUserId)
-      .single();
-    if (data) {
-      setLimiteDesconto({
-        implantacao: (data as any).desconto_limite_implantacao ?? 100,
-        mensalidade: (data as any).desconto_limite_mensalidade ?? 100,
-      });
-    } else {
-      setLimiteDesconto({ implantacao: 100, mensalidade: 100 });
-    }
-  }
+
+
 
   async function openCreate() {
     const defaultImp = (profile as any)?.comissao_implantacao_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
@@ -1217,10 +1025,8 @@ export default function Pedidos() {
         telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
       });
     }
-    // Recarregar lista de clientes e selecionar o novo
-    const { data: novosClientes } = await supabase.from("clientes").select("*").eq("ativo", true).order("nome_fantasia");
-    const listaAtualizada = (novosClientes || []) as Cliente[];
-    setClientes(listaAtualizada);
+    // Recarregar dados (inclui clientes) e selecionar o novo
+    await loadData();
     // Selecionar o cliente recém-criado e limpar busca
     setForm((f) => ({ ...f, cliente_id: data.id }));
     setClienteSearch("");
