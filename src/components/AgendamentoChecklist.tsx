@@ -27,6 +27,7 @@ interface Props {
   mesaCor?: string | null;
   filialId?: string | null;
   etapaId?: string | null;
+  etapaExecucaoId?: string | null;
   titulo?: string | null;
   onUpdate?: (hasAgendamentos: boolean) => void;
 }
