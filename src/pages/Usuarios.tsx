@@ -783,9 +783,9 @@ export default function Usuarios() {
             </Tabs>
 
             <div className="flex justify-end gap-2 pt-3 shrink-0 border-t border-border mt-3">
-              <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>Cancelar</Button>
-              <Button type="submit" disabled={saving}>
-                {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              <Button type="button" variant="outline" onClick={() => f.setOpenEdit(false)}>Cancelar</Button>
+              <Button type="submit" disabled={f.saving}>
+                {f.saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 Salvar alterações
               </Button>
             </div>
