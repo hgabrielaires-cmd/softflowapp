@@ -577,7 +577,7 @@ export default function Clientes() {
                     </TableCell>
                     <TableCell>
                       {canEditExisting && !vendedorSomenteLeitura ? (
-                        <Switch checked={c.ativo} onCheckedChange={() => toggleAtivo(c)} />
+                        <Switch checked={c.ativo} onCheckedChange={() => handleToggleAtivo(c)} />
                       ) : (
                         <Badge variant={c.ativo ? "default" : "secondary"}>
                           {c.ativo ? "Ativo" : "Inativo"}
