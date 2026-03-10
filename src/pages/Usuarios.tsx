@@ -663,8 +663,8 @@ export default function Usuarios() {
                         <Label>Desconto máx. implantação (%)</Label>
                         <Input
                           type="number" min="0" max="100" step="0.01"
-                          value={editDescontoLimiteImp}
-                          onChange={(e) => setEditDescontoLimiteImp(e.target.value)}
+                          value={f.editDescontoLimiteImp}
+                          onChange={(e) => f.setEditDescontoLimiteImp(e.target.value)}
                         />
                       </div>
                       <div className="space-y-1.5">
