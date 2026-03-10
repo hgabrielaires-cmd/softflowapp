@@ -675,6 +675,19 @@ export default function PainelAtendimento() {
         setFinalizando(false);
         return;
       }
+      // Validar se checklist obrigatório da etapa está concluído
+      if (checklistEtapa.length > 0) {
+        const totalItens = checklistEtapa.reduce((acc: number, a: any) => acc + (Array.isArray(a.checklist) ? a.checklist.length : 0), 0);
+        const totalConcluidos = checklistEtapa.reduce((acc: number, a: any) => {
+          const items = Array.isArray(a.checklist) ? a.checklist : [];
+          return acc + items.filter((_: any, idx: number) => checklistProgresso[`${a.id}_${idx}`]?.concluido).length;
+        }, 0);
+        if (totalItens > 0 && totalConcluidos < totalItens) {
+          toast.error("Conclua todos os itens do checklist antes de finalizar a etapa.");
+          setFinalizando(false);
+          return;
+        }
+      }
       const etapasOrdenadas = [...etapas].sort((a, b) => a.ordem - b.ordem);
       const etapaAtualIdx = etapasOrdenadas.findIndex((e) => e.id === detailCard.etapa_id);
       if (etapaAtualIdx === -1) { toast.error("Etapa atual não encontrada na lista de etapas ativas. Verifique a configuração."); return; }
