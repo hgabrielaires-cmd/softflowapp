@@ -217,8 +217,8 @@ export default function PainelAtendimento() {
         supabase.from("painel_tecnicos").select("tecnico_id").eq("card_id", detailCard.id),
         supabase.from("painel_curtidas").select("comentario_id, user_id"),
         supabase.from("painel_agendamentos").select("*, jornada_atividades(nome), painel_etapas:etapa_id(nome, cor)").eq("card_id", detailCard.id).order("data"),
-        supabase.from("painel_seguidores" as any).select("id").eq("card_id", detailCard.id).eq("user_id", profile?.user_id || "").is("unfollowed_at", null).maybeSingle(),
-        (supabase as any).from("painel_seguidores").select("user_id, created_at, unfollowed_at").eq("card_id", detailCard.id),
+        supabase.from("painel_seguidores").select("id").eq("card_id", detailCard.id).eq("user_id", profile?.user_id || "").is("unfollowed_at", null).maybeSingle(),
+        supabase.from("painel_seguidores").select("user_id, created_at, unfollowed_at").eq("card_id", detailCard.id),
       ]);
       setComentarios(coms || []);
       setTecnicosSelecionados((tecs || []).map((t: any) => t.tecnico_id));
@@ -356,7 +356,7 @@ export default function PainelAtendimento() {
       const { data: histOpen } = await supabase.from("painel_historico_etapas").select("id, entrada_em").eq("card_id", cardId).is("saida_em", null).order("entrada_em", { ascending: false }).limit(1);
       if (histOpen && histOpen.length > 0) {
         const atrasoInicioHoras = Math.round(((now.getTime() - new Date(histOpen[0].entrada_em).getTime()) / (1000 * 60 * 60)) * 100) / 100;
-        await supabase.from("painel_historico_etapas").update({ atraso_inicio_horas: atrasoInicioHoras } as any).eq("id", histOpen[0].id);
+        await supabase.from("painel_historico_etapas").update({ atraso_inicio_horas: atrasoInicioHoras }).eq("id", histOpen[0].id);
       }
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] }); toast.success("Atendimento iniciado! Você é o responsável."); },
@@ -454,7 +454,7 @@ export default function PainelAtendimento() {
         }
         let stageComments: any[] = [];
         if (h.entrada_em && h.saida_em) { const { data: comsByDate } = await supabase.from("painel_comentarios").select("id, texto, criado_por, created_at").eq("card_id", card.id).gte("created_at", h.entrada_em).lte("created_at", h.saida_em).order("created_at", { ascending: true }); stageComments = comsByDate || []; }
-        result.push({ etapa_nome: h.etapa_nome, entrada_em: h.entrada_em, saida_em: h.saida_em, sla_previsto_horas: (h as any).sla_previsto_horas, tempo_real_horas: (h as any).tempo_real_horas, sla_cumprido: (h as any).sla_cumprido, atraso_inicio_horas: (h as any).atraso_inicio_horas, atividades, progressoMap, comentarios: stageComments });
+        result.push({ etapa_nome: h.etapa_nome, entrada_em: h.entrada_em, saida_em: h.saida_em, sla_previsto_horas: h.sla_previsto_horas, tempo_real_horas: h.tempo_real_horas, sla_cumprido: h.sla_cumprido, atraso_inicio_horas: h.atraso_inicio_horas, atividades, progressoMap, comentarios: stageComments });
       }
       setHistoricoData(result);
     } catch { toast.error("Erro ao carregar histórico."); } finally { setHistoricoLoading(false); }
@@ -471,7 +471,7 @@ export default function PainelAtendimento() {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (!currentUser) return;
       const autorNome = profile?.full_name || "Usuário";
-      const { data: seguidores } = await (supabase as any).from("painel_seguidores").select("user_id").eq("card_id", cardId).is("unfollowed_at", null);
+      const { data: seguidores } = await supabase.from("painel_seguidores").select("user_id").eq("card_id", cardId).is("unfollowed_at", null);
       if (!seguidores || seguidores.length === 0) return;
       for (const seg of seguidores) {
         if (seg.user_id === currentUser.id) continue;
@@ -503,13 +503,13 @@ export default function PainelAtendimento() {
       const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
       await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, etapa_id: detailCard.etapa_id, criado_por: user.id, texto: `⏸️ Projeto pausado por ${autorNome}: ${pausarMotivo.trim()}` });
       await registrarEntradaEtapa(detailCard.id, standbyEtapa.id, standbyEtapa.nome);
-      const { error } = await supabase.from("painel_atendimento").update({ pausado: true, pausado_em: new Date().toISOString(), pausado_por: user.id, pausado_motivo: pausarMotivo.trim(), iniciado_em: null, iniciado_por: null, etapa_id: standbyEtapa.id, status_projeto: "pausado", etapa_origem_id: detailCard.etapa_id } as any).eq("id", detailCard.id);
+      const { error } = await supabase.from("painel_atendimento").update({ pausado: true, pausado_em: new Date().toISOString(), pausado_por: user.id, pausado_motivo: pausarMotivo.trim(), iniciado_em: null, iniciado_por: null, etapa_id: standbyEtapa.id, status_projeto: "pausado", etapa_origem_id: detailCard.etapa_id }).eq("id", detailCard.id);
       if (error) throw error;
       if (apontamentoUsuarios.length > 0) {
         const clienteNome = detailCard.clientes?.nome_fantasia || "Cliente";
-        await supabase.from("painel_apontamentos").insert(apontamentoUsuarios.map(uid => ({ card_id: detailCard.id, usuario_id: uid, apontado_por: user.id, motivo: pausarMotivo.trim() })) as any);
-        for (const uid of apontamentoUsuarios) { const prof = responsaveis.find((r: any) => r.id === uid); await supabase.from("notificacoes").insert({ titulo: "📌 Apontamento - Projeto Pausado", mensagem: `Você foi designado(a) para resolver uma pendência do projeto ${clienteNome}. Motivo: ${pausarMotivo.trim()}`, tipo: "alerta", criado_por: user.id, destinatario_user_id: (prof as any)?.user_id || uid, metadata: { card_id: detailCard.id } } as any); }
-        const nomes = apontamentoUsuarios.map(uid => { const p = responsaveis.find((r: any) => r.id === uid); return (p as any)?.full_name?.split(" ")[0] || "Usuário"; });
+        await supabase.from("painel_apontamentos").insert(apontamentoUsuarios.map(uid => ({ card_id: detailCard.id, usuario_id: uid, apontado_por: user.id, motivo: pausarMotivo.trim() })));
+        for (const uid of apontamentoUsuarios) { const prof = responsaveis.find((r) => r.id === uid); await supabase.from("notificacoes").insert({ titulo: "📌 Apontamento - Projeto Pausado", mensagem: `Você foi designado(a) para resolver uma pendência do projeto ${clienteNome}. Motivo: ${pausarMotivo.trim()}`, tipo: "alerta", criado_por: user.id, destinatario_user_id: prof?.user_id || uid, metadata: { card_id: detailCard.id } }); }
+        const nomes = apontamentoUsuarios.map(uid => { const p = responsaveis.find((r) => r.id === uid); return p?.full_name?.split(" ")[0] || "Usuário"; });
         await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, etapa_id: standbyEtapa.id, criado_por: user.id, texto: `📌 Apontamento: ${nomes.join(", ")} designado(s) para resolução.` });
       }
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] }); queryClient.invalidateQueries({ queryKey: ["card_apontamentos"] });
@@ -530,13 +530,13 @@ export default function PainelAtendimento() {
       const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
       await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, etapa_id: detailCard.etapa_id, criado_por: user.id, texto: `❌ Projeto recusado por ${autorNome}: ${recusarMotivo.trim()}` });
       await registrarEntradaEtapa(detailCard.id, standbyEtapa.id, standbyEtapa.nome);
-      const { error } = await supabase.from("painel_atendimento").update({ pausado: true, pausado_em: new Date().toISOString(), pausado_por: user.id, pausado_motivo: recusarMotivo.trim(), iniciado_em: null, iniciado_por: null, etapa_id: standbyEtapa.id, status_projeto: "recusado", etapa_origem_id: detailCard.etapa_id } as any).eq("id", detailCard.id);
+      const { error } = await supabase.from("painel_atendimento").update({ pausado: true, pausado_em: new Date().toISOString(), pausado_por: user.id, pausado_motivo: recusarMotivo.trim(), iniciado_em: null, iniciado_por: null, etapa_id: standbyEtapa.id, status_projeto: "recusado", etapa_origem_id: detailCard.etapa_id }).eq("id", detailCard.id);
       if (error) throw error;
       if (apontamentoUsuarios.length > 0) {
         const clienteNome = detailCard.clientes?.nome_fantasia || "Cliente";
-        await supabase.from("painel_apontamentos").insert(apontamentoUsuarios.map(uid => ({ card_id: detailCard.id, usuario_id: uid, apontado_por: user.id, motivo: recusarMotivo.trim() })) as any);
-        for (const uid of apontamentoUsuarios) { const prof = responsaveis.find((r: any) => r.id === uid); await supabase.from("notificacoes").insert({ titulo: "📌 Apontamento - Projeto Recusado", mensagem: `Você foi designado(a) para resolver uma pendência do projeto ${clienteNome}. Motivo: ${recusarMotivo.trim()}`, tipo: "alerta", criado_por: user.id, destinatario_user_id: (prof as any)?.user_id || uid, metadata: { card_id: detailCard.id } } as any); }
-        const nomes = apontamentoUsuarios.map(uid => { const p = responsaveis.find((r: any) => r.id === uid); return (p as any)?.full_name?.split(" ")[0] || "Usuário"; });
+        await supabase.from("painel_apontamentos").insert(apontamentoUsuarios.map(uid => ({ card_id: detailCard.id, usuario_id: uid, apontado_por: user.id, motivo: recusarMotivo.trim() })));
+        for (const uid of apontamentoUsuarios) { const prof = responsaveis.find((r) => r.id === uid); await supabase.from("notificacoes").insert({ titulo: "📌 Apontamento - Projeto Recusado", mensagem: `Você foi designado(a) para resolver uma pendência do projeto ${clienteNome}. Motivo: ${recusarMotivo.trim()}`, tipo: "alerta", criado_por: user.id, destinatario_user_id: prof?.user_id || uid, metadata: { card_id: detailCard.id } }); }
+        const nomes = apontamentoUsuarios.map(uid => { const p = responsaveis.find((r) => r.id === uid); return p?.full_name?.split(" ")[0] || "Usuário"; });
         await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, etapa_id: standbyEtapa.id, criado_por: user.id, texto: `📌 Apontamento: ${nomes.join(", ")} designado(s) para resolução.` });
       }
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] }); queryClient.invalidateQueries({ queryKey: ["card_apontamentos"] });
@@ -558,7 +558,7 @@ export default function PainelAtendimento() {
       await supabase.from("painel_agendamentos").delete().eq("card_id", detailCard.id);
       const etapaDestino = etapas.find(e => e.id === etapaDestinoId);
       await registrarEntradaEtapa(detailCard.id, etapaDestinoId!, etapaDestino?.nome || "Etapa Inicial");
-      const { error } = await supabase.from("painel_atendimento").update({ etapa_id: etapaDestinoId, iniciado_em: null, iniciado_por: null, pausado: false, pausado_em: null, pausado_por: null, pausado_motivo: null, status_projeto: "ativo", etapa_origem_id: null } as any).eq("id", detailCard.id);
+      const { error } = await supabase.from("painel_atendimento").update({ etapa_id: etapaDestinoId, iniciado_em: null, iniciado_por: null, pausado: false, pausado_em: null, pausado_por: null, pausado_motivo: null, status_projeto: "ativo", etapa_origem_id: null }).eq("id", detailCard.id);
       if (error) throw error;
       const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
       await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, etapa_id: etapaDestinoId, criado_por: user.id, texto: `🔄 Projeto resetado por ${autorNome}: ${resetarMotivo.trim()}` });
@@ -572,8 +572,8 @@ export default function PainelAtendimento() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
-      await supabase.from("projetos_cancelados").insert({ card_id: detailCard.id, contrato_id: detailCard.contrato_id, cliente_id: detailCard.cliente_id, filial_id: detailCard.filial_id, motivo: cancelarMotivo.trim(), cancelado_por: user.id, tipo_operacao: detailCard.tipo_operacao, plano_nome: detailCard.planos?.nome || null, cliente_nome: detailCard.clientes?.nome_fantasia || null, contrato_numero: detailCard.contratos?.numero_exibicao || null } as any);
-      const { error } = await supabase.from("painel_atendimento").update({ status_projeto: "cancelado" } as any).eq("id", detailCard.id);
+      await supabase.from("projetos_cancelados" as any).insert({ card_id: detailCard.id, contrato_id: detailCard.contrato_id, cliente_id: detailCard.cliente_id, filial_id: detailCard.filial_id, motivo: cancelarMotivo.trim(), cancelado_por: user.id, tipo_operacao: detailCard.tipo_operacao, plano_nome: detailCard.planos?.nome || null, cliente_nome: detailCard.clientes?.nome_fantasia || null, contrato_numero: detailCard.contratos?.numero_exibicao || null } as any);
+      const { error } = await supabase.from("painel_atendimento").update({ status_projeto: "cancelado" }).eq("id", detailCard.id);
       if (error) throw error;
       const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
       await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, etapa_id: detailCard.etapa_id, criado_por: user.id, texto: `❌ Projeto cancelado por ${autorNome}: ${cancelarMotivo.trim()}` });
@@ -599,10 +599,10 @@ export default function PainelAtendimento() {
       const existingApontados = (cardApontamentosDetalhado[apontamentoCardId] || []).map(a => a.usuario_id);
       const novosUsuarios = apontamentoUsuarios.filter(uid => !existingApontados.includes(uid));
       if (novosUsuarios.length === 0) { toast.info("Todos os usuários selecionados já estão apontados."); setApontando(false); return; }
-      const { error } = await supabase.from("painel_apontamentos").insert(novosUsuarios.map(uid => ({ card_id: apontamentoCardId, usuario_id: uid, apontado_por: user.id, motivo: card?.pausado_motivo || null })) as any);
+      const { error } = await supabase.from("painel_apontamentos").insert(novosUsuarios.map(uid => ({ card_id: apontamentoCardId, usuario_id: uid, apontado_por: user.id, motivo: card?.pausado_motivo || null })));
       if (error) throw error;
-      for (const uid of novosUsuarios) { const prof = responsaveis.find((r: any) => r.id === uid); await supabase.from("notificacoes").insert({ titulo: "📌 Apontamento de Resolução", mensagem: `Você foi designado(a) para resolver uma pendência do projeto ${clienteNome}. Motivo: ${card?.pausado_motivo || "Não informado"}`, tipo: "alerta", criado_por: user.id, destinatario_user_id: (prof as any)?.user_id || uid, metadata: { card_id: card?.id || detailCard?.id } } as any); }
-      const nomes = novosUsuarios.map(uid => { const p = responsaveis.find((r: any) => r.id === uid); return (p as any)?.full_name?.split(" ")[0] || "Usuário"; });
+      for (const uid of novosUsuarios) { const prof = responsaveis.find((r) => r.id === uid); await supabase.from("notificacoes").insert({ titulo: "📌 Apontamento de Resolução", mensagem: `Você foi designado(a) para resolver uma pendência do projeto ${clienteNome}. Motivo: ${card?.pausado_motivo || "Não informado"}`, tipo: "alerta", criado_por: user.id, destinatario_user_id: prof?.user_id || uid, metadata: { card_id: card?.id || detailCard?.id } }); }
+      const nomes = novosUsuarios.map(uid => { const p = responsaveis.find((r) => r.id === uid); return p?.full_name?.split(" ")[0] || "Usuário"; });
       await supabase.from("painel_comentarios").insert({ card_id: apontamentoCardId, etapa_id: card?.etapa_id || null, criado_por: user.id, texto: `📌 Apontamento: ${nomes.join(", ")} designado(s) para resolução.` });
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] }); queryClient.invalidateQueries({ queryKey: ["card_apontamentos"] });
       toast.success(`${novosUsuarios.length} usuário(s) designado(s)!`); setApontamentoOpen(false); setApontamentoUsuarios([]); setApontamentoCardId(null); setBuscaApontamento("");
@@ -633,7 +633,7 @@ export default function PainelAtendimento() {
       const now = new Date().toISOString();
       const statusLabel = detailCard.status_projeto === "recusado" ? "Recusa" : "Pausa";
       await supabase.from("painel_comentarios").insert({ card_id: cardId, etapa_id: targetEtapaId || detailCard.etapa_id, criado_por: user.id, texto: `▶️ Projeto retomado (resposta à ${statusLabel}): ${retomarComentario.trim()}` });
-      const { error } = await supabase.from("painel_atendimento").update({ pausado: false, pausado_em: null, pausado_por: null, pausado_motivo: null, iniciado_em: null, iniciado_por: null, responsavel_id: prof?.id || null, status_projeto: "ativo", etapa_origem_id: null, etapa_id: targetEtapaId, updated_at: now } as any).eq("id", cardId);
+      const { error } = await supabase.from("painel_atendimento").update({ pausado: false, pausado_em: null, pausado_por: null, pausado_motivo: null, iniciado_em: null, iniciado_por: null, responsavel_id: prof?.id || null, status_projeto: "ativo", etapa_origem_id: null, etapa_id: targetEtapaId, updated_at: now }).eq("id", cardId);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] }); toast.success("Projeto retomado!"); setRetomarOpen(false); setRetomarComentario(""); setDetailCard(null);
     } catch (err: any) { toast.error("Erro ao retomar projeto: " + (err.message || "")); } finally { setRetomando(false); }
@@ -827,11 +827,11 @@ export default function PainelAtendimento() {
               {/* Botão Iniciar / Em Andamento / Pausado + Progresso */}
               <div className="space-y-2">
                 {/* Recusado banner */}
-                {(detailCard as any).status_projeto === "recusado" && (
+                {detailCard.status_projeto === "recusado" && (
                   <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 p-3 space-y-2">
                     <div className="flex items-center gap-2 text-red-700"><Ban className="h-4 w-4" /><span className="text-sm font-semibold">Projeto Recusado</span></div>
                     {detailCard.pausado_motivo && <p className="text-xs text-red-600">Motivo: {detailCard.pausado_motivo}</p>}
-                    {detailCard.pausado_em && <p className="text-[10px] text-muted-foreground">Recusado em {new Date(detailCard.pausado_em).toLocaleDateString("pt-BR")} às {new Date(detailCard.pausado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}{detailCard.pausado_por && (() => { const autor = responsaveis.find((r: any) => r.id === detailCard.pausado_por); return autor ? ` por ${(autor as any).full_name?.split(" ")[0]}` : ""; })()}</p>}
+                    {detailCard.pausado_em && <p className="text-[10px] text-muted-foreground">Recusado em {new Date(detailCard.pausado_em).toLocaleDateString("pt-BR")} às {new Date(detailCard.pausado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}{detailCard.pausado_por && (() => { const autor = responsaveis.find((r) => r.id === detailCard.pausado_por); return autor ? ` por ${autor.full_name?.split(" ")[0]}` : ""; })()}</p>}
                     {cardApontamentosDetalhado[detailCard.id]?.length > 0 && (
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground flex items-center gap-1"><UserPlus className="h-3 w-3" />Apontados:</p>
@@ -850,11 +850,11 @@ export default function PainelAtendimento() {
                   </div>
                 )}
                 {/* Pausado banner */}
-                {detailCard.pausado && (detailCard as any).status_projeto !== "recusado" && (
+                {detailCard.pausado && detailCard.status_projeto !== "recusado" && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
                     <div className="flex items-center gap-2 text-amber-700"><PauseCircle className="h-4 w-4" /><span className="text-sm font-semibold">Projeto Pausado</span></div>
                     {detailCard.pausado_motivo && <p className="text-xs text-amber-600">Motivo: {detailCard.pausado_motivo}</p>}
-                    {detailCard.pausado_em && <p className="text-[10px] text-muted-foreground">Pausado em {new Date(detailCard.pausado_em).toLocaleDateString("pt-BR")} às {new Date(detailCard.pausado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}{detailCard.pausado_por && (() => { const autor = responsaveis.find((r: any) => r.id === detailCard.pausado_por); return autor ? ` por ${(autor as any).full_name?.split(" ")[0]}` : ""; })()}</p>}
+                    {detailCard.pausado_em && <p className="text-[10px] text-muted-foreground">Pausado em {new Date(detailCard.pausado_em).toLocaleDateString("pt-BR")} às {new Date(detailCard.pausado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}{detailCard.pausado_por && (() => { const autor = responsaveis.find((r) => r.id === detailCard.pausado_por); return autor ? ` por ${autor.full_name?.split(" ")[0]}` : ""; })()}</p>}
                     {cardApontamentosDetalhado[detailCard.id]?.length > 0 && (
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground flex items-center gap-1"><UserPlus className="h-3 w-3" />Apontados:</p>
@@ -1072,8 +1072,8 @@ export default function PainelAtendimento() {
                     if (!profile?.user_id || !detailCard) return;
                     setSeguindoLoading(true);
                     try {
-                      if (seguindoProjeto) { await (supabase as any).from("painel_seguidores").update({ unfollowed_at: new Date().toISOString() }).eq("card_id", detailCard.id).eq("user_id", profile.user_id); setSeguindoProjeto(false); toast.success("Você parou de seguir este projeto."); }
-                      else { await (supabase as any).from("painel_seguidores").upsert({ card_id: detailCard.id, user_id: profile.user_id, unfollowed_at: null }, { onConflict: "card_id,user_id" }); setSeguindoProjeto(true); toast.success("Agora você está seguindo este projeto!"); }
+                      if (seguindoProjeto) { await supabase.from("painel_seguidores").update({ unfollowed_at: new Date().toISOString() }).eq("card_id", detailCard.id).eq("user_id", profile.user_id); setSeguindoProjeto(false); toast.success("Você parou de seguir este projeto."); }
+                      else { await supabase.from("painel_seguidores").upsert({ card_id: detailCard.id, user_id: profile.user_id, unfollowed_at: null }, { onConflict: "card_id,user_id" }); setSeguindoProjeto(true); toast.success("Agora você está seguindo este projeto!"); }
                     } catch { toast.error("Erro ao atualizar seguimento."); } finally { setSeguindoLoading(false); }
                   }}>
                     {seguindoProjeto ? <><BellOff className="h-3 w-3" />Seguindo</> : <><BellRing className="h-3 w-3" />Seguir</>}
@@ -1160,7 +1160,7 @@ export default function PainelAtendimento() {
                       }
                       const mentionedUserIds = new Set(mentioned.map((pid: string) => { const prof = (responsaveis as any[]).find((r: any) => r.id === pid); return prof?.user_id || pid; }));
                       if (replyTo) { const parentCom = comentarios.find((c: any) => c.id === replyTo.id); if (parentCom) { const parentProf = (responsaveis as any[]).find((r: any) => r.id === parentCom.criado_por); if (parentProf?.user_id) mentionedUserIds.add(parentProf.user_id); } }
-                      try { const { data: seguidores } = await (supabase as any).from("painel_seguidores").select("user_id").eq("card_id", detailCard.id).is("unfollowed_at", null); for (const seg of (seguidores || [])) { if (seg.user_id === user.id) continue; if (mentionedUserIds.has(seg.user_id)) continue; await supabase.from("notificacoes").insert({ titulo: `💬 ${autorNome} comentou no projeto`, mensagem: `${autorNome} fez um comentário no projeto ${clienteNome} que você segue: "${novoComentario.trim().slice(0, 100)}${novoComentario.trim().length > 100 ? "..." : ""}"`, tipo: "info", criado_por: user.id, destinatario_user_id: seg.user_id, metadata: { card_id: detailCard.id, comentario_id: novo.id } }); } } catch { }
+                      try { const { data: seguidores } = await supabase.from("painel_seguidores").select("user_id").eq("card_id", detailCard.id).is("unfollowed_at", null); for (const seg of (seguidores || [])) { if (seg.user_id === user.id) continue; if (mentionedUserIds.has(seg.user_id)) continue; await supabase.from("notificacoes").insert({ titulo: `💬 ${autorNome} comentou no projeto`, mensagem: `${autorNome} fez um comentário no projeto ${clienteNome} que você segue: "${novoComentario.trim().slice(0, 100)}${novoComentario.trim().length > 100 ? "..." : ""}"`, tipo: "info", criado_por: user.id, destinatario_user_id: seg.user_id, metadata: { card_id: detailCard.id, comentario_id: novo.id } }); } } catch { }
                       setNovoComentario(""); setReplyTo(null); mentionedUsersRef.current = []; toast.success(replyTo ? "Resposta adicionada!" : "Comentário adicionado!");
                     } else { toast.error("Erro ao adicionar comentário."); }
                   }}>{replyTo ? "Responder" : "Incluir"}</Button>
