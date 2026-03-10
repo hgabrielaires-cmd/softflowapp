@@ -1823,7 +1823,7 @@ export default function Contratos() {
               {canManage && selected.pedidos && (() => {
                 const zRec = zapsignRecords[selected.id];
                 const linkAssinatura = zRec?.signers?.[1]?.sign_url || zRec?.signers?.[0]?.sign_url || undefined;
-                const mensagem = gerarTermoAceite(selected, linkAssinatura);
+                const mensagem = gerarTermoAceite(selected, buildTermoCtx(), linkAssinatura);
                 const isOA = selected.tipo === "OA";
                 const msgLabel = isOA ? "Mensagem — Ordem de Atendimento" : "Mensagem — Termo de Aceite";
                 return (
