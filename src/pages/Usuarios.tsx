@@ -590,8 +590,8 @@ export default function Usuarios() {
                               <Label className="text-xs">Mensalidade (%)</Label>
                               <Input
                                 type="number" min="0" max="100" step="0.01"
-                                value={editComissaoMens}
-                                onChange={(e) => setEditComissaoMens(e.target.value)}
+                                value={f.editComissaoMens}
+                                onChange={(e) => f.setEditComissaoMens(e.target.value)}
                               />
                             </div>
                             <div className="space-y-1.5">
