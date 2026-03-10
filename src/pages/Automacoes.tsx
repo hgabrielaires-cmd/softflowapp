@@ -446,6 +446,9 @@ export default function Automacoes() {
                   <Label>Horas sem ação antes do alerta</Label>
                   <Input type="number" min={1} value={horasSemAcao} onChange={e => setHorasSemAcao(Number(e.target.value))} className="w-32" />
                   <p className="text-xs text-muted-foreground">O alerta será disparado quando o pedido ficar na fila do financeiro por esse tempo sem ser processado.</p>
+                </div>
+              )}
+
               {gatilhoTipo === "contrato_enviado_assinatura" && (
                 <div className="pl-4 border-l-2 border-muted space-y-2">
                   <p className="text-sm text-muted-foreground">
