@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
-import { supabase } from "@/integrations/supabase/client";
 import { Cliente } from "@/lib/supabase-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,10 +24,10 @@ import { toast } from "sonner";
 import { Plus, Search, Pencil, Building2, Phone, Star, Upload, Eye, FileText } from "lucide-react";
 import { ImportClientesDialog } from "@/components/ImportClientesDialog";
 import { TablePagination } from "@/components/TablePagination";
-import { emptyContatoForm, ITEMS_PER_PAGE } from "@/pages/clientes/constants";
-import type { ClienteContato } from "@/pages/clientes/types";
+import { ITEMS_PER_PAGE } from "@/pages/clientes/constants";
 import { useClientesQueries } from "@/pages/clientes/useClientesQueries";
 import { useClienteForm } from "@/pages/clientes/useClienteForm";
+import { useClienteContatos } from "@/pages/clientes/useClienteContatos";
 import { HistoricoContratualDialog } from "@/pages/clientes/components/HistoricoContratualDialog";
 import { ClienteContatosDialog } from "@/pages/clientes/components/ClienteContatosDialog";
 import { ContatoFormDialog } from "@/pages/clientes/components/ContatoFormDialog";
@@ -37,12 +36,12 @@ import { ClienteFormDialog } from "@/pages/clientes/components/ClienteFormDialog
 export default function Clientes() {
   const q = useClientesQueries();
   const {
-    isAdmin, profile, roles,
-    crudIncluir, crudEditar, crudExcluir,
+    isAdmin, profile,
+    crudIncluir,
     canEditExisting, vendedorSomenteLeitura,
     podeImportar, podeVerHistorico, podeVerRentabilidade,
-    filiaisDoUsuario, filialPadraoId, isGlobal,
-    clientes, setClientes, decisoresMap, filiais, loading,
+    filiaisDoUsuario, filialPadraoId,
+    decisoresMap, loading,
     search, setSearch, filtroFilialId, setFiltroFilialId,
     currentPage, setCurrentPage,
     filtered, filialNome,
@@ -57,129 +56,10 @@ export default function Clientes() {
     filialPadraoId, fetchContatos, fetchData,
   });
 
-  // Contatos (modal separado — histórico/edição extra)
-  const [contatosOpen, setContatosOpen] = useState(false);
-  const [clienteContatos, setClienteContatos] = useState<Cliente | null>(null);
-  const [contatos, setContatos] = useState<ClienteContato[]>([]);
-  const [loadingContatos, setLoadingContatos] = useState(false);
-  const [contatoDialogOpen, setContatoDialogOpen] = useState(false);
-  const [editingContato, setEditingContato] = useState<ClienteContato | null>(null);
-  const [contatoForm, setContatoForm] = useState(emptyContatoForm);
-  const [savingContato, setSavingContato] = useState(false);
+  const ct = useClienteContatos({ fetchContatos });
 
   // Importação
   const [importOpen, setImportOpen] = useState(false);
-
-  // Contatos
-  async function openContatos(c: Cliente) {
-    setClienteContatos(c);
-    setContatosOpen(true);
-    await loadContatos(c.id);
-  }
-
-  async function loadContatos(clienteId: string) {
-    setLoadingContatos(true);
-    const data = await fetchContatos(clienteId);
-    setContatos(data);
-    setLoadingContatos(false);
-  }
-
-  function openNovoContato() {
-    setEditingContato(null);
-    setContatoForm(emptyContatoForm);
-    setContatoDialogOpen(true);
-  }
-
-  function openEditContato(c: ClienteContato) {
-    setEditingContato(c);
-    setContatoForm({
-      nome: c.nome,
-      cargo: c.cargo || "",
-      telefone: c.telefone || "",
-      email: c.email || "",
-      decisor: c.decisor,
-      ativo: c.ativo,
-    });
-    setContatoDialogOpen(true);
-  }
-
-  async function handleSaveContato() {
-    if (!contatoForm.nome.trim()) {
-      toast.error("Nome é obrigatório");
-      return;
-    }
-    if (!clienteContatos) return;
-    setSavingContato(true);
-
-    const payload = {
-      cliente_id: clienteContatos.id,
-      nome: contatoForm.nome.trim(),
-      cargo: contatoForm.cargo.trim() || null,
-      telefone: contatoForm.telefone.trim() || null,
-      email: contatoForm.email.trim() || null,
-      decisor: contatoForm.decisor,
-      ativo: contatoForm.ativo,
-    };
-
-    if (contatoForm.decisor) {
-      await supabase
-        .from("cliente_contatos")
-        .update({ decisor: false })
-        .eq("cliente_id", clienteContatos.id)
-        .neq("id", editingContato?.id || "");
-    }
-
-    let error;
-    if (editingContato) {
-      ({ error } = await supabase.from("cliente_contatos").update(payload).eq("id", editingContato.id));
-    } else {
-      ({ error } = await supabase.from("cliente_contatos").insert(payload));
-    }
-
-    if (error) {
-      toast.error("Erro ao salvar contato: " + error.message);
-    } else {
-      toast.success(editingContato ? "Contato atualizado!" : "Contato adicionado!");
-      setContatoDialogOpen(false);
-      await loadContatos(clienteContatos.id);
-    }
-    setSavingContato(false);
-  }
-
-  async function handleToggleDecisor(contato: ClienteContato) {
-    if (!clienteContatos) return;
-    if (!contato.decisor) {
-      await supabase.from("cliente_contatos").update({ decisor: false }).eq("cliente_id", clienteContatos.id);
-      await supabase.from("cliente_contatos").update({ decisor: true }).eq("id", contato.id);
-    } else {
-      await supabase.from("cliente_contatos").update({ decisor: false }).eq("id", contato.id);
-    }
-    await loadContatos(clienteContatos.id);
-  }
-
-  async function handleToggleAtivoContato(contato: ClienteContato) {
-    if (!clienteContatos) return;
-    await supabase.from("cliente_contatos").update({ ativo: !contato.ativo }).eq("id", contato.id);
-    await loadContatos(clienteContatos.id);
-  }
-
-  async function handleDesativarContato(contato: ClienteContato) {
-    if (!clienteContatos) return;
-    if (contato.decisor) {
-      const outroDecisorAtivo = contatos.some((c) => c.id !== contato.id && c.ativo && c.decisor);
-      if (!outroDecisorAtivo) {
-        toast.error("Defina um novo contato como decisor antes de desativar este.");
-        return;
-      }
-    }
-    const { error } = await supabase.from("cliente_contatos").update({ ativo: false, decisor: false }).eq("id", contato.id);
-    if (error) {
-      toast.error("Erro ao desativar contato: " + error.message);
-    } else {
-      toast.success("Contato desativado com sucesso");
-      await loadContatos(clienteContatos.id);
-    }
-  }
 
   async function handleToggleAtivo(c: Cliente) {
     const ok = await toggleAtivo(c);
@@ -387,26 +267,26 @@ export default function Clientes() {
       />
 
       <ClienteContatosDialog
-        open={contatosOpen}
-        onOpenChange={setContatosOpen}
-        cliente={clienteContatos}
-        contatos={contatos}
-        loading={loadingContatos}
+        open={ct.contatosOpen}
+        onOpenChange={ct.setContatosOpen}
+        cliente={ct.clienteContatos}
+        contatos={ct.contatos}
+        loading={ct.loadingContatos}
         canEditExisting={canEditExisting}
-        onNovoContato={openNovoContato}
-        onEditContato={openEditContato}
-        onToggleDecisor={handleToggleDecisor}
-        onDesativarContato={handleDesativarContato}
+        onNovoContato={ct.openNovoContato}
+        onEditContato={ct.openEditContato}
+        onToggleDecisor={ct.handleToggleDecisor}
+        onDesativarContato={ct.handleDesativarContato}
       />
 
       <ContatoFormDialog
-        open={contatoDialogOpen}
-        onOpenChange={setContatoDialogOpen}
-        editing={editingContato}
-        form={contatoForm}
-        onFormChange={setContatoForm}
-        onSave={handleSaveContato}
-        saving={savingContato}
+        open={ct.contatoDialogOpen}
+        onOpenChange={ct.setContatoDialogOpen}
+        editing={ct.editingContato}
+        form={ct.contatoForm}
+        onFormChange={ct.setContatoForm}
+        onSave={ct.handleSaveContato}
+        saving={ct.savingContato}
       />
 
       <HistoricoContratualDialog
