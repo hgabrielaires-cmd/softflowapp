@@ -1080,7 +1080,7 @@ export default function PainelAtendimento() {
                                   return (
                                     <li key={idx} className="flex flex-col gap-0.5 text-xs border-b border-border/30 pb-1.5 last:border-0 last:pb-0">
                                       <div className="flex items-center gap-2">
-                                        <Checkbox checked={prog.concluido} disabled={!checklistEditMode && !podeEditarChecklist} onCheckedChange={(checked) => saveChecklistItem(atividade.id, idx, { concluido: !!checked })} className="shrink-0" />
+                                        <Checkbox checked={prog.concluido} disabled={statusAtiv === "pendente" || (!checklistEditMode && !podeEditarChecklist)} onCheckedChange={(checked) => saveChecklistItem(atividade.id, idx, { concluido: !!checked })} className="shrink-0" />
                                         <span className={cn("flex-1", prog.concluido && "line-through text-muted-foreground")}>{item.texto || "(sem texto)"}</span>
                                         {item.tipo === "sim_nao" && (
                                           <div className="flex gap-1 shrink-0">
