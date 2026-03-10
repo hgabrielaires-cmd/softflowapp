@@ -507,16 +507,24 @@ export default function Automacoes() {
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label>Destinatários</Label>
-                <Select value={destinatarioTipo} onValueChange={setDestinatarioTipo}>
-                  <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="role">Por perfil (role)</SelectItem>
-                    <SelectItem value="usuarios">Usuários específicos</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {gatilhoTipo === "contrato_enviado_assinatura" ? (
+                <div className="pl-4 border-l-2 border-muted">
+                  <p className="text-sm text-muted-foreground">
+                    Destinatário fixo: <strong>Vendedor do pedido</strong> vinculado ao contrato.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Destinatários</Label>
+                  <Select value={destinatarioTipo} onValueChange={setDestinatarioTipo}>
+                    <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="role">Por perfil (role)</SelectItem>
+                      <SelectItem value="usuarios">Usuários específicos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {destinatarioTipo === "role" && (
                 <div className="space-y-2 pl-4 border-l-2 border-muted">
