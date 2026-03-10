@@ -312,7 +312,7 @@ export default function Usuarios() {
                   </Label>
                   <p className="text-xs text-muted-foreground">Este usuário realiza vendas e pode receber comissão</p>
                 </div>
-                <Switch checked={inviteIsVendedor} onCheckedChange={setInviteIsVendedor} />
+                <Switch checked={f.inviteIsVendedor} onCheckedChange={f.setInviteIsVendedor} />
               </div>
               {inviteIsVendedor && (
                 <>
