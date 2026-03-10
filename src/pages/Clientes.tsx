@@ -36,10 +36,11 @@ import { useNavigate } from "react-router-dom";
 import { ImportClientesDialog } from "@/components/ImportClientesDialog";
 import { TablePagination } from "@/components/TablePagination";
 import {
-  UF_LIST, emptyForm, emptyContatoForm, ITEMS_PER_PAGE,
+  UF_LIST, emptyContatoForm, ITEMS_PER_PAGE,
 } from "@/pages/clientes/constants";
 import type { ClienteContato } from "@/pages/clientes/types";
 import { useClientesQueries } from "@/pages/clientes/useClientesQueries";
+import { useClienteForm } from "@/pages/clientes/useClienteForm";
 import { HistoricoContratualDialog } from "@/pages/clientes/components/HistoricoContratualDialog";
 import { ClienteContatosDialog } from "@/pages/clientes/components/ClienteContatosDialog";
 import { ContatoFormDialog } from "@/pages/clientes/components/ContatoFormDialog";
@@ -63,16 +64,26 @@ export default function Clientes() {
     fetchData, fetchContatos, openHistorico, toggleAtivo,
   } = q;
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [viewOnly, setViewOnly] = useState(false);
-  const [editing, setEditing] = useState<Cliente | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [saving, setSaving] = useState(false);
-  const [loadingCep, setLoadingCep] = useState(false);
-  const [loadingCnpj, setLoadingCnpj] = useState(false);
-  const [cepError, setCepError] = useState("");
-  const [cnpjError, setCnpjError] = useState("");
-  const isQuerying = loadingCep || loadingCnpj;
+  const f = useClienteForm({
+    profile, isAdmin, canEditExisting, crudIncluir,
+    filialPadraoId, fetchContatos, fetchData,
+  });
+  const {
+    dialogOpen, setDialogOpen,
+    viewOnly, editing,
+    form, setForm,
+    saving,
+    loadingCep, loadingCnpj,
+    cepError, setCepError,
+    cnpjError, setCnpjError,
+    isQuerying,
+    formContatos, setFormContatos,
+    showContatoInlineForm, setShowContatoInlineForm,
+    editingInlineIdx, setEditingInlineIdx,
+    inlineContatoForm, setInlineContatoForm,
+    openCreate, openEdit,
+    handleSave, handleCepBlur, handleCnpjBlur,
+  } = f;
 
   // Contatos (modal separado — histórico/edição extra)
   const [contatosOpen, setContatosOpen] = useState(false);
@@ -84,135 +95,8 @@ export default function Clientes() {
   const [contatoForm, setContatoForm] = useState(emptyContatoForm);
   const [savingContato, setSavingContato] = useState(false);
 
-  // Contatos inline no formulário de cadastro/edição
-  const [formContatos, setFormContatos] = useState<(typeof emptyContatoForm & { _id?: string })[]>([]);
-  const [showContatoInlineForm, setShowContatoInlineForm] = useState(false);
-  const [editingInlineIdx, setEditingInlineIdx] = useState<number | null>(null);
-  const [inlineContatoForm, setInlineContatoForm] = useState(emptyContatoForm);
-
-   // Importação
+  // Importação
   const [importOpen, setImportOpen] = useState(false);
-
-  async function handleCepBlur() {
-    const cep = form.cep.replace(/\D/g, "");
-    if (cep.length !== 8) return;
-    setCepError("");
-    setLoadingCep(true);
-    try {
-      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-      const data = await res.json();
-      if (data.erro) {
-        setCepError("CEP não encontrado");
-      } else {
-        setForm((f) => ({
-          ...f,
-          logradouro: f.logradouro || data.logradouro || "",
-          bairro: f.bairro || data.bairro || "",
-          cidade: f.cidade || data.localidade || "",
-          uf: f.uf || data.uf || "",
-        }));
-      }
-    } catch {
-      setCepError("Erro ao consultar CEP");
-    } finally {
-      setLoadingCep(false);
-    }
-  }
-
-  async function handleCnpjBlur() {
-    const cnpj = form.cnpj_cpf.replace(/\D/g, "");
-    if (cnpj.length !== 14) return;
-    setCnpjError("");
-    setLoadingCnpj(true);
-    try {
-      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
-      if (!res.ok) {
-        setCnpjError("CNPJ não encontrado");
-      } else {
-        const data = await res.json();
-        const telefoneApi = data.ddd_telefone_1
-          ? `(${data.ddd_telefone_1}) ${data.telefone_1 || ""}`.trim()
-          : "";
-        const logradouroApi = data.logradouro
-          ? `${data.tipo_logradouro || ""} ${data.logradouro}`.trim()
-          : "";
-        setForm((f) => ({
-          ...f,
-          razao_social: f.razao_social || data.razao_social || "",
-          nome_fantasia: f.nome_fantasia || data.nome_fantasia || "",
-          email: f.email || data.email || "",
-          telefone: f.telefone || telefoneApi,
-          cidade: f.cidade || data.municipio || "",
-          uf: f.uf || data.uf || "",
-          logradouro: f.logradouro || logradouroApi,
-          bairro: f.bairro || data.bairro || "",
-          cep: f.cep || (data.cep ? data.cep.replace(/\D/g, "") : ""),
-        }));
-      }
-    } catch {
-      setCnpjError("CNPJ não encontrado");
-    } finally {
-      setLoadingCnpj(false);
-    }
-  }
-
-
-
-  function openCreate() {
-    setEditing(null);
-    setViewOnly(false);
-    setCepError("");
-    setCnpjError("");
-    const defaultFilial = filialPadraoId || profile?.filial_id || "";
-    setForm({ ...emptyForm, filial_id: defaultFilial });
-    setFormContatos([]);
-    setShowContatoInlineForm(false);
-    setEditingInlineIdx(null);
-    setInlineContatoForm(emptyContatoForm);
-    setDialogOpen(true);
-  }
-
-  async function openEdit(c: Cliente, readonly = false) {
-    setEditing(c);
-    setViewOnly(readonly);
-    const ieIsento = (c as any).inscricao_estadual === "ISENTO";
-    setForm({
-      nome_fantasia: c.nome_fantasia,
-      razao_social: c.razao_social || "",
-      apelido: (c as any).apelido || "",
-      cnpj_cpf: c.cnpj_cpf,
-      inscricao_estadual: ieIsento ? "" : ((c as any).inscricao_estadual || ""),
-      ie_isento: ieIsento,
-      responsavel_nome: (c as any).responsavel_nome || "",
-      contato_nome: c.contato_nome || "",
-      telefone: c.telefone || "",
-      email: c.email || "",
-      cidade: c.cidade || "",
-      uf: c.uf || "",
-      cep: (c as any).cep || "",
-      logradouro: (c as any).logradouro || "",
-      numero: (c as any).numero || "",
-      complemento: (c as any).complemento || "",
-      bairro: (c as any).bairro || "",
-      filial_id: c.filial_id || "",
-      ativo: c.ativo,
-    });
-    setShowContatoInlineForm(false);
-    setEditingInlineIdx(null);
-    setInlineContatoForm(emptyContatoForm);
-    // Carrega contatos existentes
-    const data = await fetchContatos(c.id);
-    setFormContatos((data || []).map((ct: any) => ({
-      _id: ct.id,
-      nome: ct.nome,
-      cargo: ct.cargo || "",
-      telefone: ct.telefone || "",
-      email: ct.email || "",
-      decisor: ct.decisor,
-      ativo: ct.ativo,
-    })));
-    setDialogOpen(true);
-  }
 
   // Contatos
   async function openContatos(c: Cliente) {
@@ -265,7 +149,6 @@ export default function Clientes() {
       ativo: contatoForm.ativo,
     };
 
-    // Se marcando como decisor, desmarcar os outros
     if (contatoForm.decisor) {
       await supabase
         .from("cliente_contatos")
@@ -294,7 +177,6 @@ export default function Clientes() {
   async function handleToggleDecisor(contato: ClienteContato) {
     if (!clienteContatos) return;
     if (!contato.decisor) {
-      // Desmarcar todos e marcar esse
       await supabase.from("cliente_contatos").update({ decisor: false }).eq("cliente_id", clienteContatos.id);
       await supabase.from("cliente_contatos").update({ decisor: true }).eq("id", contato.id);
     } else {
@@ -325,117 +207,6 @@ export default function Clientes() {
       toast.success("Contato desativado com sucesso");
       await loadContatos(clienteContatos.id);
     }
-  }
-
-  async function handleSave() {
-    if (isQuerying) return;
-    if (!form.nome_fantasia.trim() || !form.cnpj_cpf.trim() || !form.razao_social.trim()) {
-      toast.error("Nome fantasia, Razão social e CNPJ/CPF são obrigatórios");
-      return;
-    }
-    if (!form.responsavel_nome.trim()) {
-      toast.error("Nome completo do responsável é obrigatório");
-      return;
-    }
-    // Validar inscrição estadual
-    if (!form.ie_isento && !form.inscricao_estadual.trim()) {
-      toast.error("Inscrição Estadual é obrigatória. Se não possuir, marque 'Isento de IE'.");
-      return;
-    }
-    // Validar contatos: pelo menos 1, e cada um com email e cargo
-    if (formContatos.length === 0) {
-      toast.error("Cadastre pelo menos um contato antes de salvar");
-      return;
-    }
-    const contatoInvalido = formContatos.find((c) => !c.email?.trim() || !c.cargo?.trim());
-    if (contatoInvalido) {
-      toast.error("Todos os contatos devem ter E-mail e Cargo preenchidos");
-      return;
-    }
-    setSaving(true);
-
-    // ── Verificação de CNPJ duplicado ──────────────────────────────────────
-    if (!editing) {
-      // Verifica se o usuário tem permissão para cadastrar CNPJ duplicado
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("permitir_cnpj_duplicado")
-        .eq("user_id", profile?.user_id || "")
-        .maybeSingle();
-
-      const podeduplicar = isAdmin || (profileData as any)?.permitir_cnpj_duplicado === true;
-
-      if (!podeduplicar) {
-        const cnpjLimpo = form.cnpj_cpf.trim();
-        const { data: existente } = await supabase
-          .from("clientes")
-          .select("id, nome_fantasia")
-          .eq("cnpj_cpf", cnpjLimpo)
-          .maybeSingle();
-
-        if (existente) {
-          toast.error(`CNPJ/CPF já cadastrado para o cliente "${existente.nome_fantasia}". Para cadastrar com CNPJ duplicado, solicite permissão ao administrador.`);
-          setSaving(false);
-          return;
-        }
-      }
-    }
-
-    const payload: any = {
-      nome_fantasia: form.nome_fantasia.trim(),
-      razao_social: form.razao_social.trim(),
-      apelido: form.apelido.trim() || null,
-      cnpj_cpf: form.cnpj_cpf.trim(),
-      inscricao_estadual: form.ie_isento ? "ISENTO" : (form.inscricao_estadual.trim() || null),
-      responsavel_nome: form.responsavel_nome.trim() || null,
-      contato_nome: formContatos[0]?.nome || form.contato_nome.trim() || null,
-      telefone: formContatos[0]?.telefone || form.telefone.trim() || null,
-      email: formContatos[0]?.email || form.email.trim() || null,
-      cidade: form.cidade.trim() || null,
-      uf: form.uf || null,
-      cep: form.cep.replace(/\D/g, "") || null,
-      logradouro: form.logradouro.trim() || null,
-      numero: form.numero.trim() || null,
-      complemento: form.complemento.trim() || null,
-      bairro: form.bairro.trim() || null,
-      filial_id: form.filial_id || null,
-      ativo: form.ativo,
-    };
-    if (editing) {
-      payload.atualizado_por = profile?.user_id || null;
-      const { error, count } = await supabase.from("clientes").update(payload).eq("id", editing.id);
-      if (error) { toast.error("Erro ao atualizar cliente: " + error.message); setSaving(false); return; }
-      // Sincronizar contatos: upsert dos com _id, inserir novos
-      for (const ct of formContatos) {
-        if (ct._id) {
-          await supabase.from("cliente_contatos").update({
-            nome: ct.nome, cargo: ct.cargo || null, telefone: ct.telefone || null,
-            email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
-          }).eq("id", ct._id);
-        } else {
-          await supabase.from("cliente_contatos").insert({
-            cliente_id: editing.id, nome: ct.nome, cargo: ct.cargo || null,
-            telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
-          });
-        }
-      }
-      toast.success("Cliente atualizado com sucesso");
-    } else {
-      payload.criado_por = profile?.user_id || null;
-      const { data: newCliente, error } = await supabase.from("clientes").insert(payload).select().single();
-      if (error || !newCliente) { toast.error("Erro ao cadastrar cliente: " + (error?.message || "")); setSaving(false); return; }
-      // Inserir contatos
-      for (const ct of formContatos) {
-        await supabase.from("cliente_contatos").insert({
-          cliente_id: newCliente.id, nome: ct.nome, cargo: ct.cargo || null,
-          telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
-        });
-      }
-      toast.success("Cliente cadastrado com sucesso");
-    }
-    setSaving(false);
-    setDialogOpen(false);
-    fetchData();
   }
 
   async function handleToggleAtivo(c: Cliente) {
@@ -486,8 +257,8 @@ export default function Clientes() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__todas__">Todas as Filiais</SelectItem>
-                {filiaisDoUsuario.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                {filiaisDoUsuario.map((fil) => (
+                  <SelectItem key={fil.id} value={fil.id}>{fil.nome}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -626,7 +397,7 @@ export default function Clientes() {
               <div className="relative">
                 <Input
                   value={form.cnpj_cpf}
-                  onChange={(e) => { setCnpjError(""); setForm((f) => ({ ...f, cnpj_cpf: e.target.value })); }}
+                  onChange={(e) => { setCnpjError(""); setForm((prev) => ({ ...prev, cnpj_cpf: e.target.value })); }}
                   onBlur={handleCnpjBlur}
                   placeholder="00.000.000/0001-00"
                   className={cnpjError ? "border-destructive pr-9" : "pr-9"}
@@ -645,7 +416,7 @@ export default function Clientes() {
             {/* Filial */}
             <div className="space-y-1.5">
               <Label>Filial responsável</Label>
-              <Select value={form.filial_id} onValueChange={(v) => setForm((f) => ({ ...f, filial_id: v }))} disabled={!canEditExisting && !crudIncluir}>
+              <Select value={form.filial_id} onValueChange={(v) => setForm((prev) => ({ ...prev, filial_id: v }))} disabled={!canEditExisting && !crudIncluir}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecionar filial" />
                 </SelectTrigger>
@@ -660,19 +431,19 @@ export default function Clientes() {
             {/* Nome fantasia */}
             <div className="col-span-2 space-y-1.5">
               <Label>Nome fantasia *</Label>
-              <Input value={form.nome_fantasia} onChange={(e) => setForm((f) => ({ ...f, nome_fantasia: e.target.value }))} placeholder="Ex: Restaurante do João" />
+              <Input value={form.nome_fantasia} onChange={(e) => setForm((prev) => ({ ...prev, nome_fantasia: e.target.value }))} placeholder="Ex: Restaurante do João" />
             </div>
 
             {/* Razao social */}
             <div className="col-span-2 space-y-1.5">
               <Label>Razão social *</Label>
-              <Input value={form.razao_social} onChange={(e) => setForm((f) => ({ ...f, razao_social: e.target.value }))} placeholder="Razão social" />
+              <Input value={form.razao_social} onChange={(e) => setForm((prev) => ({ ...prev, razao_social: e.target.value }))} placeholder="Razão social" />
             </div>
 
             {/* Apelido */}
             <div className="col-span-2 space-y-1.5">
               <Label>Apelido</Label>
-              <Input value={form.apelido} onChange={(e) => setForm((f) => ({ ...f, apelido: e.target.value }))} placeholder="Ex: Bar do João Loja 01 Centro" />
+              <Input value={form.apelido} onChange={(e) => setForm((prev) => ({ ...prev, apelido: e.target.value }))} placeholder="Ex: Bar do João Loja 01 Centro" />
               <p className="text-xs text-muted-foreground">Identificação interna da loja/unidade</p>
             </div>
 
@@ -681,7 +452,7 @@ export default function Clientes() {
               <Label>Inscrição estadual *</Label>
               <Input
                 value={form.inscricao_estadual}
-                onChange={(e) => setForm((f) => ({ ...f, inscricao_estadual: e.target.value }))}
+                onChange={(e) => setForm((prev) => ({ ...prev, inscricao_estadual: e.target.value }))}
                 placeholder="Ex: 123.456.789.012"
                 disabled={form.ie_isento}
                 className={form.ie_isento ? "opacity-50" : ""}
@@ -691,7 +462,7 @@ export default function Clientes() {
               <div className="flex items-center gap-2 h-10">
                 <Switch
                   checked={form.ie_isento}
-                  onCheckedChange={(v) => setForm((f) => ({ ...f, ie_isento: v, inscricao_estadual: v ? "" : f.inscricao_estadual }))}
+                  onCheckedChange={(v) => setForm((prev) => ({ ...prev, ie_isento: v, inscricao_estadual: v ? "" : prev.inscricao_estadual }))}
                 />
                 <Label className="cursor-pointer select-none">Isento de IE</Label>
               </div>
@@ -711,7 +482,7 @@ export default function Clientes() {
               <div className="relative">
                 <Input
                   value={form.cep}
-                  onChange={(e) => { setCepError(""); setForm((f) => ({ ...f, cep: e.target.value })); }}
+                  onChange={(e) => { setCepError(""); setForm((prev) => ({ ...prev, cep: e.target.value })); }}
                   onBlur={handleCepBlur}
                   placeholder="00000-000"
                   maxLength={9}
@@ -731,35 +502,35 @@ export default function Clientes() {
             {/* Logradouro */}
             <div className="space-y-1.5">
               <Label>Logradouro</Label>
-              <Input value={form.logradouro} onChange={(e) => setForm((f) => ({ ...f, logradouro: e.target.value }))} placeholder="Rua / Avenida..." />
+              <Input value={form.logradouro} onChange={(e) => setForm((prev) => ({ ...prev, logradouro: e.target.value }))} placeholder="Rua / Avenida..." />
             </div>
 
             {/* Número */}
             <div className="space-y-1.5">
               <Label>Número</Label>
-              <Input value={form.numero} onChange={(e) => setForm((f) => ({ ...f, numero: e.target.value }))} placeholder="Ex: 123" />
+              <Input value={form.numero} onChange={(e) => setForm((prev) => ({ ...prev, numero: e.target.value }))} placeholder="Ex: 123" />
             </div>
 
             {/* Complemento */}
             <div className="space-y-1.5">
               <Label>Complemento</Label>
-              <Input value={form.complemento} onChange={(e) => setForm((f) => ({ ...f, complemento: e.target.value }))} placeholder="Apto, Sala, Bloco..." />
+              <Input value={form.complemento} onChange={(e) => setForm((prev) => ({ ...prev, complemento: e.target.value }))} placeholder="Apto, Sala, Bloco..." />
             </div>
 
             {/* Bairro */}
             <div className="space-y-1.5">
               <Label>Bairro</Label>
-              <Input value={form.bairro} onChange={(e) => setForm((f) => ({ ...f, bairro: e.target.value }))} placeholder="Bairro" />
+              <Input value={form.bairro} onChange={(e) => setForm((prev) => ({ ...prev, bairro: e.target.value }))} placeholder="Bairro" />
             </div>
 
             {/* Cidade e UF */}
             <div className="space-y-1.5">
               <Label>Cidade</Label>
-              <Input value={form.cidade} onChange={(e) => setForm((f) => ({ ...f, cidade: e.target.value }))} placeholder="Ex: São Paulo" />
+              <Input value={form.cidade} onChange={(e) => setForm((prev) => ({ ...prev, cidade: e.target.value }))} placeholder="Ex: São Paulo" />
             </div>
             <div className="space-y-1.5">
               <Label>UF</Label>
-              <Select value={form.uf} onValueChange={(v) => setForm((f) => ({ ...f, uf: v }))}>
+              <Select value={form.uf} onValueChange={(v) => setForm((prev) => ({ ...prev, uf: v }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="UF" />
                 </SelectTrigger>
@@ -773,7 +544,7 @@ export default function Clientes() {
 
             {canEditExisting && (
               <div className="col-span-2 flex items-center gap-3">
-                <Switch checked={form.ativo} onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))} />
+                <Switch checked={form.ativo} onCheckedChange={(v) => setForm((prev) => ({ ...prev, ativo: v }))} />
                 <Label>Cliente ativo</Label>
               </div>
             )}
@@ -781,7 +552,7 @@ export default function Clientes() {
             {/* ── Responsável ── */}
             <div className="col-span-2 space-y-1.5">
               <Label>Nome completo do responsável *</Label>
-              <Input value={form.responsavel_nome} onChange={(e) => setForm((f) => ({ ...f, responsavel_nome: e.target.value }))} placeholder="Nome completo do responsável pela empresa" />
+              <Input value={form.responsavel_nome} onChange={(e) => setForm((prev) => ({ ...prev, responsavel_nome: e.target.value }))} placeholder="Nome completo do responsável pela empresa" />
             </div>
 
             {/* ── Seção Contatos ── */}
@@ -838,7 +609,6 @@ export default function Clientes() {
                             <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
                               title="Desativar contato"
                               onClick={() => {
-                                // Se é decisor, verificar se há outro contato ativo que seja decisor
                                 if (ct.decisor) {
                                   const outroDecisorAtivo = formContatos.some((c, i) => i !== idx && c.ativo !== false && c.decisor);
                                   if (!outroDecisorAtivo) {
@@ -882,22 +652,22 @@ export default function Clientes() {
                   <div className="grid grid-cols-2 gap-2">
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs">Nome *</Label>
-                      <Input className="h-8 text-sm" value={inlineContatoForm.nome} onChange={(e) => setInlineContatoForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Nome completo" />
+                      <Input className="h-8 text-sm" value={inlineContatoForm.nome} onChange={(e) => setInlineContatoForm((prev) => ({ ...prev, nome: e.target.value }))} placeholder="Nome completo" />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Cargo *</Label>
-                      <Input className="h-8 text-sm" value={inlineContatoForm.cargo} onChange={(e) => setInlineContatoForm((f) => ({ ...f, cargo: e.target.value }))} placeholder="Cargo / função" />
+                      <Input className="h-8 text-sm" value={inlineContatoForm.cargo} onChange={(e) => setInlineContatoForm((prev) => ({ ...prev, cargo: e.target.value }))} placeholder="Cargo / função" />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Telefone</Label>
-                      <Input className="h-8 text-sm" value={inlineContatoForm.telefone} onChange={(e) => setInlineContatoForm((f) => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
+                      <Input className="h-8 text-sm" value={inlineContatoForm.telefone} onChange={(e) => setInlineContatoForm((prev) => ({ ...prev, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
                     </div>
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs">E-mail *</Label>
-                      <Input className="h-8 text-sm" type="email" value={inlineContatoForm.email} onChange={(e) => setInlineContatoForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@empresa.com" />
+                      <Input className="h-8 text-sm" type="email" value={inlineContatoForm.email} onChange={(e) => setInlineContatoForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="email@empresa.com" />
                     </div>
                     <div className="col-span-2 flex items-center gap-3">
-                      <Checkbox id="inline-decisor" checked={inlineContatoForm.decisor} onCheckedChange={(v) => setInlineContatoForm((f) => ({ ...f, decisor: !!v }))} />
+                      <Checkbox id="inline-decisor" checked={inlineContatoForm.decisor} onCheckedChange={(v) => setInlineContatoForm((prev) => ({ ...prev, decisor: !!v }))} />
                       <Label htmlFor="inline-decisor" className="text-xs cursor-pointer">Decisor (tomador de decisão)</Label>
                     </div>
                   </div>
@@ -910,7 +680,6 @@ export default function Clientes() {
                       if (editingInlineIdx !== null) {
                         setFormContatos((prev) => prev.map((c, i) => i === editingInlineIdx ? { ...c, ...inlineContatoForm, _id: c._id } : c));
                       } else {
-                        // Se marcado decisor, desmarcar outros
                         setFormContatos((prev) => [
                           ...(inlineContatoForm.decisor ? prev.map((c) => ({ ...c, decisor: false })) : prev),
                           { ...inlineContatoForm },
