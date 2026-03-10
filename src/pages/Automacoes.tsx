@@ -86,6 +86,7 @@ const TIPO_PEDIDO_OPTIONS = [
 const GATILHO_LABELS: Record<string, string> = {
   pedido_status: "Mudança de Status do Pedido",
   tempo_sem_acao_financeiro: "Tempo sem Ação (Financeiro)",
+  contrato_enviado_assinatura: "Contrato Enviado p/ Assinatura",
   contrato_cancelamento: "Cancelamento de Contrato",
   card_etapa: "Mudança de Etapa no Painel",
 };
