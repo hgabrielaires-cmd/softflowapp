@@ -1234,6 +1234,7 @@ export default function PainelAtendimento() {
             <DialogFooter className="border-t pt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {!isChecklistCompleto(checklistEtapa, checklistProgresso) && detailCard.iniciado_em && <p className="text-[10px] text-muted-foreground">Complete todos os itens do checklist para finalizar</p>}
+                {isChecklistCompleto(checklistEtapa, checklistProgresso) && checklistEtapa.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, checklistEtapa.map((a: any) => a.id)) && detailCard.iniciado_em && <p className="text-[10px] text-amber-600 font-medium">Conclua todas as atividades da etapa para finalizar</p>}
               </div>
               <div className="flex items-center gap-2">
                 {(podePausarProjeto || podeRecusarProjeto || podeGerenciarApontamento || podeResetarProjeto) && (
