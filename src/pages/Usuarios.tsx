@@ -699,7 +699,7 @@ export default function Usuarios() {
                           Recebe notificações e pode aprovar/reprovar solicitações de desconto acima do limite permitido.
                         </p>
                       </div>
-                      <Switch checked={editGestorDesconto} onCheckedChange={setEditGestorDesconto} />
+                      <Switch checked={f.editGestorDesconto} onCheckedChange={f.setEditGestorDesconto} />
                     </div>
                     <div className="border-t border-border" />
                     <div className="flex items-center justify-between">
