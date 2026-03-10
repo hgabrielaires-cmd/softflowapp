@@ -483,21 +483,8 @@ export default function Contratos() {
     setProfilesMap(pMap);
     setLoading(false);
 
-    // Carregar registros ZapSign
-    const { data: zapsignData } = await supabase
-      .from("contratos_zapsign")
-      .select("*");
-    const zMap: Record<string, ZapSignRecord> = {};
-    (zapsignData || []).forEach((z: any) => { zMap[z.contrato_id] = z as ZapSignRecord; });
-    setZapsignRecords(zMap);
-
-    // Sincronizar status dos contratos pendentes com ZapSign
-    const pendentes = (zapsignData || []).filter(
-      (z: any) => z.status === "Enviado" || z.status === "Pendente"
-    );
-    if (pendentes.length > 0) {
-      syncZapsignStatuses(pendentes, zMap);
-    }
+    // Carregar registros ZapSign via hook
+    loadZapsignRecords();
   }
 
   useEffect(() => {
