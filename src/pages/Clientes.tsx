@@ -1180,6 +1180,8 @@ export default function Clientes() {
         rentabilidadeConsolidada={rentabilidadeConsolidada}
         margemIdealHistorico={margemIdealHistorico}
       />
+
+      <ImportClientesDialog
         open={importOpen}
         onOpenChange={setImportOpen}
         filialId={filialPadraoId || profile?.filial_id || ""}
