@@ -1030,8 +1030,8 @@ export default function PainelAtendimento() {
                               {/* Action button + Status badge — grouped to the right */}
                               <div className="flex items-center gap-1.5 ml-auto">
                                 {statusAtiv === "pendente" && (
-                                  <Button size="sm" className="h-6 text-[10px] gap-1 bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => iniciarAtividade(detailCard.id, atividade.id, detailCard.etapa_id)}>
-                                    <Play className="h-3 w-3" />Iniciar
+                                  <Button size="sm" className="h-8 text-xs px-3 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => iniciarAtividade(detailCard.id, atividade.id, detailCard.etapa_id)}>
+                                    <Play className="h-4 w-4" />Iniciar
                                   </Button>
                                 )}
                                 {statusAtiv === "pendente" && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Pendente</Badge>}
