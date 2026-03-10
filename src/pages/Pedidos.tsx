@@ -1022,10 +1022,8 @@ export default function Pedidos() {
         telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
       });
     }
-    // Recarregar lista de clientes e selecionar o novo
-    const { data: novosClientes } = await supabase.from("clientes").select("*").eq("ativo", true).order("nome_fantasia");
-    const listaAtualizada = (novosClientes || []) as Cliente[];
-    setClientes(listaAtualizada);
+    // Recarregar dados (inclui clientes) e selecionar o novo
+    await loadData();
     // Selecionar o cliente recém-criado e limpar busca
     setForm((f) => ({ ...f, cliente_id: data.id }));
     setClienteSearch("");
