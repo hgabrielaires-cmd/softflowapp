@@ -65,20 +65,7 @@ import { UpgradePlanoDialog } from "./pedidos/components/UpgradePlanoDialog";
 
 // Types, constants, and helpers are now in src/pages/pedidos/
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function fmtBRL(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function applyDesconto(original: number, tipo: "R$" | "%", valor: number): number {
-  const raw = tipo === "%" ? original - (original * valor / 100) : original - valor;
-  return Math.max(0, raw);
-}
-
-function applyAcrescimo(original: number, tipo: "R$" | "%", valor: number): number {
-  return tipo === "%" ? original + (original * valor / 100) : original + valor;
-}
+// Helpers imported from ./pedidos/helpers
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
