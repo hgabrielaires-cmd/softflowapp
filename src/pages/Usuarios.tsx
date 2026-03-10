@@ -582,8 +582,8 @@ export default function Usuarios() {
                               <Label className="text-xs">Implantação (%)</Label>
                               <Input
                                 type="number" min="0" max="100" step="0.01"
-                                value={editComissaoImp}
-                                onChange={(e) => setEditComissaoImp(e.target.value)}
+                                value={f.editComissaoImp}
+                                onChange={(e) => f.setEditComissaoImp(e.target.value)}
                               />
                             </div>
                             <div className="space-y-1.5">
