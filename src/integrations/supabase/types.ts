@@ -436,6 +436,56 @@ export type Database = {
         }
         Relationships: []
       }
+      contratos_vendedor_lembretes: {
+        Row: {
+          cliente_nome: string
+          contrato_id: string
+          contrato_numero: string
+          created_at: string
+          decisor_nome: string
+          enviado_em: string
+          id: string
+          lembrete_24h_em: string | null
+          lembrete_24h_enviado: boolean
+          sign_url: string | null
+          vendedor_user_id: string
+        }
+        Insert: {
+          cliente_nome: string
+          contrato_id: string
+          contrato_numero: string
+          created_at?: string
+          decisor_nome: string
+          enviado_em?: string
+          id?: string
+          lembrete_24h_em?: string | null
+          lembrete_24h_enviado?: boolean
+          sign_url?: string | null
+          vendedor_user_id: string
+        }
+        Update: {
+          cliente_nome?: string
+          contrato_id?: string
+          contrato_numero?: string
+          created_at?: string
+          decisor_nome?: string
+          enviado_em?: string
+          id?: string
+          lembrete_24h_em?: string | null
+          lembrete_24h_enviado?: boolean
+          sign_url?: string | null
+          vendedor_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_vendedor_lembretes_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contratos_zapsign: {
         Row: {
           contrato_id: string
