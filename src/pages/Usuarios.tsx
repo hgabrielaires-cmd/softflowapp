@@ -331,7 +331,7 @@ export default function Usuarios() {
     const { error } = await supabase.from("profiles").update({ active: !user.active }).eq("user_id", user.user_id);
     if (error) { toast.error("Erro ao atualizar usuário"); return; }
     toast.success(user.active ? "Usuário desativado" : "Usuário ativado");
-    loadUsers();
+    q.refetchUsers();
   }
 
   // ── Reset password ────────────────────────────────────────
