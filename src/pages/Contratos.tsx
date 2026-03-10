@@ -146,6 +146,33 @@ export default function Contratos() {
   // Contatos do cliente selecionado (para Termo de Aceite)
   const [contatosCliente, setContatosCliente] = useState<{ nome: string; telefone: string | null; decisor: boolean; ativo: boolean }[]>([]);
 
+  // ── Contexto para gerarTermoAceite (helper extraído) ─────────────────────
+  function buildTermoCtx(): GerarTermoAceiteContext {
+    return { profilesMap, profileFullName: profile?.full_name, contatosCliente, linkedMessageTemplate, filialParametros, contratos };
+  }
+
+  // ── Hook de Geração/ZapSign/WhatsApp ─────────────────────
+  const zapsign = useContratoGeracaoZapsign({
+    selected,
+    setSelected,
+    contratos,
+    setContratos,
+    setContatosCliente,
+    setLinkedMessageTemplate,
+    buildTermoCtx,
+  });
+  const {
+    zapsignRecords, gerando, gerarSignedUrl, enviandoZapsign,
+    reenviandoWhatsapp, enviandoWhatsapp, syncingStatuses,
+    openZapsignDetail, setOpenZapsignDetail,
+    zapsignDetailContrato, setZapsignDetailContrato,
+    openZapsignPopup, setOpenZapsignPopup,
+    zapsignPopupStep, zapsignPopupMsgIndex, zapsignPopupContrato, zapsignPopupError,
+    loadZapsignRecords, handleSyncAllStatuses,
+    handleGerarContrato, handleBaixarContrato,
+    handleAtualizarStatusZapSign, handleEnviarWhatsapp: hookEnviarWhatsapp,
+    handleReenviarWhatsapp,
+  } = zapsign;
 
   // ── Cadastro Retroativo ──
   const [openRetroativo, setOpenRetroativo] = useState(false);
