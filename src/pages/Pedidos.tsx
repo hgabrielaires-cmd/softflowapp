@@ -62,6 +62,7 @@ import { VisualizarPedidoDialog } from "./pedidos/components/VisualizarPedidoDia
 import { ClienteRapidoDialog } from "./pedidos/components/ClienteRapidoDialog";
 import { ComentarioDraftDialog } from "./pedidos/components/ComentarioDraftDialog";
 import { UpgradePlanoDialog } from "./pedidos/components/UpgradePlanoDialog";
+import { PedidoFormDialog } from "./pedidos/components/PedidoFormDialog";
 import { usePedidosQueries } from "./pedidos/usePedidosQueries";
 
 // ─── Main Component ───────────────────────────────────────────────────────────
