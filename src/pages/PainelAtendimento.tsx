@@ -599,10 +599,10 @@ export default function PainelAtendimento() {
       const existingApontados = (cardApontamentosDetalhado[apontamentoCardId] || []).map(a => a.usuario_id);
       const novosUsuarios = apontamentoUsuarios.filter(uid => !existingApontados.includes(uid));
       if (novosUsuarios.length === 0) { toast.info("Todos os usuários selecionados já estão apontados."); setApontando(false); return; }
-      const { error } = await supabase.from("painel_apontamentos").insert(novosUsuarios.map(uid => ({ card_id: apontamentoCardId, usuario_id: uid, apontado_por: user.id, motivo: card?.pausado_motivo || null })) as any);
+      const { error } = await supabase.from("painel_apontamentos").insert(novosUsuarios.map(uid => ({ card_id: apontamentoCardId, usuario_id: uid, apontado_por: user.id, motivo: card?.pausado_motivo || null })));
       if (error) throw error;
-      for (const uid of novosUsuarios) { const prof = responsaveis.find((r: any) => r.id === uid); await supabase.from("notificacoes").insert({ titulo: "📌 Apontamento de Resolução", mensagem: `Você foi designado(a) para resolver uma pendência do projeto ${clienteNome}. Motivo: ${card?.pausado_motivo || "Não informado"}`, tipo: "alerta", criado_por: user.id, destinatario_user_id: (prof as any)?.user_id || uid, metadata: { card_id: card?.id || detailCard?.id } } as any); }
-      const nomes = novosUsuarios.map(uid => { const p = responsaveis.find((r: any) => r.id === uid); return (p as any)?.full_name?.split(" ")[0] || "Usuário"; });
+      for (const uid of novosUsuarios) { const prof = responsaveis.find((r) => r.id === uid); await supabase.from("notificacoes").insert({ titulo: "📌 Apontamento de Resolução", mensagem: `Você foi designado(a) para resolver uma pendência do projeto ${clienteNome}. Motivo: ${card?.pausado_motivo || "Não informado"}`, tipo: "alerta", criado_por: user.id, destinatario_user_id: prof?.user_id || uid, metadata: { card_id: card?.id || detailCard?.id } }); }
+      const nomes = novosUsuarios.map(uid => { const p = responsaveis.find((r) => r.id === uid); return p?.full_name?.split(" ")[0] || "Usuário"; });
       await supabase.from("painel_comentarios").insert({ card_id: apontamentoCardId, etapa_id: card?.etapa_id || null, criado_por: user.id, texto: `📌 Apontamento: ${nomes.join(", ")} designado(s) para resolução.` });
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] }); queryClient.invalidateQueries({ queryKey: ["card_apontamentos"] });
       toast.success(`${novosUsuarios.length} usuário(s) designado(s)!`); setApontamentoOpen(false); setApontamentoUsuarios([]); setApontamentoCardId(null); setBuscaApontamento("");
