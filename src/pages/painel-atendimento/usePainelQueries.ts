@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { PainelEtapa, PainelCard, PRIORIDADE_PESO } from "./types";
+import type { PainelEtapa, PainelCard, AtividadeExecucao } from "./types";
 
 export function usePainelQueries(profile: any) {
   const { data: etapas = [] } = useQuery({
