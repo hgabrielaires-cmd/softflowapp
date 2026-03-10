@@ -44,7 +44,7 @@ import { TablePagination } from "@/components/TablePagination";
 // ─── Extracted modules ────────────────────────────────────────────────────────
 import type { PedidoWithJoins, FormState, ModuloOpcional, ModuloAdicionadoItem, ServicoAdicionadoItem, DraftComentario, ClienteFormState, ClienteContatoInline } from "./pedidos/types";
 import { emptyClienteForm, STATUS_OPTIONS, STATUS_COLORS, FIN_STATUS_COLORS, emptyForm, PRIORIDADE_MAP_DRAFT, MAX_FILE_SIZE_DRAFT } from "./pedidos/constants";
-import { fmtBRL, applyDesconto, applyAcrescimo } from "./pedidos/helpers";
+import { fmtBRL, applyDesconto, applyAcrescimo, validatePedidoForm, buildPedidoPayload } from "./pedidos/helpers";
 import { VisualizarPedidoDialog } from "./pedidos/components/VisualizarPedidoDialog";
 import { ClienteRapidoDialog } from "./pedidos/components/ClienteRapidoDialog";
 import { ComentarioDraftDialog } from "./pedidos/components/ComentarioDraftDialog";
@@ -637,17 +637,11 @@ export default function Pedidos() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.cliente_id) { toast.error("Selecione um cliente"); return; }
-    if (form.tipo_pedido === "OA") {
-      if (form.servicos_pedido.length === 0) { toast.error("Adicione pelo menos um serviço"); return; }
-      if (!form.tipo_atendimento) { toast.error("Selecione o tipo de atendimento (Interno/Externo)"); return; }
-    } else {
-      if (!form.plano_id) { toast.error("Selecione um plano"); return; }
-    }
-    if (!form.pagamento_implantacao_forma) { toast.error("Selecione a forma de pagamento da implantação"); return; }
+    const validationError = validatePedidoForm(form);
+    if (validationError) { toast.error(validationError); return; }
+
     setSaving(true);
     try {
-      // Garantir que vendedorId nunca seja undefined
       const vendedorId = form.vendedor_id || profile?.user_id || "";
       if (!vendedorId) { toast.error("Vendedor não identificado"); setSaving(false); return; }
 
@@ -676,50 +670,21 @@ export default function Pedidos() {
       const precisaAprovacaoMens = descontoAtivo && descontoMensPerc > 0 && descontoMensPerc > limiteMens;
       const precisaAprovacao = precisaAprovacaoImp || precisaAprovacaoMens;
 
-      const payload: Record<string, unknown> = {
-        cliente_id: form.cliente_id,
-        plano_id: form.plano_id,
-        filial_id: filialId,
-        vendedor_id: vendedorId,
-        valor_implantacao: valorImplantacaoFinal,
-        valor_mensalidade: valorMensalidadeFinal,
-        valor_total: valorTotal,
-        comissao_percentual: comissaoPercentualLegado,
-        comissao_valor: comissaoValorTotal,
-        observacoes: form.observacoes || null,
-        motivo_desconto: form.motivo_desconto || null,
-        valor_implantacao_original: valorImplantacaoOriginal,
-        valor_mensalidade_original: valorMensalidadeOriginal,
-        desconto_implantacao_tipo: form.desconto_implantacao_tipo,
-        desconto_implantacao_valor: parseFloat(form.desconto_implantacao_valor) || 0,
-        valor_implantacao_final: valorImplantacaoFinal,
-        desconto_mensalidade_tipo: form.desconto_mensalidade_tipo,
-        desconto_mensalidade_valor: parseFloat(form.desconto_mensalidade_valor) || 0,
-        valor_mensalidade_final: valorMensalidadeFinal,
-        acrescimo_implantacao_tipo: form.acrescimo_implantacao_tipo,
-        acrescimo_implantacao_valor: parseFloat(form.acrescimo_implantacao_valor) || 0,
-        acrescimo_mensalidade_tipo: form.acrescimo_mensalidade_tipo,
-        acrescimo_mensalidade_valor: parseFloat(form.acrescimo_mensalidade_valor) || 0,
-        modulos_adicionais: form.modulos_adicionais,
-        servicos_pedido: form.servicos_pedido,
-        tipo_pedido: form.tipo_pedido,
-        tipo_atendimento: form.tipo_pedido === "OA" ? form.tipo_atendimento : null,
-        contrato_id: form.contrato_id || null,
-        comissao_implantacao_percentual: comissaoImpPerc,
-        comissao_implantacao_valor: comissaoImpValor,
-        comissao_mensalidade_percentual: comissaoMensPerc,
-        comissao_mensalidade_valor: comissaoMensValor,
-        comissao_servico_percentual: comissaoServPerc,
-        comissao_servico_valor: comissaoServValor,
-        pagamento_mensalidade_forma: form.pagamento_mensalidade_tipo || null,
-        pagamento_mensalidade_parcelas: null,
-        pagamento_mensalidade_desconto_percentual: 0,
-        pagamento_mensalidade_observacao: form.pagamento_mensalidade_observacao || null,
-        pagamento_implantacao_forma: form.pagamento_implantacao_forma || null,
-        pagamento_implantacao_parcelas: form.pagamento_implantacao_parcelas ? parseInt(form.pagamento_implantacao_parcelas) : null,
-        pagamento_implantacao_desconto_percentual: parseFloat(form.pagamento_implantacao_desconto_percentual) || 0,
-        pagamento_implantacao_observacao: form.pagamento_implantacao_observacao || null,
-      };
+      const payload = buildPedidoPayload(form, {
+        valorImplantacaoOriginal,
+        valorMensalidadeOriginal,
+        valorImplantacaoFinal,
+        valorMensalidadeFinal,
+        valorTotal,
+        comissaoPercentualLegado,
+        comissaoValorTotal,
+        comissaoImpPerc,
+        comissaoImpValor,
+        comissaoMensPerc,
+        comissaoMensValor,
+        comissaoServPerc,
+        comissaoServValor,
+      }, vendedorId, filialId);
 
       if (editingPedido) {
         const isReprovado = editingPedido.financeiro_status === "Reprovado";
@@ -800,7 +765,7 @@ export default function Pedidos() {
             financeiro_status: "Aguardando",
             contrato_liberado: false,
           };
-          const { data: novoPedido, error } = await supabase.from("pedidos").insert(insertPayload as any).select().single();
+          const { data: novoPedido, error } = await supabase.from("pedidos").insert(insertPayload).select().single();
           if (error) throw error;
           dispararAutomacaoPedidoStatus(novoPedido.id, "Novo", "Aguardando Aprovação de Desconto", form.tipo_pedido);
           await salvarDraftComentarios(novoPedido.id);
@@ -827,7 +792,7 @@ export default function Pedidos() {
             financeiro_status: "Aguardando",
             contrato_liberado: false,
           };
-          const { data: novoPedido2, error } = await supabase.from("pedidos").insert(insertPayload as any).select().single();
+          const { data: novoPedido2, error } = await supabase.from("pedidos").insert(insertPayload).select().single();
           if (error) throw error;
           await salvarDraftComentarios(novoPedido2.id);
           toast.success("Pedido criado com sucesso!");
