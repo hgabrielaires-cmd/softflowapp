@@ -33,6 +33,8 @@ import { PRIORIDADE_MAP_DRAFT, emptyClienteForm } from "../constants";
 import { fmtBRL } from "../helpers";
 import type { Cliente, Filial, Profile, Contrato } from "@/lib/supabase-types";
 
+interface FilialOption { id: string; nome: string; }
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface PedidoFormDialogProps {
