@@ -868,28 +868,7 @@ export default function Contratos() {
               size="icon"
               title="Atualizar status de assinaturas"
               disabled={syncingStatuses}
-              onClick={async () => {
-                setSyncingStatuses(true);
-                try {
-                  const { data: zapsignData } = await supabase.from("contratos_zapsign").select("*");
-                  const zMap: Record<string, ZapSignRecord> = {};
-                  (zapsignData || []).forEach((z: any) => { zMap[z.contrato_id] = z as ZapSignRecord; });
-                  const pendentes = (zapsignData || []).filter(
-                    (z: any) => z.status === "Enviado" || z.status === "Pendente"
-                  );
-                  if (pendentes.length > 0) {
-                    await syncZapsignStatuses(pendentes, zMap);
-                    toast.success("Status das assinaturas atualizados!");
-                  } else {
-                    setZapsignRecords(zMap);
-                    toast.info("Nenhum contrato pendente de assinatura.");
-                  }
-                } catch {
-                  toast.error("Erro ao sincronizar status.");
-                } finally {
-                  setSyncingStatuses(false);
-                }
-              }}
+              onClick={handleSyncAllStatuses}
             >
               <RefreshCw className={`h-4 w-4 ${syncingStatuses ? "animate-spin" : ""}`} />
             </Button>
