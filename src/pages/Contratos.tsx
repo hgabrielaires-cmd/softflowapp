@@ -419,7 +419,7 @@ export default function Contratos() {
     await loadDetailData(contrato);
   }
 
-  
+  async function handleEncerrar() {
     if (!selected) return;
 
     // Se for contrato Base, verificar aditivos vinculados ANTES de cancelar
