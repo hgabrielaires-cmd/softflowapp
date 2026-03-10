@@ -2470,48 +2470,16 @@ export default function Pedidos() {
       />
 
 
-      {/* ─── Modal Upgrade de Plano ──────────────────────────────────────────── */}
-      <Dialog open={openUpgradeDialog} onOpenChange={setOpenUpgradeDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ArrowUpCircle className="h-4 w-4 text-primary" /> Upgrade de Plano
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            {contratoAtivo && (
-              <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
-                <p className="text-muted-foreground text-xs">Contrato atual</p>
-                <p className="font-medium">Nº {contratoAtivo.numero_registro} ({contratoAtivo.numero_exibicao})</p>
-              </div>
-            )}
-            <div className="space-y-1.5">
-              <Label>Novo plano *</Label>
-              <Select value={upgradePlanoId} onValueChange={setUpgradePlanoId}>
-                <SelectTrigger><SelectValue placeholder="Selecione o novo plano..." /></SelectTrigger>
-                <SelectContent>
-                  {(() => {
-                    const planoAtualId = planoVigenteId || contratoAtivo?.plano_id;
-                    const planoAtual = planos.find((p) => p.id === planoAtualId);
-                    const ordemAtual = planoAtual?.ordem ?? 0;
-                    const planosUpgrade = planos.filter((p) => p.id !== planoAtualId && p.ordem > ordemAtual);
-                    return planosUpgrade.length === 0
-                      ? <SelectItem value="__none__" disabled>Nenhum plano disponível para upgrade</SelectItem>
-                      : planosUpgrade.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>);
-                  })()}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">Apenas planos com ordem superior ao atual são exibidos.</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenUpgradeDialog(false)}>Cancelar</Button>
-            <Button onClick={handleConfirmarUpgrade} disabled={!upgradePlanoId}>
-              <ArrowUpCircle className="h-4 w-4 mr-1.5" /> Confirmar Upgrade
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UpgradePlanoDialog
+        open={openUpgradeDialog}
+        onOpenChange={setOpenUpgradeDialog}
+        contratoAtivo={contratoAtivo}
+        planoVigenteId={planoVigenteId}
+        planos={planos}
+        upgradePlanoId={upgradePlanoId}
+        setUpgradePlanoId={setUpgradePlanoId}
+        onConfirm={handleConfirmarUpgrade}
+      />
 
       {/* ─── Dialog Visualizar Pedido ─────────────────────────────────────────── */}
       <Dialog open={!!viewingPedido} onOpenChange={(open) => { if (!open) setViewingPedido(null); }}>
