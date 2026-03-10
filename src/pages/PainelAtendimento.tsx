@@ -850,7 +850,7 @@ export default function PainelAtendimento() {
                   </div>
                 )}
                 {/* Pausado banner */}
-                {detailCard.pausado && (detailCard as any).status_projeto !== "recusado" && (
+                {detailCard.pausado && detailCard.status_projeto !== "recusado" && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
                     <div className="flex items-center gap-2 text-amber-700"><PauseCircle className="h-4 w-4" /><span className="text-sm font-semibold">Projeto Pausado</span></div>
                     {detailCard.pausado_motivo && <p className="text-xs text-amber-600">Motivo: {detailCard.pausado_motivo}</p>}
