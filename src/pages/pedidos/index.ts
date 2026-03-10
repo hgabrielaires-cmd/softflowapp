@@ -2,6 +2,7 @@ export * from "./types";
 export * from "./constants";
 export * from "./helpers";
 export { usePedidosQueries } from "./usePedidosQueries";
+export { usePedidoSave } from "./usePedidoSave";
 export { VisualizarPedidoDialog } from "./components/VisualizarPedidoDialog";
 export { ClienteRapidoDialog } from "./components/ClienteRapidoDialog";
 export { ComentarioDraftDialog } from "./components/ComentarioDraftDialog";
