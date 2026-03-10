@@ -652,7 +652,7 @@ export default function JornadaImplantacao() {
                       <TableCell className="font-medium">{j.nome}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="capitalize">{j.vinculo_tipo}</Badge>
-                        <span className="ml-2 text-sm text-muted-foreground">{getVinculoLabel(j.vinculo_tipo, j.vinculo_id)}</span>
+                        <span className="ml-2 text-sm text-muted-foreground">{resolveVinculoLabel(j.vinculo_tipo, j.vinculo_id)}</span>
                       </TableCell>
                       <TableCell>{j.filial?.nome || <span className="text-muted-foreground">Global</span>}</TableCell>
                       <TableCell className="text-center font-medium">{h}:{m.toString().padStart(2, "0")}h</TableCell>
