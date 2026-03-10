@@ -503,7 +503,7 @@ export default function PainelAtendimento() {
       const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
       await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, etapa_id: detailCard.etapa_id, criado_por: user.id, texto: `⏸️ Projeto pausado por ${autorNome}: ${pausarMotivo.trim()}` });
       await registrarEntradaEtapa(detailCard.id, standbyEtapa.id, standbyEtapa.nome);
-      const { error } = await supabase.from("painel_atendimento").update({ pausado: true, pausado_em: new Date().toISOString(), pausado_por: user.id, pausado_motivo: pausarMotivo.trim(), iniciado_em: null, iniciado_por: null, etapa_id: standbyEtapa.id, status_projeto: "pausado", etapa_origem_id: detailCard.etapa_id } as any).eq("id", detailCard.id);
+      const { error } = await supabase.from("painel_atendimento").update({ pausado: true, pausado_em: new Date().toISOString(), pausado_por: user.id, pausado_motivo: pausarMotivo.trim(), iniciado_em: null, iniciado_por: null, etapa_id: standbyEtapa.id, status_projeto: "pausado", etapa_origem_id: detailCard.etapa_id }).eq("id", detailCard.id);
       if (error) throw error;
       if (apontamentoUsuarios.length > 0) {
         const clienteNome = detailCard.clientes?.nome_fantasia || "Cliente";
