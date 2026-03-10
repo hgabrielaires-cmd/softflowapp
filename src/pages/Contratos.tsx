@@ -118,10 +118,6 @@ export default function Contratos() {
   const [aditivosVinculados, setAditivosVinculados] = useState<Contrato[]>([]);
   const [aditivosSelecionados, setAditivosSelecionados] = useState<string[]>([]);
   const [contratoBaseCancelado, setContratoBaseCancelado] = useState<Contrato | null>(null);
-  const [linkedMessageTemplate, setLinkedMessageTemplate] = useState<{ conteudo: string } | null>(null);
-
-  // Contatos do cliente selecionado (para Termo de Aceite)
-  const [contatosCliente, setContatosCliente] = useState<{ nome: string; telefone: string | null; decisor: boolean; ativo: boolean }[]>([]);
 
   // ── Contexto para gerarTermoAceite (helper extraído) ─────────────────────
   function buildTermoCtx(): GerarTermoAceiteContext {
