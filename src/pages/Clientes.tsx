@@ -40,79 +40,11 @@ import { useNavigate } from "react-router-dom";
 import { ClientePlanViewer } from "@/components/ClientePlanViewer";
 import { ImportClientesDialog } from "@/components/ImportClientesDialog";
 import { TablePagination } from "@/components/TablePagination";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-
-const UF_LIST = [
-  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
-  "PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO",
-];
-
-const emptyForm = {
-  nome_fantasia: "",
-  razao_social: "",
-  apelido: "",
-  cnpj_cpf: "",
-  inscricao_estadual: "",
-  ie_isento: false,
-  responsavel_nome: "",
-  contato_nome: "",
-  telefone: "",
-  email: "",
-  cidade: "",
-  uf: "",
-  cep: "",
-  logradouro: "",
-  numero: "",
-  complemento: "",
-  bairro: "",
-  filial_id: "",
-  ativo: true,
-};
-
-interface ClienteContato {
-  id: string;
-  cliente_id: string;
-  nome: string;
-  cargo: string | null;
-  telefone: string | null;
-  email: string | null;
-  decisor: boolean;
-  ativo: boolean;
-  created_at: string;
-}
-
-const emptyContatoForm = {
-  nome: "",
-  cargo: "",
-  telefone: "",
-  email: "",
-  decisor: false,
-  ativo: true,
-};
-
-interface PedidoHistorico {
-  id: string;
-  tipo_pedido: string;
-  status_pedido: string;
-  financeiro_status: string;
-  valor_implantacao_final: number;
-  valor_mensalidade_final: number;
-  valor_total: number;
-  created_at: string;
-  plano_id: string;
-  contrato_id: string | null;
-  planos?: { nome: string } | null;
-  modulos_adicionais?: any[];
-}
-
-interface RentabilidadeConsolidada {
-  receitaMensal: number;
-  custoMensal: number;
-  lucro: number;
-  margem: number;
-  markup: number;
-}
+import {
+  UF_LIST, emptyForm, emptyContatoForm, ITEMS_PER_PAGE, TIPO_PEDIDO_COLORS,
+} from "@/pages/clientes/constants";
+import { fmtBRL, fmtDateTime } from "@/pages/clientes/helpers";
+import type { ClienteContato, PedidoHistorico, RentabilidadeConsolidada } from "@/pages/clientes/types";
 
 export default function Clientes() {
   const { roles, profile } = useAuth();
@@ -132,7 +64,7 @@ export default function Clientes() {
   const [search, setSearch] = useState("");
   const [filtroFilialId, setFiltroFilialId] = useState<string>("__todas__");
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 15;
+  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewOnly, setViewOnly] = useState(false);
   const [editing, setEditing] = useState<Cliente | null>(null);
@@ -713,23 +645,6 @@ export default function Clientes() {
 
   const filialNome = (id: string | null) => filiais.find((f) => f.id === id)?.nome || "—";
 
-  function fmtBRL(v: number) {
-    return (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  }
-
-  function fmtDate(d: string) {
-    return format(new Date(d), "dd/MM/yyyy", { locale: ptBR });
-  }
-
-  function fmtDateTime(d: string) {
-    return format(new Date(d), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
-  }
-
-  const TIPO_PEDIDO_COLORS: Record<string, string> = {
-    Novo: "bg-blue-100 text-blue-700",
-    Upgrade: "bg-green-100 text-green-700",
-    Aditivo: "bg-purple-100 text-purple-700",
-  };
 
   // Dados do historico separados
   const contratosBase = contratosList.filter((c) => c.tipo === "Base");
