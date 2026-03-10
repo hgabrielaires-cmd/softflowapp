@@ -434,6 +434,63 @@ export function useContratoGeracaoZapsign({
     }
   }
 
+  // ── Notificar vendedor via WhatsApp (fire-and-forget) ──
+  function notificarVendedorContratoEnviado(
+    contrato: Contrato,
+    contatosCliente: { nome: string; telefone: string | null; decisor: boolean; ativo: boolean; email?: string | null }[],
+    signUrl: string,
+    templateId?: string
+  ) {
+    const vendedorId = contrato.pedidos?.vendedor_id;
+    if (!vendedorId) return;
+
+    const decisorContato = contatosCliente.find(c => c.decisor) || contatosCliente[0];
+    const decisorNome = decisorContato?.nome || "Decisor";
+    const clienteNome = contrato.clientes?.nome_fantasia || "Cliente";
+    const contratoNumero = contrato.numero_exibicao;
+
+    (async () => {
+      try {
+        // Buscar telefone do vendedor
+        const { data: vendedorProfile } = await supabase
+          .from("profiles")
+          .select("full_name, telefone")
+          .eq("user_id", vendedorId)
+          .maybeSingle();
+
+        if (!vendedorProfile?.telefone) {
+          console.warn("[Vendedor WhatsApp] Vendedor sem telefone cadastrado");
+          return;
+        }
+
+        const msgVendedor = `*O contrato da ${clienteNome} chegou! 🚀*\n\nOlá, ${vendedorProfile.full_name}, tudo bem?\n\nPassando para avisar que o contrato nº ${contratoNumero} da ${clienteNome} já está no forno e foi enviado agora mesmo via WhatsApp para o @${decisorNome}.\n\nNão queremos deixar esse assunto esfriar, então estamos dando aquele "empurrãozinho" para finalizarmos logo. Se puder reforçar com ele por aí também, agiliza muito!\n\nSegue o link do termo para assinatura:\n🔗 ${signUrl}`;
+
+        await supabase.functions.invoke("evolution-api", {
+          body: {
+            action: "send_text",
+            number: vendedorProfile.telefone,
+            text: msgVendedor,
+            template_id: templateId,
+          },
+        });
+        console.log("[Vendedor WhatsApp] Notificação enviada para", vendedorProfile.full_name);
+
+        // Registrar lembrete para 24h
+        await supabase.from("contratos_vendedor_lembretes").upsert({
+          contrato_id: contrato.id,
+          vendedor_user_id: vendedorId,
+          cliente_nome: clienteNome,
+          contrato_numero: contratoNumero,
+          decisor_nome: decisorNome,
+          sign_url: signUrl,
+        }, { onConflict: "contrato_id" });
+        console.log("[Vendedor Lembrete] Registro criado para 24h");
+      } catch (err) {
+        console.error("[Vendedor WhatsApp] Erro ao notificar vendedor:", err);
+      }
+    })();
+  }
+
   return {
     // ZapSign records
     zapsignRecords,
