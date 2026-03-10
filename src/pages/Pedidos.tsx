@@ -156,21 +156,6 @@ export default function Pedidos() {
   const draftFileRef = useRef<HTMLInputElement>(null);
   const [editingDraftIdx, setEditingDraftIdx] = useState<number | null>(null);
 
-  const PRIORIDADES_DRAFT = [
-    { value: "normal", label: "Normal", emoji: "🟢" },
-    { value: "medio", label: "Médio", emoji: "🟡" },
-    { value: "urgente", label: "Urgente", emoji: "🔴" },
-    { value: "prioridade", label: "Alta Prioridade", emoji: "⚡" },
-  ] as const;
-
-  const PRIORIDADE_MAP_DRAFT: Record<string, { label: string; emoji: string }> = {
-    normal: { label: "Normal", emoji: "🟢" },
-    medio: { label: "Médio", emoji: "🟡" },
-    urgente: { label: "Urgente", emoji: "🔴" },
-    prioridade: { label: "Alta Prioridade", emoji: "⚡" },
-  };
-
-  const MAX_FILE_SIZE_DRAFT = 11 * 1024 * 1024;
 
   function handleAddDraftComentario() {
     if (!draftTexto.trim()) { toast.error("Digite um comentário."); return; }
