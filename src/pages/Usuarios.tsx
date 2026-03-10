@@ -532,7 +532,7 @@ export default function Usuarios() {
                         }} />
                       </div>
                     </div>
-                    {!editAcessoGlobal && (
+                    {!f.editAcessoGlobal && (
                       <div className="space-y-2">
                         {q.filiais.map((f) => (
                           <div key={f.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
