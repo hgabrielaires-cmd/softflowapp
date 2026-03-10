@@ -1229,7 +1229,7 @@ export default function Pedidos() {
     toast.success("Cliente cadastrado e selecionado no pedido!");
     setClienteForm(emptyClienteForm);
     setClienteContatos([]);
-    setShowContatoClienteForm(false);
+    setClienteContatos([]);
     setOpenClienteDialog(false);
     setSavingCliente(false);
   }
