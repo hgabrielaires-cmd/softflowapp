@@ -5,7 +5,7 @@ import type { Contrato, ZapSignRecord } from "./types";
 import { ZAPSIGN_MSGS, WHATSAPP_MSGS, GERAR_MSGS_CONTRATO, GERAR_MSGS_OA } from "./constants";
 import { gerarTermoAceite, type GerarTermoAceiteContext } from "./helpers";
 
-export type ZapsignPopupStep = "gerando" | "zapsign" | "whatsapp" | "done" | "erro";
+export type ZapsignPopupStep = "gerando" | "zapsign" | "whatsapp" | "done" | "erro" | "whatsapp_erro";
 
 interface UseContratoGeracaoZapsignParams {
   selected: Contrato | null;
