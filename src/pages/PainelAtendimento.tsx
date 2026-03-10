@@ -1295,8 +1295,8 @@ export default function PainelAtendimento() {
           {detailCard && (
             <DialogFooter className="border-t pt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {!isChecklistCompleto(checklistEtapa, checklistProgresso) && detailCard.iniciado_em && <p className="text-[10px] text-muted-foreground">Complete todos os itens do checklist para finalizar</p>}
-                {isChecklistCompleto(checklistEtapa, checklistProgresso) && checklistEtapa.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, checklistEtapa.map((a: any) => a.id)) && detailCard.iniciado_em && <p className="text-[10px] text-amber-600 font-medium">Conclua todas as atividades da etapa para finalizar</p>}
+                {!isChecklistCompleto(checklistEtapa, checklistProgresso) && <p className="text-[10px] text-muted-foreground">Complete todos os itens do checklist para finalizar</p>}
+                {isChecklistCompleto(checklistEtapa, checklistProgresso) && checklistEtapa.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, checklistEtapa.map((a: any) => a.id)) && <p className="text-[10px] text-amber-600 font-medium">Conclua todas as atividades da etapa para finalizar</p>}
               </div>
               <div className="flex items-center gap-2">
                 {(podePausarProjeto || podeRecusarProjeto || podeGerenciarApontamento || podeResetarProjeto) && (
@@ -1317,12 +1317,11 @@ export default function PainelAtendimento() {
                   const atividadeIds = checklistEtapa.map((a: any) => a.id);
                   const atividadesPendentes = atividadeIds.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, atividadeIds);
                   const checklistIncompleto = !isChecklistCompleto(checklistEtapa, checklistProgresso);
-                  const naoIniciado = !detailCard.iniciado_em;
-                  const bloqueado = naoIniciado || checklistIncompleto || atividadesPendentes || finalizando;
-                  const motivo = naoIniciado ? "Inicie a etapa primeiro" : atividadesPendentes ? "Conclua todas as atividades" : checklistIncompleto ? "Conclua o checklist" : null;
+                  const bloqueado = checklistIncompleto || atividadesPendentes || finalizando;
+                  const motivo = atividadesPendentes ? "Conclua todas as atividades" : checklistIncompleto ? "Conclua o checklist" : null;
                   return (
                     <div className="flex flex-col items-end gap-0.5">
-                      <Button size="sm" onClick={finalizarEtapa} disabled={bloqueado}><ChevronRight className="h-4 w-4 mr-1" />{finalizando ? "Finalizando..." : "Finalizar Etapa"}</Button>
+                      <Button size="sm" className="h-9 px-4" onClick={finalizarEtapa} disabled={bloqueado}><ChevronRight className="h-4 w-4 mr-1" />{finalizando ? "Finalizando..." : "Finalizar Etapa"}</Button>
                       {bloqueado && motivo && <span className="text-[9px] text-destructive">{motivo}</span>}
                     </div>
                   );
