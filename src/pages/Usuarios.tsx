@@ -446,9 +446,9 @@ export default function Usuarios() {
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2 shrink-0">
-               <Button type="button" variant="outline" onClick={() => setOpenInvite(false)}>Cancelar</Button>
-              <Button type="submit" disabled={inviting}>
-                {inviting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
+               <Button type="button" variant="outline" onClick={() => f.setOpenInvite(false)}>Cancelar</Button>
+              <Button type="submit" disabled={f.inviting}>
+                {f.inviting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
                 Criar usuário
               </Button>
             </div>
