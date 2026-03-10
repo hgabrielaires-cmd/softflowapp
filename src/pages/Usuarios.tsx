@@ -238,8 +238,8 @@ export default function Usuarios() {
                 <Input
                   type="email"
                   placeholder="joao@softplus.com.br"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
+                  value={f.inviteEmail}
+                  onChange={(e) => f.setInviteEmail(e.target.value)}
                   required
                 />
               </div>
