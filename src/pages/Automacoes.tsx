@@ -204,13 +204,15 @@ export default function Automacoes() {
       gatilhoConfig = { status_de: statusDe, status_para: statusPara, tipo_pedido: tipoPedido || null };
     } else if (gatilhoTipo === "tempo_sem_acao_financeiro") {
       gatilhoConfig = { modulo: "financeiro", horas: horasSemAcao, tipo_pedido: tipoPedido || null };
+    } else if (gatilhoTipo === "contrato_enviado_assinatura") {
+      gatilhoConfig = { destinatario: "vendedor" };
     }
 
     const acaoConfig: Record<string, any> = {
       template_id: templateId || null,
-      destinatario_tipo: destinatarioTipo,
-      destinatario_valor: destinatarioRole || null,
-      usuario_ids: usuarioIds,
+      destinatario_tipo: gatilhoTipo === "contrato_enviado_assinatura" ? "vendedor" : destinatarioTipo,
+      destinatario_valor: gatilhoTipo === "contrato_enviado_assinatura" ? null : (destinatarioRole || null),
+      usuario_ids: gatilhoTipo === "contrato_enviado_assinatura" ? [] : usuarioIds,
     };
 
     const payload = {
