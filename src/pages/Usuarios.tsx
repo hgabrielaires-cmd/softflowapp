@@ -1,9 +1,7 @@
-import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
-import { AppRole, ROLE_LABELS } from "@/lib/supabase-types";
+import { ROLE_LABELS } from "@/lib/supabase-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,351 +40,18 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Search, UserX, UserCheck, Users, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Send, MessageCircle, Globe, Wrench, ShoppingCart, Headphones, RefreshCw, Ban } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
-import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
-import { UserWithRoles } from "./usuarios/types";
 import { ALL_ROLES, TIPO_TECNICO_OPTIONS } from "./usuarios/constants";
-import { gerarSenhaSegura } from "./usuarios/helpers";
 import { useUsuariosQueries } from "./usuarios/useUsuariosQueries";
+import { useUsuariosForm } from "./usuarios/useUsuariosForm";
+import type { AppRole } from "@/lib/supabase-types";
 
 export default function Usuarios() {
   const { isAdmin } = useAuth();
   const q = useUsuariosQueries();
-  
-
-  // Create dialog
-  const [openInvite, setOpenInvite] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteName, setInviteName] = useState("");
-  const [inviteRole, setInviteRole] = useState<AppRole>("vendedor");
-  const [inviteFilialId, setInviteFilialId] = useState("");
-  const [inviteFilialIds, setInviteFilialIds] = useState<string[]>([]);
-  const [inviteAcessoGlobal, setInviteAcessoGlobal] = useState(false);
-  const [inviteComissaoImp, setInviteComissaoImp] = useState("5");
-  const [inviteComissaoMens, setInviteComissaoMens] = useState("5");
-  const [inviteComissaoServ, setInviteComissaoServ] = useState("5");
-  const [inviteDescontoLimiteImp, setInviteDescontoLimiteImp] = useState("0");
-  const [inviteDescontoLimiteMens, setInviteDescontoLimiteMens] = useState("0");
-  const [inviteGestorDesconto, setInviteGestorDesconto] = useState(false);
-  const [invitePermitirCnpjDuplicado, setInvitePermitirCnpjDuplicado] = useState(false);
-  const [inviteRecebeComissao, setInviteRecebeComissao] = useState(true);
-  const [inviteTelefone, setInviteTelefone] = useState("");
-  const [inviteIsTecnico, setInviteIsTecnico] = useState(false);
-  const [inviteTipoTecnico, setInviteTipoTecnico] = useState("interno");
-  const [inviteIsVendedor, setInviteIsVendedor] = useState(false);
-  const [inviteMesaIds, setInviteMesaIds] = useState<string[]>([]);
-  const [inviting, setInviting] = useState(false);
-
-  // Edit dialog
-  const [openEdit, setOpenEdit] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserWithRoles | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editRole, setEditRole] = useState<AppRole>("vendedor");
-  const [editFilialId, setEditFilialId] = useState("");
-  const [editFilialIds, setEditFilialIds] = useState<string[]>([]);
-  const [editAcessoGlobal, setEditAcessoGlobal] = useState(false);
-  const [editComissaoImp, setEditComissaoImp] = useState("5");
-  const [editComissaoMens, setEditComissaoMens] = useState("5");
-  const [editComissaoServ, setEditComissaoServ] = useState("5");
-  const [editDescontoLimiteImp, setEditDescontoLimiteImp] = useState("0");
-  const [editDescontoLimiteMens, setEditDescontoLimiteMens] = useState("0");
-  const [editGestorDesconto, setEditGestorDesconto] = useState(false);
-  const [editPermitirCnpjDuplicado, setEditPermitirCnpjDuplicado] = useState(false);
-  const [editRecebeComissao, setEditRecebeComissao] = useState(true);
-  const [editTelefone, setEditTelefone] = useState("");
-  const [editPermiteEnviarEspelho, setEditPermiteEnviarEspelho] = useState(false);
-  const [editPermiteResetarProjeto, setEditPermiteResetarProjeto] = useState(false);
-  const [editPermiteCancelarProjeto, setEditPermiteCancelarProjeto] = useState(false);
-  const [editPermiteVerValoresProjeto, setEditPermiteVerValoresProjeto] = useState(false);
-  const [editIsTecnico, setEditIsTecnico] = useState(false);
-  const [editTipoTecnico, setEditTipoTecnico] = useState("interno");
-  const [editIsVendedor, setEditIsVendedor] = useState(false);
-  const [editMesaIds, setEditMesaIds] = useState<string[]>([]);
-  const [editActive, setEditActive] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const f = useUsuariosForm({ refetchUsers: q.refetchUsers });
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
-
-
-  // ── Enviar WhatsApp de boas-vindas ──────────────────────
-  async function enviarWhatsappBoasVindas(nome: string, email: string, senha: string, telefone: string) {
-    // Buscar template de boas-vindas (com id para roteamento de instância)
-    const { data: template } = await supabase
-      .from("message_templates")
-      .select("id, conteudo")
-      .eq("categoria", "boas_vindas")
-      .eq("ativo", true)
-      .limit(1)
-      .single();
-
-    const linkSistema = "https://softflow.app.br/login";
-    
-    let mensagem = template?.conteudo || `Olá ${nome}! Bem-vindo ao SoftFlow!\n\nE-mail: ${email}\nSenha: ${senha}\n\nAcesse: ${linkSistema}`;
-    
-    mensagem = mensagem
-      .replace(/\{usuario\.nome\}/g, nome)
-      .replace(/\{usuario\.email\}/g, email)
-      .replace(/\{usuario\.senha\}/g, senha)
-      .replace(/\{link_sistema\}/g, linkSistema);
-
-    const { error } = await supabase.functions.invoke("evolution-api", {
-      body: {
-        action: "send_text",
-        number: telefone,
-        text: mensagem,
-        template_id: template?.id || undefined,
-      },
-    });
-
-    if (error) throw error;
-  }
-
-  // ── Create ──────────────────────────────────────────────
-  async function handleInvite(e: React.FormEvent) {
-    e.preventDefault();
-    setInviting(true);
-
-    // Gerar senha segura: 8 caracteres com maiúscula, minúscula, número e especial
-    const senhaTemporaria = gerarSenhaSegura();
-
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: inviteEmail,
-        password: senhaTemporaria,
-        options: { data: { full_name: inviteName } },
-      });
-
-      if (error) throw error;
-      if (!data.user) throw new Error("Usuário não criado");
-
-      // Confirmar e-mail e definir senha via admin (evita "Email not confirmed")
-      await supabase.functions.invoke("admin-update-password", {
-        body: { user_id: data.user.id, password: senhaTemporaria },
-      });
-
-      const filialFavorita = inviteFilialIds.length > 0 ? inviteFilialIds[0] : null;
-
-      await supabase.from("profiles").update({
-        filial_id: filialFavorita,
-        acesso_global: inviteAcessoGlobal,
-        comissao_percentual: parseFloat(inviteComissaoImp) || 5,
-        comissao_implantacao_percentual: parseFloat(inviteComissaoImp) || 5,
-        comissao_mensalidade_percentual: parseFloat(inviteComissaoMens) || 5,
-        comissao_servico_percentual: parseFloat(inviteComissaoServ) || 5,
-        desconto_limite_implantacao: parseFloat(inviteDescontoLimiteImp) || 0,
-        desconto_limite_mensalidade: parseFloat(inviteDescontoLimiteMens) || 0,
-        gestor_desconto: inviteGestorDesconto,
-        permitir_cnpj_duplicado: invitePermitirCnpjDuplicado,
-        recebe_comissao: inviteRecebeComissao,
-        telefone: inviteTelefone || null,
-        deve_trocar_senha: true,
-        is_tecnico: inviteIsTecnico,
-        tipo_tecnico: inviteIsTecnico ? inviteTipoTecnico : null,
-        is_vendedor: inviteIsVendedor,
-      } as any).eq("user_id", data.user.id);
-
-      // Insert filiais junction
-      if (inviteFilialIds.length > 0 && !inviteAcessoGlobal) {
-        const rows = inviteFilialIds.map((fId) => ({ user_id: data.user.id, filial_id: fId }));
-        await supabase.from("usuario_filiais").insert(rows);
-      }
-
-      // Insert mesas junction
-      if (inviteMesaIds.length > 0) {
-        const mesaRows = inviteMesaIds.map((mId) => ({ user_id: data.user.id, mesa_id: mId }));
-        await supabase.from("usuario_mesas").insert(mesaRows);
-      }
-
-      await supabase.from("user_roles").insert({ user_id: data.user.id, role: inviteRole });
-
-      // Enviar WhatsApp de boas-vindas se o telefone foi informado
-      if (inviteTelefone) {
-        try {
-          await enviarWhatsappBoasVindas(inviteName, inviteEmail, senhaTemporaria, inviteTelefone);
-        } catch (whatsErr) {
-          console.error("Erro ao enviar WhatsApp:", whatsErr);
-          toast.warning("Usuário criado, mas não foi possível enviar o WhatsApp de boas-vindas.");
-        }
-      }
-
-      toast.success(`Usuário ${inviteName} criado com sucesso!`);
-      setOpenInvite(false);
-      setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteFilialIds([]); setInviteAcessoGlobal(false); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteComissaoServ("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone(""); setInviteIsTecnico(false); setInviteTipoTecnico("interno"); setInviteIsVendedor(false); setInviteMesaIds([]);
-      q.refetchUsers();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
-    }
-    setInviting(false);
-  }
-
-  // ── Edit ────────────────────────────────────────────────
-  function openEditDialog(user: UserWithRoles) {
-    setEditingUser(user);
-    setEditName(user.full_name);
-    setEditRole(user.roles[0] || "vendedor");
-    setEditFilialId(user.filial_id || "todas");
-    setEditFilialIds((user.filiais_vinculadas || []).map((f) => f.id));
-    setEditAcessoGlobal(user.acesso_global || false);
-    setEditComissaoImp(((user as any).comissao_implantacao_percentual ?? user.comissao_percentual ?? 5).toString());
-    setEditComissaoMens(((user as any).comissao_mensalidade_percentual ?? user.comissao_percentual ?? 5).toString());
-    setEditComissaoServ(((user as any).comissao_servico_percentual ?? 5).toString());
-    setEditDescontoLimiteImp(((user as any).desconto_limite_implantacao ?? 0).toString());
-    setEditDescontoLimiteMens(((user as any).desconto_limite_mensalidade ?? 0).toString());
-    setEditGestorDesconto((user as any).gestor_desconto ?? false);
-    setEditPermitirCnpjDuplicado((user as any).permitir_cnpj_duplicado ?? false);
-    setEditRecebeComissao((user as any).recebe_comissao ?? true);
-    setEditTelefone((user as any).telefone || "");
-    setEditPermiteEnviarEspelho((user as any).permite_enviar_espelho_whatsapp ?? false);
-    setEditPermiteResetarProjeto((user as any).permite_resetar_projeto ?? false);
-    setEditPermiteCancelarProjeto((user as any).permite_cancelar_projeto ?? false);
-    setEditPermiteVerValoresProjeto((user as any).permite_ver_valores_projeto ?? false);
-    setEditIsTecnico((user as any).is_tecnico ?? false);
-    setEditTipoTecnico((user as any).tipo_tecnico || "interno");
-    setEditIsVendedor((user as any).is_vendedor ?? false);
-    setEditMesaIds((user.mesas_vinculadas || []).map((m) => m.id));
-    setEditActive(user.active);
-    setOpenEdit(true);
-  }
-
-  async function handleEdit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!editingUser) return;
-    setSaving(true);
-    try {
-      // Determine filial_favorita: use filial_id (kept for backward compat), set to first selected or null
-      const filialFavorita = editFilialIds.length > 0 ? editFilialIds[0] : null;
-      
-      const { error: profileError } = await supabase.from("profiles").update({
-        full_name: editName,
-        filial_id: filialFavorita,
-        acesso_global: editAcessoGlobal,
-        comissao_percentual: parseFloat(editComissaoImp) || 0,
-        comissao_implantacao_percentual: parseFloat(editComissaoImp) || 0,
-        comissao_mensalidade_percentual: parseFloat(editComissaoMens) || 0,
-        comissao_servico_percentual: parseFloat(editComissaoServ) || 0,
-        desconto_limite_implantacao: parseFloat(editDescontoLimiteImp) || 0,
-        desconto_limite_mensalidade: parseFloat(editDescontoLimiteMens) || 0,
-        gestor_desconto: editGestorDesconto,
-        permitir_cnpj_duplicado: editPermitirCnpjDuplicado,
-        recebe_comissao: editRecebeComissao,
-        telefone: editTelefone || null,
-        permite_enviar_espelho_whatsapp: editPermiteEnviarEspelho,
-        permite_resetar_projeto: editPermiteResetarProjeto,
-        permite_cancelar_projeto: editPermiteCancelarProjeto,
-        permite_ver_valores_projeto: editPermiteVerValoresProjeto,
-        is_tecnico: editIsTecnico,
-        tipo_tecnico: editIsTecnico ? editTipoTecnico : null,
-        is_vendedor: editIsVendedor,
-        active: editActive,
-      } as any).eq("user_id", editingUser.user_id);
-
-      if (profileError) throw profileError;
-
-      // Update usuario_filiais junction
-      const { error: deleteUfError } = await supabase.from("usuario_filiais").delete().eq("user_id", editingUser.user_id);
-      if (deleteUfError) throw deleteUfError;
-      if (editFilialIds.length > 0 && !editAcessoGlobal) {
-        const rows = editFilialIds.map((fId) => ({ user_id: editingUser.user_id, filial_id: fId }));
-        const { error: ufError } = await supabase.from("usuario_filiais").insert(rows);
-        if (ufError) throw ufError;
-      }
-
-      // Update usuario_mesas junction
-      await supabase.from("usuario_mesas").delete().eq("user_id", editingUser.user_id);
-      if (editMesaIds.length > 0) {
-        const mesaRows = editMesaIds.map((mId) => ({ user_id: editingUser.user_id, mesa_id: mId }));
-        await supabase.from("usuario_mesas").insert(mesaRows);
-      }
-
-      const { data: existingRole } = await supabase
-        .from("user_roles")
-        .select("id")
-        .eq("user_id", editingUser.user_id)
-        .single();
-
-      if (existingRole) {
-        const { error: updateRoleError } = await supabase
-          .from("user_roles")
-          .update({ role: editRole })
-          .eq("id", existingRole.id);
-        if (updateRoleError) throw updateRoleError;
-      } else {
-        const { error: insertError } = await supabase
-          .from("user_roles")
-          .insert({ user_id: editingUser.user_id, role: editRole });
-        if (insertError) throw insertError;
-      }
-
-      toast.success("Usuário atualizado com sucesso!");
-      setOpenEdit(false);
-      q.refetchUsers();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Erro ao atualizar usuário");
-    }
-    setSaving(false);
-  }
-
-  // ── Toggle active ────────────────────────────────────────
-  async function toggleActive(user: UserWithRoles) {
-    const { error } = await supabase.from("profiles").update({ active: !user.active }).eq("user_id", user.user_id);
-    if (error) { toast.error("Erro ao atualizar usuário"); return; }
-    toast.success(user.active ? "Usuário desativado" : "Usuário ativado");
-    q.refetchUsers();
-  }
-
-  // ── Reset password ────────────────────────────────────────
-  async function handleResetPassword(user: UserWithRoles) {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) throw error;
-      toast.success(`E-mail de redefinição de senha enviado para ${user.email}`);
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Erro ao enviar e-mail de redefinição");
-    }
-  }
-
-  // ── Reenviar boas-vindas ────────────────────────────────
-  async function handleReenviarBoasVindas(user: UserWithRoles) {
-    const telefone = (user as any).telefone;
-    if (!telefone) {
-      toast.error("Usuário não possui telefone cadastrado. Edite o usuário e informe o telefone.");
-      return;
-    }
-
-    try {
-      toast.loading("Reenviando boas-vindas...", { id: "reenviar" });
-
-      // Gerar senha segura: 8 caracteres com maiúscula, minúscula, número e especial
-      const novaSenha = gerarSenhaSegura();
-
-      // Atualizar senha via edge function (usa service role)
-      const { error: pwError } = await supabase.functions.invoke("admin-update-password", {
-        body: { user_id: user.user_id, password: novaSenha },
-      });
-
-      if (pwError) throw pwError;
-
-      // Marcar que deve trocar senha
-      await supabase.from("profiles").update({
-        deve_trocar_senha: true,
-      } as any).eq("user_id", user.user_id);
-
-      // Enviar WhatsApp
-      await enviarWhatsappBoasVindas(user.full_name, user.email, novaSenha, telefone);
-
-      toast.success("Boas-vindas reenviada com sucesso! Nova senha gerada.", { id: "reenviar" });
-    } catch (err: unknown) {
-      console.error("Erro ao reenviar boas-vindas:", err);
-      toast.error(err instanceof Error ? err.message : "Erro ao reenviar boas-vindas", { id: "reenviar" });
-    }
-  }
-
-
-
-
-
   return (
     <AppLayout>
       <div className="space-y-5 w-full max-w-[1400px]">
@@ -396,7 +61,7 @@ export default function Usuarios() {
             <p className="text-sm text-muted-foreground">Gerencie os colaboradores e permissões</p>
           </div>
 
-          <Button className="gap-2" onClick={() => setOpenInvite(true)}>
+          <Button className="gap-2" onClick={() => f.setOpenInvite(true)}>
             <Plus className="h-4 w-4" />
             Novo usuário
           </Button>
@@ -479,7 +144,7 @@ export default function Usuarios() {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => openEditDialog(user)}
+                          onClick={() => f.openEditDialog(user)}
                           title="Editar usuário"
                         >
                           <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
@@ -489,7 +154,7 @@ export default function Usuarios() {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => handleResetPassword(user)}
+                          onClick={() => f.handleResetPassword(user)}
                           title="Redefinir senha por e-mail"
                         >
                           <Key className="h-3.5 w-3.5 text-muted-foreground" />
@@ -499,7 +164,7 @@ export default function Usuarios() {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => handleReenviarBoasVindas(user)}
+                          onClick={() => f.handleReenviarBoasVindas(user)}
                           title="Reenviar boas-vindas (WhatsApp)"
                         >
                           <Send className="h-3.5 w-3.5 text-muted-foreground" />
@@ -528,7 +193,7 @@ export default function Usuarios() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => toggleActive(user)}>
+                              <AlertDialogAction onClick={() => f.toggleActive(user)}>
                                 Confirmar
                               </AlertDialogAction>
                             </AlertDialogFooter>
@@ -552,18 +217,18 @@ export default function Usuarios() {
       </div>
 
       {/* ── Create Dialog ── */}
-      <Dialog open={openInvite} onOpenChange={setOpenInvite}>
+      <Dialog open={f.openInvite} onOpenChange={f.setOpenInvite}>
         <DialogContent className="max-w-xl flex flex-col max-h-[90vh]">
           <DialogHeader className="shrink-0">
             <DialogTitle>Criar novo usuário</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleInvite} className="space-y-4 overflow-y-auto flex-1 pr-1">
+          <form onSubmit={f.handleInvite} className="space-y-4 overflow-y-auto flex-1 pr-1">
             <div className="space-y-1.5">
               <Label>Nome completo</Label>
               <Input
                 placeholder="João da Silva"
-                value={inviteName}
-                onChange={(e) => setInviteName(e.target.value)}
+                value={f.inviteName}
+                onChange={(e) => f.setInviteName(e.target.value)}
                 required
               />
             </div>
@@ -573,8 +238,8 @@ export default function Usuarios() {
                 <Input
                   type="email"
                   placeholder="joao@softplus.com.br"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
+                  value={f.inviteEmail}
+                  onChange={(e) => f.setInviteEmail(e.target.value)}
                   required
                 />
               </div>
@@ -583,15 +248,15 @@ export default function Usuarios() {
                 <Input
                   type="tel"
                   placeholder="(11) 99999-9999"
-                  value={inviteTelefone}
-                  onChange={(e) => setInviteTelefone(e.target.value)}
+                  value={f.inviteTelefone}
+                  onChange={(e) => f.setInviteTelefone(e.target.value)}
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Cargo</Label>
-                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
+                <Select value={f.inviteRole} onValueChange={(v) => f.setInviteRole(v as AppRole)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {ALL_ROLES.map((r) => (
@@ -609,24 +274,24 @@ export default function Usuarios() {
                     <Globe className="h-3.5 w-3.5" />
                     Acesso global
                   </Label>
-                  <Switch checked={inviteAcessoGlobal} onCheckedChange={(v) => {
-                    setInviteAcessoGlobal(v);
-                    if (v) setInviteFilialIds([]);
+                  <Switch checked={f.inviteAcessoGlobal} onCheckedChange={(v) => {
+                    f.setInviteAcessoGlobal(v);
+                    if (v) f.setInviteFilialIds([]);
                   }} />
                 </div>
               </div>
-              {!inviteAcessoGlobal && (
+              {!f.inviteAcessoGlobal && (
                 <div className="space-y-2">
-                  {q.filiais.map((f) => (
-                    <div key={f.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
-                      <span className="text-sm">{f.nome}</span>
+                  {q.filiais.map((fil) => (
+                    <div key={fil.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
+                      <span className="text-sm">{fil.nome}</span>
                       <Switch
-                        checked={inviteFilialIds.includes(f.id)}
+                        checked={f.inviteFilialIds.includes(fil.id)}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setInviteFilialIds((prev) => [...prev, f.id]);
+                            f.setInviteFilialIds((prev) => [...prev, fil.id]);
                           } else {
-                            setInviteFilialIds((prev) => prev.filter((id) => id !== f.id));
+                            f.setInviteFilialIds((prev) => prev.filter((id) => id !== fil.id));
                           }
                         }}
                       />
@@ -634,7 +299,7 @@ export default function Usuarios() {
                   ))}
                 </div>
               )}
-              {inviteAcessoGlobal && (
+              {f.inviteAcessoGlobal && (
                 <p className="text-xs text-muted-foreground">Este usuário terá acesso a todas as filiais.</p>
               )}
             </div>
@@ -647,42 +312,42 @@ export default function Usuarios() {
                   </Label>
                   <p className="text-xs text-muted-foreground">Este usuário realiza vendas e pode receber comissão</p>
                 </div>
-                <Switch checked={inviteIsVendedor} onCheckedChange={setInviteIsVendedor} />
+                <Switch checked={f.inviteIsVendedor} onCheckedChange={f.setInviteIsVendedor} />
               </div>
-              {inviteIsVendedor && (
+              {f.inviteIsVendedor && (
                 <>
                   <div className="border-t border-border" />
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comissão</p>
                     <div className="flex items-center gap-2">
                       <Label className="text-xs text-muted-foreground">Recebe comissão</Label>
-                      <Switch checked={inviteRecebeComissao} onCheckedChange={setInviteRecebeComissao} />
+                      <Switch checked={f.inviteRecebeComissao} onCheckedChange={f.setInviteRecebeComissao} />
                     </div>
                   </div>
-                  {inviteRecebeComissao && (
+                  {f.inviteRecebeComissao && (
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1.5">
                         <Label className="text-xs">Implantação (%)</Label>
                         <Input
                           type="number" min="0" max="100" step="0.01" placeholder="5"
-                          value={inviteComissaoImp}
-                          onChange={(e) => setInviteComissaoImp(e.target.value)}
+                          value={f.inviteComissaoImp}
+                          onChange={(e) => f.setInviteComissaoImp(e.target.value)}
                         />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Mensalidade (%)</Label>
                         <Input
                           type="number" min="0" max="100" step="0.01" placeholder="5"
-                          value={inviteComissaoMens}
-                          onChange={(e) => setInviteComissaoMens(e.target.value)}
+                          value={f.inviteComissaoMens}
+                          onChange={(e) => f.setInviteComissaoMens(e.target.value)}
                         />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Serviço (%)</Label>
                         <Input
                           type="number" min="0" max="100" step="0.01" placeholder="5"
-                          value={inviteComissaoServ}
-                          onChange={(e) => setInviteComissaoServ(e.target.value)}
+                          value={f.inviteComissaoServ}
+                          onChange={(e) => f.setInviteComissaoServ(e.target.value)}
                         />
                       </div>
                     </div>
@@ -699,9 +364,9 @@ export default function Usuarios() {
                   </Label>
                   <p className="text-xs text-muted-foreground">Realiza atendimentos técnicos e pode ser apontado para agenda</p>
                 </div>
-                <Switch checked={inviteIsTecnico} onCheckedChange={setInviteIsTecnico} />
+                <Switch checked={f.inviteIsTecnico} onCheckedChange={f.setInviteIsTecnico} />
               </div>
-              {inviteIsTecnico && (
+              {f.inviteIsTecnico && (
                 <div className="space-y-2 pl-2 border-l-2 border-primary/30">
                   <Label className="text-xs font-medium">Tipo de Atendimento</Label>
                   <div className="space-y-1.5">
@@ -709,8 +374,8 @@ export default function Usuarios() {
                       <div key={opt.value} className="flex items-center justify-between rounded px-2 py-1">
                         <span className="text-xs">{opt.label}</span>
                         <Switch
-                          checked={inviteTipoTecnico === opt.value}
-                          onCheckedChange={(checked) => { if (checked) setInviteTipoTecnico(opt.value); }}
+                          checked={f.inviteTipoTecnico === opt.value}
+                          onCheckedChange={(checked) => { if (checked) f.setInviteTipoTecnico(opt.value); }}
                         />
                       </div>
                     ))}
@@ -728,10 +393,10 @@ export default function Usuarios() {
                   <div key={m.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
                     <span className="text-sm">{m.nome}</span>
                     <Switch
-                      checked={inviteMesaIds.includes(m.id)}
+                       checked={f.inviteMesaIds.includes(m.id)}
                       onCheckedChange={(checked) => {
-                        if (checked) setInviteMesaIds((prev) => [...prev, m.id]);
-                        else setInviteMesaIds((prev) => prev.filter((id) => id !== m.id));
+                        if (checked) f.setInviteMesaIds((prev) => [...prev, m.id]);
+                        else f.setInviteMesaIds((prev) => prev.filter((id) => id !== m.id));
                       }}
                     />
                   </div>
@@ -746,16 +411,16 @@ export default function Usuarios() {
                   <Label>Desconto máx. implantação (%)</Label>
                   <Input
                     type="number" min="0" max="100" step="0.01" placeholder="0"
-                    value={inviteDescontoLimiteImp}
-                    onChange={(e) => setInviteDescontoLimiteImp(e.target.value)}
+                    value={f.inviteDescontoLimiteImp}
+                    onChange={(e) => f.setInviteDescontoLimiteImp(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Desconto máx. mensalidade (%)</Label>
                   <Input
                     type="number" min="0" max="100" step="0.01" placeholder="0"
-                    value={inviteDescontoLimiteMens}
-                    onChange={(e) => setInviteDescontoLimiteMens(e.target.value)}
+                    value={f.inviteDescontoLimiteMens}
+                    onChange={(e) => f.setInviteDescontoLimiteMens(e.target.value)}
                   />
                 </div>
               </div>
@@ -767,7 +432,7 @@ export default function Usuarios() {
                   </Label>
                   <p className="text-xs text-muted-foreground">Recebe notificações e aprova descontos acima do limite</p>
                 </div>
-                <Switch checked={inviteGestorDesconto} onCheckedChange={setInviteGestorDesconto} />
+                <Switch checked={f.inviteGestorDesconto} onCheckedChange={f.setInviteGestorDesconto} />
               </div>
               <div className="flex items-center justify-between pt-1">
                 <div className="space-y-0.5">
@@ -777,13 +442,13 @@ export default function Usuarios() {
                   </Label>
                   <p className="text-xs text-muted-foreground">Permite cadastrar clientes com CNPJ já existente no módulo de Clientes</p>
                 </div>
-                <Switch checked={invitePermitirCnpjDuplicado} onCheckedChange={setInvitePermitirCnpjDuplicado} />
+                <Switch checked={f.invitePermitirCnpjDuplicado} onCheckedChange={f.setInvitePermitirCnpjDuplicado} />
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2 shrink-0">
-               <Button type="button" variant="outline" onClick={() => setOpenInvite(false)}>Cancelar</Button>
-              <Button type="submit" disabled={inviting}>
-                {inviting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
+               <Button type="button" variant="outline" onClick={() => f.setOpenInvite(false)}>Cancelar</Button>
+              <Button type="submit" disabled={f.inviting}>
+                {f.inviting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
                 Criar usuário
               </Button>
             </div>
@@ -792,12 +457,12 @@ export default function Usuarios() {
       </Dialog>
 
       {/* ── Edit Dialog ── */}
-      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+      <Dialog open={f.openEdit} onOpenChange={f.setOpenEdit}>
         <DialogContent className="max-w-xl flex flex-col max-h-[90vh]">
           <DialogHeader className="shrink-0">
             <DialogTitle>Editar usuário</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleEdit} className="flex-1 overflow-hidden flex flex-col">
+          <form onSubmit={f.handleEdit} className="flex-1 overflow-hidden flex flex-col">
             <Tabs defaultValue="dados" className="flex-1 flex flex-col overflow-hidden">
               <TabsList className="shrink-0 mb-3">
                 <TabsTrigger value="dados" className="gap-1.5">
@@ -820,30 +485,30 @@ export default function Usuarios() {
                   <div className="space-y-1.5">
                     <Label>Nome completo</Label>
                     <Input
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
+                      value={f.editName}
+                      onChange={(e) => f.setEditName(e.target.value)}
                       required
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label>E-mail</Label>
-                      <Input value={editingUser?.email || ""} disabled className="bg-muted text-muted-foreground" />
+                      <Input value={f.editingUser?.email || ""} disabled className="bg-muted text-muted-foreground" />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Telefone</Label>
                       <Input
                         type="tel"
                         placeholder="(11) 99999-9999"
-                        value={editTelefone}
-                        onChange={(e) => setEditTelefone(e.target.value)}
+                        value={f.editTelefone}
+                        onChange={(e) => f.setEditTelefone(e.target.value)}
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label>Cargo</Label>
-                      <Select value={editRole} onValueChange={(v) => setEditRole(v as AppRole)}>
+                      <Select value={f.editRole} onValueChange={(v) => f.setEditRole(v as AppRole)}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {ALL_ROLES.map((r) => (
@@ -861,24 +526,24 @@ export default function Usuarios() {
                           <Globe className="h-3.5 w-3.5" />
                           Acesso global
                         </Label>
-                        <Switch checked={editAcessoGlobal} onCheckedChange={(v) => {
-                          setEditAcessoGlobal(v);
-                          if (v) setEditFilialIds([]);
+                        <Switch checked={f.editAcessoGlobal} onCheckedChange={(v) => {
+                          f.setEditAcessoGlobal(v);
+                          if (v) f.setEditFilialIds([]);
                         }} />
                       </div>
                     </div>
-                    {!editAcessoGlobal && (
+                    {!f.editAcessoGlobal && (
                       <div className="space-y-2">
-                        {q.filiais.map((f) => (
-                          <div key={f.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
-                            <span className="text-sm">{f.nome}</span>
+                        {q.filiais.map((fil) => (
+                          <div key={fil.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
+                            <span className="text-sm">{fil.nome}</span>
                             <Switch
-                              checked={editFilialIds.includes(f.id)}
+                              checked={f.editFilialIds.includes(fil.id)}
                               onCheckedChange={(checked) => {
                                 if (checked) {
-                                  setEditFilialIds((prev) => [...prev, f.id]);
+                                  f.setEditFilialIds((prev) => [...prev, fil.id]);
                                 } else {
-                                  setEditFilialIds((prev) => prev.filter((id) => id !== f.id));
+                                  f.setEditFilialIds((prev) => prev.filter((id) => id !== fil.id));
                                 }
                               }}
                             />
@@ -886,7 +551,7 @@ export default function Usuarios() {
                         ))}
                       </div>
                     )}
-                    {editAcessoGlobal && (
+                    {f.editAcessoGlobal && (
                       <p className="text-xs text-muted-foreground">Este usuário terá acesso a todas as filiais.</p>
                     )}
                   </div>
@@ -899,42 +564,42 @@ export default function Usuarios() {
                         </Label>
                         <p className="text-xs text-muted-foreground">Este usuário realiza vendas e pode receber comissão</p>
                       </div>
-                      <Switch checked={editIsVendedor} onCheckedChange={setEditIsVendedor} />
+                      <Switch checked={f.editIsVendedor} onCheckedChange={f.setEditIsVendedor} />
                     </div>
-                    {editIsVendedor && (
+                    {f.editIsVendedor && (
                       <>
                         <div className="border-t border-border" />
                         <div className="flex items-center justify-between">
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comissão</p>
                           <div className="flex items-center gap-2">
                             <Label className="text-xs text-muted-foreground">Recebe comissão</Label>
-                            <Switch checked={editRecebeComissao} onCheckedChange={setEditRecebeComissao} />
+                            <Switch checked={f.editRecebeComissao} onCheckedChange={f.setEditRecebeComissao} />
                           </div>
                         </div>
-                        {editRecebeComissao && (
+                        {f.editRecebeComissao && (
                           <div className="grid grid-cols-3 gap-3">
                             <div className="space-y-1.5">
                               <Label className="text-xs">Implantação (%)</Label>
                               <Input
                                 type="number" min="0" max="100" step="0.01"
-                                value={editComissaoImp}
-                                onChange={(e) => setEditComissaoImp(e.target.value)}
+                                value={f.editComissaoImp}
+                                onChange={(e) => f.setEditComissaoImp(e.target.value)}
                               />
                             </div>
                             <div className="space-y-1.5">
                               <Label className="text-xs">Mensalidade (%)</Label>
                               <Input
                                 type="number" min="0" max="100" step="0.01"
-                                value={editComissaoMens}
-                                onChange={(e) => setEditComissaoMens(e.target.value)}
+                                value={f.editComissaoMens}
+                                onChange={(e) => f.setEditComissaoMens(e.target.value)}
                               />
                             </div>
                             <div className="space-y-1.5">
                               <Label className="text-xs">Serviço (%)</Label>
                               <Input
                                 type="number" min="0" max="100" step="0.01"
-                                value={editComissaoServ}
-                                onChange={(e) => setEditComissaoServ(e.target.value)}
+                                value={f.editComissaoServ}
+                                onChange={(e) => f.setEditComissaoServ(e.target.value)}
                               />
                             </div>
                           </div>
@@ -951,9 +616,9 @@ export default function Usuarios() {
                         </Label>
                         <p className="text-xs text-muted-foreground">Realiza atendimentos técnicos e pode ser apontado para agenda</p>
                       </div>
-                      <Switch checked={editIsTecnico} onCheckedChange={setEditIsTecnico} />
+                      <Switch checked={f.editIsTecnico} onCheckedChange={f.setEditIsTecnico} />
                     </div>
-                    {editIsTecnico && (
+                    {f.editIsTecnico && (
                       <div className="space-y-2 pl-2 border-l-2 border-primary/30">
                         <Label className="text-xs font-medium">Tipo de Atendimento Técnico</Label>
                         <div className="space-y-1.5">
@@ -961,8 +626,8 @@ export default function Usuarios() {
                             <div key={opt.value} className="flex items-center justify-between rounded px-2 py-1">
                               <span className="text-xs">{opt.label}</span>
                               <Switch
-                                checked={editTipoTecnico === opt.value}
-                                onCheckedChange={(checked) => { if (checked) setEditTipoTecnico(opt.value); }}
+                                checked={f.editTipoTecnico === opt.value}
+                                onCheckedChange={(checked) => { if (checked) f.setEditTipoTecnico(opt.value); }}
                               />
                             </div>
                           ))}
@@ -980,10 +645,10 @@ export default function Usuarios() {
                         <div key={m.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
                           <span className="text-sm">{m.nome}</span>
                           <Switch
-                            checked={editMesaIds.includes(m.id)}
+                            checked={f.editMesaIds.includes(m.id)}
                             onCheckedChange={(checked) => {
-                              if (checked) setEditMesaIds((prev) => [...prev, m.id]);
-                              else setEditMesaIds((prev) => prev.filter((id) => id !== m.id));
+                              if (checked) f.setEditMesaIds((prev) => [...prev, m.id]);
+                              else f.setEditMesaIds((prev) => prev.filter((id) => id !== m.id));
                             }}
                           />
                         </div>
@@ -998,16 +663,16 @@ export default function Usuarios() {
                         <Label>Desconto máx. implantação (%)</Label>
                         <Input
                           type="number" min="0" max="100" step="0.01"
-                          value={editDescontoLimiteImp}
-                          onChange={(e) => setEditDescontoLimiteImp(e.target.value)}
+                          value={f.editDescontoLimiteImp}
+                          onChange={(e) => f.setEditDescontoLimiteImp(e.target.value)}
                         />
                       </div>
                       <div className="space-y-1.5">
                         <Label>Desconto máx. mensalidade (%)</Label>
                         <Input
                           type="number" min="0" max="100" step="0.01"
-                          value={editDescontoLimiteMens}
-                          onChange={(e) => setEditDescontoLimiteMens(e.target.value)}
+                          value={f.editDescontoLimiteMens}
+                          onChange={(e) => f.setEditDescontoLimiteMens(e.target.value)}
                         />
                       </div>
                     </div>
@@ -1015,9 +680,9 @@ export default function Usuarios() {
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label className="text-sm font-medium">Status</Label>
-                      <p className="text-xs text-muted-foreground">{editActive ? "Usuário ativo no sistema" : "Usuário sem acesso ao sistema"}</p>
+                      <p className="text-xs text-muted-foreground">{f.editActive ? "Usuário ativo no sistema" : "Usuário sem acesso ao sistema"}</p>
                     </div>
-                    <Switch checked={editActive} onCheckedChange={setEditActive} />
+                    <Switch checked={f.editActive} onCheckedChange={f.setEditActive} />
                   </div>
                 </TabsContent>
 
@@ -1034,7 +699,7 @@ export default function Usuarios() {
                           Recebe notificações e pode aprovar/reprovar solicitações de desconto acima do limite permitido.
                         </p>
                       </div>
-                      <Switch checked={editGestorDesconto} onCheckedChange={setEditGestorDesconto} />
+                      <Switch checked={f.editGestorDesconto} onCheckedChange={f.setEditGestorDesconto} />
                     </div>
                     <div className="border-t border-border" />
                     <div className="flex items-center justify-between">
@@ -1047,7 +712,7 @@ export default function Usuarios() {
                           Permite cadastrar clientes com CNPJ/CPF já existente no sistema.
                         </p>
                       </div>
-                      <Switch checked={editPermitirCnpjDuplicado} onCheckedChange={setEditPermitirCnpjDuplicado} />
+                      <Switch checked={f.editPermitirCnpjDuplicado} onCheckedChange={f.setEditPermitirCnpjDuplicado} />
                     </div>
                     <div className="border-t border-border" />
                     <div className="flex items-center justify-between">
@@ -1060,7 +725,7 @@ export default function Usuarios() {
                           Permite enviar o resumo do espelho do cliente via WhatsApp diretamente pelo sistema.
                         </p>
                       </div>
-                      <Switch checked={editPermiteEnviarEspelho} onCheckedChange={setEditPermiteEnviarEspelho} />
+                      <Switch checked={f.editPermiteEnviarEspelho} onCheckedChange={f.setEditPermiteEnviarEspelho} />
                     </div>
                     <div className="border-t border-border" />
                     <div className="flex items-center justify-between">
@@ -1073,7 +738,7 @@ export default function Usuarios() {
                           Permite resetar projetos no painel de atendimento, apagando histórico e voltando para etapa inicial.
                         </p>
                       </div>
-                      <Switch checked={editPermiteResetarProjeto} onCheckedChange={setEditPermiteResetarProjeto} />
+                      <Switch checked={f.editPermiteResetarProjeto} onCheckedChange={f.setEditPermiteResetarProjeto} />
                     </div>
                     <div className="border-t border-border" />
                     <div className="flex items-center justify-between">
@@ -1086,7 +751,7 @@ export default function Usuarios() {
                           Permite cancelar projetos no painel de atendimento, registrando o motivo no relatório de projetos cancelados.
                         </p>
                       </div>
-                      <Switch checked={editPermiteCancelarProjeto} onCheckedChange={setEditPermiteCancelarProjeto} />
+                      <Switch checked={f.editPermiteCancelarProjeto} onCheckedChange={f.setEditPermiteCancelarProjeto} />
                     </div>
                     <div className="border-t border-border" />
                     <div className="flex items-center justify-between">
@@ -1099,7 +764,7 @@ export default function Usuarios() {
                           Permite visualizar os valores financeiros (implantação, mensalidade, etc.) nos detalhes do projeto no painel de atendimento.
                         </p>
                       </div>
-                      <Switch checked={editPermiteVerValoresProjeto} onCheckedChange={setEditPermiteVerValoresProjeto} />
+                      <Switch checked={f.editPermiteVerValoresProjeto} onCheckedChange={f.setEditPermiteVerValoresProjeto} />
                     </div>
                   </div>
                 </TabsContent>
@@ -1118,9 +783,9 @@ export default function Usuarios() {
             </Tabs>
 
             <div className="flex justify-end gap-2 pt-3 shrink-0 border-t border-border mt-3">
-              <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>Cancelar</Button>
-              <Button type="submit" disabled={saving}>
-                {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              <Button type="button" variant="outline" onClick={() => f.setOpenEdit(false)}>Cancelar</Button>
+              <Button type="submit" disabled={f.saving}>
+                {f.saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 Salvar alterações
               </Button>
             </div>
