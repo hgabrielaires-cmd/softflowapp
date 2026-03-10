@@ -408,10 +408,16 @@ export default function Contratos() {
     loadData();
   }
 
+  // Load ZapSign records when contratos change
+  useEffect(() => {
+    if (contratos.length > 0) loadZapsignRecords();
+  }, [contratos.length]);
 
-
-
-
+  async function handleOpenDetail(contrato: Contrato) {
+    setSelected(contrato);
+    setOpenDetail(true);
+    await loadDetailData(contrato);
+  }
 
 
   async function loadData() {
