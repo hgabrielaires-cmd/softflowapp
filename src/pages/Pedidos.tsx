@@ -151,10 +151,7 @@ export default function Pedidos() {
   const [clienteSearchFocused, setClienteSearchFocused] = useState(false);
 
   // Contatos inline do form novo cliente
-  const [clienteContatos, setClienteContatos] = useState<{ nome: string; cargo: string; telefone: string; email: string; decisor: boolean; ativo: boolean }[]>([]);
-  const [showContatoClienteForm, setShowContatoClienteForm] = useState(false);
-  const [editingContatoClienteIdx, setEditingContatoClienteIdx] = useState<number | null>(null);
-  const [inlineContatoClienteForm, setInlineContatoClienteForm] = useState({ nome: "", cargo: "", telefone: "", email: "", decisor: false, ativo: true });
+   const [clienteContatos, setClienteContatos] = useState<ClienteContatoInline[]>([]);
 
   // Draft comments (antes de salvar pedido)
   interface DraftComentario {
