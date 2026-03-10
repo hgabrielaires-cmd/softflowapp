@@ -154,7 +154,7 @@ export default function Usuarios() {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => handleResetPassword(user)}
+                          onClick={() => f.handleResetPassword(user)}
                           title="Redefinir senha por e-mail"
                         >
                           <Key className="h-3.5 w-3.5 text-muted-foreground" />
