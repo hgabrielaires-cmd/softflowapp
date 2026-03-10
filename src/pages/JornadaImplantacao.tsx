@@ -126,20 +126,12 @@ export default function JornadaImplantacao() {
     if (desc) setForm((prev) => ({ ...prev, descricao: desc }));
   }, [form.vinculo_tipo, form.vinculo_id]);
 
-  // ─── Get vinculo items based on type ───────────────────────────────────────
+  // ─── Vinculo helpers (delegated to extracted helpers) ────────────────────────
 
-  function getVinculoItems() {
-    if (form.vinculo_tipo === "plano") return planos.map((p) => ({ id: p.id, nome: p.nome }));
-    if (form.vinculo_tipo === "modulo") return modulos.map((m) => ({ id: m.id, nome: m.nome }));
-    if (form.vinculo_tipo === "servico") return servicos.map((s) => ({ id: s.id, nome: s.nome }));
-    return [];
-  }
+  const vinculoItems = getVinculoItems(form.vinculo_tipo, planos, modulos, servicos);
 
-  function getVinculoLabel(tipo: string, id: string) {
-    if (tipo === "plano") return planos.find((p) => p.id === id)?.nome || id;
-    if (tipo === "modulo") return modulos.find((m) => m.id === id)?.nome || id;
-    if (tipo === "servico") return servicos.find((s) => s.id === id)?.nome || id;
-    return id;
+  function resolveVinculoLabel(tipo: string, id: string) {
+    return getVinculoLabel(tipo, id, planos, modulos, servicos);
   }
 
   // ─── Save jornada ──────────────────────────────────────────────────────────
