@@ -217,8 +217,8 @@ export default function PainelAtendimento() {
         supabase.from("painel_tecnicos").select("tecnico_id").eq("card_id", detailCard.id),
         supabase.from("painel_curtidas").select("comentario_id, user_id"),
         supabase.from("painel_agendamentos").select("*, jornada_atividades(nome), painel_etapas:etapa_id(nome, cor)").eq("card_id", detailCard.id).order("data"),
-        supabase.from("painel_seguidores" as any).select("id").eq("card_id", detailCard.id).eq("user_id", profile?.user_id || "").is("unfollowed_at", null).maybeSingle(),
-        (supabase as any).from("painel_seguidores").select("user_id, created_at, unfollowed_at").eq("card_id", detailCard.id),
+        supabase.from("painel_seguidores").select("id").eq("card_id", detailCard.id).eq("user_id", profile?.user_id || "").is("unfollowed_at", null).maybeSingle(),
+        supabase.from("painel_seguidores").select("user_id, created_at, unfollowed_at").eq("card_id", detailCard.id),
       ]);
       setComentarios(coms || []);
       setTecnicosSelecionados((tecs || []).map((t: any) => t.tecnico_id));
