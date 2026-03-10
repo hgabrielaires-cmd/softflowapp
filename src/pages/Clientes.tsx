@@ -311,7 +311,7 @@ export default function Clientes() {
   async function handleToggleAtivoContato(contato: ClienteContato) {
     if (!clienteContatos) return;
     await supabase.from("cliente_contatos").update({ ativo: !contato.ativo }).eq("id", contato.id);
-    await fetchContatos(clienteContatos.id);
+    await loadContatos(clienteContatos.id);
   }
 
   async function handleDesativarContato(contato: ClienteContato) {
