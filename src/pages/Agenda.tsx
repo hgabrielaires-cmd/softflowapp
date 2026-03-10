@@ -437,6 +437,118 @@ export default function Agenda() {
   const updateAgStatus = useMutation({
     mutationFn: async ({ agId, newStatus }: { agId: string; newStatus: string }) => {
       const now = new Date().toISOString();
+
+      // Fetch full agendamento data for linking
+      const { data: agData } = await supabase
+        .from("painel_agendamentos")
+        .select("card_id, atividade_id, etapa_execucao_id, etapa_id")
+        .eq("id", agId)
+        .single();
+
+      if (!agData) throw new Error("Agendamento não encontrado.");
+
+      if (newStatus === "em_andamento") {
+        const etapaExecId = agData.etapa_execucao_id;
+        const atividadeId = agData.atividade_id;
+
+        // If there's an execution stage configured, validate and move card if needed
+        if (etapaExecId) {
+          // Validate the execution stage exists and is active
+          const { data: etapaExec } = await supabase
+            .from("painel_etapas")
+            .select("id, nome, ativo")
+            .eq("id", etapaExecId)
+            .single();
+
+          if (!etapaExec) {
+            throw new Error("A etapa de execução configurada não foi encontrada.");
+          }
+          if (!etapaExec.ativo) {
+            throw new Error("A etapa de execução configurada está inativa.");
+          }
+
+          // Check current card stage
+          const { data: card } = await supabase
+            .from("painel_atendimento")
+            .select("id, etapa_id, filial_id")
+            .eq("id", agData.card_id)
+            .single();
+
+          if (!card) throw new Error("Card do projeto não encontrado.");
+
+          // Move card to execution stage if not already there
+          if (card.etapa_id !== etapaExecId) {
+            // Register stage exit/entry in history
+            const { data: currentEtapa } = await supabase
+              .from("painel_etapas")
+              .select("nome")
+              .eq("id", card.etapa_id)
+              .single();
+
+            // Close current stage history
+            const { data: histOpen } = await supabase
+              .from("painel_historico_etapas")
+              .select("id, entrada_em")
+              .eq("card_id", card.id)
+              .eq("etapa_id", card.etapa_id)
+              .is("saida_em", null)
+              .order("entrada_em", { ascending: false })
+              .limit(1);
+
+            if (histOpen && histOpen.length > 0) {
+              const tempoReal = Math.round(((Date.now() - new Date(histOpen[0].entrada_em).getTime()) / (1000 * 60 * 60)) * 100) / 100;
+              await supabase.from("painel_historico_etapas").update({
+                saida_em: now,
+                tempo_real_horas: tempoReal,
+              }).eq("id", histOpen[0].id);
+            }
+
+            // Open new stage history
+            await supabase.from("painel_historico_etapas").insert({
+              card_id: card.id,
+              etapa_id: etapaExecId,
+              etapa_nome: etapaExec.nome,
+              entrada_em: now,
+              usuario_id: user?.id || null,
+            });
+
+            // Move card
+            await supabase.from("painel_atendimento").update({
+              etapa_id: etapaExecId,
+              iniciado_em: now,
+              iniciado_por: user?.id || null,
+            }).eq("id", card.id);
+          }
+        }
+
+        // Validate and start linked activity
+        if (atividadeId) {
+          const { data: atividade } = await supabase
+            .from("jornada_atividades")
+            .select("id, etapa_id")
+            .eq("id", atividadeId)
+            .single();
+
+          if (!atividade) {
+            throw new Error("A atividade vinculada não foi encontrada.");
+          }
+
+          // Start the activity execution
+          await supabase
+            .from("painel_atividade_execucao")
+            .upsert({
+              card_id: agData.card_id,
+              atividade_id: atividadeId,
+              etapa_id: etapaExecId || agData.etapa_id || null,
+              status: "em_andamento",
+              iniciado_em: now,
+              iniciado_por: user?.id || null,
+              updated_at: now,
+            }, { onConflict: "card_id,atividade_id" });
+        }
+      }
+
+      // Update agenda status
       const updateData: any = { status: newStatus };
       if (newStatus === "em_andamento") {
         updateData.iniciado_em = now;
@@ -453,8 +565,10 @@ export default function Agenda() {
       toast.success(newStatus === "em_andamento" ? "Atendimento iniciado!" : "Atendimento finalizado!");
       queryClient.invalidateQueries({ queryKey: ["agenda-cal"] });
       queryClient.invalidateQueries({ queryKey: ["agenda-list"] });
+      queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+      queryClient.invalidateQueries({ queryKey: ["painel_atividade_execucao"] });
     },
-    onError: () => toast.error("Erro ao atualizar status"),
+    onError: (err: any) => toast.error(err?.message || "Erro ao atualizar status"),
   });
 
   // ===== RENDER: event card (shared between views) =====
