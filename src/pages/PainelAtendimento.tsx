@@ -471,7 +471,7 @@ export default function PainelAtendimento() {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (!currentUser) return;
       const autorNome = profile?.full_name || "Usuário";
-      const { data: seguidores } = await (supabase as any).from("painel_seguidores").select("user_id").eq("card_id", cardId).is("unfollowed_at", null);
+      const { data: seguidores } = await supabase.from("painel_seguidores").select("user_id").eq("card_id", cardId).is("unfollowed_at", null);
       if (!seguidores || seguidores.length === 0) return;
       for (const seg of seguidores) {
         if (seg.user_id === currentUser.id) continue;
