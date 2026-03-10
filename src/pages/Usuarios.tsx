@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
-import { Profile, AppRole, ROLE_LABELS, Filial } from "@/lib/supabase-types";
+import { AppRole, ROLE_LABELS, Filial } from "@/lib/supabase-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,52 +40,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, UserX, UserCheck, Users, Shield, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Phone, Send, MessageCircle, Globe, Wrench, ShoppingCart, Headphones, RefreshCw, Ban } from "lucide-react";
+import { Plus, Search, UserX, UserCheck, Users, Loader2, Mail, Pencil, ShieldCheck, Bell, KeyRound, Key, Send, MessageCircle, Globe, Wrench, ShoppingCart, Headphones, RefreshCw, Ban } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-
-
-interface UserWithRoles extends Profile {
-  roles: AppRole[];
-  filial_nome?: string;
-  acesso_global: boolean;
-  filiais_vinculadas?: { id: string; nome: string }[];
-  mesas_vinculadas?: { id: string; nome: string }[];
-}
-
-interface MesaOption {
-  id: string;
-  nome: string;
-}
-
-const ALL_ROLES: AppRole[] = ["admin", "gestor", "financeiro", "vendedor", "operacional", "tecnico"];
-
-function gerarSenhaSegura(): string {
-  const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const lower = "abcdefghijklmnopqrstuvwxyz";
-  const digits = "0123456789";
-  const special = "!@#$%&*";
-  const all = upper + lower + digits + special;
-  const securePick = (s: string) => {
-    const arr = new Uint32Array(1);
-    crypto.getRandomValues(arr);
-    return s[arr[0] % s.length];
-  };
-  // Garantir pelo menos 1 de cada tipo + extras = 12 caracteres
-  const mandatory = [securePick(upper), securePick(lower), securePick(digits), securePick(special)];
-  const rest = Array.from({ length: 8 }, () => securePick(all));
-  const combined = [...mandatory, ...rest];
-  for (let i = combined.length - 1; i > 0; i--) {
-    const arr = new Uint32Array(1);
-    crypto.getRandomValues(arr);
-    const j = arr[0] % (i + 1);
-    [combined[i], combined[j]] = [combined[j], combined[i]];
-  }
-  return combined.join("");
-}
+import { UserWithRoles, MesaOption } from "./usuarios/types";
+import { ALL_ROLES, ITEMS_PER_PAGE, TIPO_TECNICO_OPTIONS } from "./usuarios/constants";
+import { gerarSenhaSegura } from "./usuarios/helpers";
 
 export default function Usuarios() {
   const { isAdmin } = useAuth();
@@ -96,7 +57,7 @@ export default function Usuarios() {
   const [filiaisLoaded, setFiliaisLoaded] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 15;
+  
   
 
   // Create dialog
@@ -819,7 +780,7 @@ export default function Usuarios() {
                 <div className="space-y-2 pl-2 border-l-2 border-primary/30">
                   <Label className="text-xs font-medium">Tipo de Atendimento</Label>
                   <div className="space-y-1.5">
-                    {[{ value: "interno", label: "Interno" }, { value: "externo", label: "Externo" }, { value: "ambos", label: "Ambos" }].map((opt) => (
+                    {TIPO_TECNICO_OPTIONS.map((opt) => (
                       <div key={opt.value} className="flex items-center justify-between rounded px-2 py-1">
                         <span className="text-xs">{opt.label}</span>
                         <Switch
@@ -1071,7 +1032,7 @@ export default function Usuarios() {
                       <div className="space-y-2 pl-2 border-l-2 border-primary/30">
                         <Label className="text-xs font-medium">Tipo de Atendimento Técnico</Label>
                         <div className="space-y-1.5">
-                          {[{ value: "interno", label: "Interno" }, { value: "externo", label: "Externo" }, { value: "ambos", label: "Ambos" }].map((opt) => (
+                          {TIPO_TECNICO_OPTIONS.map((opt) => (
                             <div key={opt.value} className="flex items-center justify-between rounded px-2 py-1">
                               <span className="text-xs">{opt.label}</span>
                               <Switch
