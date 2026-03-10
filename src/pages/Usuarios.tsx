@@ -736,7 +736,7 @@ export default function Usuarios() {
                     />
                   </div>
                 ))}
-                {mesasDisponiveis.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma mesa cadastrada.</p>}
+                {q.mesasDisponiveis.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma mesa cadastrada.</p>}
               </div>
             </div>
             <div className="rounded-lg border border-border p-3 space-y-3">
