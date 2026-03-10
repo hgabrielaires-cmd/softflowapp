@@ -94,7 +94,6 @@ export default function Pedidos() {
   const [filterDe, setFilterDe] = useState("");
   const [filterAte, setFilterAte] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 15;
 
   // Dialog pedido
   const [openDialog, setOpenDialog] = useState(false);
