@@ -107,67 +107,6 @@ export default function Usuarios() {
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
-  async function loadFiliais() {
-    const [{ data: fData }, { data: mData }] = await Promise.all([
-      supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
-      supabase.from("mesas_atendimento").select("id, nome").eq("ativo", true).order("nome"),
-    ]);
-    if (fData) setFiliais(fData as Filial[]);
-    if (mData) setMesasDisponiveis(mData as MesaOption[]);
-    setFiliaisLoaded(true);
-  }
-
-  async function loadUsers() {
-    setLoading(true);
-    const { data: profiles, error } = await supabase
-      .from("profiles")
-      .select("*, filiais!profiles_filial_id_fkey(nome)")
-      .order("full_name");
-
-    if (error) { toast.error("Erro ao carregar usuários"); setLoading(false); return; }
-
-    const [{ data: roleData }, { data: ufData }, { data: umData }] = await Promise.all([
-      supabase.from("user_roles").select("*"),
-      supabase.from("usuario_filiais").select("user_id, filial_id"),
-      supabase.from("usuario_mesas").select("user_id, mesa_id"),
-    ]);
-
-    const enriched: UserWithRoles[] = (profiles || []).map((p: any) => {
-      const userFiliais = (ufData || []).filter((uf) => uf.user_id === p.user_id);
-      const filiaisVinculadas = userFiliais.map((uf) => {
-        const f = filiais.find((fl) => fl.id === uf.filial_id);
-        return f ? { id: f.id, nome: f.nome } : null;
-      }).filter(Boolean) as { id: string; nome: string }[];
-
-      const userMesas = (umData || []).filter((um: any) => um.user_id === p.user_id);
-      const mesasVinculadas = userMesas.map((um: any) => {
-        const m = mesasDisponiveis.find((md) => md.id === um.mesa_id);
-        return m ? { id: m.id, nome: m.nome } : null;
-      }).filter(Boolean) as { id: string; nome: string }[];
-
-      return {
-        ...p,
-        filial_nome: p.filiais?.nome || p.filial || null,
-        roles: (roleData || []).filter((r) => r.user_id === p.user_id).map((r) => r.role as AppRole),
-        acesso_global: p.acesso_global || false,
-        filiais_vinculadas: filiaisVinculadas,
-        mesas_vinculadas: mesasVinculadas,
-      };
-    });
-
-    setUsers(enriched);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    loadFiliais();
-  }, []);
-
-  useEffect(() => {
-    if (filiaisLoaded) {
-      loadUsers();
-    }
-  }, [filiaisLoaded]);
 
   // ── Enviar WhatsApp de boas-vindas ──────────────────────
   async function enviarWhatsappBoasVindas(nome: string, email: string, senha: string, telefone: string) {
