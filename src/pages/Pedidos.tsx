@@ -44,7 +44,8 @@ import { TablePagination } from "@/components/TablePagination";
 // ─── Extracted modules ────────────────────────────────────────────────────────
 import type { PedidoWithJoins, FormState, ModuloOpcional, ModuloAdicionadoItem, ServicoAdicionadoItem, DraftComentario, ClienteFormState, ClienteContatoInline } from "./pedidos/types";
 import { emptyClienteForm, STATUS_OPTIONS, STATUS_COLORS, FIN_STATUS_COLORS, emptyForm, PRIORIDADE_MAP_DRAFT, MAX_FILE_SIZE_DRAFT } from "./pedidos/constants";
-import { fmtBRL, applyDesconto, applyAcrescimo, validatePedidoForm, buildPedidoPayload, checkDescontoAprovacao, checkDescontoValoresMudaram, buildSolicitacaoDescontoPayload, applyFinanceiroReset } from "./pedidos/helpers";
+import { fmtBRL, applyDesconto, applyAcrescimo, validatePedidoForm } from "./pedidos/helpers";
+import { usePedidoSave } from "./pedidos/usePedidoSave";
 import { VisualizarPedidoDialog } from "./pedidos/components/VisualizarPedidoDialog";
 import { ClienteRapidoDialog } from "./pedidos/components/ClienteRapidoDialog";
 import { ComentarioDraftDialog } from "./pedidos/components/ComentarioDraftDialog";
