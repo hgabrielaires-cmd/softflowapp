@@ -1743,6 +1743,70 @@ export type Database = {
           },
         ]
       }
+      painel_atividade_execucao: {
+        Row: {
+          atividade_id: string
+          card_id: string
+          concluido_em: string | null
+          concluido_por: string | null
+          created_at: string
+          etapa_id: string | null
+          id: string
+          iniciado_em: string | null
+          iniciado_por: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          atividade_id: string
+          card_id: string
+          concluido_em?: string | null
+          concluido_por?: string | null
+          created_at?: string
+          etapa_id?: string | null
+          id?: string
+          iniciado_em?: string | null
+          iniciado_por?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          atividade_id?: string
+          card_id?: string
+          concluido_em?: string | null
+          concluido_por?: string | null
+          created_at?: string
+          etapa_id?: string | null
+          id?: string
+          iniciado_em?: string | null
+          iniciado_por?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "painel_atividade_execucao_atividade_id_fkey"
+            columns: ["atividade_id"]
+            isOneToOne: false
+            referencedRelation: "jornada_atividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_atividade_execucao_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "painel_atendimento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_atividade_execucao_etapa_id_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "painel_etapas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       painel_checklist_progresso: {
         Row: {
           atividade_id: string | null
