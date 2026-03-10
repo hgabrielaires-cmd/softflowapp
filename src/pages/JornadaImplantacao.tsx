@@ -28,7 +28,7 @@ export default function JornadaImplantacao() {
   const [filterVinculo, setFilterVinculo] = useState("todos");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Jornada | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(emptyJornadaForm);
   const [etapas, setEtapas] = useState<LocalEtapa[]>([]);
   const [etapaDialogOpen, setEtapaDialogOpen] = useState(false);
   const [editingEtapa, setEditingEtapa] = useState<LocalEtapa | null>(null);
