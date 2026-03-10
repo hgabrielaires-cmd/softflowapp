@@ -1488,7 +1488,7 @@ export default function Contratos() {
                       size="sm"
                       className="w-full gap-2 mt-2"
                       disabled={enviandoWhatsapp}
-                      onClick={() => handleEnviarWhatsapp(mensagem)}
+                      onClick={() => hookEnviarWhatsapp(mensagem, contatosCliente, selected)}
                     >
                       {enviandoWhatsapp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                       {enviandoWhatsapp ? "Enviando..." : "Enviar WhatsApp"}
@@ -1673,236 +1673,26 @@ export default function Contratos() {
       {/* (Old generation popup removed - now unified in ZapSign popup below) */}
 
       {/* ZapSign Detail Dialog */}
-      {zapsignDetailContrato && zapsignRecords[zapsignDetailContrato.id] && (
-        <Dialog open={openZapsignDetail} onOpenChange={setOpenZapsignDetail}>
-          <DialogContent className="max-w-md" aria-describedby="zapsign-desc">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-base">
-                <Send className="h-5 w-5 text-primary" />
-                ZapSign — {zapsignDetailContrato.numero_exibicao}
-              </DialogTitle>
-              <DialogDescription id="zapsign-desc" className="sr-only">
-                Detalhes da assinatura no ZapSign
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Status</span>
-                {getZapSignStatusBadge(zapsignRecords[zapsignDetailContrato.id].status)}
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Signatários</p>
-                {zapsignRecords[zapsignDetailContrato.id].signers.map((signer, i) => (
-                  <div key={i} className="rounded-lg border border-border p-3 space-y-1">
-                    <span className="text-sm font-medium">{signer.name}</span>
-                    {signer.email && <p className="text-xs text-muted-foreground">{signer.email}</p>}
-                    {signer.sign_url && (
-                      <div className="flex gap-1 pt-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-xs gap-1"
-                          onClick={() => {
-                            navigator.clipboard.writeText(signer.sign_url);
-                            toast.success("Link copiado!");
-                          }}
-                        >
-                          <ClipboardCopy className="h-3 w-3" />
-                          Copiar Link
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-xs gap-1"
-                          onClick={() => window.open(signer.sign_url, "_blank")}
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          Abrir
-                        </Button>
-                      </div>
-                    )}
-                    <div className="pt-1">
-                      {(() => {
-                        const s = signer.status?.toLowerCase();
-                        if (s === "signed")
-                          return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs">Assinado</Badge>;
-                        if (s === "refused" || s === "canceled")
-                          return <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 text-xs">Recusado</Badge>;
-                        return <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 text-xs">Aguardando assinatura</Badge>;
-                      })()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  className="flex-1 gap-1"
-                  onClick={() => handleAtualizarStatusZapSign(zapsignDetailContrato.id)}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Atualizar Status
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 gap-1"
-                  disabled={reenviandoWhatsapp}
-                  onClick={() => handleReenviarWhatsapp(zapsignDetailContrato)}
-                >
-                  {reenviandoWhatsapp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  Reenviar WhatsApp
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      <ZapsignDetailDialog
+        open={openZapsignDetail}
+        onOpenChange={setOpenZapsignDetail}
+        contrato={zapsignDetailContrato}
+        zapsignRecord={zapsignDetailContrato ? zapsignRecords[zapsignDetailContrato.id] : undefined}
+        getZapSignStatusBadge={getZapSignStatusBadge}
+        onAtualizarStatus={handleAtualizarStatusZapSign}
+        onReenviarWhatsapp={handleReenviarWhatsapp}
+        reenviandoWhatsapp={reenviandoWhatsapp}
+      />
 
       {/* ── Popup ZapSign + WhatsApp Animada ──────────────────────────── */}
-      <Dialog
+      <ZapsignPopupDialog
         open={openZapsignPopup}
-        onOpenChange={(open) => {
-          if (zapsignPopupStep === "done" || zapsignPopupStep === "erro") setOpenZapsignPopup(open);
-        }}
-      >
-        <DialogContent className="max-w-sm" aria-describedby="zapsign-popup-desc" onPointerDownOutside={(e) => {
-          if (zapsignPopupStep !== "done" && zapsignPopupStep !== "erro") e.preventDefault();
-        }} onEscapeKeyDown={(e) => {
-          if (zapsignPopupStep !== "done" && zapsignPopupStep !== "erro") e.preventDefault();
-        }}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              {zapsignPopupStep === "gerando" ? (
-                <FileOutput className="h-5 w-5 text-primary" />
-              ) : (
-                <Send className="h-5 w-5 text-primary" />
-              )}
-              {zapsignPopupStep === "gerando"
-                ? (zapsignPopupContrato?.tipo === "OA" ? "Gerando OA" : "Gerando Contrato")
-                : zapsignPopupStep === "whatsapp" ? "Enviando WhatsApp"
-                : zapsignPopupStep === "done" ? "Tudo pronto!"
-                : zapsignPopupStep === "erro" ? "Erro"
-                : "Enviando para ZapSign"}
-            </DialogTitle>
-            <DialogDescription id="zapsign-popup-desc" className="sr-only">
-              Progresso da geração, envio para assinatura e notificação
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-6 flex flex-col items-center gap-5">
-            {/* Passo 0: Gerando PDF */}
-            {zapsignPopupStep === "gerando" && (
-              <div className="flex flex-col items-center gap-4 animate-fade-in">
-                <div className="relative flex items-center justify-center">
-                  <span className="absolute inline-flex h-20 w-20 rounded-full bg-primary/10 animate-ping" />
-                  <span className="absolute inline-flex h-14 w-14 rounded-full bg-primary/20 animate-ping [animation-delay:0.3s]" />
-                  <div className="relative flex items-center justify-center h-16 w-16 rounded-full bg-primary/15 border-2 border-primary/30">
-                    <Loader2 className="h-7 w-7 text-primary animate-spin" />
-                  </div>
-                </div>
-                <div className="text-center space-y-1">
-                  <p className="font-semibold text-foreground">
-                    {zapsignPopupContrato?.tipo === "OA" ? "Gerando OA…" : "Gerando contrato…"}
-                  </p>
-                  <p className="text-sm text-muted-foreground transition-all duration-500 min-h-[1.5rem]">
-                    {(zapsignPopupContrato?.tipo === "OA" ? GERAR_MSGS_OA : GERAR_MSGS_CONTRATO)[zapsignPopupMsgIndex]}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Passo 1: ZapSign */}
-            {zapsignPopupStep === "zapsign" && (
-              <div className="flex flex-col items-center gap-4 animate-fade-in">
-                <div className="relative flex items-center justify-center">
-                  <span className="absolute inline-flex h-20 w-20 rounded-full bg-primary/10 animate-ping" />
-                  <span className="absolute inline-flex h-14 w-14 rounded-full bg-primary/20 animate-ping [animation-delay:0.3s]" />
-                  <div className="relative flex items-center justify-center h-16 w-16 rounded-full bg-primary/15 border-2 border-primary/30">
-                    <Loader2 className="h-7 w-7 text-primary animate-spin" />
-                  </div>
-                </div>
-                <div className="text-center space-y-1">
-                  <p className="font-semibold text-foreground">Enviando para ZapSign…</p>
-                  <p className="text-sm text-muted-foreground transition-all duration-500 min-h-[1.5rem]">
-                    {ZAPSIGN_MSGS[zapsignPopupMsgIndex]}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Passo 2: WhatsApp */}
-            {zapsignPopupStep === "whatsapp" && (
-              <div className="flex flex-col items-center gap-4 animate-fade-in">
-                <div className="relative flex items-center justify-center">
-                  <span className="absolute inline-flex h-20 w-20 rounded-full bg-emerald-500/10 animate-ping" />
-                  <span className="absolute inline-flex h-14 w-14 rounded-full bg-emerald-500/20 animate-ping [animation-delay:0.3s]" />
-                  <div className="relative flex items-center justify-center h-16 w-16 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-300 dark:border-emerald-700">
-                    <Loader2 className="h-7 w-7 text-emerald-600 dark:text-emerald-400 animate-spin" />
-                  </div>
-                </div>
-                <div className="text-center space-y-1">
-                  <p className="font-semibold text-foreground">Disparando WhatsApp…</p>
-                  <p className="text-sm text-muted-foreground transition-all duration-500 min-h-[2.5rem]">
-                    {WHATSAPP_MSGS[zapsignPopupMsgIndex]}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Concluído */}
-            {zapsignPopupStep === "done" && (
-              <div className="flex flex-col items-center gap-4 animate-fade-in">
-                <div className="relative flex items-center justify-center">
-                  <span className="absolute inline-flex h-20 w-20 rounded-full bg-emerald-500/10" />
-                  <div className="relative flex items-center justify-center h-16 w-16 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-300 dark:border-emerald-700">
-                    <CheckCircle2 className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                </div>
-                <div className="text-center space-y-2">
-                  <p className="font-semibold text-foreground text-base">
-                    ✅ Tudo pronto!
-                  </p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    🤖 O Flowy acabou de disparar a mensagem no WhatsApp do cliente!
-                  </p>
-                </div>
-
-                <Button
-                  className="w-full gap-2 mt-2"
-                  onClick={() => setOpenZapsignPopup(false)}
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  Fechar
-                </Button>
-              </div>
-            )}
-
-            {/* Erro */}
-            {zapsignPopupStep === "erro" && (
-              <div className="flex flex-col items-center gap-4 animate-fade-in">
-                <div className="flex items-center justify-center h-16 w-16 rounded-full bg-destructive/10 border-2 border-destructive/30">
-                  <XCircle className="h-8 w-8 text-destructive" />
-                </div>
-                <div className="text-center space-y-1">
-                  <p className="font-semibold text-foreground">Falha no envio</p>
-                  <p className="text-xs text-muted-foreground">
-                    {zapsignPopupError || "Erro inesperado. Tente novamente."}
-                  </p>
-                </div>
-                <Button
-                  className="w-full"
-                  variant="outline"
-                  onClick={() => setOpenZapsignPopup(false)}
-                >
-                  Fechar
-                </Button>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={setOpenZapsignPopup}
+        step={zapsignPopupStep}
+        msgIndex={zapsignPopupMsgIndex}
+        contratoTipo={zapsignPopupContrato?.tipo}
+        error={zapsignPopupError}
+      />
       {/* Dialog Cadastro Retroativo */}
       <CadastroRetroativoDialog
         open={openRetroativo}
