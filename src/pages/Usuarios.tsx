@@ -434,7 +434,7 @@ export default function Usuarios() {
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
-              ) : filtered.length === 0 ? (
+              ) : q.filtered.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     Nenhum usuário encontrado
