@@ -319,7 +319,7 @@ export default function Usuarios() {
 
       toast.success("Usuário atualizado com sucesso!");
       setOpenEdit(false);
-      loadUsers();
+      q.refetchUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao atualizar usuário");
     }
