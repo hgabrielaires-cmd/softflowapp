@@ -671,8 +671,8 @@ export default function Usuarios() {
                         <Label>Desconto máx. mensalidade (%)</Label>
                         <Input
                           type="number" min="0" max="100" step="0.01"
-                          value={editDescontoLimiteMens}
-                          onChange={(e) => setEditDescontoLimiteMens(e.target.value)}
+                          value={f.editDescontoLimiteMens}
+                          onChange={(e) => f.setEditDescontoLimiteMens(e.target.value)}
                         />
                       </div>
                     </div>
