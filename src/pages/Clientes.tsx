@@ -33,18 +33,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Building2, Phone, Mail, FileText, ArrowUpCircle, ArrowDownCircle, Package, Loader2, MapPin, AlertCircle, Users, Star, Trash2, Upload, Eye } from "lucide-react";
+import { Plus, Search, Pencil, Building2, Phone, Loader2, MapPin, AlertCircle, Users, Star, Trash2, Upload, Eye, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { ClientePlanViewer } from "@/components/ClientePlanViewer";
 import { ImportClientesDialog } from "@/components/ImportClientesDialog";
 import { TablePagination } from "@/components/TablePagination";
 import {
-  UF_LIST, emptyForm, emptyContatoForm, ITEMS_PER_PAGE, TIPO_PEDIDO_COLORS,
+  UF_LIST, emptyForm, emptyContatoForm, ITEMS_PER_PAGE,
 } from "@/pages/clientes/constants";
-import { fmtBRL, fmtDateTime } from "@/pages/clientes/helpers";
 import type { ClienteContato, PedidoHistorico, RentabilidadeConsolidada } from "@/pages/clientes/types";
+import { HistoricoContratualDialog } from "@/pages/clientes/components/HistoricoContratualDialog";
+import { ClienteContatosDialog } from "@/pages/clientes/components/ClienteContatosDialog";
+import { ContatoFormDialog } from "@/pages/clientes/components/ContatoFormDialog";
 
 export default function Clientes() {
   const { roles, profile } = useAuth();
