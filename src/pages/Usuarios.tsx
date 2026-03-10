@@ -493,7 +493,7 @@ export default function Usuarios() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label>E-mail</Label>
-                      <Input value={editingUser?.email || ""} disabled className="bg-muted text-muted-foreground" />
+                      <Input value={f.editingUser?.email || ""} disabled className="bg-muted text-muted-foreground" />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Telefone</Label>
