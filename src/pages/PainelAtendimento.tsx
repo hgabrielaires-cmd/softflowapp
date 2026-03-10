@@ -633,7 +633,7 @@ export default function PainelAtendimento() {
       const now = new Date().toISOString();
       const statusLabel = detailCard.status_projeto === "recusado" ? "Recusa" : "Pausa";
       await supabase.from("painel_comentarios").insert({ card_id: cardId, etapa_id: targetEtapaId || detailCard.etapa_id, criado_por: user.id, texto: `▶️ Projeto retomado (resposta à ${statusLabel}): ${retomarComentario.trim()}` });
-      const { error } = await supabase.from("painel_atendimento").update({ pausado: false, pausado_em: null, pausado_por: null, pausado_motivo: null, iniciado_em: null, iniciado_por: null, responsavel_id: prof?.id || null, status_projeto: "ativo", etapa_origem_id: null, etapa_id: targetEtapaId, updated_at: now } as any).eq("id", cardId);
+      const { error } = await supabase.from("painel_atendimento").update({ pausado: false, pausado_em: null, pausado_por: null, pausado_motivo: null, iniciado_em: null, iniciado_por: null, responsavel_id: prof?.id || null, status_projeto: "ativo", etapa_origem_id: null, etapa_id: targetEtapaId, updated_at: now }).eq("id", cardId);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] }); toast.success("Projeto retomado!"); setRetomarOpen(false); setRetomarComentario(""); setDetailCard(null);
     } catch (err: any) { toast.error("Erro ao retomar projeto: " + (err.message || "")); } finally { setRetomando(false); }
