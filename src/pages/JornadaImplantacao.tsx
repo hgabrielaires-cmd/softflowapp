@@ -18,39 +18,9 @@ import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Eye, GripVerti
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Jornada, JornadaEtapa, JornadaAtividade, MesaAtendimento, ChecklistItem, ChecklistItemTipo, Filial } from "@/lib/supabase-types";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
-
-// ─── Local state types for creation ──────────────────────────────────────────
-
-interface LocalAtividade {
-  tempId: string;
-  id?: string;
-  nome: string;
-  descricao: string;
-  horas_estimadas: number;
-  checklist: ChecklistItem[];
-  tipo_responsabilidade: string;
-  mesa_atendimento_id: string;
-  ordem: number;
-}
-
-interface LocalEtapa {
-  tempId: string;
-  id?: string;
-  nome: string;
-  descricao: string;
-  mesa_atendimento_id: string;
-  permite_clonar: boolean;
-  ordem: number;
-  atividades: LocalAtividade[];
-}
-
-const emptyForm = {
-  nome: "",
-  descricao: "",
-  filial_id: "",
-  vinculo_tipo: "",
-  vinculo_id: "",
-};
+import type { LocalEtapa, LocalAtividade } from "@/pages/jornada-implantacao/types";
+import { emptyJornadaForm, emptyEtapaForm, emptyAtividadeForm } from "@/pages/jornada-implantacao/constants";
+import { formatHorasMinutos, calcTotalMinutos, getVinculoLabel, getVinculoItems, mapEtapasToLocal, parseHorasText, decimalToHorasText } from "@/pages/jornada-implantacao/helpers";
 
 export default function JornadaImplantacao() {
   const queryClient = useQueryClient();
@@ -58,7 +28,7 @@ export default function JornadaImplantacao() {
   const [filterVinculo, setFilterVinculo] = useState("todos");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Jornada | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(emptyJornadaForm);
   const [etapas, setEtapas] = useState<LocalEtapa[]>([]);
   const [etapaDialogOpen, setEtapaDialogOpen] = useState(false);
   const [editingEtapa, setEditingEtapa] = useState<LocalEtapa | null>(null);
@@ -156,20 +126,12 @@ export default function JornadaImplantacao() {
     if (desc) setForm((prev) => ({ ...prev, descricao: desc }));
   }, [form.vinculo_tipo, form.vinculo_id]);
 
-  // ─── Get vinculo items based on type ───────────────────────────────────────
+  // ─── Vinculo helpers (delegated to extracted helpers) ────────────────────────
 
-  function getVinculoItems() {
-    if (form.vinculo_tipo === "plano") return planos.map((p) => ({ id: p.id, nome: p.nome }));
-    if (form.vinculo_tipo === "modulo") return modulos.map((m) => ({ id: m.id, nome: m.nome }));
-    if (form.vinculo_tipo === "servico") return servicos.map((s) => ({ id: s.id, nome: s.nome }));
-    return [];
-  }
+  const vinculoItems = getVinculoItems(form.vinculo_tipo, planos, modulos, servicos);
 
-  function getVinculoLabel(tipo: string, id: string) {
-    if (tipo === "plano") return planos.find((p) => p.id === id)?.nome || id;
-    if (tipo === "modulo") return modulos.find((m) => m.id === id)?.nome || id;
-    if (tipo === "servico") return servicos.find((s) => s.id === id)?.nome || id;
-    return id;
+  function resolveVinculoLabel(tipo: string, id: string) {
+    return getVinculoLabel(tipo, id, planos, modulos, servicos);
   }
 
   // ─── Save jornada ──────────────────────────────────────────────────────────
@@ -348,7 +310,7 @@ export default function JornadaImplantacao() {
 
   function openNew() {
     setEditing(null);
-    setForm({ ...emptyForm });
+    setForm({ ...emptyJornadaForm });
     setEtapas([]);
     setDialogOpen(true);
   }
@@ -365,65 +327,21 @@ export default function JornadaImplantacao() {
 
     // Load etapas with atividades in a single query
     const { data: etapasData } = await supabase.from("jornada_etapas").select("*, jornada_atividades(*)").eq("jornada_id", jornada.id).order("ordem");
-    const localEtapas: LocalEtapa[] = (etapasData || []).map((e: any) => ({
-      tempId: crypto.randomUUID(),
-      id: e.id,
-      nome: e.nome,
-      descricao: e.descricao || "",
-      mesa_atendimento_id: e.mesa_atendimento_id || "",
-      permite_clonar: e.permite_clonar || false,
-      ordem: e.ordem,
-      atividades: (e.jornada_atividades || [])
-        .sort((a: any, b: any) => a.ordem - b.ordem)
-        .map((a: any) => ({
-          tempId: crypto.randomUUID(),
-          id: a.id,
-          nome: a.nome,
-          descricao: a.descricao || "",
-          horas_estimadas: a.horas_estimadas,
-          checklist: Array.isArray(a.checklist) ? a.checklist : [],
-          tipo_responsabilidade: a.tipo_responsabilidade,
-          mesa_atendimento_id: a.mesa_atendimento_id || "",
-          ordem: a.ordem,
-        })),
-    }));
-    setEtapas(localEtapas);
+    setEtapas(mapEtapasToLocal(etapasData || []));
     setDialogOpen(true);
   }
 
   function closeDialog() {
     setDialogOpen(false);
     setEditing(null);
-    setForm({ ...emptyForm });
+    setForm({ ...emptyJornadaForm });
     setEtapas([]);
   }
 
   async function openView(jornada: Jornada) {
     setViewJornada(jornada);
     const { data: etapasData } = await supabase.from("jornada_etapas").select("*, mesas_atendimento(nome), jornada_atividades(*)").eq("jornada_id", jornada.id).order("ordem");
-    const localEtapas: LocalEtapa[] = (etapasData || []).map((e: any) => ({
-      tempId: crypto.randomUUID(),
-      id: e.id,
-      nome: e.nome,
-      descricao: e.descricao || "",
-      mesa_atendimento_id: e.mesa_atendimento_id || "",
-      permite_clonar: e.permite_clonar || false,
-      ordem: e.ordem,
-      atividades: (e.jornada_atividades || [])
-        .sort((a: any, b: any) => a.ordem - b.ordem)
-        .map((a: any) => ({
-          tempId: crypto.randomUUID(),
-          id: a.id,
-          nome: a.nome,
-          descricao: a.descricao || "",
-          horas_estimadas: a.horas_estimadas,
-          checklist: Array.isArray(a.checklist) ? a.checklist : [],
-          tipo_responsabilidade: a.tipo_responsabilidade,
-          mesa_atendimento_id: a.mesa_atendimento_id || "",
-          ordem: a.ordem,
-        })),
-      mesa_atendimento: e.mesas_atendimento ? { nome: e.mesas_atendimento.nome } : null,
-    } as any));
+    const localEtapas = mapEtapasToLocal(etapasData || []);
     setViewEtapas(localEtapas);
     setViewExpandedEtapas(new Set(localEtapas.map(e => e.tempId)));
     setViewDialogOpen(true);
@@ -690,7 +608,7 @@ export default function JornadaImplantacao() {
                       <TableCell className="font-medium">{j.nome}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="capitalize">{j.vinculo_tipo}</Badge>
-                        <span className="ml-2 text-sm text-muted-foreground">{getVinculoLabel(j.vinculo_tipo, j.vinculo_id)}</span>
+                        <span className="ml-2 text-sm text-muted-foreground">{resolveVinculoLabel(j.vinculo_tipo, j.vinculo_id)}</span>
                       </TableCell>
                       <TableCell>{j.filial?.nome || <span className="text-muted-foreground">Global</span>}</TableCell>
                       <TableCell className="text-center font-medium">{h}:{m.toString().padStart(2, "0")}h</TableCell>
@@ -788,7 +706,7 @@ export default function JornadaImplantacao() {
                   <Select value={form.vinculo_id} onValueChange={(v) => setForm((p) => ({ ...p, vinculo_id: v }))} disabled={!form.vinculo_tipo}>
                     <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
-                      {getVinculoItems().map((item) => <SelectItem key={item.id} value={item.id}>{item.nome}</SelectItem>)}
+                      {vinculoItems.map((item) => <SelectItem key={item.id} value={item.id}>{item.nome}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1127,7 +1045,7 @@ export default function JornadaImplantacao() {
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Vínculo</label>
-                  <p className="text-sm capitalize">{viewJornada.vinculo_tipo} — {getVinculoLabel(viewJornada.vinculo_tipo, viewJornada.vinculo_id)}</p>
+                  <p className="text-sm capitalize">{viewJornada.vinculo_tipo} — {resolveVinculoLabel(viewJornada.vinculo_tipo, viewJornada.vinculo_id)}</p>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Status</label>
