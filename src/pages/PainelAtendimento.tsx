@@ -534,9 +534,9 @@ export default function PainelAtendimento() {
       if (error) throw error;
       if (apontamentoUsuarios.length > 0) {
         const clienteNome = detailCard.clientes?.nome_fantasia || "Cliente";
-        await supabase.from("painel_apontamentos").insert(apontamentoUsuarios.map(uid => ({ card_id: detailCard.id, usuario_id: uid, apontado_por: user.id, motivo: recusarMotivo.trim() })) as any);
-        for (const uid of apontamentoUsuarios) { const prof = responsaveis.find((r: any) => r.id === uid); await supabase.from("notificacoes").insert({ titulo: "📌 Apontamento - Projeto Recusado", mensagem: `Você foi designado(a) para resolver uma pendência do projeto ${clienteNome}. Motivo: ${recusarMotivo.trim()}`, tipo: "alerta", criado_por: user.id, destinatario_user_id: (prof as any)?.user_id || uid, metadata: { card_id: detailCard.id } } as any); }
-        const nomes = apontamentoUsuarios.map(uid => { const p = responsaveis.find((r: any) => r.id === uid); return (p as any)?.full_name?.split(" ")[0] || "Usuário"; });
+        await supabase.from("painel_apontamentos").insert(apontamentoUsuarios.map(uid => ({ card_id: detailCard.id, usuario_id: uid, apontado_por: user.id, motivo: recusarMotivo.trim() })));
+        for (const uid of apontamentoUsuarios) { const prof = responsaveis.find((r) => r.id === uid); await supabase.from("notificacoes").insert({ titulo: "📌 Apontamento - Projeto Recusado", mensagem: `Você foi designado(a) para resolver uma pendência do projeto ${clienteNome}. Motivo: ${recusarMotivo.trim()}`, tipo: "alerta", criado_por: user.id, destinatario_user_id: prof?.user_id || uid, metadata: { card_id: detailCard.id } }); }
+        const nomes = apontamentoUsuarios.map(uid => { const p = responsaveis.find((r) => r.id === uid); return p?.full_name?.split(" ")[0] || "Usuário"; });
         await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, etapa_id: standbyEtapa.id, criado_por: user.id, texto: `📌 Apontamento: ${nomes.join(", ")} designado(s) para resolução.` });
       }
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] }); queryClient.invalidateQueries({ queryKey: ["card_apontamentos"] });
