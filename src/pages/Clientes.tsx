@@ -1,10 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
-import { useCrudPermissions } from "@/hooks/useCrudPermissions";
-import { Cliente, Filial, Contrato } from "@/lib/supabase-types";
-import { useUserFiliais } from "@/hooks/useUserFiliais";
+import { Cliente } from "@/lib/supabase-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,30 +38,31 @@ import { TablePagination } from "@/components/TablePagination";
 import {
   UF_LIST, emptyForm, emptyContatoForm, ITEMS_PER_PAGE,
 } from "@/pages/clientes/constants";
-import type { ClienteContato, PedidoHistorico, RentabilidadeConsolidada } from "@/pages/clientes/types";
+import type { ClienteContato } from "@/pages/clientes/types";
+import { useClientesQueries } from "@/pages/clientes/useClientesQueries";
 import { HistoricoContratualDialog } from "@/pages/clientes/components/HistoricoContratualDialog";
 import { ClienteContatosDialog } from "@/pages/clientes/components/ClienteContatosDialog";
 import { ContatoFormDialog } from "@/pages/clientes/components/ContatoFormDialog";
 
 export default function Clientes() {
-  const { roles, profile } = useAuth();
   const navigate = useNavigate();
-  const isAdmin = roles.includes("admin");
-  const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("clientes", roles);
-  // Pode editar registros existentes: admin sempre pode, demais dependem da permissão CRUD dinâmica
-  const canEditExisting = isAdmin || crudEditar;
-  // Sem permissão de edição = somente visualização em registros existentes
-  const vendedorSomenteLeitura = !canEditExisting;
-  const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
+  const q = useClientesQueries();
+  const {
+    isAdmin, profile, roles,
+    crudIncluir, crudEditar, crudExcluir,
+    canEditExisting, vendedorSomenteLeitura,
+    podeImportar, podeVerHistorico, podeVerRentabilidade,
+    filiaisDoUsuario, filialPadraoId, isGlobal,
+    clientes, setClientes, decisoresMap, filiais, loading,
+    search, setSearch, filtroFilialId, setFiltroFilialId,
+    currentPage, setCurrentPage,
+    filtered, filialNome,
+    historicoOpen, setHistoricoOpen,
+    clienteHistorico, contratosList, pedidosHistorico,
+    loadingHistorico, rentabilidadeConsolidada, margemIdealHistorico,
+    fetchData, fetchContatos, openHistorico, toggleAtivo,
+  } = q;
 
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [decisoresMap, setDecisoresMap] = useState<Record<string, { nome: string; telefone: string | null }>>({});
-  const [filiais, setFiliais] = useState<Filial[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filtroFilialId, setFiltroFilialId] = useState<string>("__todas__");
-  const [currentPage, setCurrentPage] = useState(1);
-  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewOnly, setViewOnly] = useState(false);
   const [editing, setEditing] = useState<Cliente | null>(null);
@@ -92,31 +90,8 @@ export default function Clientes() {
   const [editingInlineIdx, setEditingInlineIdx] = useState<number | null>(null);
   const [inlineContatoForm, setInlineContatoForm] = useState(emptyContatoForm);
 
-  // Importação
+   // Importação
   const [importOpen, setImportOpen] = useState(false);
-  const [podeImportar, setPodeImportar] = useState(false);
-  const [podeVerHistorico, setPodeVerHistorico] = useState(false);
-
-  useEffect(() => {
-    if (!profile?.user_id) return;
-    (async () => {
-      const { data: rolesData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", profile.user_id);
-      const userRoles = (rolesData || []).map((r: any) => r.role);
-      const { data: perms } = await supabase
-        .from("role_permissions")
-        .select("permissao, ativo")
-        .in("role", userRoles)
-        .in("permissao", ["acao.importar_clientes", "acao.ver_rentabilidade_historico", "acao.ver_historico_clientes"])
-        .eq("ativo", true);
-      const permSet = new Set((perms || []).map((p: any) => p.permissao));
-      setPodeImportar(permSet.has("acao.importar_clientes"));
-      setPodeVerRentabilidade(isAdmin || permSet.has("acao.ver_rentabilidade_historico"));
-      setPodeVerHistorico(isAdmin || permSet.has("acao.ver_historico_clientes"));
-    })();
-  }, [profile?.user_id, isAdmin]);
 
   async function handleCepBlur() {
     const cep = form.cep.replace(/\D/g, "");
@@ -181,63 +156,7 @@ export default function Clientes() {
     }
   }
 
-  // Historico contratual
-  const [historicoOpen, setHistoricoOpen] = useState(false);
-  const [clienteHistorico, setClienteHistorico] = useState<Cliente | null>(null);
-  const [contratosList, setContratosList] = useState<Contrato[]>([]);
-  const [pedidosHistorico, setPedidosHistorico] = useState<PedidoHistorico[]>([]);
-  const [loadingHistorico, setLoadingHistorico] = useState(false);
-  const [rentabilidadeConsolidada, setRentabilidadeConsolidada] = useState<RentabilidadeConsolidada | null>(null);
-  const [podeVerRentabilidade, setPodeVerRentabilidade] = useState(false);
-  const [margemIdealHistorico, setMargemIdealHistorico] = useState<number | null>(null);
 
-  async function fetchData() {
-    setLoading(true);
-    const [{ data: c }, { data: f }, { data: decisores }] = await Promise.all([
-      supabase.from("clientes").select("*").order("nome_fantasia"),
-      supabase.from("filiais").select("*").order("nome"),
-      supabase.from("cliente_contatos").select("cliente_id, nome, telefone").eq("decisor", true).eq("ativo", true),
-    ]);
-    setClientes(c || []);
-    setFiliais(f || []);
-    // Map: cliente_id -> primeiro decisor ativo
-    const dMap: Record<string, { nome: string; telefone: string | null }> = {};
-    (decisores || []).forEach((d: any) => {
-      if (!dMap[d.cliente_id]) dMap[d.cliente_id] = { nome: d.nome, telefone: d.telefone };
-    });
-    setDecisoresMap(dMap);
-    setLoading(false);
-  }
-
-  useEffect(() => { fetchData(); }, []);
-
-  // Filter by user's filiais first
-  const allowedFilialIds = filiaisDoUsuario.map(f => f.id);
-  const clientesFiltradosPorFilial = isGlobal
-    ? clientes
-    : clientes.filter((c) => c.filial_id && allowedFilialIds.includes(c.filial_id));
-
-  // Apply filial filter selection
-  const clientesFiltradosPorFilialSelecionada = filtroFilialId === "__todas__"
-    ? clientesFiltradosPorFilial
-    : clientesFiltradosPorFilial.filter((c) => c.filial_id === filtroFilialId);
-
-  const searchTerm = search.toLowerCase().trim();
-  const searchDigits = searchTerm.replace(/\D/g, "");
-  const filtered = searchTerm
-    ? clientesFiltradosPorFilialSelecionada.filter((c) =>
-        c.nome_fantasia.toLowerCase().includes(searchTerm) ||
-        (c.razao_social || "").toLowerCase().includes(searchTerm) ||
-        ((c as any).apelido || "").toLowerCase().includes(searchTerm) ||
-        (searchDigits.length > 0 && (c.cnpj_cpf || "").replace(/\D/g, "").includes(searchDigits)) ||
-        (c.cnpj_cpf || "").toLowerCase().includes(searchTerm) ||
-        (c.contato_nome || "").toLowerCase().includes(searchTerm) ||
-        (c.telefone || "").includes(searchTerm)
-      )
-    : clientesFiltradosPorFilialSelecionada;
-
-  // Reset page when search or filter changes
-  useEffect(() => { setCurrentPage(1); }, [search, filtroFilialId]);
 
   function openCreate() {
     setEditing(null);
@@ -282,12 +201,7 @@ export default function Clientes() {
     setEditingInlineIdx(null);
     setInlineContatoForm(emptyContatoForm);
     // Carrega contatos existentes
-    const { data } = await supabase
-      .from("cliente_contatos")
-      .select("*")
-      .eq("cliente_id", c.id)
-      .order("decisor", { ascending: false })
-      .order("nome");
+    const data = await fetchContatos(c.id);
     setFormContatos((data || []).map((ct: any) => ({
       _id: ct.id,
       nome: ct.nome,
@@ -300,130 +214,17 @@ export default function Clientes() {
     setDialogOpen(true);
   }
 
-  async function openHistorico(c: Cliente) {
-    setClienteHistorico(c);
-    setHistoricoOpen(true);
-    setLoadingHistorico(true);
-    setRentabilidadeConsolidada(null);
-    setMargemIdealHistorico(null);
-    const [{ data: cData }, { data: pData }] = await Promise.all([
-      supabase.from("contratos").select("*").eq("cliente_id", c.id).order("created_at", { ascending: false }),
-      supabase.from("pedidos")
-        .select("id, tipo_pedido, status_pedido, financeiro_status, valor_implantacao_final, valor_mensalidade_final, valor_total, created_at, modulos_adicionais, plano_id, contrato_id, planos(nome)")
-        .eq("cliente_id", c.id)
-        .order("created_at", { ascending: false }),
-    ]);
-    const contratos = (cData || []) as any[];
-    const pedidos = (pData || []) as PedidoHistorico[];
-    setContratosList(contratos as unknown as Contrato[]);
-    setPedidosHistorico(pedidos);
-
-    // Calcular rentabilidade consolidada se permitido
-    if (podeVerRentabilidade) {
-      try {
-        await calcularRentabilidadeConsolidada(contratos, pedidos, c.filial_id);
-      } catch (e) {
-        console.error("Erro ao calcular rentabilidade:", e);
-      }
-    }
-    setLoadingHistorico(false);
-  }
-
-  async function calcularRentabilidadeConsolidada(contratos: any[], pedidos: PedidoHistorico[], filialId: string | null) {
-    // Pegar contratos ativos (Base e Aditivo — excluir OA)
-    const contratosAtivos = contratos.filter((c) => c.status === "Ativo" && c.tipo !== "OA");
-    if (contratosAtivos.length === 0) return;
-
-    // Pegar pedidos aprovados vinculados a contratos ativos, excluindo OA e Serviço
-    const contratoIds = new Set(contratosAtivos.map((c) => c.id));
-    const pedidosRelevantes = pedidos.filter(
-      (p) => p.contrato_id && contratoIds.has(p.contrato_id) &&
-        p.status_pedido !== "Cancelado" &&
-        !["OA", "Serviço"].includes(p.tipo_pedido)
-    );
-
-    // Buscar plano_ids únicos para custos
-    const planoIds = [...new Set(pedidosRelevantes.map((p) => p.plano_id).filter(Boolean))];
-    
-    const [{ data: custosPlanos }, { data: custosModulos }, { data: paramFilial }] = await Promise.all([
-      supabase.from("custos").select("*").in("plano_id", planoIds.length ? planoIds : [""]).is("modulo_id", null),
-      supabase.from("custos").select("*").not("modulo_id", "is", null),
-      filialId ? supabase.from("filial_parametros").select("margem_venda_ideal").eq("filial_id", filialId).maybeSingle() : Promise.resolve({ data: null }),
-    ]);
-
-    if (paramFilial) setMargemIdealHistorico((paramFilial as any)?.margem_venda_ideal ?? null);
-
-    const calcCustoPlano = (cp: any, receitaRef: number) => {
-      if (!cp) return 0;
-      const impostoBase = cp.imposto_base === 'venda' ? receitaRef : cp.preco_fornecedor;
-      const impostoVal = cp.imposto_tipo === '%' ? impostoBase * (cp.imposto_valor / 100) : cp.imposto_valor;
-      return cp.preco_fornecedor + impostoVal + cp.taxa_boleto + cp.despesas_adicionais;
-    };
-
-    let receitaMensalTotal = 0;
-    let custoMensalTotal = 0;
-    const processedPlanos = new Set<string>();
-
-    for (const ped of pedidosRelevantes) {
-      const mensFinal = ped.valor_mensalidade_final || 0;
-      receitaMensalTotal += mensFinal;
-
-      // Custo do plano (apenas uma vez por plano — para Upgrade calcula diferencial)
-      if (ped.tipo_pedido === "Upgrade" && ped.contrato_id) {
-        // Para upgrade, o custo diferencial já está embutido
-        const contrato = contratosAtivos.find((c) => c.id === ped.contrato_id);
-        const planoAnteriorId = contrato?.contrato_origem_id
-          ? contratosAtivos.find((c2) => c2.id === contrato.contrato_origem_id)?.plano_id
-          : null;
-        const custoNovo = (custosPlanos || []).find((c: any) => c.plano_id === ped.plano_id);
-        let custoAnterior: any = null;
-        if (planoAnteriorId) {
-          custoAnterior = (custosPlanos || []).find((c: any) => c.plano_id === planoAnteriorId);
-        }
-        const diff = Math.max(0, calcCustoPlano(custoNovo, mensFinal) - calcCustoPlano(custoAnterior, 0));
-        custoMensalTotal += diff;
-      } else if (!processedPlanos.has(ped.plano_id)) {
-        // Custo do plano base (evitar duplicata)
-        processedPlanos.add(ped.plano_id);
-        const custoPlano = (custosPlanos || []).find((c: any) => c.plano_id === ped.plano_id);
-        custoMensalTotal += calcCustoPlano(custoPlano, mensFinal);
-      }
-
-      // Custo dos módulos adicionais
-      const adicionais = Array.isArray(ped.modulos_adicionais) ? ped.modulos_adicionais : [];
-      adicionais.forEach((m: any) => {
-        const custoMod = (custosModulos || []).find((c: any) => c.modulo_id === m.modulo_id);
-        if (custoMod) {
-          const qty = m.quantidade || 1;
-          const impostoBase = custoMod.imposto_base === 'venda' ? (m.valor_mensalidade_modulo || 0) * qty : custoMod.preco_fornecedor * qty;
-          const impostoVal = custoMod.imposto_tipo === '%' ? impostoBase * (custoMod.imposto_valor / 100) : custoMod.imposto_valor * qty;
-          custoMensalTotal += (custoMod.preco_fornecedor * qty) + impostoVal + (custoMod.taxa_boleto * qty) + (custoMod.despesas_adicionais * qty);
-        }
-      });
-    }
-
-    const lucro = receitaMensalTotal - custoMensalTotal;
-    const margem = receitaMensalTotal > 0 ? (lucro / receitaMensalTotal) * 100 : 0;
-    const markup = custoMensalTotal > 0 ? (lucro / custoMensalTotal) * 100 : 0;
-    setRentabilidadeConsolidada({ receitaMensal: receitaMensalTotal, custoMensal: custoMensalTotal, lucro, margem, markup });
-  }
-
   // Contatos
   async function openContatos(c: Cliente) {
     setClienteContatos(c);
     setContatosOpen(true);
-    await fetchContatos(c.id);
+    await loadContatos(c.id);
   }
 
-  async function fetchContatos(clienteId: string) {
+  async function loadContatos(clienteId: string) {
     setLoadingContatos(true);
-    const { data } = await supabase
-      .from("cliente_contatos")
-      .select("*")
-      .eq("cliente_id", clienteId)
-      .order("decisor", { ascending: false })
-      .order("nome");
-    setContatos((data || []) as ClienteContato[]);
+    const data = await fetchContatos(clienteId);
+    setContatos(data);
     setLoadingContatos(false);
   }
 
@@ -485,7 +286,7 @@ export default function Clientes() {
     } else {
       toast.success(editingContato ? "Contato atualizado!" : "Contato adicionado!");
       setContatoDialogOpen(false);
-      await fetchContatos(clienteContatos.id);
+      await loadContatos(clienteContatos.id);
     }
     setSavingContato(false);
   }
@@ -499,13 +300,13 @@ export default function Clientes() {
     } else {
       await supabase.from("cliente_contatos").update({ decisor: false }).eq("id", contato.id);
     }
-    await fetchContatos(clienteContatos.id);
+    await loadContatos(clienteContatos.id);
   }
 
   async function handleToggleAtivoContato(contato: ClienteContato) {
     if (!clienteContatos) return;
     await supabase.from("cliente_contatos").update({ ativo: !contato.ativo }).eq("id", contato.id);
-    await fetchContatos(clienteContatos.id);
+    await loadContatos(clienteContatos.id);
   }
 
   async function handleDesativarContato(contato: ClienteContato) {
@@ -522,7 +323,7 @@ export default function Clientes() {
       toast.error("Erro ao desativar contato: " + error.message);
     } else {
       toast.success("Contato desativado com sucesso");
-      await fetchContatos(clienteContatos.id);
+      await loadContatos(clienteContatos.id);
     }
   }
 
@@ -637,15 +438,10 @@ export default function Clientes() {
     fetchData();
   }
 
-  async function toggleAtivo(c: Cliente) {
-    const { error } = await supabase.from("clientes").update({ ativo: !c.ativo }).eq("id", c.id);
-    if (error) { toast.error("Erro ao atualizar status"); return; }
-    setClientes((prev) => prev.map((x) => x.id === c.id ? { ...x, ativo: !x.ativo } : x));
+  async function handleToggleAtivo(c: Cliente) {
+    const ok = await toggleAtivo(c);
+    if (!ok) toast.error("Erro ao atualizar status");
   }
-
-  const filialNome = (id: string | null) => filiais.find((f) => f.id === id)?.nome || "—";
-
-
 
   return (
     <AppLayout>
@@ -776,7 +572,7 @@ export default function Clientes() {
                     </TableCell>
                     <TableCell>
                       {canEditExisting && !vendedorSomenteLeitura ? (
-                        <Switch checked={c.ativo} onCheckedChange={() => toggleAtivo(c)} />
+                        <Switch checked={c.ativo} onCheckedChange={() => handleToggleAtivo(c)} />
                       ) : (
                         <Badge variant={c.ativo ? "default" : "secondary"}>
                           {c.ativo ? "Ativo" : "Inativo"}
