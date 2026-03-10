@@ -601,7 +601,7 @@ export function useJornadaForm({ planos, modulos, servicos, mesas }: UseJornadaF
     handleAtivDragStart, handleAtivDragEnter, handleAtividadeDragEnd,
 
     // Checklist
-    addChecklistItem, updateChecklistText, updateChecklistTipo, removeChecklistItem, moveChecklistItem,
+    addChecklistItem, updateChecklistText, updateChecklistTipo, updateChecklistMesaId, updateChecklistEtapaExecucaoId, removeChecklistItem, moveChecklistItem,
 
     // Expand/collapse
     toggleExpanded,
