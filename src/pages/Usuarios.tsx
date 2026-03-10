@@ -598,8 +598,8 @@ export default function Usuarios() {
                               <Label className="text-xs">Serviço (%)</Label>
                               <Input
                                 type="number" min="0" max="100" step="0.01"
-                                value={editComissaoServ}
-                                onChange={(e) => setEditComissaoServ(e.target.value)}
+                                value={f.editComissaoServ}
+                                onChange={(e) => f.setEditComissaoServ(e.target.value)}
                               />
                             </div>
                           </div>
