@@ -827,7 +827,7 @@ export default function PainelAtendimento() {
               {/* Botão Iniciar / Em Andamento / Pausado + Progresso */}
               <div className="space-y-2">
                 {/* Recusado banner */}
-                {(detailCard as any).status_projeto === "recusado" && (
+                {detailCard.status_projeto === "recusado" && (
                   <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 p-3 space-y-2">
                     <div className="flex items-center gap-2 text-red-700"><Ban className="h-4 w-4" /><span className="text-sm font-semibold">Projeto Recusado</span></div>
                     {detailCard.pausado_motivo && <p className="text-xs text-red-600">Motivo: {detailCard.pausado_motivo}</p>}
