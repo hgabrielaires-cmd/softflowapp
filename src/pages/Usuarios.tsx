@@ -384,14 +384,6 @@ export default function Usuarios() {
   }
 
 
-  const filtered = users.filter(
-    (u) =>
-      u.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase())
-  );
-
-  // Reset page when search changes
-  useEffect(() => { setCurrentPage(1); }, [search]);
 
 
 
