@@ -139,6 +139,7 @@ export default function PainelAtendimento() {
     etapas, cards, isLoading, responsaveis, mesasAtendimento, jornadaMesaMap,
     tecnicos, jornadaSlaMap, totalChecklistPorPlano, pedidoPrioridadeMap,
     cardProgressMap, cardApontamentosMap, cardApontamentosDetalhado, permissions,
+    atividadeExecucaoMap,
   } = usePainelQueries(profile);
 
   const {
