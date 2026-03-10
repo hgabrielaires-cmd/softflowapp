@@ -1089,7 +1089,7 @@ export default function JornadaImplantacao() {
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Vínculo</label>
-                  <p className="text-sm capitalize">{viewJornada.vinculo_tipo} — {getVinculoLabel(viewJornada.vinculo_tipo, viewJornada.vinculo_id)}</p>
+                  <p className="text-sm capitalize">{viewJornada.vinculo_tipo} — {resolveVinculoLabel(viewJornada.vinculo_tipo, viewJornada.vinculo_id)}</p>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Status</label>
