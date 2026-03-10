@@ -45,24 +45,24 @@ import { ClienteContatosDialog } from "@/pages/clientes/components/ClienteContat
 import { ContatoFormDialog } from "@/pages/clientes/components/ContatoFormDialog";
 
 export default function Clientes() {
-  const { roles, profile } = useAuth();
   const navigate = useNavigate();
-  const isAdmin = roles.includes("admin");
-  const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("clientes", roles);
-  // Pode editar registros existentes: admin sempre pode, demais dependem da permissão CRUD dinâmica
-  const canEditExisting = isAdmin || crudEditar;
-  // Sem permissão de edição = somente visualização em registros existentes
-  const vendedorSomenteLeitura = !canEditExisting;
-  const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
+  const q = useClientesQueries();
+  const {
+    isAdmin, profile, roles,
+    crudIncluir, crudEditar, crudExcluir,
+    canEditExisting, vendedorSomenteLeitura,
+    podeImportar, podeVerHistorico, podeVerRentabilidade,
+    filiaisDoUsuario, filialPadraoId, isGlobal,
+    clientes, setClientes, decisoresMap, filiais, loading,
+    search, setSearch, filtroFilialId, setFiltroFilialId,
+    currentPage, setCurrentPage,
+    filtered, filialNome,
+    historicoOpen, setHistoricoOpen,
+    clienteHistorico, contratosList, pedidosHistorico,
+    loadingHistorico, rentabilidadeConsolidada, margemIdealHistorico,
+    fetchData, fetchContatos, openHistorico, toggleAtivo,
+  } = q;
 
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [decisoresMap, setDecisoresMap] = useState<Record<string, { nome: string; telefone: string | null }>>({});
-  const [filiais, setFiliais] = useState<Filial[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filtroFilialId, setFiltroFilialId] = useState<string>("__todas__");
-  const [currentPage, setCurrentPage] = useState(1);
-  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewOnly, setViewOnly] = useState(false);
   const [editing, setEditing] = useState<Cliente | null>(null);
