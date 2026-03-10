@@ -324,7 +324,7 @@ export default function Usuarios() {
                       <Switch checked={f.inviteRecebeComissao} onCheckedChange={f.setInviteRecebeComissao} />
                     </div>
                   </div>
-                  {inviteRecebeComissao && (
+                  {f.inviteRecebeComissao && (
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1.5">
                         <Label className="text-xs">Implantação (%)</Label>
