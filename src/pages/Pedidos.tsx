@@ -48,208 +48,24 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Search, Pencil, XCircle, Loader2, Filter, RefreshCw, CheckCircle, UserPlus, Tag, ArrowUpCircle, FileText, AlertCircle, Eye, Users, Star, Trash2, MapPin, Send, MessageSquare, Paperclip, Download } from "lucide-react";
 import { ClientePlanViewer } from "@/components/ClientePlanViewer";
-import { PedidoComentarios } from "@/components/PedidoComentarios";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TablePagination } from "@/components/TablePagination";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Extracted modules ────────────────────────────────────────────────────────
+import type { PedidoWithJoins, FormState, ModuloOpcional, ModuloAdicionadoItem, ServicoAdicionadoItem, DraftComentario, ClienteFormState, ClienteContatoInline } from "./pedidos/types";
+import { UF_LIST, emptyClienteForm, STATUS_OPTIONS, STATUS_COLORS, FIN_STATUS_COLORS, emptyForm, PRIORIDADES_DRAFT, PRIORIDADE_MAP_DRAFT, MAX_FILE_SIZE_DRAFT, ITEMS_PER_PAGE } from "./pedidos/constants";
+import { fmtBRL, applyDesconto, applyAcrescimo } from "./pedidos/helpers";
+import { VisualizarPedidoDialog } from "./pedidos/components/VisualizarPedidoDialog";
+import { ClienteRapidoDialog } from "./pedidos/components/ClienteRapidoDialog";
+import { ComentarioDraftDialog } from "./pedidos/components/ComentarioDraftDialog";
+import { UpgradePlanoDialog } from "./pedidos/components/UpgradePlanoDialog";
 
-const UF_LIST = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+// Types, constants, and helpers are now in src/pages/pedidos/
 
-const emptyClienteForm = {
-  nome_fantasia: "", razao_social: "", apelido: "", cnpj_cpf: "",
-  responsavel_nome: "",
-  contato_nome: "", telefone: "", email: "", cidade: "", uf: "",
-  cep: "", logradouro: "", numero: "", complemento: "", bairro: "",
-  inscricao_estadual: "", ie_isento: false,
-};
-
-const STATUS_OPTIONS = ["Aguardando Financeiro", "Aprovado Financeiro", "Reprovado Financeiro", "Aguardando Aprovação de Desconto", "Desconto Aprovado", "Cancelado"] as const;
-
-const STATUS_COLORS: Record<string, string> = {
-  "Aguardando Financeiro": "bg-amber-100 text-amber-700",
-  "Aprovado Financeiro": "bg-emerald-100 text-emerald-700",
-  "Reprovado Financeiro": "bg-red-100 text-red-600",
-  "Aguardando Aprovação de Desconto": "bg-purple-100 text-purple-700",
-  "Desconto Aprovado": "bg-teal-100 text-teal-700",
-  "Cancelado": "bg-gray-100 text-gray-500",
-};
-
-const FIN_STATUS_COLORS: Record<string, string> = {
-  Aguardando: "bg-amber-100 text-amber-700",
-  Aprovado: "bg-emerald-100 text-emerald-700",
-  Reprovado: "bg-red-100 text-red-600",
-  Cancelado: "bg-gray-100 text-gray-500",
-};
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface ModuloOpcional {
-  id: string;
-  nome: string;
-  valor_implantacao_modulo: number | null;
-  valor_mensalidade_modulo: number | null;
-  incluso_no_plano: boolean;
-  permite_revenda: boolean;
-  quantidade_maxima: number | null;
-}
-
-interface ModuloAdicionadoItem {
-  modulo_id: string;
-  nome: string;
-  quantidade: number;
-  valor_implantacao_modulo: number;
-  valor_mensalidade_modulo: number;
-}
-
-interface ServicoAdicionadoItem {
-  servico_id: string;
-  nome: string;
-  quantidade: number;
-  valor_unitario: number;
-  unidade_medida: string;
-}
-
-interface PedidoWithJoins {
-  id: string;
-  cliente_id: string;
-  plano_id: string;
-  filial_id: string;
-  vendedor_id: string;
-  valor_implantacao: number;
-  valor_mensalidade: number;
-  valor_total: number;
-  comissao_percentual: number;
-  comissao_valor: number;
-  status_pedido: string;
-  observacoes: string | null;
-  created_at: string;
-  updated_at: string;
-  financeiro_status?: string;
-  financeiro_motivo?: string | null;
-  contrato_liberado?: boolean;
-  valor_implantacao_original?: number;
-  valor_mensalidade_original?: number;
-  desconto_implantacao_tipo?: string;
-  desconto_implantacao_valor?: number;
-  valor_implantacao_final?: number;
-  desconto_mensalidade_tipo?: string;
-  desconto_mensalidade_valor?: number;
-  valor_mensalidade_final?: number;
-  acrescimo_implantacao_tipo?: string;
-  acrescimo_implantacao_valor?: number;
-  acrescimo_mensalidade_tipo?: string;
-  acrescimo_mensalidade_valor?: number;
-  modulos_adicionais?: ModuloAdicionadoItem[];
-  tipo_pedido?: string;
-  contrato_id?: string | null;
-  servicos_pedido?: ServicoAdicionadoItem[] | null;
-  tipo_atendimento?: string | null;
-  numero_exibicao?: string;
-  clientes?: { nome_fantasia: string } | null;
-  planos?: { nome: string } | null;
-  filiais?: { nome: string } | null;
-}
-
-interface FormState {
-  cliente_id: string;
-  plano_id: string;
-  filial_id: string;
-  vendedor_id: string;
-  comissao_percentual: string;
-  comissao_implantacao_percentual: string;
-  comissao_mensalidade_percentual: string;
-  comissao_servico_percentual: string;
-  observacoes: string;
-  motivo_desconto: string;
-  // Valores originais (auto-preenchidos, readonly)
-  valor_implantacao_original: number;
-  valor_mensalidade_original: number;
-  // Descontos
-  desconto_implantacao_tipo: "R$" | "%";
-  desconto_implantacao_valor: string;
-  desconto_mensalidade_tipo: "R$" | "%";
-  desconto_mensalidade_valor: string;
-  // Acréscimos
-  acrescimo_implantacao_tipo: "R$" | "%";
-  acrescimo_implantacao_valor: string;
-  acrescimo_mensalidade_tipo: "R$" | "%";
-  acrescimo_mensalidade_valor: string;
-  // Módulos adicionais (lista de itens com quantidade)
-  modulos_adicionais: ModuloAdicionadoItem[];
-  // Tipo do pedido
-  tipo_pedido: "Novo" | "Upgrade" | "Aditivo" | "OA";
-  // Tipo de atendimento OA
-  tipo_atendimento: "Interno" | "Externo" | "";
-  // Serviços para OA
-  servicos_pedido: ServicoAdicionadoItem[];
-  contrato_id: string | null;
-  // Forma de pagamento mensalidade (simplificado)
-  pagamento_mensalidade_tipo: "Pré-pago" | "Pós-pago";
-  pagamento_mensalidade_observacao: string;
-  // Forma de pagamento implantação
-  pagamento_mensalidade_forma: string;
-  pagamento_mensalidade_parcelas: string;
-  pagamento_mensalidade_desconto_percentual: string;
-  pagamento_implantacao_forma: string;
-  pagamento_implantacao_parcelas: string;
-  pagamento_implantacao_desconto_percentual: string;
-  pagamento_implantacao_observacao: string;
-}
-
-const emptyForm: FormState = {
-  cliente_id: "", plano_id: "", filial_id: "", vendedor_id: "",
-  comissao_percentual: "5",
-  comissao_implantacao_percentual: "5",
-  comissao_mensalidade_percentual: "5",
-  comissao_servico_percentual: "5",
-  observacoes: "",
-  motivo_desconto: "",
-  valor_implantacao_original: 0,
-  valor_mensalidade_original: 0,
-  desconto_implantacao_tipo: "R$",
-  desconto_implantacao_valor: "0",
-  desconto_mensalidade_tipo: "R$",
-  desconto_mensalidade_valor: "0",
-  acrescimo_implantacao_tipo: "R$",
-  acrescimo_implantacao_valor: "0",
-  acrescimo_mensalidade_tipo: "R$",
-  acrescimo_mensalidade_valor: "0",
-  modulos_adicionais: [],
-  tipo_pedido: "Novo",
-  tipo_atendimento: "",
-  servicos_pedido: [],
-  contrato_id: null,
-  // Mensalidade (simplificado)
-  pagamento_mensalidade_tipo: "Pré-pago",
-  pagamento_mensalidade_observacao: "",
-  // Implantação
-  pagamento_mensalidade_forma: "",
-  pagamento_mensalidade_parcelas: "",
-  pagamento_mensalidade_desconto_percentual: "0",
-  pagamento_implantacao_forma: "",
-  pagamento_implantacao_parcelas: "",
-  pagamento_implantacao_desconto_percentual: "0",
-  pagamento_implantacao_observacao: "",
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function fmtBRL(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function applyDesconto(original: number, tipo: "R$" | "%", valor: number): number {
-  const raw = tipo === "%" ? original - (original * valor / 100) : original - valor;
-  return Math.max(0, raw);
-}
-
-function applyAcrescimo(original: number, tipo: "R$" | "%", valor: number): number {
-  return tipo === "%" ? original + (original * valor / 100) : original + valor;
-}
+// Helpers imported from ./pedidos/helpers
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -335,10 +151,7 @@ export default function Pedidos() {
   const [clienteSearchFocused, setClienteSearchFocused] = useState(false);
 
   // Contatos inline do form novo cliente
-  const [clienteContatos, setClienteContatos] = useState<{ nome: string; cargo: string; telefone: string; email: string; decisor: boolean; ativo: boolean }[]>([]);
-  const [showContatoClienteForm, setShowContatoClienteForm] = useState(false);
-  const [editingContatoClienteIdx, setEditingContatoClienteIdx] = useState<number | null>(null);
-  const [inlineContatoClienteForm, setInlineContatoClienteForm] = useState({ nome: "", cargo: "", telefone: "", email: "", decisor: false, ativo: true });
+   const [clienteContatos, setClienteContatos] = useState<ClienteContatoInline[]>([]);
 
   // Draft comments (antes de salvar pedido)
   interface DraftComentario {
@@ -1416,7 +1229,7 @@ export default function Pedidos() {
     toast.success("Cliente cadastrado e selecionado no pedido!");
     setClienteForm(emptyClienteForm);
     setClienteContatos([]);
-    setShowContatoClienteForm(false);
+    setClienteContatos([]);
     setOpenClienteDialog(false);
     setSavingCliente(false);
   }
@@ -2618,615 +2431,64 @@ export default function Pedidos() {
       </Dialog>
 
       {/* ─── Dialog Comentário Interno (draft) ────────────────────────────── */}
-      <Dialog open={openComentarioDialog} onOpenChange={setOpenComentarioDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <MessageSquare className="h-4 w-4" /> {editingDraftIdx !== null ? "Editar Comentário" : "Novo Comentário Interno"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Textarea
-              placeholder="Escreva um comentário..."
-              value={draftTexto}
-              onChange={(e) => setDraftTexto(e.target.value)}
-              className="min-h-[80px] text-sm"
-            />
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">Prioridade:</Label>
-              <div className="flex flex-wrap gap-2">
-                {PRIORIDADES_DRAFT.map((p) => (
-                  <button
-                    key={p.value}
-                    type="button"
-                    onClick={() => setDraftPrioridade(p.value)}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border transition-colors ${
-                      draftPrioridade === p.value
-                        ? "border-primary bg-primary/10 font-semibold"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    {p.emoji} {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="text-xs"
-                onClick={() => draftFileRef.current?.click()}
-              >
-                <Paperclip className="h-3.5 w-3.5 mr-1" />
-                {draftArquivo ? draftArquivo.name : "Anexar (máx 11MB)"}
-              </Button>
-              <input
-                type="file"
-                ref={draftFileRef}
-                className="hidden"
-                onChange={handleDraftFileChange}
-              />
-              {draftArquivo && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => { setDraftArquivo(null); if (draftFileRef.current) draftFileRef.current.value = ""; }}
-                >
-                  <Trash2 className="h-3 w-3 text-destructive" />
-                </Button>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpenComentarioDialog(false)}>Cancelar</Button>
-            <Button type="button" onClick={handleAddDraftComentario} disabled={!draftTexto.trim()}>
-              {editingDraftIdx !== null ? "Salvar" : "Adicionar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ComentarioDraftDialog
+        open={openComentarioDialog}
+        onOpenChange={setOpenComentarioDialog}
+        texto={draftTexto}
+        setTexto={setDraftTexto}
+        prioridade={draftPrioridade}
+        setPrioridade={setDraftPrioridade}
+        arquivo={draftArquivo}
+        setArquivo={setDraftArquivo}
+        fileRef={draftFileRef}
+        isEditing={editingDraftIdx !== null}
+        onSave={handleAddDraftComentario}
+        onFileChange={handleDraftFileChange}
+      />
 
-      <Dialog open={openClienteDialog} onOpenChange={(open) => { setOpenClienteDialog(open); if (!open) { setClienteContatos([]); setShowContatoClienteForm(false); } }}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-4 w-4" /> Cadastrar Novo Cliente
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSaveCliente} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-
-              {/* CNPJ com busca automática */}
-              <div className="col-span-2 space-y-1.5">
-                <Label>CNPJ / CPF *</Label>
-                <div className="relative">
-                  <Input
-                    placeholder="00.000.000/0000-00"
-                    value={clienteForm.cnpj_cpf}
-                    onChange={(e) => { setCnpjError(""); setClienteForm((f) => ({ ...f, cnpj_cpf: e.target.value })); }}
-                    onBlur={handleCnpjBlurCliente}
-                    required
-                    autoFocus
-                    className={cnpjError ? "border-destructive pr-9" : "pr-9"}
-                  />
-                  {loadingCnpj && <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
-                </div>
-                {cnpjError && (
-                  <p className="flex items-center gap-1 text-xs text-destructive">
-                    <AlertCircle className="h-3 w-3" />{cnpjError}
-                  </p>
-                )}
-              </div>
-
-              <div className="col-span-2 space-y-1.5">
-                <Label>Nome Fantasia *</Label>
-                <Input placeholder="Nome fantasia..." value={clienteForm.nome_fantasia} onChange={(e) => setClienteForm((f) => ({ ...f, nome_fantasia: e.target.value }))} required />
-              </div>
-              <div className="col-span-2 space-y-1.5">
-                <Label>Razão Social *</Label>
-                <Input placeholder="Razão social..." value={clienteForm.razao_social} onChange={(e) => setClienteForm((f) => ({ ...f, razao_social: e.target.value }))} required />
-              </div>
-              <div className="col-span-2 space-y-1.5">
-                <Label>Apelido</Label>
-                <Input placeholder="Ex: Bar do João Loja 01 Centro" value={clienteForm.apelido} onChange={(e) => setClienteForm((f) => ({ ...f, apelido: e.target.value }))} />
-                <p className="text-xs text-muted-foreground">Identificação interna da loja/unidade</p>
-              </div>
-
-              {/* Inscrição Estadual */}
-              <div className="space-y-1.5">
-                <Label>Inscrição estadual *</Label>
-                <Input
-                  value={clienteForm.inscricao_estadual}
-                  onChange={(e) => setClienteForm((f) => ({ ...f, inscricao_estadual: e.target.value }))}
-                  placeholder="000.000.000.000"
-                  disabled={clienteForm.ie_isento}
-                />
-              </div>
-              <div className="flex items-center gap-2 h-10">
-                <Switch
-                  checked={clienteForm.ie_isento}
-                  onCheckedChange={(v) => setClienteForm((f) => ({ ...f, ie_isento: v, inscricao_estadual: v ? "" : f.inscricao_estadual }))}
-                />
-                <Label className="cursor-pointer select-none">Isento de IE</Label>
-              </div>
-
-              {/* Responsável */}
-              <div className="col-span-2 space-y-1.5">
-                <Label>Nome completo do responsável *</Label>
-                <Input value={clienteForm.responsavel_nome} onChange={(e) => setClienteForm((f) => ({ ...f, responsavel_nome: e.target.value }))} placeholder="Nome completo do responsável pela empresa" />
-              </div>
-
-              {/* Separador endereço */}
-              <div className="col-span-2 pt-1">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                  <MapPin className="h-3 w-3" /> Endereço
-                </div>
-              </div>
-
-              {/* CEP com busca automática */}
-              <div className="space-y-1.5">
-                <Label>CEP</Label>
-                <div className="relative">
-                  <Input
-                    placeholder="00000-000"
-                    value={clienteForm.cep}
-                    onChange={(e) => { setCepError(""); setClienteForm((f) => ({ ...f, cep: e.target.value })); }}
-                    onBlur={handleCepBlurCliente}
-                    maxLength={9}
-                    className={cepError ? "border-destructive pr-9" : "pr-9"}
-                  />
-                  {loadingCep && <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
-                </div>
-                {cepError && (
-                  <p className="flex items-center gap-1 text-xs text-destructive">
-                    <AlertCircle className="h-3 w-3" />{cepError}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-1.5">
-                <Label>Logradouro</Label>
-                <Input placeholder="Rua / Avenida..." value={clienteForm.logradouro} onChange={(e) => setClienteForm((f) => ({ ...f, logradouro: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Número</Label>
-                <Input placeholder="Ex: 123" value={clienteForm.numero} onChange={(e) => setClienteForm((f) => ({ ...f, numero: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Complemento</Label>
-                <Input placeholder="Apto, Sala, Bloco..." value={clienteForm.complemento} onChange={(e) => setClienteForm((f) => ({ ...f, complemento: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Bairro</Label>
-                <Input placeholder="Bairro" value={clienteForm.bairro} onChange={(e) => setClienteForm((f) => ({ ...f, bairro: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Cidade</Label>
-                <Input placeholder="Cidade" value={clienteForm.cidade} onChange={(e) => setClienteForm((f) => ({ ...f, cidade: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>UF</Label>
-                <Select value={clienteForm.uf} onValueChange={(v) => setClienteForm((f) => ({ ...f, uf: v }))}>
-                  <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
-                  <SelectContent>
-                    {UF_LIST.map((uf) => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* ── Seção Contatos ── */}
-              <div className="col-span-2 pt-2">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                    <Users className="h-3.5 w-3.5" />
-                    Contatos <span className="text-destructive">*</span>
-                    <span className="text-xs font-normal normal-case">(obrigatório ao menos 1)</span>
-                  </div>
-                  {!showContatoClienteForm && (
-                    <Button type="button" size="sm" variant="outline" className="gap-1.5 h-7 text-xs"
-                      onClick={() => { setEditingContatoClienteIdx(null); setInlineContatoClienteForm({ nome: "", cargo: "", telefone: "", email: "", decisor: false, ativo: true }); setShowContatoClienteForm(true); }}>
-                      <Plus className="h-3 w-3" /> Adicionar contato
-                    </Button>
-                  )}
-                </div>
-
-                {clienteContatos.length > 0 && (
-                  <div className="rounded-lg border border-border divide-y divide-border mb-2">
-                    {clienteContatos.map((ct, idx) => (
-                      <div key={idx} className="flex items-center gap-3 px-3 py-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-medium truncate">{ct.nome}</p>
-                            {ct.decisor && (
-                              <span className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium shrink-0">
-                                <Star className="h-2.5 w-2.5 fill-current" /> Decisor
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex gap-2 mt-0.5">
-                            {ct.cargo && <span className="text-xs text-muted-foreground">{ct.cargo}</span>}
-                            {ct.telefone && <span className="text-xs text-muted-foreground">{ct.telefone}</span>}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-0.5 shrink-0">
-                          <Button type="button" variant="ghost" size="icon" className={`h-6 w-6 ${ct.decisor ? "text-primary" : "text-muted-foreground"}`}
-                            onClick={() => setClienteContatos((prev) => prev.map((c, i) => ({ ...c, decisor: i === idx ? !c.decisor : (ct.decisor ? c.decisor : false) })))}>
-                            <Star className={`h-3 w-3 ${ct.decisor ? "fill-current" : ""}`} />
-                          </Button>
-                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6"
-                            onClick={() => { setEditingContatoClienteIdx(idx); setInlineContatoClienteForm({ ...ct }); setShowContatoClienteForm(true); }}>
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
-                            onClick={() => setClienteContatos((prev) => prev.filter((_, i) => i !== idx))}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {clienteContatos.length === 0 && !showContatoClienteForm && (
-                  <div className="rounded-lg border border-dashed border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-muted-foreground text-center mb-2">
-                    <Users className="h-4 w-4 mx-auto mb-1" />
-                    Nenhum contato cadastrado. Adicione pelo menos um contato.
-                  </div>
-                )}
-
-                {showContatoClienteForm && (
-                  <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
-                    <p className="text-xs font-medium text-foreground">{editingContatoClienteIdx !== null ? "Editar contato" : "Novo contato"}</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="col-span-2 space-y-1">
-                        <Label className="text-xs">Nome *</Label>
-                        <Input className="h-8 text-sm" value={inlineContatoClienteForm.nome} onChange={(e) => setInlineContatoClienteForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Nome completo" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Cargo *</Label>
-                        <Input className="h-8 text-sm" value={inlineContatoClienteForm.cargo} onChange={(e) => setInlineContatoClienteForm((f) => ({ ...f, cargo: e.target.value }))} placeholder="Cargo / função" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Telefone</Label>
-                        <Input className="h-8 text-sm" value={inlineContatoClienteForm.telefone} onChange={(e) => setInlineContatoClienteForm((f) => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
-                      </div>
-                      <div className="col-span-2 space-y-1">
-                        <Label className="text-xs">E-mail *</Label>
-                        <Input className="h-8 text-sm" type="email" value={inlineContatoClienteForm.email} onChange={(e) => setInlineContatoClienteForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@empresa.com" />
-                      </div>
-                      <div className="col-span-2 flex items-center gap-3">
-                        <Checkbox id="cli-decisor" checked={inlineContatoClienteForm.decisor} onCheckedChange={(v) => setInlineContatoClienteForm((f) => ({ ...f, decisor: !!v }))} />
-                        <Label htmlFor="cli-decisor" className="text-xs cursor-pointer">Decisor (tomador de decisão)</Label>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 justify-end">
-                      <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setShowContatoClienteForm(false); setEditingContatoClienteIdx(null); }}>Cancelar</Button>
-                      <Button type="button" size="sm" className="h-7 text-xs" onClick={() => {
-                        if (!inlineContatoClienteForm.nome.trim()) { toast.error("Nome do contato é obrigatório"); return; }
-                        if (!inlineContatoClienteForm.email?.trim()) { toast.error("E-mail do contato é obrigatório"); return; }
-                        if (!inlineContatoClienteForm.cargo?.trim()) { toast.error("Cargo do contato é obrigatório"); return; }
-                        if (editingContatoClienteIdx !== null) {
-                          setClienteContatos((prev) => prev.map((c, i) => i === editingContatoClienteIdx ? { ...inlineContatoClienteForm } : c));
-                        } else {
-                          setClienteContatos((prev) => [
-                            ...(inlineContatoClienteForm.decisor ? prev.map((c) => ({ ...c, decisor: false })) : prev),
-                            { ...inlineContatoClienteForm },
-                          ]);
-                        }
-                        setShowContatoClienteForm(false);
-                        setEditingContatoClienteIdx(null);
-                        setInlineContatoClienteForm({ nome: "", cargo: "", telefone: "", email: "", decisor: false, ativo: true });
-                      }}>
-                        {editingContatoClienteIdx !== null ? "Salvar" : "Adicionar"}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-            </div>
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setOpenClienteDialog(false)}>Cancelar</Button>
-              <Button type="submit" disabled={savingCliente || isQuerying}>
-                {isQuerying ? (
-                  <><Loader2 className="h-4 w-4 animate-spin mr-2" />Consultando...</>
-                ) : savingCliente ? (
-                  <><Loader2 className="h-4 w-4 animate-spin mr-2" />Salvando...</>
-                ) : "Cadastrar cliente"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-        </Dialog>
+      <ClienteRapidoDialog
+        open={openClienteDialog}
+        onOpenChange={(open) => { setOpenClienteDialog(open); }}
+        clienteForm={clienteForm}
+        setClienteForm={setClienteForm}
+        clienteContatos={clienteContatos}
+        setClienteContatos={setClienteContatos}
+        savingCliente={savingCliente}
+        isQuerying={isQuerying}
+        loadingCep={loadingCep}
+        loadingCnpj={loadingCnpj}
+        cepError={cepError}
+        cnpjError={cnpjError}
+        setCepError={setCepError}
+        setCnpjError={setCnpjError}
+        onSave={handleSaveCliente}
+        onCepBlur={handleCepBlurCliente}
+        onCnpjBlur={handleCnpjBlurCliente}
+      />
 
 
-      {/* ─── Modal Upgrade de Plano ──────────────────────────────────────────── */}
-      <Dialog open={openUpgradeDialog} onOpenChange={setOpenUpgradeDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ArrowUpCircle className="h-4 w-4 text-primary" /> Upgrade de Plano
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            {contratoAtivo && (
-              <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
-                <p className="text-muted-foreground text-xs">Contrato atual</p>
-                <p className="font-medium">Nº {contratoAtivo.numero_registro} ({contratoAtivo.numero_exibicao})</p>
-              </div>
-            )}
-            <div className="space-y-1.5">
-              <Label>Novo plano *</Label>
-              <Select value={upgradePlanoId} onValueChange={setUpgradePlanoId}>
-                <SelectTrigger><SelectValue placeholder="Selecione o novo plano..." /></SelectTrigger>
-                <SelectContent>
-                  {(() => {
-                    const planoAtualId = planoVigenteId || contratoAtivo?.plano_id;
-                    const planoAtual = planos.find((p) => p.id === planoAtualId);
-                    const ordemAtual = planoAtual?.ordem ?? 0;
-                    const planosUpgrade = planos.filter((p) => p.id !== planoAtualId && p.ordem > ordemAtual);
-                    return planosUpgrade.length === 0
-                      ? <SelectItem value="__none__" disabled>Nenhum plano disponível para upgrade</SelectItem>
-                      : planosUpgrade.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>);
-                  })()}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">Apenas planos com ordem superior ao atual são exibidos.</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenUpgradeDialog(false)}>Cancelar</Button>
-            <Button onClick={handleConfirmarUpgrade} disabled={!upgradePlanoId}>
-              <ArrowUpCircle className="h-4 w-4 mr-1.5" /> Confirmar Upgrade
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UpgradePlanoDialog
+        open={openUpgradeDialog}
+        onOpenChange={setOpenUpgradeDialog}
+        contratoAtivo={contratoAtivo}
+        planoVigenteId={planoVigenteId}
+        planos={planos}
+        upgradePlanoId={upgradePlanoId}
+        setUpgradePlanoId={setUpgradePlanoId}
+        onConfirm={handleConfirmarUpgrade}
+      />
 
-      {/* ─── Dialog Visualizar Pedido ─────────────────────────────────────────── */}
-      <Dialog open={!!viewingPedido} onOpenChange={(open) => { if (!open) setViewingPedido(null); }}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Eye className="h-4 w-4" /> Visualizar Pedido
-              {viewingPedido?.numero_exibicao && <span className="ml-auto font-mono text-sm text-primary">{viewingPedido.numero_exibicao}</span>}
-            </DialogTitle>
-          </DialogHeader>
-          {viewingPedido && (() => {
-            const vp = viewingPedido;
-            const finStatus = vp.financeiro_status || "Aguardando";
-            const impFinal = vp.valor_implantacao_final ?? vp.valor_implantacao;
-            const mensFinal = vp.valor_mensalidade_final ?? vp.valor_mensalidade;
-            const vendedorNome = vendedores.find((v) => v.user_id === vp.vendedor_id)?.full_name || "—";
-            const filialNome = (vp as any).filiais?.nome || filiais.find(f => f.id === vp.filial_id)?.nome || "—";
-            const adicionais = (vp.modulos_adicionais || []) as ModuloAdicionadoItem[];
-            return (
-              <div className="space-y-4 text-sm">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Cliente</p>
-                    <p className="font-medium">{(vp as any).clientes?.nome_fantasia || "—"}</p>
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Plano</p>
-                    <p className="font-medium">{(vp as any).planos?.nome || "—"}</p>
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Filial</p>
-                    <p>{filialNome}</p>
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Vendedor</p>
-                    <p>{vendedorNome}</p>
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Tipo</p>
-                    <p>{vp.tipo_pedido || "Novo"}</p>
-                  </div>
-                  {(vp as any).tipo_pedido === "OA" && (
-                    <div className="space-y-0.5">
-                      <p className="text-xs text-muted-foreground">Tipo Atendimento</p>
-                      <p>{(vp as any).tipo_atendimento || "—"}</p>
-                    </div>
-                  )}
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Data</p>
-                    <p>{format(new Date(vp.created_at), "dd/MM/yyyy", { locale: ptBR })}</p>
-                  </div>
-                </div>
-
-                {/* ── Detalhes do que foi lançado ── */}
-                <div className="border-t border-border pt-3 space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">📋 Itens do Pedido</p>
-                  
-                  {/* Plano (Novo ou Upgrade) */}
-                  {(vp.tipo_pedido === "Novo" || vp.tipo_pedido === "Upgrade") && (vp as any).planos?.nome && (
-                    <div className="bg-muted/50 rounded-md p-2.5 space-y-1">
-                      <p className="text-xs font-medium flex items-center gap-1.5">
-                        {vp.tipo_pedido === "Upgrade" ? "⬆️ Upgrade de Plano" : "📦 Plano Contratado"}
-                      </p>
-                      <p className="text-sm font-semibold">{(vp as any).planos?.nome}</p>
-                      <div className="flex gap-4 text-xs text-muted-foreground">
-                        <span>Impl: <span className="font-mono">{fmtBRL(vp.valor_implantacao_original ?? vp.valor_implantacao)}</span></span>
-                        <span>Mens: <span className="font-mono">{fmtBRL(vp.valor_mensalidade_original ?? vp.valor_mensalidade)}</span></span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Módulos Adicionais (Aditivo ou junto com outros tipos) */}
-                  {adicionais.length > 0 && (
-                    <div className="bg-muted/50 rounded-md p-2.5 space-y-1.5">
-                      <p className="text-xs font-medium flex items-center gap-1.5">
-                        {vp.tipo_pedido === "Aditivo" ? "➕ Módulos Adicionais (Aditivo)" : "➕ Módulos Adicionais"}
-                      </p>
-                      {adicionais.map((m) => (
-                        <div key={m.modulo_id} className="flex justify-between text-xs">
-                          <span>{m.nome} {m.quantidade > 1 ? `(x${m.quantidade})` : ""}</span>
-                          <div className="flex gap-3 font-mono text-muted-foreground">
-                            <span>Impl: {fmtBRL(m.valor_implantacao_modulo * m.quantidade)}</span>
-                            <span>Mens: {fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Serviços OA */}
-                  {vp.tipo_pedido === "OA" && (() => {
-                    const servicos = (vp.servicos_pedido || []) as ServicoAdicionadoItem[];
-                    if (servicos.length === 0) return null;
-                    return (
-                      <div className="bg-muted/50 rounded-md p-2.5 space-y-1.5">
-                        <p className="text-xs font-medium flex items-center gap-1.5">🔧 Serviços (Ordem de Atendimento)</p>
-                        {servicos.map((s, idx) => (
-                          <div key={idx} className="flex justify-between text-xs">
-                            <span>{s.nome} — {s.quantidade}x {s.unidade_medida || "un."}</span>
-                            <span className="font-mono text-muted-foreground">{fmtBRL(s.valor_unitario * s.quantidade)}</span>
-                          </div>
-                        ))}
-                        <div className="flex justify-between text-xs font-semibold border-t border-border pt-1 mt-1">
-                          <span>Total serviços</span>
-                          <span className="font-mono">{fmtBRL(servicos.reduce((sum, s) => sum + s.valor_unitario * s.quantidade, 0))}</span>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Se nenhum item foi encontrado */}
-                  {!((vp.tipo_pedido === "Novo" || vp.tipo_pedido === "Upgrade") && (vp as any).planos?.nome) && adicionais.length === 0 && !(vp.tipo_pedido === "OA" && ((vp.servicos_pedido || []) as any[]).length > 0) && (
-                    <p className="text-xs text-muted-foreground italic">Nenhum detalhe de itens disponível.</p>
-                  )}
-                </div>
-
-                {/* Acréscimo info */}
-                {(((vp as any).acrescimo_implantacao_valor ?? 0) > 0 || ((vp as any).acrescimo_mensalidade_valor ?? 0) > 0) && (
-                  <div className="border-t border-border pt-3 space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">Acréscimos aplicados</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {((vp as any).acrescimo_implantacao_valor ?? 0) > 0 && (
-                        <div className="space-y-0.5">
-                          <p className="text-xs text-muted-foreground">Implantação</p>
-                          <p className="text-xs font-mono text-emerald-600">+{(vp as any).acrescimo_implantacao_valor} {(vp as any).acrescimo_implantacao_tipo === "%" ? "%" : "R$"}</p>
-                        </div>
-                      )}
-                      {((vp as any).acrescimo_mensalidade_valor ?? 0) > 0 && (
-                        <div className="space-y-0.5">
-                          <p className="text-xs text-muted-foreground">Mensalidade</p>
-                          <p className="text-xs font-mono text-emerald-600">+{(vp as any).acrescimo_mensalidade_valor} {(vp as any).acrescimo_mensalidade_tipo === "%" ? "%" : "R$"}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div className="border-t border-border pt-3 grid grid-cols-3 gap-3">
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Implantação</p>
-                    <p className="font-mono font-semibold">{fmtBRL(impFinal)}</p>
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Mensalidade</p>
-                    <p className="font-mono font-semibold">{fmtBRL(mensFinal)}</p>
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Total</p>
-                    <p className="font-mono font-bold text-primary">{fmtBRL(vp.valor_total)}</p>
-                  </div>
-                </div>
-
-                {(isAdmin || isFinanceiro || isVendedor) && (
-                  <div className="border-t border-border pt-3 space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">Comissões</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="space-y-0.5">
-                        <p className="text-xs text-muted-foreground">Implantação / Treinamento</p>
-                        <p className="text-xs">{(vp as any).comissao_implantacao_percentual ?? vp.comissao_percentual}% → <span className="font-mono">{fmtBRL((vp as any).comissao_implantacao_valor ?? 0)}</span></p>
-                      </div>
-                      <div className="space-y-0.5">
-                        <p className="text-xs text-muted-foreground">Mensalidade</p>
-                        <p className="text-xs">{(vp as any).comissao_mensalidade_percentual ?? vp.comissao_percentual}% → <span className="font-mono">{fmtBRL((vp as any).comissao_mensalidade_valor ?? 0)}</span></p>
-                      </div>
-                      <div className="space-y-0.5">
-                        <p className="text-xs text-muted-foreground">Serviço</p>
-                        <p className="text-xs">{(vp as any).comissao_servico_percentual ?? 0}% → <span className="font-mono">{fmtBRL((vp as any).comissao_servico_valor ?? 0)}</span></p>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center pt-1 border-t border-border">
-                      <span className="text-xs text-muted-foreground">Total comissão</span>
-                      <span className="font-mono font-semibold text-sm">{fmtBRL(vp.comissao_valor)}</span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="border-t border-border pt-3 grid grid-cols-2 gap-3">
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Status pedido</p>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[vp.status_pedido] || "bg-muted text-muted-foreground"}`}>
-                      {vp.status_pedido}
-                    </span>
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Status financeiro</p>
-                    {(() => {
-                      const zsStatus = zapsignMap[vp.id];
-                      if (zsStatus === "Assinado") {
-                        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700"><CheckCircle className="h-3 w-3" />Contrato assinado</span>;
-                      }
-                      if (zsStatus === "Recusado") {
-                        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600"><XCircle className="h-3 w-3" />Assinatura recusada</span>;
-                      }
-                      if (zsStatus === "Enviado" || zsStatus === "Pendente") {
-                        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700"><Send className="h-3 w-3" />Aguardando assinatura</span>;
-                      }
-                      if (vp.contrato_liberado) {
-                        const stGeracao = contratoStatusMap[vp.id];
-                        if (stGeracao === 'Pendente' || stGeracao === 'Gerando') {
-                          return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700"><Loader2 className="h-3 w-3 animate-spin" />Aguardando geração</span>;
-                        }
-                        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700"><FileText className="h-3 w-3" />Contrato gerado</span>;
-                      }
-                      return (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${FIN_STATUS_COLORS[finStatus] || "bg-muted text-muted-foreground"}`}>
-                          {finStatus}
-                        </span>
-                      );
-                    })()}
-                  </div>
-                  {vp.financeiro_motivo && (
-                    <div className="col-span-2 space-y-0.5">
-                      <p className="text-xs text-muted-foreground">Motivo reprovação</p>
-                      <p className="text-destructive text-xs">{vp.financeiro_motivo}</p>
-                    </div>
-                  )}
-                </div>
-
-
-                {(vp as any).motivo_desconto && (
-                  <div className="border-t border-border pt-3 space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Motivo do Desconto</p>
-                    <p className="text-xs">{(vp as any).motivo_desconto}</p>
-                  </div>
-                )}
-
-                {vp.observacoes && (
-                  <div className="border-t border-border pt-3 space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Observações</p>
-                    <p className="text-xs">{vp.observacoes}</p>
-                  </div>
-                )}
-
-                <PedidoComentarios pedidoId={vp.id} />
-              </div>
-            );
-          })()}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setViewingPedido(null)}>Fechar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <VisualizarPedidoDialog
+        pedido={viewingPedido}
+        onClose={() => setViewingPedido(null)}
+        vendedores={vendedores}
+        filiais={filiais}
+        zapsignMap={zapsignMap}
+        contratoStatusMap={contratoStatusMap}
+        isAdmin={isAdmin}
+        isFinanceiro={isFinanceiro}
+        isVendedor={isVendedor}
+      />
     </AppLayout>
   );
 }
