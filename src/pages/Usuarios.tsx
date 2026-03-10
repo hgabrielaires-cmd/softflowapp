@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
-import { AppRole, ROLE_LABELS, Filial } from "@/lib/supabase-types";
+import { AppRole, ROLE_LABELS } from "@/lib/supabase-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,20 +44,14 @@ import { Plus, Search, UserX, UserCheck, Users, Loader2, Mail, Pencil, ShieldChe
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
-import { UserWithRoles, MesaOption } from "./usuarios/types";
-import { ALL_ROLES, ITEMS_PER_PAGE, TIPO_TECNICO_OPTIONS } from "./usuarios/constants";
+import { UserWithRoles } from "./usuarios/types";
+import { ALL_ROLES, TIPO_TECNICO_OPTIONS } from "./usuarios/constants";
 import { gerarSenhaSegura } from "./usuarios/helpers";
+import { useUsuariosQueries } from "./usuarios/useUsuariosQueries";
 
 export default function Usuarios() {
   const { isAdmin } = useAuth();
-  const [users, setUsers] = useState<UserWithRoles[]>([]);
-  const [filiais, setFiliais] = useState<Filial[]>([]);
-  const [mesasDisponiveis, setMesasDisponiveis] = useState<MesaOption[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filiaisLoaded, setFiliaisLoaded] = useState(false);
-  const [search, setSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  
+  const q = useUsuariosQueries();
   
 
   // Create dialog
@@ -113,67 +107,6 @@ export default function Usuarios() {
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
-  async function loadFiliais() {
-    const [{ data: fData }, { data: mData }] = await Promise.all([
-      supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
-      supabase.from("mesas_atendimento").select("id, nome").eq("ativo", true).order("nome"),
-    ]);
-    if (fData) setFiliais(fData as Filial[]);
-    if (mData) setMesasDisponiveis(mData as MesaOption[]);
-    setFiliaisLoaded(true);
-  }
-
-  async function loadUsers() {
-    setLoading(true);
-    const { data: profiles, error } = await supabase
-      .from("profiles")
-      .select("*, filiais!profiles_filial_id_fkey(nome)")
-      .order("full_name");
-
-    if (error) { toast.error("Erro ao carregar usuários"); setLoading(false); return; }
-
-    const [{ data: roleData }, { data: ufData }, { data: umData }] = await Promise.all([
-      supabase.from("user_roles").select("*"),
-      supabase.from("usuario_filiais").select("user_id, filial_id"),
-      supabase.from("usuario_mesas").select("user_id, mesa_id"),
-    ]);
-
-    const enriched: UserWithRoles[] = (profiles || []).map((p: any) => {
-      const userFiliais = (ufData || []).filter((uf) => uf.user_id === p.user_id);
-      const filiaisVinculadas = userFiliais.map((uf) => {
-        const f = filiais.find((fl) => fl.id === uf.filial_id);
-        return f ? { id: f.id, nome: f.nome } : null;
-      }).filter(Boolean) as { id: string; nome: string }[];
-
-      const userMesas = (umData || []).filter((um: any) => um.user_id === p.user_id);
-      const mesasVinculadas = userMesas.map((um: any) => {
-        const m = mesasDisponiveis.find((md) => md.id === um.mesa_id);
-        return m ? { id: m.id, nome: m.nome } : null;
-      }).filter(Boolean) as { id: string; nome: string }[];
-
-      return {
-        ...p,
-        filial_nome: p.filiais?.nome || p.filial || null,
-        roles: (roleData || []).filter((r) => r.user_id === p.user_id).map((r) => r.role as AppRole),
-        acesso_global: p.acesso_global || false,
-        filiais_vinculadas: filiaisVinculadas,
-        mesas_vinculadas: mesasVinculadas,
-      };
-    });
-
-    setUsers(enriched);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    loadFiliais();
-  }, []);
-
-  useEffect(() => {
-    if (filiaisLoaded) {
-      loadUsers();
-    }
-  }, [filiaisLoaded]);
 
   // ── Enviar WhatsApp de boas-vindas ──────────────────────
   async function enviarWhatsappBoasVindas(nome: string, email: string, senha: string, telefone: string) {
@@ -279,7 +212,7 @@ export default function Usuarios() {
       toast.success(`Usuário ${inviteName} criado com sucesso!`);
       setOpenInvite(false);
       setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteFilialIds([]); setInviteAcessoGlobal(false); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteComissaoServ("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone(""); setInviteIsTecnico(false); setInviteTipoTecnico("interno"); setInviteIsVendedor(false); setInviteMesaIds([]);
-      loadUsers();
+      q.refetchUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar usuário");
     }
@@ -386,7 +319,7 @@ export default function Usuarios() {
 
       toast.success("Usuário atualizado com sucesso!");
       setOpenEdit(false);
-      loadUsers();
+      q.refetchUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Erro ao atualizar usuário");
     }
@@ -398,7 +331,7 @@ export default function Usuarios() {
     const { error } = await supabase.from("profiles").update({ active: !user.active }).eq("user_id", user.user_id);
     if (error) { toast.error("Erro ao atualizar usuário"); return; }
     toast.success(user.active ? "Usuário desativado" : "Usuário ativado");
-    loadUsers();
+    q.refetchUsers();
   }
 
   // ── Reset password ────────────────────────────────────────
@@ -451,14 +384,6 @@ export default function Usuarios() {
   }
 
 
-  const filtered = users.filter(
-    (u) =>
-      u.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase())
-  );
-
-  // Reset page when search changes
-  useEffect(() => { setCurrentPage(1); }, [search]);
 
 
 
@@ -483,8 +408,8 @@ export default function Usuarios() {
           <Input
             placeholder="Buscar por nome ou e-mail..."
             className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={q.search}
+            onChange={(e) => q.setSearch(e.target.value)}
           />
         </div>
 
@@ -503,20 +428,20 @@ export default function Usuarios() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {q.loading ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
-              ) : filtered.length === 0 ? (
+              ) : q.filtered.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     Nenhum usuário encontrado
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((user) => (
+                q.filtered.slice((q.currentPage - 1) * q.ITEMS_PER_PAGE, q.currentPage * q.ITEMS_PER_PAGE).map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.full_name}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{user.email}</TableCell>
@@ -617,11 +542,11 @@ export default function Usuarios() {
             </TableBody>
           </Table>
           <TablePagination
-            currentPage={currentPage}
-            totalPages={Math.ceil(filtered.length / ITEMS_PER_PAGE)}
-            totalItems={filtered.length}
-            itemsPerPage={ITEMS_PER_PAGE}
-            onPageChange={setCurrentPage}
+            currentPage={q.currentPage}
+            totalPages={Math.ceil(q.filtered.length / q.ITEMS_PER_PAGE)}
+            totalItems={q.filtered.length}
+            itemsPerPage={q.ITEMS_PER_PAGE}
+            onPageChange={q.setCurrentPage}
           />
         </div>
       </div>
@@ -692,7 +617,7 @@ export default function Usuarios() {
               </div>
               {!inviteAcessoGlobal && (
                 <div className="space-y-2">
-                  {filiais.map((f) => (
+                  {q.filiais.map((f) => (
                     <div key={f.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
                       <span className="text-sm">{f.nome}</span>
                       <Switch
@@ -799,7 +724,7 @@ export default function Usuarios() {
                 Mesas de Atendimento
               </p>
               <div className="space-y-2">
-                {mesasDisponiveis.map((m) => (
+                {q.mesasDisponiveis.map((m) => (
                   <div key={m.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
                     <span className="text-sm">{m.nome}</span>
                     <Switch
@@ -811,7 +736,7 @@ export default function Usuarios() {
                     />
                   </div>
                 ))}
-                {mesasDisponiveis.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma mesa cadastrada.</p>}
+                {q.mesasDisponiveis.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma mesa cadastrada.</p>}
               </div>
             </div>
             <div className="rounded-lg border border-border p-3 space-y-3">
@@ -944,7 +869,7 @@ export default function Usuarios() {
                     </div>
                     {!editAcessoGlobal && (
                       <div className="space-y-2">
-                        {filiais.map((f) => (
+                        {q.filiais.map((f) => (
                           <div key={f.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
                             <span className="text-sm">{f.nome}</span>
                             <Switch
@@ -1051,7 +976,7 @@ export default function Usuarios() {
                       Mesas de Atendimento
                     </p>
                     <div className="space-y-2">
-                      {mesasDisponiveis.map((m) => (
+                      {q.mesasDisponiveis.map((m) => (
                         <div key={m.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
                           <span className="text-sm">{m.nome}</span>
                           <Switch
@@ -1063,7 +988,7 @@ export default function Usuarios() {
                           />
                         </div>
                       ))}
-                      {mesasDisponiveis.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma mesa cadastrada.</p>}
+                      {q.mesasDisponiveis.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma mesa cadastrada.</p>}
                     </div>
                   </div>
                   <div className="rounded-lg border border-border p-3 space-y-3">
