@@ -17,6 +17,21 @@ export function usePainelAtividadeActions() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Não autenticado."); return false; }
 
+      // Defensive: validate card exists
+      const { data: card } = await supabase.from("painel_atendimento").select("id").eq("id", cardId).maybeSingle();
+      if (!card) { toast.error("Card do projeto não encontrado."); return false; }
+
+      // Defensive: validate atividade exists
+      const { data: atividade } = await supabase.from("jornada_atividades").select("id, etapa_id").eq("id", atividadeId).maybeSingle();
+      if (!atividade) { toast.error("Atividade não encontrada."); return false; }
+
+      // Defensive: validate etapa is active if provided
+      if (etapaId) {
+        const { data: etapa } = await supabase.from("painel_etapas").select("id, ativo").eq("id", etapaId).maybeSingle();
+        if (!etapa) { toast.error("Etapa não encontrada."); return false; }
+        if (!etapa.ativo) { toast.error("Etapa inativa. Não é possível iniciar atividade."); return false; }
+      }
+
       const now = new Date().toISOString();
       const { error } = await supabase
         .from("painel_atividade_execucao")
