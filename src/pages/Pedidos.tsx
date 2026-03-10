@@ -114,12 +114,8 @@ export default function Pedidos() {
   const [acrescimoAtivo, setAcrescimoAtivo] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Limites de desconto do vendedor atual
-  const [limiteDesconto, setLimiteDesconto] = useState<{ implantacao: number; mensalidade: number } | null>(null);
 
-  // Contrato ativo do cliente selecionado
-  const [contratoAtivo, setContratoAtivo] = useState<Contrato | null>(null);
-  const [loadingContrato, setLoadingContrato] = useState(false);
+
   // Modal de upgrade
   const [openUpgradeDialog, setOpenUpgradeDialog] = useState(false);
   // Módulos já contratados (para Aditivo — excluir do seletor)
