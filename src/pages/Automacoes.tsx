@@ -446,7 +446,18 @@ export default function Automacoes() {
                   <Label>Horas sem ação antes do alerta</Label>
                   <Input type="number" min={1} value={horasSemAcao} onChange={e => setHorasSemAcao(Number(e.target.value))} className="w-32" />
                   <p className="text-xs text-muted-foreground">O alerta será disparado quando o pedido ficar na fila do financeiro por esse tempo sem ser processado.</p>
+              {gatilhoTipo === "contrato_enviado_assinatura" && (
+                <div className="pl-4 border-l-2 border-muted space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Dispara quando um contrato é enviado para assinatura via ZapSign.
+                    O destinatário é <strong>sempre o vendedor</strong> do pedido vinculado ao contrato.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Variáveis disponíveis: <code>{"{vendedor.nome}"}</code>, <code>{"{cliente.nome_fantasia}"}</code>, <code>{"{contrato.numero}"}</code>, <code>{"{decisor.nome}"}</code>, <code>{"{contrato.sign_url}"}</code>
+                  </p>
                 </div>
+              )}
+            </div>
               )}
             </div>
 
