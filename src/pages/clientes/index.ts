@@ -6,3 +6,4 @@ export { useClienteForm } from "./useClienteForm";
 export { HistoricoContratualDialog } from "./components/HistoricoContratualDialog";
 export { ClienteContatosDialog } from "./components/ClienteContatosDialog";
 export { ContatoFormDialog } from "./components/ContatoFormDialog";
+export { ClienteFormDialog } from "./components/ClienteFormDialog";
