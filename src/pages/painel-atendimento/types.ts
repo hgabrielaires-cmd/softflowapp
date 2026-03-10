@@ -45,6 +45,20 @@ export interface PainelCard {
   profiles?: { full_name: string } | null;
 }
 
+export interface AtividadeExecucao {
+  id: string;
+  card_id: string;
+  atividade_id: string;
+  etapa_id: string | null;
+  status: "pendente" | "em_andamento" | "concluida";
+  iniciado_em: string | null;
+  iniciado_por: string | null;
+  concluido_em: string | null;
+  concluido_por: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export const PRIORIDADE_PESO: Record<string, number> = {
   prioridade: 4,
   urgente: 3,
