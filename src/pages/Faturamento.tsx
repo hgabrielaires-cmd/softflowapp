@@ -32,98 +32,28 @@ import {
 } from "@/components/ui/tabs";
 import {
   Receipt, Plus, Loader2, MoreHorizontal, Pencil, Trash2,
-  CheckCircle, XCircle, Filter, FileText, Search, Calendar,
+  CheckCircle, XCircle, Filter, FileText, Search,
   DollarSign, AlertTriangle, Clock,
 } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
-import { format, parseISO, isAfter, isBefore, startOfDay } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface Fatura {
-  id: string;
-  numero_fatura: string;
-  contrato_id: string | null;
-  cliente_id: string;
-  filial_id: string | null;
-  pedido_id: string | null;
-  valor: number;
-  valor_desconto: number;
-  valor_final: number;
-  data_emissao: string;
-  data_vencimento: string;
-  data_pagamento: string | null;
-  status: string;
-  forma_pagamento: string | null;
-  referencia_mes: number | null;
-  referencia_ano: number | null;
-  tipo: string;
-  gerado_automaticamente: boolean;
-  observacoes: string | null;
-  created_at: string;
-  updated_at: string;
-  clientes?: { nome_fantasia: string } | null;
-  contratos?: { numero_exibicao: string } | null;
-}
-
-interface NotaFiscal {
-  id: string;
-  fatura_id: string | null;
-  cliente_id: string;
-  filial_id: string | null;
-  numero_nf: string;
-  serie: string | null;
-  valor: number;
-  data_emissao: string;
-  status: string;
-  xml_url: string | null;
-  pdf_url: string | null;
-  observacoes: string | null;
-  created_at: string;
-  clientes?: { nome_fantasia: string } | null;
-  faturas?: { numero_fatura: string } | null;
-}
-
-interface ClienteOption {
-  id: string;
-  nome_fantasia: string;
-}
-
-interface ContratoOption {
-  id: string;
-  numero_exibicao: string;
-}
-
-const STATUS_FATURA = [
-  { value: "Pendente", label: "Pendente", color: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800" },
-  { value: "Pago", label: "Pago", color: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800" },
-  { value: "Vencido", label: "Vencido", color: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800" },
-  { value: "Cancelado", label: "Cancelado", color: "bg-muted text-muted-foreground border-border" },
-];
-
-const TIPOS_FATURA = [
-  { value: "Mensalidade", label: "Mensalidade" },
-  { value: "Implantação", label: "Implantação" },
-  { value: "Serviço", label: "Serviço" },
-  { value: "Avulsa", label: "Avulsa" },
-];
-
-const FORMAS_PAGAMENTO = [
-  { value: "Boleto", label: "Boleto" },
-  { value: "Pix", label: "Pix" },
-  { value: "Cartão de Crédito", label: "Cartão de Crédito" },
-  { value: "Cartão de Débito", label: "Cartão de Débito" },
-  { value: "Transferência", label: "Transferência" },
-  { value: "Dinheiro", label: "Dinheiro" },
-];
-
-const PAGE_SIZE = 15;
-
-function fmtCurrency(val: number) {
-  return val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
+import type {
+  Fatura, NotaFiscal, ClienteOption, ContratoOption,
+  FaturaFormState, NotaFiscalFormState, PagamentoFormState,
+} from "@/pages/faturamento";
+import {
+  STATUS_FATURA, TIPOS_FATURA, FORMAS_PAGAMENTO, PAGE_SIZE,
+  newFaturaFormDefaults, newNotaFiscalFormDefaults,
+} from "@/pages/faturamento";
+import {
+  fmtCurrency, isVencida, getStatusFaturaColor,
+  validateFaturaForm, validateNotaFiscalForm,
+  buildFaturaPayload, buildNotaFiscalPayload,
+  faturaToFormState,
+} from "@/pages/faturamento";
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -198,20 +128,9 @@ function FaturasTab() {
   const [clientes, setClientes] = useState<ClienteOption[]>([]);
   const [contratos, setContratos] = useState<ContratoOption[]>([]);
   const [registrarPagamentoId, setRegistrarPagamentoId] = useState<string | null>(null);
-  const [pagamentoForm, setPagamentoForm] = useState({ data_pagamento: "", forma_pagamento: "" });
+  const [pagamentoForm, setPagamentoForm] = useState<PagamentoFormState>({ data_pagamento: "", forma_pagamento: "" });
 
-  const [form, setForm] = useState({
-    cliente_id: "",
-    contrato_id: "",
-    valor: "",
-    valor_desconto: "0",
-    data_vencimento: "",
-    tipo: "Mensalidade",
-    forma_pagamento: "",
-    referencia_mes: "",
-    referencia_ano: "",
-    observacoes: "",
-  });
+  const [form, setForm] = useState<FaturaFormState>(newFaturaFormDefaults());
 
   const loadFaturas = useCallback(async () => {
     setLoading(true);
@@ -264,59 +183,25 @@ function FaturasTab() {
 
   function openNew() {
     setEditingFatura(null);
-    setForm({
-      cliente_id: "", contrato_id: "", valor: "", valor_desconto: "0",
-      data_vencimento: "", tipo: "Mensalidade", forma_pagamento: "",
-      referencia_mes: String(new Date().getMonth() + 1),
-      referencia_ano: String(new Date().getFullYear()),
-      observacoes: "",
-    });
+    setForm(newFaturaFormDefaults());
     setContratos([]);
     setOpenEditor(true);
   }
 
   function openEdit(f: Fatura) {
     setEditingFatura(f);
-    setForm({
-      cliente_id: f.cliente_id,
-      contrato_id: f.contrato_id || "",
-      valor: String(f.valor),
-      valor_desconto: String(f.valor_desconto),
-      data_vencimento: f.data_vencimento,
-      tipo: f.tipo,
-      forma_pagamento: f.forma_pagamento || "",
-      referencia_mes: f.referencia_mes ? String(f.referencia_mes) : "",
-      referencia_ano: f.referencia_ano ? String(f.referencia_ano) : "",
-      observacoes: f.observacoes || "",
-    });
+    setForm(faturaToFormState(f));
     loadContratos(f.cliente_id);
     setOpenEditor(true);
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.cliente_id) { toast.error("Selecione um cliente"); return; }
-    if (!form.valor || Number(form.valor) <= 0) { toast.error("Informe o valor"); return; }
-    if (!form.data_vencimento) { toast.error("Informe a data de vencimento"); return; }
+    const err = validateFaturaForm(form);
+    if (err) { toast.error(err); return; }
 
     setSaving(true);
-    const valor = Number(form.valor);
-    const desconto = Number(form.valor_desconto) || 0;
-
-    const payload = {
-      cliente_id: form.cliente_id,
-      contrato_id: form.contrato_id || null,
-      filial_id: filialPadraoId || null,
-      valor,
-      valor_desconto: desconto,
-      valor_final: valor - desconto,
-      data_vencimento: form.data_vencimento,
-      tipo: form.tipo,
-      forma_pagamento: form.forma_pagamento || null,
-      referencia_mes: form.referencia_mes ? Number(form.referencia_mes) : null,
-      referencia_ano: form.referencia_ano ? Number(form.referencia_ano) : null,
-      observacoes: form.observacoes.trim() || null,
-    };
+    const payload = buildFaturaPayload(form, filialPadraoId || null);
 
     if (editingFatura) {
       const { error } = await supabase.from("faturas").update(payload).eq("id", editingFatura.id);
@@ -364,12 +249,7 @@ function FaturasTab() {
   }
 
   function getStatusBadge(status: string) {
-    const s = STATUS_FATURA.find(s => s.value === status);
-    return <Badge className={`text-xs ${s?.color || "bg-muted text-muted-foreground"}`}>{s?.label || status}</Badge>;
-  }
-
-  function isVencida(f: Fatura) {
-    return f.status === "Pendente" && isBefore(parseISO(f.data_vencimento), startOfDay(new Date()));
+    return <Badge className={`text-xs ${getStatusFaturaColor(status)}`}>{STATUS_FATURA.find(s => s.value === status)?.label || status}</Badge>;
   }
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -703,7 +583,7 @@ function FaturasTab() {
 
 function FaturasResumo({ faturas }: { faturas: Fatura[] }) {
   const pendentes = faturas.filter(f => f.status === "Pendente");
-  const vencidas = pendentes.filter(f => isBefore(parseISO(f.data_vencimento), startOfDay(new Date())));
+  const vencidas = pendentes.filter(f => isVencida(f));
   const totalPendente = pendentes.reduce((sum, f) => sum + f.valor_final, 0);
   const totalVencido = vencidas.reduce((sum, f) => sum + f.valor_final, 0);
   const pagos = faturas.filter(f => f.status === "Pago");
@@ -747,15 +627,7 @@ function NotasFiscaisTab() {
   const [clientes, setClientes] = useState<ClienteOption[]>([]);
   const [faturasOptions, setFaturasOptions] = useState<{ id: string; numero_fatura: string }[]>([]);
 
-  const [form, setForm] = useState({
-    cliente_id: "",
-    fatura_id: "",
-    numero_nf: "",
-    serie: "1",
-    valor: "",
-    data_emissao: format(new Date(), "yyyy-MM-dd"),
-    observacoes: "",
-  });
+  const [form, setForm] = useState<NotaFiscalFormState>(newNotaFiscalFormDefaults());
 
   const loadNotas = useCallback(async () => {
     setLoading(true);
@@ -801,7 +673,7 @@ function NotasFiscaisTab() {
 
   function openNew() {
     setEditingNota(null);
-    setForm({ cliente_id: "", fatura_id: "", numero_nf: "", serie: "1", valor: "", data_emissao: format(new Date(), "yyyy-MM-dd"), observacoes: "" });
+    setForm(newNotaFiscalFormDefaults());
     setFaturasOptions([]);
     setOpenEditor(true);
   }
@@ -823,21 +695,11 @@ function NotasFiscaisTab() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.cliente_id) { toast.error("Selecione um cliente"); return; }
-    if (!form.numero_nf.trim()) { toast.error("Informe o número da NF"); return; }
-    if (!form.valor || Number(form.valor) <= 0) { toast.error("Informe o valor"); return; }
+    const err = validateNotaFiscalForm(form);
+    if (err) { toast.error(err); return; }
 
     setSaving(true);
-    const payload = {
-      cliente_id: form.cliente_id,
-      fatura_id: form.fatura_id || null,
-      filial_id: filialPadraoId || null,
-      numero_nf: form.numero_nf.trim(),
-      serie: form.serie || "1",
-      valor: Number(form.valor),
-      data_emissao: form.data_emissao,
-      observacoes: form.observacoes.trim() || null,
-    };
+    const payload = buildNotaFiscalPayload(form, filialPadraoId || null);
 
     if (editingNota) {
       const { error } = await supabase.from("notas_fiscais").update(payload).eq("id", editingNota.id);
