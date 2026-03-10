@@ -382,7 +382,6 @@ export default function Pedidos() {
     }));
     loadPlano(planoId, []);
   }
-
   // ─── Filial favorita ──────────────────────────────────────────────────────
 
   // Use filialPadraoId from hook as filialFavoritaId
@@ -390,89 +389,10 @@ export default function Pedidos() {
     if (filialPadraoId) setFilialFavoritaId(filialPadraoId);
   }, [filialPadraoId]);
 
-  // ─── Buscar parâmetros da filial ──────────────────────────────────────────
-
-  async function loadFilialParametros(filialId: string) {
-    if (!filialId) { setFilialParametros(null); return; }
-    const { data } = await supabase
-      .from("filial_parametros")
-      .select("*")
-      .eq("filial_id", filialId)
-      .maybeSingle();
-    setFilialParametros(data || null);
-  }
-
   // Atualiza parametros quando filial muda no form
   useEffect(() => {
     if (form.filial_id) loadFilialParametros(form.filial_id);
-  }, [form.filial_id]);
-
-
-
-  async function loadData() {
-    setLoading(true);
-    const [
-      { data: pedidosData },
-      { data: clientesData },
-      { data: planosData },
-      { data: filiaisData },
-      { data: vendedoresData },
-      { data: servicosData },
-    ] = await Promise.all([
-      supabase.from("pedidos").select("*, clientes(nome_fantasia), planos(nome), filiais(nome)").order("created_at", { ascending: false }),
-      supabase.from("clientes").select("*").eq("ativo", true).order("nome_fantasia"),
-      supabase.from("planos").select("*").eq("ativo", true).order("ordem").order("nome"),
-      supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
-      supabase.from("profiles").select("*").eq("active", true).order("full_name"),
-      supabase.from("servicos").select("id, nome, valor, unidade_medida").eq("ativo", true).order("nome"),
-    ]);
-    const pedidosList = (pedidosData || []) as unknown as PedidoWithJoins[];
-    setPedidos(pedidosList);
-    setClientes((clientesData || []) as Cliente[]);
-    setPlanos(planosData || []);
-    setFiliais((filiaisData || []) as Filial[]);
-    setVendedores((vendedoresData || []) as Profile[]);
-    setServicosCatalogo((servicosData || []) as any[]);
-
-    // Buscar status ZapSign para pedidos — via contratos.pedido_id → contratos_zapsign
-    const pedidoIds = pedidosList.map(p => p.id);
-    if (pedidoIds.length > 0) {
-      const { data: contratosData } = await supabase
-        .from("contratos")
-        .select("id, pedido_id, status_geracao, contratos_zapsign(status)")
-        .in("pedido_id", pedidoIds);
-      const map: Record<string, string> = {};
-      const statusMap: Record<string, string> = {};
-      (contratosData || []).forEach((c: any) => {
-        if (c.pedido_id && c.contratos_zapsign?.status) {
-          map[c.pedido_id] = c.contratos_zapsign.status;
-        }
-        if (c.pedido_id && c.status_geracao) {
-          statusMap[c.pedido_id] = c.status_geracao;
-        }
-      });
-      setZapsignMap(map);
-      setContratoStatusMap(statusMap);
-    } else {
-      setZapsignMap({});
-      setContratoStatusMap({});
-    }
-
-    setLoading(false);
-  }
-
-  useEffect(() => { loadData(); }, []);
-
-  // Default filial filter from user access
-  useEffect(() => {
-    if (filterFilial === "_init_") {
-      if (profile?.filial_favorita_id) {
-        setFilterFilial(profile.filial_favorita_id);
-      } else {
-        setFilterFilial("all");
-      }
-    }
-  }, [filialPadraoId, profile?.filial_favorita_id]);
+  }, [form.filial_id, loadFilialParametros]);
 
   // ─── Buscar contrato ativo do cliente ─────────────────────────────────────
 
