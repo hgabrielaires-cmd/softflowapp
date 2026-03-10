@@ -538,9 +538,9 @@ export default function Pedidos() {
 
 
   async function openCreate() {
-    const defaultImp = (profile as any)?.comissao_implantacao_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
-    const defaultMens = (profile as any)?.comissao_mensalidade_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
-    const defaultServ = (profile as any)?.comissao_servico_percentual?.toString() ?? "5";
+    const defaultImp = profile?.comissao_implantacao_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
+    const defaultMens = profile?.comissao_mensalidade_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
+    const defaultServ = profile?.comissao_servico_percentual?.toString() ?? "5";
 
     // Usar filialPadraoId do hook (favorita > filial_id > primeira vinculada)
     let resolvedFilialId = filialPadraoId || filialFavoritaId || profile?.filial_favorita_id || profile?.filial_id || "";
