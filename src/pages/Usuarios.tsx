@@ -408,8 +408,8 @@ export default function Usuarios() {
           <Input
             placeholder="Buscar por nome ou e-mail..."
             className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={q.search}
+            onChange={(e) => q.setSearch(e.target.value)}
           />
         </div>
 
