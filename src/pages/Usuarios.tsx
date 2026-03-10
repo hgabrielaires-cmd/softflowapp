@@ -724,7 +724,7 @@ export default function Usuarios() {
                 Mesas de Atendimento
               </p>
               <div className="space-y-2">
-                {mesasDisponiveis.map((m) => (
+                {q.mesasDisponiveis.map((m) => (
                   <div key={m.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
                     <span className="text-sm">{m.nome}</span>
                     <Switch
