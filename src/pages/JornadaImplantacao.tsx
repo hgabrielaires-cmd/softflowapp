@@ -18,39 +18,9 @@ import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Eye, GripVerti
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Jornada, JornadaEtapa, JornadaAtividade, MesaAtendimento, ChecklistItem, ChecklistItemTipo, Filial } from "@/lib/supabase-types";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
-
-// ─── Local state types for creation ──────────────────────────────────────────
-
-interface LocalAtividade {
-  tempId: string;
-  id?: string;
-  nome: string;
-  descricao: string;
-  horas_estimadas: number;
-  checklist: ChecklistItem[];
-  tipo_responsabilidade: string;
-  mesa_atendimento_id: string;
-  ordem: number;
-}
-
-interface LocalEtapa {
-  tempId: string;
-  id?: string;
-  nome: string;
-  descricao: string;
-  mesa_atendimento_id: string;
-  permite_clonar: boolean;
-  ordem: number;
-  atividades: LocalAtividade[];
-}
-
-const emptyForm = {
-  nome: "",
-  descricao: "",
-  filial_id: "",
-  vinculo_tipo: "",
-  vinculo_id: "",
-};
+import type { LocalEtapa, LocalAtividade } from "@/pages/jornada-implantacao/types";
+import { emptyJornadaForm, emptyEtapaForm, emptyAtividadeForm } from "@/pages/jornada-implantacao/constants";
+import { formatHorasMinutos, calcTotalMinutos, getVinculoLabel, getVinculoItems, mapEtapasToLocal, parseHorasText, decimalToHorasText } from "@/pages/jornada-implantacao/helpers";
 
 export default function JornadaImplantacao() {
   const queryClient = useQueryClient();
