@@ -328,7 +328,7 @@ export default function Clientes() {
       toast.error("Erro ao desativar contato: " + error.message);
     } else {
       toast.success("Contato desativado com sucesso");
-      await fetchContatos(clienteContatos.id);
+      await loadContatos(clienteContatos.id);
     }
   }
 
