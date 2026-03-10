@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
-import { AppRole, ROLE_LABELS, Filial } from "@/lib/supabase-types";
+import { AppRole, ROLE_LABELS } from "@/lib/supabase-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,20 +44,14 @@ import { Plus, Search, UserX, UserCheck, Users, Loader2, Mail, Pencil, ShieldChe
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
-import { UserWithRoles, MesaOption } from "./usuarios/types";
-import { ALL_ROLES, ITEMS_PER_PAGE, TIPO_TECNICO_OPTIONS } from "./usuarios/constants";
+import { UserWithRoles } from "./usuarios/types";
+import { ALL_ROLES, TIPO_TECNICO_OPTIONS } from "./usuarios/constants";
 import { gerarSenhaSegura } from "./usuarios/helpers";
+import { useUsuariosQueries } from "./usuarios/useUsuariosQueries";
 
 export default function Usuarios() {
   const { isAdmin } = useAuth();
-  const [users, setUsers] = useState<UserWithRoles[]>([]);
-  const [filiais, setFiliais] = useState<Filial[]>([]);
-  const [mesasDisponiveis, setMesasDisponiveis] = useState<MesaOption[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filiaisLoaded, setFiliaisLoaded] = useState(false);
-  const [search, setSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  
+  const q = useUsuariosQueries();
   
 
   // Create dialog
