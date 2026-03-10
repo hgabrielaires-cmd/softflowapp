@@ -4,6 +4,9 @@ import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
 import { Filial } from "@/lib/supabase-types";
+import type { Contrato, ZapSignRecord, ModuloAdicionadoItem } from "./contratos/types";
+import { ITEMS_PER_PAGE, UF_LIST, ZAPSIGN_MSGS, WHATSAPP_MSGS, GERAR_MSGS_CONTRATO, GERAR_MSGS_OA } from "./contratos/constants";
+import { fmtBRL } from "./contratos/helpers";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -87,86 +90,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TablePagination } from "@/components/TablePagination";
 
-interface ModuloAdicionadoItem {
-  modulo_id: string;
-  nome: string;
-  quantidade: number;
-  valor_implantacao_modulo: number;
-  valor_mensalidade_modulo: number;
-}
-
-interface Contrato {
-  id: string;
-  numero_exibicao: string;
-  numero_registro: number;
-  cliente_id: string;
-  plano_id: string | null;
-  pedido_id: string | null;
-  tipo: string;
-  status: string;
-  contrato_origem_id: string | null;
-  created_at: string;
-  updated_at: string;
-  pdf_url: string | null;
-  status_geracao: string | null;
-  clientes?: {
-    nome_fantasia: string;
-    filial_id: string | null;
-    razao_social: string | null;
-    cnpj_cpf: string;
-    inscricao_estadual: string | null;
-    cidade: string | null;
-    uf: string | null;
-    cep: string | null;
-    logradouro: string | null;
-    numero: string | null;
-    complemento: string | null;
-    bairro: string | null;
-    telefone: string | null;
-    email: string | null;
-  } | null;
-  planos?: { nome: string; descricao: string | null; valor_mensalidade_padrao: number } | null;
-  pedidos?: {
-    status_pedido: string;
-    contrato_liberado: boolean;
-    financeiro_status: string;
-    valor_implantacao_final: number;
-    valor_mensalidade_final: number;
-    valor_implantacao_original: number;
-    valor_mensalidade_original: number;
-    valor_total: number;
-    desconto_implantacao_tipo: string;
-    desconto_implantacao_valor: number;
-    desconto_mensalidade_tipo: string;
-    desconto_mensalidade_valor: number;
-    modulos_adicionais: ModuloAdicionadoItem[] | null;
-    observacoes: string | null;
-    motivo_desconto: string | null;
-    pagamento_mensalidade_observacao: string | null;
-    pagamento_implantacao_observacao: string | null;
-    pagamento_implantacao_forma: string | null;
-    pagamento_implantacao_parcelas: number | null;
-    pagamento_mensalidade_forma: string | null;
-    pagamento_mensalidade_parcelas: number | null;
-    filial_id: string;
-    vendedor_id: string;
-    tipo_pedido?: string;
-    servicos_pedido?: any[] | null;
-    tipo_atendimento?: string | null;
-  } | null;
-}
-
-interface ZapSignRecord {
-  contrato_id: string;
-  zapsign_doc_token: string;
-  status: string;
-  signers: { name: string; email: string; token: string; status: string; sign_url: string; signed_at?: string }[];
-  sign_url: string | null;
-}
-
-function fmtBRL(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
+// Types, constants and helpers imported from ./contratos/
 
 export default function Contratos() {
   const { isAdmin, roles, profile } = useAuth();
@@ -202,7 +126,7 @@ export default function Contratos() {
   const [filterAte, setFilterAte] = useState("");
   const [filterBusca, setFilterBusca] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 15;
+  
 
   const [selected, setSelected] = useState<Contrato | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
@@ -264,7 +188,7 @@ export default function Contratos() {
   const [retroClienteSearchFocused, setRetroClienteSearchFocused] = useState(false);
 
   // Novo cliente inline no retroativo
-  const UF_LIST = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+  
   const emptyRetroClienteForm = { nome_fantasia: "", razao_social: "", cnpj_cpf: "", contato_nome: "", telefone: "", email: "", cidade: "", uf: "", cep: "", logradouro: "", numero: "", complemento: "", bairro: "" };
   const [openRetroClienteDialog, setOpenRetroClienteDialog] = useState(false);
   const [retroClienteForm, setRetroClienteForm] = useState(emptyRetroClienteForm);
@@ -499,37 +423,7 @@ export default function Contratos() {
   const [zapsignPopupContrato, setZapsignPopupContrato] = useState<Contrato | null>(null);
   const [zapsignPopupError, setZapsignPopupError] = useState<string | null>(null);
 
-  const ZAPSIGN_MSGS = [
-    "🚀 Rumo à ativação",
-    "⚡ O Softflow não para",
-    "🏁 Pé no acelerador",
-    "📂 Burocracia zero",
-    "✨ Quase lá",
-  ];
-
-  const WHATSAPP_MSGS = [
-    "📲 Conectando ao WhatsApp...",
-    "⚡ Softflow em ação!",
-    "✅ Quase pronto!",
-    "💬 Disparando notificação automática...",
-    "🤖 O Flowy robô do Softflow está enviando a mensagem de confirmação para o WhatsApp agora.",
-  ];
-
-  const GERAR_MSGS_CONTRATO = [
-    "Ajustando os detalhes finais…",
-    "Quase lá… deixando tudo redondo pra você!",
-    "Montando seu contrato sob medida…",
-    "Organizando tudo para assinatura…",
-    "Preparando seu Termo de Aceite 💙",
-  ];
-
-  const GERAR_MSGS_OA = [
-    "Montando sua Ordem de Atendimento…",
-    "Ajustando os serviços…",
-    "Quase lá… finalizando sua OA!",
-    "Organizando tudo pra você 💙",
-    "Preparando sua OA sob medida…",
-  ];
+  // Message constants imported from ./contratos/constants
 
   // (old gerarStatus effect removed - now unified in zapsignPopup)
 
