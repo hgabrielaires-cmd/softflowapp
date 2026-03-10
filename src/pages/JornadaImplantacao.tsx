@@ -750,7 +750,7 @@ export default function JornadaImplantacao() {
                   <Select value={form.vinculo_id} onValueChange={(v) => setForm((p) => ({ ...p, vinculo_id: v }))} disabled={!form.vinculo_tipo}>
                     <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
-                      {getVinculoItems().map((item) => <SelectItem key={item.id} value={item.id}>{item.nome}</SelectItem>)}
+                      {vinculoItems.map((item) => <SelectItem key={item.id} value={item.id}>{item.nome}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
