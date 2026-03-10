@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -41,12 +41,12 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import type {
-  Fatura, NotaFiscal, ClienteOption, ContratoOption,
-  FaturaFormState, NotaFiscalFormState, PagamentoFormState,
+  Fatura, NotaFiscal, FaturaFormState, NotaFiscalFormState,
 } from "@/pages/faturamento";
 import {
   STATUS_FATURA, TIPOS_FATURA, FORMAS_PAGAMENTO, PAGE_SIZE,
   newFaturaFormDefaults, newNotaFiscalFormDefaults,
+  useFaturasQueries, useNotasFiscaisQueries,
 } from "@/pages/faturamento";
 import {
   fmtCurrency, isVencida, getStatusFaturaColor,
@@ -114,84 +114,25 @@ function FaturamentoContent() {
 
 function FaturasTab() {
   const { filialPadraoId } = useUserFiliais();
-  const [faturas, setFaturas] = useState<Fatura[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [tipoFilter, setTipoFilter] = useState("all");
+  const q = useFaturasQueries();
+
   const [openEditor, setOpenEditor] = useState(false);
   const [editingFatura, setEditingFatura] = useState<Fatura | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [clientes, setClientes] = useState<ClienteOption[]>([]);
-  const [contratos, setContratos] = useState<ContratoOption[]>([]);
-  const [registrarPagamentoId, setRegistrarPagamentoId] = useState<string | null>(null);
-  const [pagamentoForm, setPagamentoForm] = useState<PagamentoFormState>({ data_pagamento: "", forma_pagamento: "" });
-
   const [form, setForm] = useState<FaturaFormState>(newFaturaFormDefaults());
-
-  const loadFaturas = useCallback(async () => {
-    setLoading(true);
-    let query = supabase
-      .from("faturas")
-      .select("*, clientes(nome_fantasia), contratos(numero_exibicao)", { count: "exact" });
-
-    if (statusFilter !== "all") query = query.eq("status", statusFilter);
-    if (tipoFilter !== "all") query = query.eq("tipo", tipoFilter);
-    if (search.trim()) {
-      query = query.or(`numero_fatura.ilike.%${search.trim()}%,clientes.nome_fantasia.ilike.%${search.trim()}%`);
-    }
-
-    const from = (page - 1) * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
-
-    const { data, count, error } = await query
-      .order("data_vencimento", { ascending: false })
-      .range(from, to);
-
-    if (error) toast.error("Erro ao carregar faturas: " + error.message);
-    setFaturas((data || []) as unknown as Fatura[]);
-    setTotal(count || 0);
-    setLoading(false);
-  }, [page, search, statusFilter, tipoFilter]);
-
-  const loadClientes = useCallback(async () => {
-    const { data } = await supabase
-      .from("clientes")
-      .select("id, nome_fantasia")
-      .eq("ativo", true)
-      .order("nome_fantasia")
-      .limit(500);
-    setClientes((data || []) as ClienteOption[]);
-  }, []);
-
-  const loadContratos = useCallback(async (clienteId: string) => {
-    if (!clienteId) { setContratos([]); return; }
-    const { data } = await supabase
-      .from("contratos")
-      .select("id, numero_exibicao")
-      .eq("cliente_id", clienteId)
-      .eq("status", "Ativo")
-      .order("numero_exibicao");
-    setContratos((data || []) as ContratoOption[]);
-  }, []);
-
-  useEffect(() => { loadFaturas(); }, [loadFaturas]);
-  useEffect(() => { loadClientes(); }, [loadClientes]);
 
   function openNew() {
     setEditingFatura(null);
     setForm(newFaturaFormDefaults());
-    setContratos([]);
+    q.setContratos([]);
     setOpenEditor(true);
   }
 
   function openEdit(f: Fatura) {
     setEditingFatura(f);
     setForm(faturaToFormState(f));
-    loadContratos(f.cliente_id);
+    q.loadContratos(f.cliente_id);
     setOpenEditor(true);
   }
 
@@ -214,7 +155,7 @@ function FaturasTab() {
     toast.success(editingFatura ? "Fatura atualizada!" : "Fatura criada!");
     setSaving(false);
     setOpenEditor(false);
-    loadFaturas();
+    q.loadFaturas();
   }
 
   async function handleDelete(id: string) {
@@ -222,37 +163,19 @@ function FaturasTab() {
     if (error) { toast.error("Erro ao excluir: " + error.message); return; }
     toast.success("Fatura excluída");
     setDeletingId(null);
-    loadFaturas();
+    q.loadFaturas();
   }
 
   async function handleCancelar(id: string) {
     const { error } = await supabase.from("faturas").update({ status: "Cancelado" }).eq("id", id);
     if (error) { toast.error("Erro ao cancelar: " + error.message); return; }
     toast.success("Fatura cancelada");
-    loadFaturas();
-  }
-
-  async function handleRegistrarPagamento() {
-    if (!registrarPagamentoId) return;
-    if (!pagamentoForm.data_pagamento) { toast.error("Informe a data do pagamento"); return; }
-
-    const { error } = await supabase.from("faturas").update({
-      status: "Pago",
-      data_pagamento: pagamentoForm.data_pagamento,
-      forma_pagamento: pagamentoForm.forma_pagamento || null,
-    }).eq("id", registrarPagamentoId);
-
-    if (error) { toast.error("Erro: " + error.message); return; }
-    toast.success("Pagamento registrado!");
-    setRegistrarPagamentoId(null);
-    loadFaturas();
+    q.loadFaturas();
   }
 
   function getStatusBadge(status: string) {
     return <Badge className={`text-xs ${getStatusFaturaColor(status)}`}>{STATUS_FATURA.find(s => s.value === status)?.label || status}</Badge>;
   }
-
-  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
     <div className="space-y-4">
@@ -263,12 +186,12 @@ function FaturasTab() {
             <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar por nº ou cliente..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              value={q.search}
+              onChange={(e) => { q.setSearch(e.target.value); q.setPage(1); }}
               className="pl-9 h-9 w-64"
             />
           </div>
-          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+          <Select value={q.statusFilter} onValueChange={(v) => { q.setStatusFilter(v); q.setPage(1); }}>
             <SelectTrigger className="h-9 w-36">
               <Filter className="h-3.5 w-3.5 mr-1.5" />
               <SelectValue placeholder="Status" />
@@ -280,7 +203,7 @@ function FaturasTab() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={tipoFilter} onValueChange={(v) => { setTipoFilter(v); setPage(1); }}>
+          <Select value={q.tipoFilter} onValueChange={(v) => { q.setTipoFilter(v); q.setPage(1); }}>
             <SelectTrigger className="h-9 w-36">
               <SelectValue placeholder="Tipo" />
             </SelectTrigger>
@@ -298,7 +221,7 @@ function FaturasTab() {
       </div>
 
       {/* Summary Cards */}
-      <FaturasResumo faturas={faturas} />
+      <FaturasResumo faturas={q.faturas} />
 
       {/* Table */}
       <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
@@ -317,20 +240,20 @@ function FaturasTab() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
+            {q.loading ? (
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-12">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                 </TableCell>
               </TableRow>
-            ) : faturas.length === 0 ? (
+            ) : q.faturas.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-16 text-muted-foreground">
                   <Receipt className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   Nenhuma fatura encontrada
                 </TableCell>
               </TableRow>
-            ) : faturas.map((f) => (
+            ) : q.faturas.map((f) => (
               <TableRow key={f.id} className={isVencida(f) ? "bg-red-50/50 dark:bg-red-950/10" : ""}>
                 <TableCell className="font-mono text-sm font-medium">{f.numero_fatura}</TableCell>
                 <TableCell className="max-w-[180px] truncate">{f.clientes?.nome_fantasia || "—"}</TableCell>
@@ -374,10 +297,7 @@ function FaturasTab() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                       {f.status === "Pendente" && (
-                        <DropdownMenuItem onClick={() => {
-                          setRegistrarPagamentoId(f.id);
-                          setPagamentoForm({ data_pagamento: format(new Date(), "yyyy-MM-dd"), forma_pagamento: f.forma_pagamento || "" });
-                        }} className="cursor-pointer">
+                        <DropdownMenuItem onClick={() => q.openRegistrarPagamento(f.id, f.forma_pagamento)} className="cursor-pointer">
                           <CheckCircle className="h-4 w-4 mr-2" /> Registrar Pagamento
                         </DropdownMenuItem>
                       )}
@@ -402,8 +322,8 @@ function FaturasTab() {
         </Table>
       </div>
 
-      {totalPages > 1 && (
-        <TablePagination currentPage={page} totalPages={totalPages} totalItems={total} itemsPerPage={PAGE_SIZE} onPageChange={setPage} />
+      {q.totalPages > 1 && (
+        <TablePagination currentPage={q.page} totalPages={q.totalPages} totalItems={q.total} itemsPerPage={PAGE_SIZE} onPageChange={q.setPage} />
       )}
 
       {/* Editor Dialog */}
@@ -418,24 +338,24 @@ function FaturasTab() {
           <form onSubmit={handleSave} className="flex flex-col gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Cliente *</Label>
-              <Select value={form.cliente_id} onValueChange={(v) => { setForm(f => ({ ...f, cliente_id: v, contrato_id: "" })); loadContratos(v); }}>
+              <Select value={form.cliente_id} onValueChange={(v) => { setForm(f => ({ ...f, cliente_id: v, contrato_id: "" })); q.loadContratos(v); }}>
                 <SelectTrigger className="h-9"><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
                 <SelectContent>
-                  {clientes.map(c => (
+                  {q.clientes.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {contratos.length > 0 && (
+            {q.contratos.length > 0 && (
               <div className="space-y-1">
                 <Label className="text-xs">Contrato (opcional)</Label>
                 <Select value={form.contrato_id || "_none"} onValueChange={(v) => setForm(f => ({ ...f, contrato_id: v === "_none" ? "" : v }))}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Nenhum" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="_none">Nenhum</SelectItem>
-                    {contratos.map(c => (
+                    {q.contratos.map(c => (
                       <SelectItem key={c.id} value={c.id}>{c.numero_exibicao}</SelectItem>
                     ))}
                   </SelectContent>
@@ -528,7 +448,7 @@ function FaturasTab() {
       </Dialog>
 
       {/* Registrar Pagamento Dialog */}
-      <Dialog open={!!registrarPagamentoId} onOpenChange={() => setRegistrarPagamentoId(null)}>
+      <Dialog open={!!q.registrarPagamentoId} onOpenChange={() => q.setRegistrarPagamentoId(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -538,11 +458,11 @@ function FaturasTab() {
           <div className="flex flex-col gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Data do Pagamento *</Label>
-              <Input type="date" value={pagamentoForm.data_pagamento} onChange={(e) => setPagamentoForm(f => ({ ...f, data_pagamento: e.target.value }))} className="h-9" />
+              <Input type="date" value={q.pagamentoForm.data_pagamento} onChange={(e) => q.setPagamentoForm(f => ({ ...f, data_pagamento: e.target.value }))} className="h-9" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Forma de Pagamento</Label>
-              <Select value={pagamentoForm.forma_pagamento || "_none"} onValueChange={(v) => setPagamentoForm(f => ({ ...f, forma_pagamento: v === "_none" ? "" : v }))}>
+              <Select value={q.pagamentoForm.forma_pagamento || "_none"} onValueChange={(v) => q.setPagamentoForm(f => ({ ...f, forma_pagamento: v === "_none" ? "" : v }))}>
                 <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_none">Nenhuma</SelectItem>
@@ -553,8 +473,8 @@ function FaturasTab() {
               </Select>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setRegistrarPagamentoId(null)}>Cancelar</Button>
-              <Button onClick={handleRegistrarPagamento}>Confirmar</Button>
+              <Button variant="outline" onClick={() => q.setRegistrarPagamentoId(null)}>Cancelar</Button>
+              <Button onClick={q.handleRegistrarPagamento}>Confirmar</Button>
             </div>
           </div>
         </DialogContent>
@@ -615,66 +535,18 @@ function FaturasResumo({ faturas }: { faturas: Fatura[] }) {
 
 function NotasFiscaisTab() {
   const { filialPadraoId } = useUserFiliais();
-  const [notas, setNotas] = useState<NotaFiscal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
+  const q = useNotasFiscaisQueries();
+
   const [openEditor, setOpenEditor] = useState(false);
   const [editingNota, setEditingNota] = useState<NotaFiscal | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [clientes, setClientes] = useState<ClienteOption[]>([]);
-  const [faturasOptions, setFaturasOptions] = useState<{ id: string; numero_fatura: string }[]>([]);
-
   const [form, setForm] = useState<NotaFiscalFormState>(newNotaFiscalFormDefaults());
-
-  const loadNotas = useCallback(async () => {
-    setLoading(true);
-    let query = supabase
-      .from("notas_fiscais")
-      .select("*, clientes(nome_fantasia), faturas(numero_fatura)", { count: "exact" });
-
-    if (search.trim()) {
-      query = query.or(`numero_nf.ilike.%${search.trim()}%,clientes.nome_fantasia.ilike.%${search.trim()}%`);
-    }
-
-    const from = (page - 1) * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
-
-    const { data, count, error } = await query
-      .order("data_emissao", { ascending: false })
-      .range(from, to);
-
-    if (error) toast.error("Erro ao carregar notas: " + error.message);
-    setNotas((data || []) as unknown as NotaFiscal[]);
-    setTotal(count || 0);
-    setLoading(false);
-  }, [page, search]);
-
-  const loadClientes = useCallback(async () => {
-    const { data } = await supabase.from("clientes").select("id, nome_fantasia").eq("ativo", true).order("nome_fantasia").limit(500);
-    setClientes((data || []) as ClienteOption[]);
-  }, []);
-
-  const loadFaturas = useCallback(async (clienteId: string) => {
-    if (!clienteId) { setFaturasOptions([]); return; }
-    const { data } = await supabase
-      .from("faturas")
-      .select("id, numero_fatura")
-      .eq("cliente_id", clienteId)
-      .order("numero_fatura", { ascending: false })
-      .limit(50);
-    setFaturasOptions((data || []) as { id: string; numero_fatura: string }[]);
-  }, []);
-
-  useEffect(() => { loadNotas(); }, [loadNotas]);
-  useEffect(() => { loadClientes(); }, [loadClientes]);
 
   function openNew() {
     setEditingNota(null);
     setForm(newNotaFiscalFormDefaults());
-    setFaturasOptions([]);
+    q.setFaturasOptions([]);
     setOpenEditor(true);
   }
 
@@ -689,7 +561,7 @@ function NotasFiscaisTab() {
       data_emissao: n.data_emissao,
       observacoes: n.observacoes || "",
     });
-    loadFaturas(n.cliente_id);
+    q.loadFaturasOptions(n.cliente_id);
     setOpenEditor(true);
   }
 
@@ -712,7 +584,7 @@ function NotasFiscaisTab() {
     toast.success(editingNota ? "NF atualizada!" : "NF registrada!");
     setSaving(false);
     setOpenEditor(false);
-    loadNotas();
+    q.loadNotas();
   }
 
   async function handleDelete(id: string) {
@@ -720,24 +592,22 @@ function NotasFiscaisTab() {
     if (error) { toast.error("Erro: " + error.message); return; }
     toast.success("NF excluída");
     setDeletingId(null);
-    loadNotas();
+    q.loadNotas();
   }
 
   async function handleCancelarNF(id: string) {
     const { error } = await supabase.from("notas_fiscais").update({ status: "Cancelada" }).eq("id", id);
     if (error) { toast.error("Erro: " + error.message); return; }
     toast.success("NF cancelada");
-    loadNotas();
+    q.loadNotas();
   }
-
-  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="relative">
           <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar por nº NF ou cliente..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="pl-9 h-9 w-64" />
+          <Input placeholder="Buscar por nº NF ou cliente..." value={q.search} onChange={(e) => { q.setSearch(e.target.value); q.setPage(1); }} className="pl-9 h-9 w-64" />
         </div>
         <Button className="gap-2" onClick={openNew}>
           <Plus className="h-4 w-4" /> Nova NF
@@ -759,20 +629,20 @@ function NotasFiscaisTab() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
+            {q.loading ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-12">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                 </TableCell>
               </TableRow>
-            ) : notas.length === 0 ? (
+            ) : q.notas.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-16 text-muted-foreground">
                   <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   Nenhuma nota fiscal encontrada
                 </TableCell>
               </TableRow>
-            ) : notas.map((n) => (
+            ) : q.notas.map((n) => (
               <TableRow key={n.id}>
                 <TableCell className="font-mono text-sm font-medium">{n.numero_nf}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{n.serie}</TableCell>
@@ -817,8 +687,8 @@ function NotasFiscaisTab() {
         </Table>
       </div>
 
-      {totalPages > 1 && (
-        <TablePagination currentPage={page} totalPages={totalPages} totalItems={total} itemsPerPage={PAGE_SIZE} onPageChange={setPage} />
+      {q.totalPages > 1 && (
+        <TablePagination currentPage={q.page} totalPages={q.totalPages} totalItems={q.total} itemsPerPage={PAGE_SIZE} onPageChange={q.setPage} />
       )}
 
       {/* NF Editor */}
@@ -833,24 +703,24 @@ function NotasFiscaisTab() {
           <form onSubmit={handleSave} className="flex flex-col gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Cliente *</Label>
-              <Select value={form.cliente_id} onValueChange={(v) => { setForm(f => ({ ...f, cliente_id: v, fatura_id: "" })); loadFaturas(v); }}>
+              <Select value={form.cliente_id} onValueChange={(v) => { setForm(f => ({ ...f, cliente_id: v, fatura_id: "" })); q.loadFaturasOptions(v); }}>
                 <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {clientes.map(c => (
+                  {q.clientes.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {faturasOptions.length > 0 && (
+            {q.faturasOptions.length > 0 && (
               <div className="space-y-1">
                 <Label className="text-xs">Fatura vinculada (opcional)</Label>
                 <Select value={form.fatura_id || "_none"} onValueChange={(v) => setForm(f => ({ ...f, fatura_id: v === "_none" ? "" : v }))}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="_none">Nenhuma</SelectItem>
-                    {faturasOptions.map(f => (
+                    {q.faturasOptions.map(f => (
                       <SelectItem key={f.id} value={f.id}>{f.numero_fatura}</SelectItem>
                     ))}
                   </SelectContent>
