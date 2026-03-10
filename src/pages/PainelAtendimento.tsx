@@ -1033,27 +1033,44 @@ export default function PainelAtendimento() {
                               <p className="text-xs font-medium text-foreground">{atividade.nome}</p>
                               {atividade.mesas_atendimento?.nome && <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-1" style={{ backgroundColor: atividade.mesas_atendimento.cor ? `${atividade.mesas_atendimento.cor}15` : undefined, color: atividade.mesas_atendimento.cor || undefined, borderColor: atividade.mesas_atendimento.cor ? `${atividade.mesas_atendimento.cor}40` : undefined }}>{atividade.mesas_atendimento.nome}</Badge>}
                               {atividade.horas_estimadas > 0 && <span className="text-[10px] text-muted-foreground"><Clock className="h-2.5 w-2.5 inline mr-0.5" />{formatSLA(atividade.horas_estimadas)}</span>}
-                              {/* Status badge */}
-                              {statusAtiv === "pendente" && <Badge variant="secondary" className="text-[9px] px-1.5 py-0 ml-auto">Pendente</Badge>}
-                              {statusAtiv === "em_andamento" && <Badge className="text-[9px] px-1.5 py-0 ml-auto bg-accent text-accent-foreground">Em andamento</Badge>}
-                              {statusAtiv === "concluida" && !emAtraso && <Badge className="text-[9px] px-1.5 py-0 ml-auto bg-primary text-primary-foreground">Concluída</Badge>}
-                              {statusAtiv === "concluida" && emAtraso && <Badge variant="destructive" className="text-[9px] px-1.5 py-0 ml-auto gap-0.5"><AlertTriangle className="h-2.5 w-2.5" />Concluída em atraso</Badge>}
+                              {/* Action button + Status badge — grouped to the right */}
+                              <div className="flex items-center gap-1.5 ml-auto">
+                                {statusAtiv === "pendente" && (
+                                  <Button size="sm" className="h-6 text-[10px] gap-1 bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => iniciarAtividade(detailCard.id, atividade.id, detailCard.etapa_id)}>
+                                    <Play className="h-3 w-3" />Iniciar
+                                  </Button>
+                                )}
+                                {statusAtiv === "pendente" && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Pendente</Badge>}
+                                {statusAtiv === "em_andamento" && (
+                                  <Button size="sm" className="h-6 text-[10px] gap-1 bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => {
+                                    const atividadeItems: ChecklistItem[] = Array.isArray(atividade.checklist) ? atividade.checklist : [];
+                                    if (atividadeItems.length > 0) {
+                                      const todosFeitos = atividadeItems.every((_: ChecklistItem, i: number) => {
+                                        const k = `${atividade.id}_${i}`;
+                                        return checklistProgresso[k]?.concluido === true;
+                                      });
+                                      if (!todosFeitos) {
+                                        toast.error("Conclua todos os itens do checklist antes de finalizar a atividade.");
+                                        return;
+                                      }
+                                    }
+                                    concluirAtividade(detailCard.id, atividade.id, detailCard.etapa_id, atividade.horas_estimadas || 0);
+                                  }}>
+                                    <CheckSquare className="h-3 w-3" />Concluir
+                                  </Button>
+                                )}
+                                {statusAtiv === "em_andamento" && <Badge className="text-[9px] px-1.5 py-0 bg-accent text-accent-foreground">Em andamento</Badge>}
+                                {statusAtiv === "concluida" && !emAtraso && <Badge className="text-[9px] px-1.5 py-0 bg-primary text-primary-foreground">Concluída</Badge>}
+                                {statusAtiv === "concluida" && emAtraso && <Badge variant="destructive" className="text-[9px] px-1.5 py-0 gap-0.5"><AlertTriangle className="h-2.5 w-2.5" />Concluída em atraso</Badge>}
+                              </div>
                             </div>
-                            {/* Ação iniciar/concluir atividade */}
+                            {/* Timestamps */}
+                            {(execAtiv?.iniciado_em || execAtiv?.concluido_em) && (
                             <div className="flex items-center gap-2 mb-1.5">
-                              {statusAtiv === "pendente" && (
-                                <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => iniciarAtividade(detailCard.id, atividade.id, detailCard.etapa_id)}>
-                                  <Play className="h-3 w-3" />Iniciar
-                                </Button>
-                              )}
-                              {statusAtiv === "em_andamento" && (
-                                <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => concluirAtividade(detailCard.id, atividade.id, detailCard.etapa_id, atividade.horas_estimadas || 0)}>
-                                  <CheckSquare className="h-3 w-3" />Concluir
-                                </Button>
-                              )}
                               {execAtiv?.iniciado_em && <span className="text-[10px] text-muted-foreground">Início: {new Date(execAtiv.iniciado_em).toLocaleDateString("pt-BR")} {new Date(execAtiv.iniciado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>}
                               {execAtiv?.concluido_em && <span className="text-[10px] text-muted-foreground">Fim: {new Date(execAtiv.concluido_em).toLocaleDateString("pt-BR")} {new Date(execAtiv.concluido_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>}
                             </div>
+                            )}
                             {/* Checklist items */}
                             {items.length > 0 && (
                               <ul className="space-y-1 pl-1">
