@@ -291,7 +291,7 @@ export default function Clientes() {
     } else {
       toast.success(editingContato ? "Contato atualizado!" : "Contato adicionado!");
       setContatoDialogOpen(false);
-      await fetchContatos(clienteContatos.id);
+      await loadContatos(clienteContatos.id);
     }
     setSavingContato(false);
   }
