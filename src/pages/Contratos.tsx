@@ -1488,7 +1488,7 @@ export default function Contratos() {
                       size="sm"
                       className="w-full gap-2 mt-2"
                       disabled={enviandoWhatsapp}
-                      onClick={() => handleEnviarWhatsapp(mensagem)}
+                      onClick={() => handleEnviarWhatsapp(mensagem, contatosCliente, selected)}
                     >
                       {enviandoWhatsapp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                       {enviandoWhatsapp ? "Enviando..." : "Enviar WhatsApp"}
