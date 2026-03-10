@@ -1,10 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
-import { useCrudPermissions } from "@/hooks/useCrudPermissions";
-import { Cliente, Filial, Contrato } from "@/lib/supabase-types";
-import { useUserFiliais } from "@/hooks/useUserFiliais";
+import { Cliente } from "@/lib/supabase-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +38,8 @@ import { TablePagination } from "@/components/TablePagination";
 import {
   UF_LIST, emptyForm, emptyContatoForm, ITEMS_PER_PAGE,
 } from "@/pages/clientes/constants";
-import type { ClienteContato, PedidoHistorico, RentabilidadeConsolidada } from "@/pages/clientes/types";
+import type { ClienteContato } from "@/pages/clientes/types";
+import { useClientesQueries } from "@/pages/clientes/useClientesQueries";
 import { HistoricoContratualDialog } from "@/pages/clientes/components/HistoricoContratualDialog";
 import { ClienteContatosDialog } from "@/pages/clientes/components/ClienteContatosDialog";
 import { ContatoFormDialog } from "@/pages/clientes/components/ContatoFormDialog";
