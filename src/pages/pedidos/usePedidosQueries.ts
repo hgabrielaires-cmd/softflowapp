@@ -259,8 +259,8 @@ export function usePedidosQueries(): UsePedidosQueriesReturn {
       .single();
     if (data) {
       setLimiteDesconto({
-        implantacao: (data as any).desconto_limite_implantacao ?? 100,
-        mensalidade: (data as any).desconto_limite_mensalidade ?? 100,
+        implantacao: data.desconto_limite_implantacao ?? 100,
+        mensalidade: data.desconto_limite_mensalidade ?? 100,
       });
     } else {
       setLimiteDesconto({ implantacao: 100, mensalidade: 100 });

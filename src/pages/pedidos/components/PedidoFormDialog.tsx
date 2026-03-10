@@ -481,20 +481,20 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
             <div className="space-y-1.5">
               <Label>Vendedor *</Label>
               {isAdmin ? (
-                <Select value={form.vendedor_id} onValueChange={(v) => {
-                  const vend = vendedores.find((vv: any) => vv.user_id === v);
-                  setForm((f) => ({
-                    ...f,
-                    vendedor_id: v,
-                    comissao_percentual: (vend as any)?.comissao_implantacao_percentual?.toString() ?? vend?.comissao_percentual?.toString() ?? f.comissao_percentual,
-                    comissao_implantacao_percentual: (vend as any)?.comissao_implantacao_percentual?.toString() ?? vend?.comissao_percentual?.toString() ?? f.comissao_implantacao_percentual,
-                    comissao_mensalidade_percentual: (vend as any)?.comissao_mensalidade_percentual?.toString() ?? vend?.comissao_percentual?.toString() ?? f.comissao_mensalidade_percentual,
-                    comissao_servico_percentual: (vend as any)?.comissao_servico_percentual?.toString() ?? f.comissao_servico_percentual,
-                  }));
-                }}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    {vendedores.map((v: any) => <SelectItem key={v.user_id} value={v.user_id}>{v.full_name}</SelectItem>)}
+                 <Select value={form.vendedor_id} onValueChange={(v) => {
+                   const vend = vendedores.find((vv) => vv.user_id === v);
+                   setForm((f) => ({
+                     ...f,
+                     vendedor_id: v,
+                     comissao_percentual: vend?.comissao_implantacao_percentual?.toString() ?? vend?.comissao_percentual?.toString() ?? f.comissao_percentual,
+                     comissao_implantacao_percentual: vend?.comissao_implantacao_percentual?.toString() ?? vend?.comissao_percentual?.toString() ?? f.comissao_implantacao_percentual,
+                     comissao_mensalidade_percentual: vend?.comissao_mensalidade_percentual?.toString() ?? vend?.comissao_percentual?.toString() ?? f.comissao_mensalidade_percentual,
+                     comissao_servico_percentual: vend?.comissao_servico_percentual?.toString() ?? f.comissao_servico_percentual,
+                   }));
+                 }}>
+                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                   <SelectContent>
+                     {vendedores.map((v) => <SelectItem key={v.user_id} value={v.user_id}>{v.full_name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               ) : (

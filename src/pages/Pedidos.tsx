@@ -538,16 +538,16 @@ export default function Pedidos() {
 
 
   async function openCreate() {
-    const defaultImp = (profile as any)?.comissao_implantacao_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
-    const defaultMens = (profile as any)?.comissao_mensalidade_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
-    const defaultServ = (profile as any)?.comissao_servico_percentual?.toString() ?? "5";
+    const defaultImp = profile?.comissao_implantacao_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
+    const defaultMens = profile?.comissao_mensalidade_percentual?.toString() ?? profile?.comissao_percentual?.toString() ?? "5";
+    const defaultServ = profile?.comissao_servico_percentual?.toString() ?? "5";
 
     // Usar filialPadraoId do hook (favorita > filial_id > primeira vinculada)
     let resolvedFilialId = filialPadraoId || filialFavoritaId || profile?.filial_favorita_id || profile?.filial_id || "";
     if (!resolvedFilialId && profile?.user_id) {
       const { data: pData } = await supabase.from("profiles").select("filial_favorita_id, filial_id").eq("user_id", profile.user_id).maybeSingle();
-      resolvedFilialId = (pData as any)?.filial_favorita_id || (pData as any)?.filial_id || "";
-      if ((pData as any)?.filial_favorita_id) setFilialFavoritaId((pData as any).filial_favorita_id);
+      resolvedFilialId = pData?.filial_favorita_id || pData?.filial_id || "";
+      if (pData?.filial_favorita_id) setFilialFavoritaId(pData.filial_favorita_id);
     }
 
     const defaultVendedor = profile?.user_id ?? "";
@@ -587,11 +587,11 @@ export default function Pedidos() {
       filial_id: pedido.filial_id,
       vendedor_id: pedido.vendedor_id,
       comissao_percentual: pedido.comissao_percentual.toString(),
-      comissao_implantacao_percentual: ((pedido as any).comissao_implantacao_percentual ?? pedido.comissao_percentual ?? 5).toString(),
-      comissao_mensalidade_percentual: ((pedido as any).comissao_mensalidade_percentual ?? pedido.comissao_percentual ?? 5).toString(),
-      comissao_servico_percentual: ((pedido as any).comissao_servico_percentual ?? 5).toString(),
+      comissao_implantacao_percentual: (pedido.comissao_implantacao_percentual ?? pedido.comissao_percentual ?? 5).toString(),
+      comissao_mensalidade_percentual: (pedido.comissao_mensalidade_percentual ?? pedido.comissao_percentual ?? 5).toString(),
+      comissao_servico_percentual: (pedido.comissao_servico_percentual ?? 5).toString(),
       observacoes: pedido.observacoes || "",
-      motivo_desconto: (pedido as any).motivo_desconto || "",
+      motivo_desconto: pedido.motivo_desconto || "",
       valor_implantacao_original: pedido.valor_implantacao_original ?? pedido.valor_implantacao,
       valor_mensalidade_original: pedido.valor_mensalidade_original ?? pedido.valor_mensalidade,
       desconto_implantacao_tipo: (pedido.desconto_implantacao_tipo as "R$" | "%") || "R$",
@@ -600,29 +600,29 @@ export default function Pedidos() {
       desconto_mensalidade_valor: (pedido.desconto_mensalidade_valor ?? 0).toString(),
       modulos_adicionais: adicionais,
       tipo_pedido: (pedido.tipo_pedido as "Novo" | "Upgrade" | "Aditivo" | "OA") || "Novo",
-      tipo_atendimento: ((pedido as any).tipo_atendimento as "Interno" | "Externo" | "") || "",
-      servicos_pedido: ((pedido as any).servicos_pedido || []) as ServicoAdicionadoItem[],
+      tipo_atendimento: (pedido.tipo_atendimento as "Interno" | "Externo" | "") || "",
+      servicos_pedido: (pedido.servicos_pedido || []) as ServicoAdicionadoItem[],
       contrato_id: pedido.contrato_id || null,
-      pagamento_mensalidade_tipo: ((pedido as any).pagamento_mensalidade_forma === "Pós-pago" ? "Pós-pago" : "Pré-pago") as "Pré-pago" | "Pós-pago",
-      pagamento_mensalidade_observacao: (pedido as any).pagamento_mensalidade_observacao || "",
-      pagamento_mensalidade_forma: (pedido as any).pagamento_mensalidade_forma || "",
-      pagamento_mensalidade_parcelas: (pedido as any).pagamento_mensalidade_parcelas?.toString() || "",
-      pagamento_mensalidade_desconto_percentual: ((pedido as any).pagamento_mensalidade_desconto_percentual ?? 0).toString(),
-      pagamento_implantacao_forma: (pedido as any).pagamento_implantacao_forma || "",
-      pagamento_implantacao_parcelas: (pedido as any).pagamento_implantacao_parcelas?.toString() || "",
-      pagamento_implantacao_desconto_percentual: ((pedido as any).pagamento_implantacao_desconto_percentual ?? 0).toString(),
-      pagamento_implantacao_observacao: (pedido as any).pagamento_implantacao_observacao || "",
-      acrescimo_implantacao_tipo: ((pedido as any).acrescimo_implantacao_tipo as "R$" | "%") || "R$",
-      acrescimo_implantacao_valor: ((pedido as any).acrescimo_implantacao_valor ?? 0).toString(),
-      acrescimo_mensalidade_tipo: ((pedido as any).acrescimo_mensalidade_tipo as "R$" | "%") || "R$",
-      acrescimo_mensalidade_valor: ((pedido as any).acrescimo_mensalidade_valor ?? 0).toString(),
+      pagamento_mensalidade_tipo: (pedido.pagamento_mensalidade_forma === "Pós-pago" ? "Pós-pago" : "Pré-pago") as "Pré-pago" | "Pós-pago",
+      pagamento_mensalidade_observacao: pedido.pagamento_mensalidade_observacao || "",
+      pagamento_mensalidade_forma: pedido.pagamento_mensalidade_forma || "",
+      pagamento_mensalidade_parcelas: pedido.pagamento_mensalidade_parcelas?.toString() || "",
+      pagamento_mensalidade_desconto_percentual: (pedido.pagamento_mensalidade_desconto_percentual ?? 0).toString(),
+      pagamento_implantacao_forma: pedido.pagamento_implantacao_forma || "",
+      pagamento_implantacao_parcelas: pedido.pagamento_implantacao_parcelas?.toString() || "",
+      pagamento_implantacao_desconto_percentual: (pedido.pagamento_implantacao_desconto_percentual ?? 0).toString(),
+      pagamento_implantacao_observacao: pedido.pagamento_implantacao_observacao || "",
+      acrescimo_implantacao_tipo: (pedido.acrescimo_implantacao_tipo as "R$" | "%") || "R$",
+      acrescimo_implantacao_valor: (pedido.acrescimo_implantacao_valor ?? 0).toString(),
+      acrescimo_mensalidade_tipo: (pedido.acrescimo_mensalidade_tipo as "R$" | "%") || "R$",
+      acrescimo_mensalidade_valor: (pedido.acrescimo_mensalidade_valor ?? 0).toString(),
     });
     // Limpar a busca de cliente ao editar (o nome será exibido via form.cliente_id)
     setClienteSearch("");
     setModuloBuscaId("");
     setModuloBuscaQtd("1");
     setDescontoAtivo(temDesconto);
-    const temAcrescimo = ((pedido as any).acrescimo_implantacao_valor ?? 0) > 0 || ((pedido as any).acrescimo_mensalidade_valor ?? 0) > 0;
+    const temAcrescimo = (pedido.acrescimo_implantacao_valor ?? 0) > 0 || (pedido.acrescimo_mensalidade_valor ?? 0) > 0;
     setAcrescimoAtivo(temAcrescimo);
     setEditingPedido(pedido);
     setOpenDialog(true);
@@ -661,8 +661,8 @@ export default function Pedidos() {
         .eq("user_id", vendedorId)
         .maybeSingle();
 
-      const limiteImp = (vendedorProfile as any)?.desconto_limite_implantacao ?? 100;
-      const limiteMens = (vendedorProfile as any)?.desconto_limite_mensalidade ?? 100;
+      const limiteImp = vendedorProfile?.desconto_limite_implantacao ?? 100;
+      const limiteMens = vendedorProfile?.desconto_limite_mensalidade ?? 100;
 
       // Calcular percentual de desconto aplicado
       const descontoImpPerc = form.desconto_implantacao_tipo === "%"
@@ -838,7 +838,7 @@ export default function Pedidos() {
       loadData();
     } catch (err: unknown) {
       console.error("Erro ao salvar pedido:", err);
-      const msg = err instanceof Error ? err.message : (err as any)?.message || "Erro ao salvar pedido";
+      const msg = err instanceof Error ? err.message : "Erro ao salvar pedido";
       toast.error(msg);
     }
     setSaving(false);
@@ -848,7 +848,7 @@ export default function Pedidos() {
   async function cancelarPedido(pedido: PedidoWithJoins) {
     const { error } = await supabase.from("pedidos").update({ status_pedido: "Cancelado", financeiro_status: "Cancelado", comissao_valor: 0 }).eq("id", pedido.id);
     if (error) { toast.error("Erro ao cancelar pedido"); return; }
-    dispararAutomacaoPedidoStatus(pedido.id, pedido.status_pedido, "Cancelado", (pedido as any).tipo_pedido);
+    dispararAutomacaoPedidoStatus(pedido.id, pedido.status_pedido, "Cancelado", pedido.tipo_pedido);
     toast.success("Pedido cancelado");
     loadData();
   }
@@ -862,7 +862,7 @@ export default function Pedidos() {
       financeiro_aprovado_por: null,
     }).eq("id", pedido.id);
     if (error) { toast.error("Erro ao enviar pedido: " + error.message); return; }
-    dispararAutomacaoPedidoStatus(pedido.id, pedido.status_pedido, "Aguardando Financeiro", (pedido as any).tipo_pedido);
+    dispararAutomacaoPedidoStatus(pedido.id, pedido.status_pedido, "Aguardando Financeiro", pedido.tipo_pedido);
     toast.success("Pedido enviado para o financeiro!");
     loadData();
   }
@@ -1031,7 +1031,7 @@ export default function Pedidos() {
   // ─── Filtering ────────────────────────────────────────────────────────────
 
   const filtered = pedidos.filter((p) => {
-    const clienteNome = (p as any).clientes?.nome_fantasia?.toLowerCase() || "";
+    const clienteNome = p.clientes?.nome_fantasia?.toLowerCase() || "";
     if (search && !clienteNome.includes(search.toLowerCase())) return false;
     if (filterFilial !== "all" && filterFilial !== "_init_" && p.filial_id !== filterFilial) return false;
     if (filterStatus !== "all" && p.status_pedido !== filterStatus) return false;
@@ -1169,18 +1169,18 @@ export default function Pedidos() {
                    const canCancel = (isAdmin || crudExcluir) && pedido.status_pedido !== "Cancelado" && !temContratoVigente;
 
                   const vendedorNome = vendedores.find((v) => v.user_id === pedido.vendedor_id)?.full_name || "—";
-                  const filialNome = (pedido as any).filiais?.nome || filiais.find(f => f.id === pedido.filial_id)?.nome || "—";
-                  const impFinal = pedido.valor_implantacao_final ?? pedido.valor_implantacao;
-                  const mensFinal = pedido.valor_mensalidade_final ?? pedido.valor_mensalidade;
-                  return (
-                    <TableRow key={pedido.id} className={isReprovado ? "bg-destructive/5" : undefined}>
-                      <TableCell className="font-mono text-xs font-semibold text-primary">{(pedido as any).numero_exibicao || "—"}</TableCell>
-                      <TableCell className="font-medium">{(pedido as any).clientes?.nome_fantasia || "—"}</TableCell>
-                      {canSeeAllBranches && <TableCell className="text-sm text-muted-foreground">{filialNome}</TableCell>}
-                      {canSeeAllBranches && <TableCell className="text-sm text-muted-foreground">{vendedorNome}</TableCell>}
-                      <TableCell className="text-right font-mono text-sm">{(pedido as any).tipo_pedido === "OA" ? "—" : fmtBRL(impFinal)}</TableCell>
-                      <TableCell className="text-right font-mono text-sm">{(pedido as any).tipo_pedido === "OA" ? "—" : fmtBRL(mensFinal)}</TableCell>
-                      <TableCell className="text-right font-mono text-sm">{(pedido as any).tipo_pedido === "OA" ? fmtBRL(pedido.valor_total) : "—"}</TableCell>
+                   const filialNome = pedido.filiais?.nome || filiais.find(f => f.id === pedido.filial_id)?.nome || "—";
+                   const impFinal = pedido.valor_implantacao_final ?? pedido.valor_implantacao;
+                   const mensFinal = pedido.valor_mensalidade_final ?? pedido.valor_mensalidade;
+                   return (
+                     <TableRow key={pedido.id} className={isReprovado ? "bg-destructive/5" : undefined}>
+                       <TableCell className="font-mono text-xs font-semibold text-primary">{pedido.numero_exibicao || "—"}</TableCell>
+                       <TableCell className="font-medium">{pedido.clientes?.nome_fantasia || "—"}</TableCell>
+                       {canSeeAllBranches && <TableCell className="text-sm text-muted-foreground">{filialNome}</TableCell>}
+                       {canSeeAllBranches && <TableCell className="text-sm text-muted-foreground">{vendedorNome}</TableCell>}
+                       <TableCell className="text-right font-mono text-sm">{pedido.tipo_pedido === "OA" ? "—" : fmtBRL(impFinal)}</TableCell>
+                       <TableCell className="text-right font-mono text-sm">{pedido.tipo_pedido === "OA" ? "—" : fmtBRL(mensFinal)}</TableCell>
+                       <TableCell className="text-right font-mono text-sm">{pedido.tipo_pedido === "OA" ? fmtBRL(pedido.valor_total) : "—"}</TableCell>
                       <TableCell className="text-right font-mono text-sm font-semibold">{fmtBRL(pedido.valor_total)}</TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[pedido.status_pedido] || "bg-muted text-muted-foreground"}`}>
@@ -1287,7 +1287,7 @@ export default function Pedidos() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Cancelar pedido?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    O pedido de {(pedido as any).clientes?.nome_fantasia} será cancelado e a comissão zerada.
+                                    O pedido de {pedido.clientes?.nome_fantasia} será cancelado e a comissão zerada.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
