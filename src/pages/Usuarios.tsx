@@ -712,7 +712,7 @@ export default function Usuarios() {
                           Permite cadastrar clientes com CNPJ/CPF já existente no sistema.
                         </p>
                       </div>
-                      <Switch checked={editPermitirCnpjDuplicado} onCheckedChange={setEditPermitirCnpjDuplicado} />
+                      <Switch checked={f.editPermitirCnpjDuplicado} onCheckedChange={f.setEditPermitirCnpjDuplicado} />
                     </div>
                     <div className="border-t border-border" />
                     <div className="flex items-center justify-between">
