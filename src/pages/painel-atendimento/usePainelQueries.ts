@@ -278,6 +278,23 @@ export function usePainelQueries(profile: any) {
     podeVerValoresProjeto: (profile as any)?.permite_ver_valores_projeto === true,
   };
 
+  // ─── Execução por atividade ──────────────────────────────────────────────
+  const { data: atividadeExecucaoMap = {} } = useQuery({
+    queryKey: ["painel_atividade_execucao", cards.map(c => c.id).join(",")],
+    enabled: cards.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("painel_atividade_execucao")
+        .select("*");
+      const map: Record<string, AtividadeExecucao[]> = {};
+      (data || []).forEach((r: any) => {
+        if (!map[r.card_id]) map[r.card_id] = [];
+        map[r.card_id].push(r as AtividadeExecucao);
+      });
+      return map;
+    },
+  });
+
   return {
     etapas,
     cards,
@@ -293,5 +310,6 @@ export function usePainelQueries(profile: any) {
     cardApontamentosMap,
     cardApontamentosDetalhado,
     permissions,
+    atividadeExecucaoMap,
   };
 }
