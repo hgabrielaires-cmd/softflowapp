@@ -526,9 +526,9 @@ export default function Usuarios() {
                           <Globe className="h-3.5 w-3.5" />
                           Acesso global
                         </Label>
-                        <Switch checked={editAcessoGlobal} onCheckedChange={(v) => {
-                          setEditAcessoGlobal(v);
-                          if (v) setEditFilialIds([]);
+                        <Switch checked={f.editAcessoGlobal} onCheckedChange={(v) => {
+                          f.setEditAcessoGlobal(v);
+                          if (v) f.setEditFilialIds([]);
                         }} />
                       </div>
                     </div>
