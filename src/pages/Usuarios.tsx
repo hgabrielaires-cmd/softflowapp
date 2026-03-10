@@ -393,10 +393,10 @@ export default function Usuarios() {
                   <div key={m.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
                     <span className="text-sm">{m.nome}</span>
                     <Switch
-                      checked={inviteMesaIds.includes(m.id)}
+                       checked={f.inviteMesaIds.includes(m.id)}
                       onCheckedChange={(checked) => {
-                        if (checked) setInviteMesaIds((prev) => [...prev, m.id]);
-                        else setInviteMesaIds((prev) => prev.filter((id) => id !== m.id));
+                        if (checked) f.setInviteMesaIds((prev) => [...prev, m.id]);
+                        else f.setInviteMesaIds((prev) => prev.filter((id) => id !== m.id));
                       }}
                     />
                   </div>
