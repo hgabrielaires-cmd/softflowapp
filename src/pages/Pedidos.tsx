@@ -62,10 +62,7 @@ import { VisualizarPedidoDialog } from "./pedidos/components/VisualizarPedidoDia
 import { ClienteRapidoDialog } from "./pedidos/components/ClienteRapidoDialog";
 import { ComentarioDraftDialog } from "./pedidos/components/ComentarioDraftDialog";
 import { UpgradePlanoDialog } from "./pedidos/components/UpgradePlanoDialog";
-
-// Types, constants, and helpers are now in src/pages/pedidos/
-
-// Helpers imported from ./pedidos/helpers
+import { usePedidosQueries } from "./pedidos/usePedidosQueries";
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
