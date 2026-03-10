@@ -338,8 +338,8 @@ export default function Usuarios() {
                         <Label className="text-xs">Mensalidade (%)</Label>
                         <Input
                           type="number" min="0" max="100" step="0.01" placeholder="5"
-                          value={inviteComissaoMens}
-                          onChange={(e) => setInviteComissaoMens(e.target.value)}
+                          value={f.inviteComissaoMens}
+                          onChange={(e) => f.setInviteComissaoMens(e.target.value)}
                         />
                       </div>
                       <div className="space-y-1.5">
