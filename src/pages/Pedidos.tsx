@@ -765,7 +765,7 @@ export default function Pedidos() {
             financeiro_status: "Aguardando",
             contrato_liberado: false,
           };
-          const { data: novoPedido, error } = await supabase.from("pedidos").insert(insertPayload as any).select().single();
+          const { data: novoPedido, error } = await supabase.from("pedidos").insert(insertPayload).select().single();
           if (error) throw error;
           dispararAutomacaoPedidoStatus(novoPedido.id, "Novo", "Aguardando Aprovação de Desconto", form.tipo_pedido);
           await salvarDraftComentarios(novoPedido.id);
