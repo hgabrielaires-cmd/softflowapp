@@ -645,23 +645,6 @@ export default function Clientes() {
 
   const filialNome = (id: string | null) => filiais.find((f) => f.id === id)?.nome || "—";
 
-  function fmtBRL(v: number) {
-    return (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  }
-
-  function fmtDate(d: string) {
-    return format(new Date(d), "dd/MM/yyyy", { locale: ptBR });
-  }
-
-  function fmtDateTime(d: string) {
-    return format(new Date(d), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
-  }
-
-  const TIPO_PEDIDO_COLORS: Record<string, string> = {
-    Novo: "bg-blue-100 text-blue-700",
-    Upgrade: "bg-green-100 text-green-700",
-    Aditivo: "bg-purple-100 text-purple-700",
-  };
 
   // Dados do historico separados
   const contratosBase = contratosList.filter((c) => c.tipo === "Base");
