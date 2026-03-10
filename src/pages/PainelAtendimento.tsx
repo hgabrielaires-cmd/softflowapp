@@ -668,6 +668,13 @@ export default function PainelAtendimento() {
     if (!detailCard) return;
     setFinalizando(true);
     try {
+      // Validar se todas as atividades da etapa estão concluídas
+      const atividadeIds = checklistEtapa.map((a: any) => a.id);
+      if (atividadeIds.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, atividadeIds)) {
+        toast.error("Conclua todas as atividades da etapa antes de finalizar.");
+        setFinalizando(false);
+        return;
+      }
       const etapasOrdenadas = [...etapas].sort((a, b) => a.ordem - b.ordem);
       const etapaAtualIdx = etapasOrdenadas.findIndex((e) => e.id === detailCard.etapa_id);
       if (etapaAtualIdx === -1) { toast.error("Etapa atual não encontrada na lista de etapas ativas. Verifique a configuração."); return; }
@@ -678,6 +685,7 @@ export default function PainelAtendimento() {
       const { error } = await supabase.from("painel_atendimento").update({ etapa_id: proximaEtapa.id, iniciado_em: null, iniciado_por: null }).eq("id", detailCard.id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
+      queryClient.invalidateQueries({ queryKey: ["painel_atividade_execucao"] });
       toast.success(`Avançado para etapa: ${proximaEtapa.nome}`);
       const clienteNomeNotif = detailCard.clientes?.apelido || detailCard.clientes?.nome_fantasia || "Projeto";
       notificarSeguidoresAvanco(detailCard.id, proximaEtapa.nome, clienteNomeNotif);
@@ -1226,6 +1234,7 @@ export default function PainelAtendimento() {
             <DialogFooter className="border-t pt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {!isChecklistCompleto(checklistEtapa, checklistProgresso) && detailCard.iniciado_em && <p className="text-[10px] text-muted-foreground">Complete todos os itens do checklist para finalizar</p>}
+                {isChecklistCompleto(checklistEtapa, checklistProgresso) && checklistEtapa.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, checklistEtapa.map((a: any) => a.id)) && detailCard.iniciado_em && <p className="text-[10px] text-amber-600 font-medium">Conclua todas as atividades da etapa para finalizar</p>}
               </div>
               <div className="flex items-center gap-2">
                 {(podePausarProjeto || podeRecusarProjeto || podeGerenciarApontamento || podeResetarProjeto) && (
@@ -1242,7 +1251,7 @@ export default function PainelAtendimento() {
                 )}
                 <Button variant="outline" size="sm" onClick={() => fetchDetalhes(detailCard)}><Info className="h-4 w-4 mr-1" />Detalhes</Button>
                 {(() => { const etapaAtualIdx = etapas.findIndex((e) => e.id === detailCard.etapa_id); if (etapaAtualIdx <= 0) return null; return <Button variant="outline" size="sm" className="bg-amber-500 hover:bg-amber-600 text-white border-amber-500 hover:border-amber-600" onClick={() => fetchHistorico(detailCard)}><History className="h-4 w-4 mr-1" />Histórico</Button>; })()}
-                <Button size="sm" onClick={finalizarEtapa} disabled={!detailCard.iniciado_em || !isChecklistCompleto(checklistEtapa, checklistProgresso) || finalizando}><ChevronRight className="h-4 w-4 mr-1" />{finalizando ? "Finalizando..." : "Finalizar Etapa"}</Button>
+                <Button size="sm" onClick={finalizarEtapa} disabled={!detailCard.iniciado_em || !isChecklistCompleto(checklistEtapa, checklistProgresso) || (checklistEtapa.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, checklistEtapa.map((a: any) => a.id))) || finalizando}><ChevronRight className="h-4 w-4 mr-1" />{finalizando ? "Finalizando..." : "Finalizar Etapa"}</Button>
               </div>
             </DialogFooter>
           )}

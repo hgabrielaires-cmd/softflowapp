@@ -27,11 +27,12 @@ interface Props {
   mesaCor?: string | null;
   filialId?: string | null;
   etapaId?: string | null;
+  etapaExecucaoId?: string | null;
   titulo?: string | null;
   onUpdate?: (hasAgendamentos: boolean) => void;
 }
 
-export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disabled, mesaId, mesaCor, filialId, etapaId, titulo, onUpdate }: Props) {
+export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disabled, mesaId, mesaCor, filialId, etapaId, etapaExecucaoId, titulo, onUpdate }: Props) {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,6 +92,7 @@ export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disa
           mesa_id: mesaId || null,
           filial_id: filialId || null,
           etapa_id: etapaId || null,
+          etapa_execucao_id: etapaExecucaoId || null,
           titulo: titulo || null,
           cor_evento: mesaCor || null,
         }))

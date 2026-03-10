@@ -1419,6 +1419,7 @@ export type Database = {
           created_at: string
           criado_por: string | null
           data: string
+          etapa_execucao_id: string | null
           etapa_id: string | null
           filial_id: string | null
           finalizado_em: string | null
@@ -1441,6 +1442,7 @@ export type Database = {
           created_at?: string
           criado_por?: string | null
           data: string
+          etapa_execucao_id?: string | null
           etapa_id?: string | null
           filial_id?: string | null
           finalizado_em?: string | null
@@ -1463,6 +1465,7 @@ export type Database = {
           created_at?: string
           criado_por?: string | null
           data?: string
+          etapa_execucao_id?: string | null
           etapa_id?: string | null
           filial_id?: string | null
           finalizado_em?: string | null
@@ -1490,6 +1493,13 @@ export type Database = {
             columns: ["card_id"]
             isOneToOne: false
             referencedRelation: "painel_atendimento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_agendamentos_etapa_execucao_id_fkey"
+            columns: ["etapa_execucao_id"]
+            isOneToOne: false
+            referencedRelation: "painel_etapas"
             referencedColumns: ["id"]
           },
           {
