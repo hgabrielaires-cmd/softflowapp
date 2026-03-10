@@ -80,40 +80,26 @@ import { TablePagination } from "@/components/TablePagination";
 // Types, constants and helpers imported from ./contratos/
 
 export default function Contratos() {
-  const { isAdmin, roles, profile } = useAuth();
-  const isFinanceiro = roles.includes("financeiro");
-  const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("contratos", roles);
-  const canManage = crudEditar || crudIncluir;
-  const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais } = useUserFiliais();
-
-  // Permissões do usuário
-  const [userPermissions, setUserPermissions] = useState<string[]>([]);
-  useEffect(() => {
-    async function loadPerms() {
-      if (!profile?.user_id) return;
-      const { data: userRoles } = await supabase.from("user_roles").select("role").eq("user_id", profile.user_id);
-      if (!userRoles || userRoles.length === 0) return;
-      const roleNames = userRoles.map(r => r.role);
-      const { data } = await supabase.from("role_permissions").select("permissao, ativo").in("role", roleNames).eq("ativo", true);
-      setUserPermissions((data || []).map(p => p.permissao));
-    }
-    loadPerms();
-  }, [profile?.user_id]);
-  const podeCadastroRetroativo = userPermissions.includes("acao.cadastro_retroativo");
-  const podeRegerarContrato = userPermissions.includes("acao.regerar_contrato");
-
-  const [contratos, setContratos] = useState<Contrato[]>([]);
-  const [filiais, setFiliais] = useState<Filial[]>([]);
-  const [filialParametros, setFilialParametros] = useState<Record<string, any>>({});
-  const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [filterFilial, setFilterFilial] = useState("_init_");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterDe, setFilterDe] = useState("");
-  const [filterAte, setFilterAte] = useState("");
-  const [filterBusca, setFilterBusca] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  
+  const queries = useContratosQueries();
+  const {
+    isAdmin, roles, profile, isFinanceiro,
+    canManage, crudIncluir, crudEditar, crudExcluir,
+    podeCadastroRetroativo, podeRegerarContrato,
+    filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais,
+    contratos, setContratos,
+    filiais, filialParametros, profilesMap,
+    contatosCliente, setContatosCliente,
+    linkedMessageTemplate, setLinkedMessageTemplate,
+    loading,
+    filterFilial, setFilterFilial,
+    filterStatus, setFilterStatus,
+    filterDe, setFilterDe,
+    filterAte, setFilterAte,
+    filterBusca, setFilterBusca,
+    currentPage, setCurrentPage,
+    filtered, ativos,
+    loadData, loadDetailData,
+  } = queries;
 
   const [selected, setSelected] = useState<Contrato | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
