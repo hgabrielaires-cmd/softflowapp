@@ -937,16 +937,10 @@ export default function PainelAtendimento() {
                   </div>
                 )}
                 <div className="flex items-center gap-3">
-                  {detailCard.pausado ? (
+                  {detailCard.pausado && (
                     <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={(e) => { e.stopPropagation(); setRetomarOpen(true); }}><Play className="h-4 w-4 mr-1" />Retomar Projeto</Button>
-                  ) : detailCard.iniciado_em ? (
-                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" disabled><Play className="h-4 w-4 mr-1" />Em andamento</Button>
-                  ) : (
-                    <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={(e) => { e.stopPropagation(); iniciarAtendimento.mutate(detailCard.id); setDetailCard({ ...detailCard, iniciado_em: new Date().toISOString() }); }} disabled={iniciarAtendimento.isPending}><Play className="h-4 w-4 mr-1" />{iniciarAtendimento.isPending ? "Iniciando..." : "Iniciar Etapa"}</Button>
                   )}
                   {detailCard.iniciado_em && <span className="text-xs text-muted-foreground">Iniciado em {new Date(detailCard.iniciado_em).toLocaleDateString("pt-BR")} às {new Date(detailCard.iniciado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>}
-                  {!detailCard.iniciado_em && isInicioAtrasado(detailCard, etapas) && <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" />Tarefa Atrasada</Badge>}
-                  {!detailCard.iniciado_em && (() => { const tempo = getTempoRestante(detailCard, etapas); return tempo ? <span className="flex items-center gap-1 text-xs text-amber-600 font-medium"><Clock className="h-3 w-3" />Vence em {tempo}h</span> : null; })()}
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs mb-1">Progresso do Projeto</p>
