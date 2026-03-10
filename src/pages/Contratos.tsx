@@ -1673,92 +1673,16 @@ export default function Contratos() {
       {/* (Old generation popup removed - now unified in ZapSign popup below) */}
 
       {/* ZapSign Detail Dialog */}
-      {zapsignDetailContrato && zapsignRecords[zapsignDetailContrato.id] && (
-        <Dialog open={openZapsignDetail} onOpenChange={setOpenZapsignDetail}>
-          <DialogContent className="max-w-md" aria-describedby="zapsign-desc">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-base">
-                <Send className="h-5 w-5 text-primary" />
-                ZapSign — {zapsignDetailContrato.numero_exibicao}
-              </DialogTitle>
-              <DialogDescription id="zapsign-desc" className="sr-only">
-                Detalhes da assinatura no ZapSign
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Status</span>
-                {getZapSignStatusBadge(zapsignRecords[zapsignDetailContrato.id].status)}
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Signatários</p>
-                {zapsignRecords[zapsignDetailContrato.id].signers.map((signer, i) => (
-                  <div key={i} className="rounded-lg border border-border p-3 space-y-1">
-                    <span className="text-sm font-medium">{signer.name}</span>
-                    {signer.email && <p className="text-xs text-muted-foreground">{signer.email}</p>}
-                    {signer.sign_url && (
-                      <div className="flex gap-1 pt-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-xs gap-1"
-                          onClick={() => {
-                            navigator.clipboard.writeText(signer.sign_url);
-                            toast.success("Link copiado!");
-                          }}
-                        >
-                          <ClipboardCopy className="h-3 w-3" />
-                          Copiar Link
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-xs gap-1"
-                          onClick={() => window.open(signer.sign_url, "_blank")}
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          Abrir
-                        </Button>
-                      </div>
-                    )}
-                    <div className="pt-1">
-                      {(() => {
-                        const s = signer.status?.toLowerCase();
-                        if (s === "signed")
-                          return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs">Assinado</Badge>;
-                        if (s === "refused" || s === "canceled")
-                          return <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 text-xs">Recusado</Badge>;
-                        return <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 text-xs">Aguardando assinatura</Badge>;
-                      })()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  className="flex-1 gap-1"
-                  onClick={() => handleAtualizarStatusZapSign(zapsignDetailContrato.id)}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Atualizar Status
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 gap-1"
-                  disabled={reenviandoWhatsapp}
-                  onClick={() => handleReenviarWhatsapp(zapsignDetailContrato)}
-                >
-                  {reenviandoWhatsapp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  Reenviar WhatsApp
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      <ZapsignDetailDialog
+        open={openZapsignDetail}
+        onOpenChange={setOpenZapsignDetail}
+        contrato={zapsignDetailContrato}
+        zapsignRecord={zapsignDetailContrato ? zapsignRecords[zapsignDetailContrato.id] : undefined}
+        getZapSignStatusBadge={getZapSignStatusBadge}
+        onAtualizarStatus={handleAtualizarStatusZapSign}
+        onReenviarWhatsapp={handleReenviarWhatsapp}
+        reenviandoWhatsapp={reenviandoWhatsapp}
+      />
 
       {/* ── Popup ZapSign + WhatsApp Animada ──────────────────────────── */}
       <Dialog
