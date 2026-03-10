@@ -738,7 +738,7 @@ export default function Usuarios() {
                           Permite resetar projetos no painel de atendimento, apagando histórico e voltando para etapa inicial.
                         </p>
                       </div>
-                      <Switch checked={editPermiteResetarProjeto} onCheckedChange={setEditPermiteResetarProjeto} />
+                      <Switch checked={f.editPermiteResetarProjeto} onCheckedChange={f.setEditPermiteResetarProjeto} />
                     </div>
                     <div className="border-t border-border" />
                     <div className="flex items-center justify-between">
