@@ -1079,6 +1079,92 @@ serve(async (req) => {
       }
     }
 
+    // ─── Process: Lembretes 24h para vendedores (contratos aguardando assinatura) ───
+    try {
+      const now24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: lembretesPendentes } = await supabase
+        .from("contratos_vendedor_lembretes")
+        .select("*")
+        .eq("lembrete_24h_enviado", false)
+        .lt("enviado_em", now24h);
+
+      if (lembretesPendentes && lembretesPendentes.length > 0) {
+        // Verificar quais contratos ainda estão pendentes de assinatura
+        const contratoIds = lembretesPendentes.map((l: any) => l.contrato_id);
+        const { data: zapsignRecords } = await supabase
+          .from("contratos_zapsign")
+          .select("contrato_id, status")
+          .in("contrato_id", contratoIds);
+
+        const zStatusMap: Record<string, string> = {};
+        (zapsignRecords || []).forEach((z: any) => { zStatusMap[z.contrato_id] = z.status; });
+
+        // WhatsApp config
+        const whatsappCfg = whatsappEnabled ? whatsappConfig : null;
+
+        for (const lembrete of lembretesPendentes) {
+          const zStatus = zStatusMap[lembrete.contrato_id];
+          // Se já assinou, marcar lembrete como enviado (cancelar)
+          if (zStatus === "Assinado" || zStatus === "signed") {
+            await supabase.from("contratos_vendedor_lembretes")
+              .update({ lembrete_24h_enviado: true, lembrete_24h_em: new Date().toISOString() })
+              .eq("id", lembrete.id);
+            console.log(`[LEMBRETE] Contrato ${lembrete.contrato_numero} já assinado, lembrete cancelado.`);
+            continue;
+          }
+
+          // Buscar telefone do vendedor
+          const { data: vendedorProfile } = await supabase
+            .from("profiles")
+            .select("full_name, telefone")
+            .eq("user_id", lembrete.vendedor_user_id)
+            .maybeSingle();
+
+          if (!vendedorProfile?.telefone) {
+            console.warn(`[LEMBRETE] Vendedor sem telefone para contrato ${lembrete.contrato_numero}`);
+            await supabase.from("contratos_vendedor_lembretes")
+              .update({ lembrete_24h_enviado: true, lembrete_24h_em: new Date().toISOString() })
+              .eq("id", lembrete.id);
+            continue;
+          }
+
+          const msgLembrete = `Oi, ${vendedorProfile.full_name}, tudo bem?\n\nPassando para acompanhar o contrato nº ${lembrete.contrato_numero} da ${lembrete.cliente_nome}. Notei que o @${lembrete.decisor_nome} ainda não conseguiu assinar.\n\nSurgiu alguma dúvida ou houve algum problema técnico com o link? Se precisar de qualquer ajuda para explicar algum ponto ou agilizar o processo por aqui, é só me dar um alô.\n\nSegue o link novamente para facilitar:\n🔗 ${lembrete.sign_url || "Link indisponível"}\n\nVamos tentar fechar isso hoje para não perdermos o cronograma?`;
+
+          if (whatsappCfg) {
+            let formattedNumber = vendedorProfile.telefone.replace(/\D/g, "");
+            if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
+            if (!formattedNumber.startsWith("55")) formattedNumber = "55" + formattedNumber;
+
+            let baseUrl = whatsappCfg.server_url!.replace(/\/+$/, "");
+            try {
+              const parsed = new URL(baseUrl);
+              if (parsed.protocol === "https:" && parsed.port && parsed.port !== "443") {
+                baseUrl = baseUrl.replace(/^https:/, "http:");
+              }
+            } catch { /* keep */ }
+
+            try {
+              await fetch(`${baseUrl}/message/sendText/Softflow_WhatsApp`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", apikey: whatsappCfg.token! },
+                body: JSON.stringify({ number: formattedNumber, text: msgLembrete }),
+              });
+              console.log(`[LEMBRETE] WhatsApp 24h enviado para ${vendedorProfile.full_name} (contrato ${lembrete.contrato_numero})`);
+            } catch (err) {
+              console.error(`[LEMBRETE] Erro WhatsApp 24h:`, err);
+            }
+          }
+
+          await supabase.from("contratos_vendedor_lembretes")
+            .update({ lembrete_24h_enviado: true, lembrete_24h_em: new Date().toISOString() })
+            .eq("id", lembrete.id);
+          totalProcessed++;
+        }
+      }
+    } catch (err) {
+      console.error("[LEMBRETE] Erro ao processar lembretes 24h:", err);
+    }
+
     console.log(`[AUTO] Processamento concluído: ${totalProcessed} automações disparadas.`);
 
     return new Response(
