@@ -441,7 +441,7 @@ export default function Contratos() {
           </div>
             <div className="flex items-center gap-3">
             {podeCadastroRetroativo && (
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={openRetroativoDialog}>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={retro.openRetroativoDialog}>
                 <FilePen className="h-4 w-4" />
                 Cadastrar Retroativo
               </Button>
