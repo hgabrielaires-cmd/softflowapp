@@ -657,9 +657,11 @@ export default function PainelAtendimento() {
     if (!detailCard) return;
     setFinalizando(true);
     try {
-      const etapaAtualIdx = etapas.findIndex((e) => e.id === detailCard.etapa_id);
-      const proximaEtapa = etapas[etapaAtualIdx + 1];
-      if (!proximaEtapa) { toast.error("Não há próxima etapa configurada."); return; }
+      const etapasOrdenadas = [...etapas].sort((a, b) => a.ordem - b.ordem);
+      const etapaAtualIdx = etapasOrdenadas.findIndex((e) => e.id === detailCard.etapa_id);
+      if (etapaAtualIdx === -1) { toast.error("Etapa atual não encontrada na lista de etapas ativas. Verifique a configuração."); return; }
+      const proximaEtapa = etapasOrdenadas[etapaAtualIdx + 1];
+      if (!proximaEtapa) { toast.error("Não há próxima etapa configurada após a etapa atual."); return; }
       await registrarSaidaEtapa(detailCard.id, detailCard.etapa_id, slaEtapaJornada);
       await registrarEntradaEtapa(detailCard.id, proximaEtapa.id, proximaEtapa.nome);
       const { error } = await supabase.from("painel_atendimento").update({ etapa_id: proximaEtapa.id, iniciado_em: null, iniciado_por: null }).eq("id", detailCard.id);
