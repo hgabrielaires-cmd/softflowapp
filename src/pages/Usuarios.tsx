@@ -626,8 +626,8 @@ export default function Usuarios() {
                             <div key={opt.value} className="flex items-center justify-between rounded px-2 py-1">
                               <span className="text-xs">{opt.label}</span>
                               <Switch
-                                checked={editTipoTecnico === opt.value}
-                                onCheckedChange={(checked) => { if (checked) setEditTipoTecnico(opt.value); }}
+                                checked={f.editTipoTecnico === opt.value}
+                                onCheckedChange={(checked) => { if (checked) f.setEditTipoTecnico(opt.value); }}
                               />
                             </div>
                           ))}
