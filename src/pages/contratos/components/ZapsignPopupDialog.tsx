@@ -38,6 +38,7 @@ export function ZapsignPopupDialog({ open, onOpenChange, step, msgIndex, contrat
               ? (isOA ? "Gerando OA" : "Gerando Contrato")
               : step === "whatsapp" ? "Enviando WhatsApp"
               : step === "done" ? "Tudo pronto!"
+              : step === "whatsapp_erro" ? "WhatsApp não enviado"
               : step === "erro" ? "Erro"
               : "Enviando para ZapSign"}
           </DialogTitle>
