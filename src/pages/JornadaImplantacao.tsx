@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -16,14 +16,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Eye, GripVertical, Download, Calendar, Paperclip, Hash, ToggleLeft, Type, CheckSquare, ArrowUp, ArrowDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { Jornada, JornadaEtapa, JornadaAtividade, MesaAtendimento, ChecklistItem, ChecklistItemTipo, Filial } from "@/lib/supabase-types";
+import type { Jornada, ChecklistItem, ChecklistItemTipo } from "@/lib/supabase-types";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { LocalEtapa, LocalAtividade } from "@/pages/jornada-implantacao/types";
 import { emptyJornadaForm, emptyEtapaForm, emptyAtividadeForm } from "@/pages/jornada-implantacao/constants";
 import { formatHorasMinutos, calcTotalMinutos, getVinculoLabel, getVinculoItems, mapEtapasToLocal, parseHorasText, decimalToHorasText } from "@/pages/jornada-implantacao/helpers";
+import { useJornadaQueries } from "@/pages/jornada-implantacao/useJornadaQueries";
 
 export default function JornadaImplantacao() {
   const queryClient = useQueryClient();
+  const { jornadas, isLoading, filiais, planos, modulos, servicos, mesas, painelEtapas } = useJornadaQueries();
   const [search, setSearch] = useState("");
   const [filterVinculo, setFilterVinculo] = useState("todos");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -52,66 +54,8 @@ export default function JornadaImplantacao() {
   const dragEtapaOverItem = useRef<number | null>(null);
   const dragAtivItem = useRef<{ etapaTempId: string; index: number } | null>(null);
   const dragAtivOverItem = useRef<{ etapaTempId: string; index: number } | null>(null);
-  // ─── Queries ────────────────────────────────────────────────────────────────
 
-  const { data: jornadas = [], isLoading } = useQuery({
-    queryKey: ["jornadas"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("jornadas").select("*, filiais(nome), jornada_etapas(id, nome, jornada_atividades(horas_estimadas))").order("nome");
-      if (error) throw error;
-      return data.map((j: any) => ({ ...j, filial: j.filiais ? { nome: j.filiais.nome } : null })) as Jornada[];
-    },
-  });
 
-  const { data: filiais = [] } = useQuery({
-    queryKey: ["filiais"],
-    queryFn: async () => {
-      const { data } = await supabase.from("filiais").select("*").eq("ativa", true).order("nome");
-      return (data || []) as Filial[];
-    },
-  });
-
-  const { data: planos = [] } = useQuery({
-    queryKey: ["planos_ativos"],
-    queryFn: async () => {
-      const { data } = await supabase.from("planos").select("id, nome, descricao").eq("ativo", true).order("nome");
-      return data || [];
-    },
-  });
-
-  const { data: modulos = [] } = useQuery({
-    queryKey: ["modulos_ativos"],
-    queryFn: async () => {
-      const { data } = await supabase.from("modulos").select("id, nome").eq("ativo", true).order("nome");
-      return data || [];
-    },
-  });
-
-  const { data: servicos = [] } = useQuery({
-    queryKey: ["servicos_ativos"],
-    queryFn: async () => {
-      const { data } = await supabase.from("servicos").select("id, nome, descricao").eq("ativo", true).order("nome");
-      return data || [];
-    },
-  });
-
-  const { data: mesas = [] } = useQuery({
-    queryKey: ["mesas_atendimento"],
-    queryFn: async () => {
-      const { data } = await supabase.from("mesas_atendimento").select("*").eq("ativo", true).order("nome");
-      return (data || []) as MesaAtendimento[];
-    },
-  });
-
-  const { data: painelEtapas = [] } = useQuery({
-    queryKey: ["painel_etapas_for_jornada"],
-    queryFn: async () => {
-      const { data } = await supabase.from("painel_etapas").select("id, nome").eq("ativo", true).order("ordem");
-      return data || [];
-    },
-  });
-
-  // ─── Auto-fill description ─────────────────────────────────────────────────
 
   useEffect(() => {
     if (!form.vinculo_tipo || !form.vinculo_id) return;
