@@ -100,8 +100,8 @@ export interface PedidoFormDialogProps {
 
   // Filial / Vendedor
   filiais: Filial[];
-  filiaisDoUsuario: Filial[];
-  todasFiliais: Filial[];
+  filiaisDoUsuario: FilialOption[];
+  todasFiliais: FilialOption[];
   vendedores: any[];
   isAdmin: boolean;
   profile: Profile | null;
