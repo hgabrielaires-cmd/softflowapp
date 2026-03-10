@@ -90,31 +90,8 @@ export default function Clientes() {
   const [editingInlineIdx, setEditingInlineIdx] = useState<number | null>(null);
   const [inlineContatoForm, setInlineContatoForm] = useState(emptyContatoForm);
 
-  // Importação
+   // Importação
   const [importOpen, setImportOpen] = useState(false);
-  const [podeImportar, setPodeImportar] = useState(false);
-  const [podeVerHistorico, setPodeVerHistorico] = useState(false);
-
-  useEffect(() => {
-    if (!profile?.user_id) return;
-    (async () => {
-      const { data: rolesData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", profile.user_id);
-      const userRoles = (rolesData || []).map((r: any) => r.role);
-      const { data: perms } = await supabase
-        .from("role_permissions")
-        .select("permissao, ativo")
-        .in("role", userRoles)
-        .in("permissao", ["acao.importar_clientes", "acao.ver_rentabilidade_historico", "acao.ver_historico_clientes"])
-        .eq("ativo", true);
-      const permSet = new Set((perms || []).map((p: any) => p.permissao));
-      setPodeImportar(permSet.has("acao.importar_clientes"));
-      setPodeVerRentabilidade(isAdmin || permSet.has("acao.ver_rentabilidade_historico"));
-      setPodeVerHistorico(isAdmin || permSet.has("acao.ver_historico_clientes"));
-    })();
-  }, [profile?.user_id, isAdmin]);
 
   async function handleCepBlur() {
     const cep = form.cep.replace(/\D/g, "");
