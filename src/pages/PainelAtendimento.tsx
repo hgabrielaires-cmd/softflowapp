@@ -831,7 +831,7 @@ export default function PainelAtendimento() {
                   <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 p-3 space-y-2">
                     <div className="flex items-center gap-2 text-red-700"><Ban className="h-4 w-4" /><span className="text-sm font-semibold">Projeto Recusado</span></div>
                     {detailCard.pausado_motivo && <p className="text-xs text-red-600">Motivo: {detailCard.pausado_motivo}</p>}
-                    {detailCard.pausado_em && <p className="text-[10px] text-muted-foreground">Recusado em {new Date(detailCard.pausado_em).toLocaleDateString("pt-BR")} às {new Date(detailCard.pausado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}{detailCard.pausado_por && (() => { const autor = responsaveis.find((r: any) => r.id === detailCard.pausado_por); return autor ? ` por ${(autor as any).full_name?.split(" ")[0]}` : ""; })()}</p>}
+                    {detailCard.pausado_em && <p className="text-[10px] text-muted-foreground">Recusado em {new Date(detailCard.pausado_em).toLocaleDateString("pt-BR")} às {new Date(detailCard.pausado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}{detailCard.pausado_por && (() => { const autor = responsaveis.find((r) => r.id === detailCard.pausado_por); return autor ? ` por ${autor.full_name?.split(" ")[0]}` : ""; })()}</p>}
                     {cardApontamentosDetalhado[detailCard.id]?.length > 0 && (
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground flex items-center gap-1"><UserPlus className="h-3 w-3" />Apontados:</p>
