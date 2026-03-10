@@ -435,33 +435,8 @@ export default function Contratos() {
     loadData();
   }
 
-  // ── ZapSign + WhatsApp animated popup state ──
-  const [openZapsignPopup, setOpenZapsignPopup] = useState(false);
-  const [zapsignPopupStep, setZapsignPopupStep] = useState<"gerando" | "zapsign" | "whatsapp" | "done" | "erro">("zapsign");
-  const [zapsignPopupMsgIndex, setZapsignPopupMsgIndex] = useState(0);
-  const [zapsignPopupContrato, setZapsignPopupContrato] = useState<Contrato | null>(null);
-  const [zapsignPopupError, setZapsignPopupError] = useState<string | null>(null);
 
-  // Message constants imported from ./contratos/constants
 
-  // (old gerarStatus effect removed - now unified in zapsignPopup)
-
-  // ZapSign popup message cycling
-  useEffect(() => {
-    if (!openZapsignPopup || zapsignPopupStep === "done" || zapsignPopupStep === "erro") return;
-    setZapsignPopupMsgIndex(0);
-    const msgs = zapsignPopupStep === "gerando"
-      ? (zapsignPopupContrato?.tipo === "OA" ? GERAR_MSGS_OA : GERAR_MSGS_CONTRATO)
-      : zapsignPopupStep === "zapsign" ? ZAPSIGN_MSGS : WHATSAPP_MSGS;
-    const interval = setInterval(() => {
-      setZapsignPopupMsgIndex((prev) => (prev + 1) % msgs.length);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [openZapsignPopup, zapsignPopupStep]);
-
-  // Contatos do cliente selecionado (para Termo de Aceite)
-  const [contatosCliente, setContatosCliente] = useState<{ nome: string; telefone: string | null; decisor: boolean; ativo: boolean }[]>([]);
-  const [enviandoWhatsapp, setEnviandoWhatsapp] = useState(false);
 
   async function syncZapsignStatuses(pendentes: any[], currentMap: Record<string, ZapSignRecord>) {
     const updatedMap = { ...currentMap };
