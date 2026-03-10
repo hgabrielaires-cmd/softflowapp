@@ -8,6 +8,11 @@ import type { ChecklistItemTipo, MesaAtendimento } from "@/lib/supabase-types";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { LocalEtapa, LocalAtividade, AtividadeFormState } from "../types";
 
+interface PainelEtapaItem {
+  id: string;
+  nome: string;
+}
+
 interface AtividadeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -21,18 +26,23 @@ interface AtividadeDialogProps {
   mesas: MesaAtendimento[];
   etapas: LocalEtapa[];
   currentEtapaTempId: string;
+  painelEtapas: PainelEtapaItem[];
   // Checklist
   onAddChecklistItem: () => void;
   onUpdateChecklistText: (index: number, texto: string) => void;
   onUpdateChecklistTipo: (index: number, tipo: ChecklistItemTipo) => void;
+  onUpdateChecklistMesaId: (index: number, mesaId: string | null) => void;
+  onUpdateChecklistEtapaExecucaoId: (index: number, etapaExecucaoId: string | null) => void;
   onRemoveChecklistItem: (index: number) => void;
   onMoveChecklistItem: (index: number, direction: "up" | "down") => void;
 }
 
 export function AtividadeDialog({
   open, onOpenChange, editingAtividade, atividadeForm, setAtividadeForm,
-  horasText, onHorasTextChange, onHorasTextBlur, onSave, mesas, etapas, currentEtapaTempId,
-  onAddChecklistItem, onUpdateChecklistText, onUpdateChecklistTipo, onRemoveChecklistItem, onMoveChecklistItem,
+  horasText, onHorasTextChange, onHorasTextBlur, onSave, mesas, etapas, currentEtapaTempId, painelEtapas,
+  onAddChecklistItem, onUpdateChecklistText, onUpdateChecklistTipo,
+  onUpdateChecklistMesaId, onUpdateChecklistEtapaExecucaoId,
+  onRemoveChecklistItem, onMoveChecklistItem,
 }: AtividadeDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -95,23 +105,53 @@ export function AtividadeDialog({
             ) : (
               <div className="space-y-2">
                 {atividadeForm.checklist.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <div className="flex flex-col gap-0.5">
-                      <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => onMoveChecklistItem(idx, "up")} disabled={idx === 0}><ArrowUp className="h-3 w-3" /></Button>
-                      <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => onMoveChecklistItem(idx, "down")} disabled={idx === atividadeForm.checklist.length - 1}><ArrowDown className="h-3 w-3" /></Button>
+                  <div key={idx} className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-0.5">
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => onMoveChecklistItem(idx, "up")} disabled={idx === 0}><ArrowUp className="h-3 w-3" /></Button>
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => onMoveChecklistItem(idx, "down")} disabled={idx === atividadeForm.checklist.length - 1}><ArrowDown className="h-3 w-3" /></Button>
+                      </div>
+                      <Select value={item.tipo || "check"} onValueChange={(v) => onUpdateChecklistTipo(idx, v as ChecklistItemTipo)}>
+                        <SelectTrigger className="w-[140px] h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(CHECKLIST_TIPO_LABELS).map(([key, label]) => (
+                            <SelectItem key={key} value={key}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input value={item.texto} onChange={(e) => onUpdateChecklistText(idx, e.target.value)} placeholder="Descrição do item..." className="flex-1 h-8 text-sm" />
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onRemoveChecklistItem(idx)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
                     </div>
-                    <Select value={item.tipo || "check"} onValueChange={(v) => onUpdateChecklistTipo(idx, v as ChecklistItemTipo)}>
-                      <SelectTrigger className="w-[140px] h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(CHECKLIST_TIPO_LABELS).map(([key, label]) => (
-                          <SelectItem key={key} value={key}>{label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Input value={item.texto} onChange={(e) => onUpdateChecklistText(idx, e.target.value)} placeholder="Descrição do item..." className="flex-1 h-8 text-sm" />
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onRemoveChecklistItem(idx)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+                    {item.tipo === "agendamento" && (
+                      <div className="flex gap-2 pl-12">
+                        <div className="flex-1">
+                          <label className="text-[11px] text-muted-foreground">Mesa responsável</label>
+                          <Select value={item.mesa_id || "none"} onValueChange={(v) => onUpdateChecklistMesaId(idx, v === "none" ? null : v)}>
+                            <SelectTrigger className="h-7 text-xs">
+                              <SelectValue placeholder="Nenhuma" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhuma</SelectItem>
+                              {mesas.map((m) => <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-[11px] text-muted-foreground">Executar na etapa</label>
+                          <Select value={item.etapa_execucao_id || "none"} onValueChange={(v) => onUpdateChecklistEtapaExecucaoId(idx, v === "none" ? null : v)}>
+                            <SelectTrigger className="h-7 text-xs">
+                              <SelectValue placeholder="Nenhuma" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhuma</SelectItem>
+                              {painelEtapas.map((e) => <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

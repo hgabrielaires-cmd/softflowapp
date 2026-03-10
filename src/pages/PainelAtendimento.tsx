@@ -1074,7 +1074,7 @@ export default function PainelAtendimento() {
                                         {(item.tipo as string) === "data" && <Input type="date" className="h-5 w-32 text-[10px] px-1" value={prog.valor_data || ""} disabled={!checklistEditMode && !podeEditarChecklist} onChange={(e) => saveChecklistItem(atividade.id, idx, { valor_data: e.target.value })} />}
                                         {item.tipo === "texto" && <Input className="h-5 w-40 text-[10px] px-1" placeholder="Valor..." value={prog.valor_texto || ""} disabled={!checklistEditMode && !podeEditarChecklist} onChange={(e) => saveChecklistItem(atividade.id, idx, { valor_texto: e.target.value })} />}
                                         {detailCard.aponta_tecnico_agenda && prog.concluido && !prog.valor_data && (
-                                           <AgendamentoChecklist cardId={detailCard.id} atividadeId={atividade.id} checklistIndex={idx} etapaId={detailCard.etapa_id} filialId={detailCard.filial_id} mesaId={etapaMesaInfo?.id} mesaCor={etapaMesaInfo?.cor} titulo={item.texto} />
+                                           <AgendamentoChecklist cardId={detailCard.id} atividadeId={atividade.id} checklistIndex={idx} etapaId={detailCard.etapa_id} filialId={detailCard.filial_id} mesaId={item.mesa_id || etapaMesaInfo?.id} mesaCor={etapaMesaInfo?.cor} etapaExecucaoId={item.etapa_execucao_id || null} titulo={item.texto} />
                                         )}
                                       </div>
                                       {prog.concluido && prog.concluido_por_nome && (

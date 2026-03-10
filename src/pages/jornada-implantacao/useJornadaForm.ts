@@ -447,7 +447,26 @@ export function useJornadaForm({ planos, modulos, servicos, mesas }: UseJornadaF
   }
 
   function updateChecklistTipo(index: number, tipo: ChecklistItemTipo) {
-    setAtividadeForm((prev) => ({ ...prev, checklist: prev.checklist.map((c, i) => i === index ? { ...c, tipo } : c) }));
+    setAtividadeForm((prev) => ({
+      ...prev,
+      checklist: prev.checklist.map((c, i) => {
+        if (i !== index) return c;
+        // When switching away from agendamento, clear the extra fields
+        if (tipo !== "agendamento") {
+          const { mesa_id, etapa_execucao_id, ...rest } = c;
+          return { ...rest, tipo };
+        }
+        return { ...c, tipo };
+      }),
+    }));
+  }
+
+  function updateChecklistMesaId(index: number, mesa_id: string | null) {
+    setAtividadeForm((prev) => ({ ...prev, checklist: prev.checklist.map((c, i) => i === index ? { ...c, mesa_id } : c) }));
+  }
+
+  function updateChecklistEtapaExecucaoId(index: number, etapa_execucao_id: string | null) {
+    setAtividadeForm((prev) => ({ ...prev, checklist: prev.checklist.map((c, i) => i === index ? { ...c, etapa_execucao_id } : c) }));
   }
 
   function removeChecklistItem(index: number) {
@@ -582,7 +601,7 @@ export function useJornadaForm({ planos, modulos, servicos, mesas }: UseJornadaF
     handleAtivDragStart, handleAtivDragEnter, handleAtividadeDragEnd,
 
     // Checklist
-    addChecklistItem, updateChecklistText, updateChecklistTipo, removeChecklistItem, moveChecklistItem,
+    addChecklistItem, updateChecklistText, updateChecklistTipo, updateChecklistMesaId, updateChecklistEtapaExecucaoId, removeChecklistItem, moveChecklistItem,
 
     // Expand/collapse
     toggleExpanded,
