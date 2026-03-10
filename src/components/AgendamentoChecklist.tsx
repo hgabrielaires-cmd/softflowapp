@@ -32,7 +32,7 @@ interface Props {
   onUpdate?: (hasAgendamentos: boolean) => void;
 }
 
-export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disabled, mesaId, mesaCor, filialId, etapaId, titulo, onUpdate }: Props) {
+export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disabled, mesaId, mesaCor, filialId, etapaId, etapaExecucaoId, titulo, onUpdate }: Props) {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [loading, setLoading] = useState(true);
