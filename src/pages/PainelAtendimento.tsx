@@ -1028,7 +1028,7 @@ export default function PainelAtendimento() {
                               {atividade.mesas_atendimento?.nome && <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-1" style={{ backgroundColor: atividade.mesas_atendimento.cor ? `${atividade.mesas_atendimento.cor}15` : undefined, color: atividade.mesas_atendimento.cor || undefined, borderColor: atividade.mesas_atendimento.cor ? `${atividade.mesas_atendimento.cor}40` : undefined }}>{atividade.mesas_atendimento.nome}</Badge>}
                               {atividade.horas_estimadas > 0 && <span className="text-[10px] text-muted-foreground"><Clock className="h-2.5 w-2.5 inline mr-0.5" />{formatSLA(atividade.horas_estimadas)}</span>}
                               {/* Action button + Status badge — grouped to the right */}
-                              <div className="flex items-center gap-1.5 ml-auto">
+                              <div className="flex flex-col items-end gap-1 ml-auto">
                                 {statusAtiv === "pendente" && (
                                   <Button size="sm" className="h-8 text-xs px-3 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => iniciarAtividade(detailCard.id, atividade.id, detailCard.etapa_id)}>
                                     <Play className="h-4 w-4" />Iniciar
