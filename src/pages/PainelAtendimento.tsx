@@ -675,6 +675,19 @@ export default function PainelAtendimento() {
         setFinalizando(false);
         return;
       }
+      // Validar se checklist obrigatório da etapa está concluído
+      if (checklistEtapa.length > 0) {
+        const totalItens = checklistEtapa.reduce((acc: number, a: any) => acc + (Array.isArray(a.checklist) ? a.checklist.length : 0), 0);
+        const totalConcluidos = checklistEtapa.reduce((acc: number, a: any) => {
+          const items = Array.isArray(a.checklist) ? a.checklist : [];
+          return acc + items.filter((_: any, idx: number) => checklistProgresso[`${a.id}_${idx}`]?.concluido).length;
+        }, 0);
+        if (totalItens > 0 && totalConcluidos < totalItens) {
+          toast.error("Conclua todos os itens do checklist antes de finalizar a etapa.");
+          setFinalizando(false);
+          return;
+        }
+      }
       const etapasOrdenadas = [...etapas].sort((a, b) => a.ordem - b.ordem);
       const etapaAtualIdx = etapasOrdenadas.findIndex((e) => e.id === detailCard.etapa_id);
       if (etapaAtualIdx === -1) { toast.error("Etapa atual não encontrada na lista de etapas ativas. Verifique a configuração."); return; }
@@ -712,7 +725,7 @@ export default function PainelAtendimento() {
 
   // ─── Drag & Drop ──────────────────────────────────────────────────────────
   function handleDragOver(e: React.DragEvent) { e.preventDefault(); }
-  function handleDrop(etapaId: string) {
+  async function handleDrop(etapaId: string) {
     if (dragCardId) {
       const card = cards.find((c) => c.id === dragCardId);
       if (card && card.etapa_id !== etapaId) {
@@ -725,6 +738,30 @@ export default function PainelAtendimento() {
         const etapaAtual = etapas.find((e) => e.id === card.etapa_id);
         if (etapaAtual && etapaDestino.ordem < etapaAtual.ordem && !podeVoltarEtapa) { toast.error("Você não tem permissão para voltar etapa."); setDragCardId(null); return; }
         if (etapaDestino.nome === "Em Execução" && etapaAtual && etapaAtual.ordem < 2) { toast.error("Complete as etapas obrigatórias antes de mover para 'Em Execução'."); setDragCardId(null); return; }
+
+        // Validate activity completion before advancing forward
+        if (etapaAtual && etapaDestino.ordem > etapaAtual.ordem && card.jornada_id) {
+          try {
+            let resolvedJornadaId = card.jornada_id;
+            if (!resolvedJornadaId && card.plano_id) {
+              const { data: jornada } = await supabase.from("jornadas").select("id").eq("vinculo_tipo", "plano").eq("vinculo_id", card.plano_id).eq("ativo", true).limit(1);
+              resolvedJornadaId = jornada?.[0]?.id || null;
+            }
+            if (resolvedJornadaId) {
+              const { data: jornadaEtapa } = await supabase.from("jornada_etapas").select("id").eq("jornada_id", resolvedJornadaId).eq("nome", etapaAtual.nome).limit(1);
+              if (jornadaEtapa && jornadaEtapa.length > 0) {
+                const { data: atividadesEtapa } = await supabase.from("jornada_atividades").select("id").eq("etapa_id", jornadaEtapa[0].id);
+                const atividadeIds = (atividadesEtapa || []).map((a: any) => a.id);
+                if (atividadeIds.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, card.id, atividadeIds)) {
+                  toast.error("Conclua todas as atividades da etapa antes de avançar.");
+                  setDragCardId(null);
+                  return;
+                }
+              }
+            }
+          } catch { /* allow if validation fails gracefully */ }
+        }
+
         (async () => {
           const dragSla = getSlaEtapaForCard(card, jornadaSlaMap, etapas);
           await registrarSaidaEtapa(card.id, card.etapa_id, dragSla);
@@ -977,8 +1014,22 @@ export default function PainelAtendimento() {
                         const statusAtiv = execAtiv?.status || "pendente";
                         const emAtraso = execAtiv?.finalizado_em_atraso === true;
                         return (
-                          <div key={atividade.id} className={cn("rounded-md border p-2", statusAtiv === "concluida" ? "border-primary/30 bg-primary/5" : statusAtiv === "em_andamento" ? "border-accent/50 bg-accent/5" : "border-border/50")}>
+                          <div key={atividade.id} className={cn(
+                            "rounded-md border p-2",
+                            statusAtiv === "concluida" && !emAtraso ? "border-primary/30 bg-primary/5" :
+                            statusAtiv === "concluida" && emAtraso ? "border-destructive/30 bg-destructive/5" :
+                            statusAtiv === "em_andamento" ? "border-accent/50 bg-accent/5" :
+                            "border-border/50"
+                          )}>
                             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                              {/* Status indicator dot */}
+                              <span className={cn(
+                                "h-2 w-2 rounded-full shrink-0",
+                                statusAtiv === "pendente" && "bg-muted-foreground/40",
+                                statusAtiv === "em_andamento" && "bg-accent-foreground animate-pulse",
+                                statusAtiv === "concluida" && !emAtraso && "bg-primary",
+                                statusAtiv === "concluida" && emAtraso && "bg-destructive",
+                              )} />
                               <p className="text-xs font-medium text-foreground">{atividade.nome}</p>
                               {atividade.mesas_atendimento?.nome && <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-1" style={{ backgroundColor: atividade.mesas_atendimento.cor ? `${atividade.mesas_atendimento.cor}15` : undefined, color: atividade.mesas_atendimento.cor || undefined, borderColor: atividade.mesas_atendimento.cor ? `${atividade.mesas_atendimento.cor}40` : undefined }}>{atividade.mesas_atendimento.nome}</Badge>}
                               {atividade.horas_estimadas > 0 && <span className="text-[10px] text-muted-foreground"><Clock className="h-2.5 w-2.5 inline mr-0.5" />{formatSLA(atividade.horas_estimadas)}</span>}
@@ -1251,7 +1302,20 @@ export default function PainelAtendimento() {
                 )}
                 <Button variant="outline" size="sm" onClick={() => fetchDetalhes(detailCard)}><Info className="h-4 w-4 mr-1" />Detalhes</Button>
                 {(() => { const etapaAtualIdx = etapas.findIndex((e) => e.id === detailCard.etapa_id); if (etapaAtualIdx <= 0) return null; return <Button variant="outline" size="sm" className="bg-amber-500 hover:bg-amber-600 text-white border-amber-500 hover:border-amber-600" onClick={() => fetchHistorico(detailCard)}><History className="h-4 w-4 mr-1" />Histórico</Button>; })()}
-                <Button size="sm" onClick={finalizarEtapa} disabled={!detailCard.iniciado_em || !isChecklistCompleto(checklistEtapa, checklistProgresso) || (checklistEtapa.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, checklistEtapa.map((a: any) => a.id))) || finalizando}><ChevronRight className="h-4 w-4 mr-1" />{finalizando ? "Finalizando..." : "Finalizar Etapa"}</Button>
+                {(() => {
+                  const atividadeIds = checklistEtapa.map((a: any) => a.id);
+                  const atividadesPendentes = atividadeIds.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, atividadeIds);
+                  const checklistIncompleto = !isChecklistCompleto(checklistEtapa, checklistProgresso);
+                  const naoIniciado = !detailCard.iniciado_em;
+                  const bloqueado = naoIniciado || checklistIncompleto || atividadesPendentes || finalizando;
+                  const motivo = naoIniciado ? "Inicie a etapa primeiro" : atividadesPendentes ? "Conclua todas as atividades" : checklistIncompleto ? "Conclua o checklist" : null;
+                  return (
+                    <div className="flex flex-col items-end gap-0.5">
+                      <Button size="sm" onClick={finalizarEtapa} disabled={bloqueado}><ChevronRight className="h-4 w-4 mr-1" />{finalizando ? "Finalizando..." : "Finalizar Etapa"}</Button>
+                      {bloqueado && motivo && <span className="text-[9px] text-destructive">{motivo}</span>}
+                    </div>
+                  );
+                })()}
               </div>
             </DialogFooter>
           )}
