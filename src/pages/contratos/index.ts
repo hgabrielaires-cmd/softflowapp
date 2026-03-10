@@ -8,3 +8,4 @@ export { AgendamentosCancelDialog } from "./components/AgendamentosCancelDialog"
 export { CancelarAditivosDialog } from "./components/CancelarAditivosDialog";
 export { ContratoDetailDialog } from "./components/ContratoDetailDialog";
 export { useContratosQueries } from "./useContratosQueries";
+export { useCadastroRetroativo } from "./useCadastroRetroativo";
