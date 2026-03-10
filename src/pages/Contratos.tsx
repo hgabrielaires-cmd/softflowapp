@@ -8,6 +8,10 @@ import type { Contrato, ZapSignRecord, ModuloAdicionadoItem } from "./contratos/
 import { ITEMS_PER_PAGE, UF_LIST, ZAPSIGN_MSGS, WHATSAPP_MSGS, GERAR_MSGS_CONTRATO, GERAR_MSGS_OA } from "./contratos/constants";
 import { fmtBRL } from "./contratos/helpers";
 import { CadastroRetroativoDialog } from "./contratos/components/CadastroRetroativoDialog";
+import { EncerrarContratoDialog } from "./contratos/components/EncerrarContratoDialog";
+import { CancelarProjetoDialog } from "./contratos/components/CancelarProjetoDialog";
+import { AgendamentosCancelDialog } from "./contratos/components/AgendamentosCancelDialog";
+import { CancelarAditivosDialog } from "./contratos/components/CancelarAditivosDialog";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
