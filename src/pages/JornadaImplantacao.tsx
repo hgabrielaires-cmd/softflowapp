@@ -327,29 +327,7 @@ export default function JornadaImplantacao() {
 
     // Load etapas with atividades in a single query
     const { data: etapasData } = await supabase.from("jornada_etapas").select("*, jornada_atividades(*)").eq("jornada_id", jornada.id).order("ordem");
-    const localEtapas: LocalEtapa[] = (etapasData || []).map((e: any) => ({
-      tempId: crypto.randomUUID(),
-      id: e.id,
-      nome: e.nome,
-      descricao: e.descricao || "",
-      mesa_atendimento_id: e.mesa_atendimento_id || "",
-      permite_clonar: e.permite_clonar || false,
-      ordem: e.ordem,
-      atividades: (e.jornada_atividades || [])
-        .sort((a: any, b: any) => a.ordem - b.ordem)
-        .map((a: any) => ({
-          tempId: crypto.randomUUID(),
-          id: a.id,
-          nome: a.nome,
-          descricao: a.descricao || "",
-          horas_estimadas: a.horas_estimadas,
-          checklist: Array.isArray(a.checklist) ? a.checklist : [],
-          tipo_responsabilidade: a.tipo_responsabilidade,
-          mesa_atendimento_id: a.mesa_atendimento_id || "",
-          ordem: a.ordem,
-        })),
-    }));
-    setEtapas(localEtapas);
+    setEtapas(mapEtapasToLocal(etapasData || []));
     setDialogOpen(true);
   }
 
