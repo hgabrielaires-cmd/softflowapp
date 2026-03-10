@@ -551,7 +551,7 @@ export default function Usuarios() {
                         ))}
                       </div>
                     )}
-                    {editAcessoGlobal && (
+                    {f.editAcessoGlobal && (
                       <p className="text-xs text-muted-foreground">Este usuário terá acesso a todas as filiais.</p>
                     )}
                   </div>
