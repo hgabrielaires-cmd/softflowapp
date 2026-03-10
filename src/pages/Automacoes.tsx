@@ -55,6 +55,7 @@ interface Profile {
 const GATILHO_TIPOS = [
   { value: "pedido_status", label: "Pedido muda de status" },
   { value: "tempo_sem_acao_financeiro", label: "Pedido parado na fila do Financeiro" },
+  { value: "contrato_enviado_assinatura", label: "Contrato enviado para assinatura" },
   { value: "contrato_cancelamento", label: "Contrato cancelado" },
   { value: "card_etapa", label: "Card muda de etapa no Painel" },
 ];
