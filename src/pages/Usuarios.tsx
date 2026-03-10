@@ -485,8 +485,8 @@ export default function Usuarios() {
                   <div className="space-y-1.5">
                     <Label>Nome completo</Label>
                     <Input
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
+                      value={f.editName}
+                      onChange={(e) => f.setEditName(e.target.value)}
                       required
                     />
                   </div>
