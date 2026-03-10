@@ -6,3 +6,4 @@ export { VisualizarPedidoDialog } from "./components/VisualizarPedidoDialog";
 export { ClienteRapidoDialog } from "./components/ClienteRapidoDialog";
 export { ComentarioDraftDialog } from "./components/ComentarioDraftDialog";
 export { UpgradePlanoDialog } from "./components/UpgradePlanoDialog";
+export { PedidoFormDialog } from "./components/PedidoFormDialog";
