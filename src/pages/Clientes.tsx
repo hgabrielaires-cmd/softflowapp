@@ -201,12 +201,7 @@ export default function Clientes() {
     setEditingInlineIdx(null);
     setInlineContatoForm(emptyContatoForm);
     // Carrega contatos existentes
-    const { data } = await supabase
-      .from("cliente_contatos")
-      .select("*")
-      .eq("cliente_id", c.id)
-      .order("decisor", { ascending: false })
-      .order("nome");
+    const data = await fetchContatos(c.id);
     setFormContatos((data || []).map((ct: any) => ({
       _id: ct.id,
       nome: ct.nome,
