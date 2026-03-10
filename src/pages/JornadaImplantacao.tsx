@@ -26,6 +26,7 @@ import { useJornadaQueries } from "@/pages/jornada-implantacao/useJornadaQueries
 export default function JornadaImplantacao() {
   const queryClient = useQueryClient();
   const { jornadas, isLoading, filiais, planos, modulos, servicos, mesas, painelEtapas } = useJornadaQueries();
+  const [search, setSearch] = useState("");
   const [filterVinculo, setFilterVinculo] = useState("todos");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Jornada | null>(null);
