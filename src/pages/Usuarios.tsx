@@ -536,7 +536,7 @@ export default function Usuarios() {
                       <div className="space-y-2">
                         {q.filiais.map((fil) => (
                           <div key={fil.id} className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent">
-                            <span className="text-sm">{f.nome}</span>
+                            <span className="text-sm">{fil.nome}</span>
                             <Switch
                               checked={editFilialIds.includes(f.id)}
                               onCheckedChange={(checked) => {
