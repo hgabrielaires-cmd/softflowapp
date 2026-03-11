@@ -1110,7 +1110,7 @@ export default function PainelAtendimento() {
                                         )}
                                         {(item.tipo as string) === "data" && <Input type="date" className="h-5 w-32 text-[10px] px-1" value={prog.valor_data || ""} disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onChange={(e) => saveChecklistItem(atividade.id, idx, { valor_data: e.target.value, concluido: !!e.target.value })} />}
                                         
-                                        {detailCard.aponta_tecnico_agenda && item.tipo === "agendamento" && prog.concluido && (
+                                        {item.tipo === "agendamento" && prog.concluido && (
                                            <AgendamentoChecklist cardId={detailCard.id} atividadeId={atividade.id} checklistIndex={idx} etapaId={detailCard.etapa_id} filialId={detailCard.filial_id} mesaId={item.mesa_id || etapaMesaInfo?.id} mesaCor={etapaMesaInfo?.cor} etapaExecucaoId={item.etapa_execucao_id || null} titulo={item.texto} allowDelete={!!(item.etapa_execucao_id && detailCard.etapa_id === item.etapa_execucao_id)} />
                                          )}
                                       </div>
