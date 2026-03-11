@@ -990,6 +990,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                 type="button"
                 variant="outline"
                 size="sm"
+                tabIndex={-1}
                 className="text-xs gap-1"
                 onClick={() => {
                   setEditingDraftIdx(null);
