@@ -669,15 +669,6 @@ export default function Agenda() {
                 )}
               </div>
             )}
-            {/* Barra de progresso do projeto */}
-            {ag.progresso && ag.progresso.total > 0 && (
-              <div className="flex items-center gap-2 mt-1.5">
-                <Progress value={Math.round((ag.progresso.concluidas / ag.progresso.total) * 100)} className="h-2 flex-1" />
-                <span className="text-[10px] text-muted-foreground font-medium shrink-0">
-                  {ag.progresso.concluidas}/{ag.progresso.total} atividades
-                </span>
-              </div>
-            )}
             {!compact && ag.tecnicos.length > 0 && (
               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                 {ag.tecnicos.map((t: any) => (
