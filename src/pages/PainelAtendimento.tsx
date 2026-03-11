@@ -1105,6 +1105,9 @@ export default function PainelAtendimento() {
                                            <AgendamentoChecklist cardId={detailCard.id} atividadeId={atividade.id} checklistIndex={idx} etapaId={detailCard.etapa_id} filialId={detailCard.filial_id} mesaId={item.mesa_id || etapaMesaInfo?.id} mesaCor={etapaMesaInfo?.cor} etapaExecucaoId={item.etapa_execucao_id || null} titulo={item.texto} />
                                          )}
                                       </div>
+                                      {item.tipo === "texto" && (
+                                        <Input className="h-7 w-full text-xs px-2 mt-0.5" placeholder="Texto..." value={prog.valor_texto || ""} disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onChange={(e) => saveChecklistItem(atividade.id, idx, { valor_texto: e.target.value, concluido: !!e.target.value.trim() })} />
+                                      )}
                                       {prog.concluido && prog.concluido_por_nome && (
                                         <div className="flex items-center gap-1.5 pl-6 text-[10px] text-muted-foreground">
                                           <User className="h-2.5 w-2.5" /><span>{prog.concluido_por_nome}</span>
