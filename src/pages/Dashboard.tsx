@@ -97,6 +97,7 @@ interface PedidoRow {
   status_pedido: string;
   numero_exibicao: string;
   created_at: string;
+  motivo_cancelamento: string | null;
 }
 
 interface PlanoInfo {
@@ -272,7 +273,27 @@ export default function Dashboard() {
         cliente_nome: p.clientes?.nome_fantasia || "Cliente",
         desconto_aprovado_por_nome: null as string | null,
         plano_origem_id: null as string | null,
+        motivo_cancelamento: null as string | null,
       })) as PedidoRow[];
+
+      // Fetch cancellation reasons for cancelled pedidos
+      const canceladosContratoIds = mappedPedidos
+        .filter(p => p.status_pedido === "Cancelado" && p.contrato_id)
+        .map(p => p.contrato_id!);
+      if (canceladosContratoIds.length > 0) {
+        const { data: cancelados } = await supabase
+          .from("contratos_cancelados")
+          .select("contrato_id, motivo")
+          .in("contrato_id", canceladosContratoIds);
+        if (cancelados) {
+          const motivoMap = new Map(cancelados.map((c: any) => [c.contrato_id, c.motivo]));
+          mappedPedidos.forEach(p => {
+            if (p.status_pedido === "Cancelado" && p.contrato_id) {
+              p.motivo_cancelamento = motivoMap.get(p.contrato_id) || null;
+            }
+          });
+        }
+      }
 
       // Fetch old plan for upgrade pedidos via contrato
       const upgradeContratoIds = mappedPedidos
@@ -1126,6 +1147,26 @@ export default function Dashboard() {
                                 <span>→</span>
                                 <span className="font-medium text-foreground">{planoNome}</span>
                               </p>
+                            ) : dialogType === "cancelados" ? (
+                              // Cancelados: show cancellation reason
+                              <>
+                                <p className="text-xs text-muted-foreground">
+                                  📦 Plano: <span className="font-medium text-foreground">{planoNome}</span>
+                                </p>
+                                {modulosTexto && (
+                                  <p className="text-xs text-muted-foreground">
+                                    🧩 Módulos Adicionais: <span className="font-medium text-foreground">{modulosTexto}</span>
+                                  </p>
+                                )}
+                                <div className="mt-1.5 pt-1.5 border-t border-border/50">
+                                  <p className="text-xs text-destructive font-medium">
+                                    🚫 Motivo do cancelamento:
+                                  </p>
+                                  <p className="text-xs text-foreground mt-0.5">
+                                    {p.motivo_cancelamento || "Não informado"}
+                                  </p>
+                                </div>
+                              </>
                             ) : (
                               // Other types: show plan + modules
                               <>
