@@ -313,23 +313,28 @@ export default function Agenda() {
         (cardsData || []).forEach((c: any) => { cardsMap[c.id] = c; });
       }
 
-      // Técnicos
+      // Técnicos, Apontados & Progress
       let tecMap: Record<string, any[]> = {};
+      let aponMap: Record<string, any[]> = {};
+      let progressMap: Record<string, { total: number; concluidas: number }> = {};
       if (cardIds.length > 0) {
-        const { data: tecData } = await supabase.from("painel_tecnicos").select("card_id, tecnico_id, profiles:tecnico_id(id, full_name, avatar_url)").in("card_id", cardIds);
-        (tecData || []).forEach((t: any) => {
+        const [tecRes, aponRes, execRes] = await Promise.all([
+          supabase.from("painel_tecnicos").select("card_id, tecnico_id, profiles:tecnico_id(id, full_name, avatar_url)").in("card_id", cardIds),
+          supabase.from("painel_apontamentos").select("card_id, usuario_id, profiles:usuario_id(id, full_name, avatar_url)").in("card_id", cardIds),
+          supabase.from("painel_atividade_execucao").select("card_id, status").in("card_id", cardIds),
+        ]);
+        (tecRes.data || []).forEach((t: any) => {
           if (!tecMap[t.card_id]) tecMap[t.card_id] = [];
           if (t.profiles) tecMap[t.card_id].push(t.profiles);
         });
-      }
-
-      // Apontados
-      let aponMap: Record<string, any[]> = {};
-      if (cardIds.length > 0) {
-        const { data: aponData } = await supabase.from("painel_apontamentos").select("card_id, usuario_id, profiles:usuario_id(id, full_name, avatar_url)").in("card_id", cardIds);
-        (aponData || []).forEach((a: any) => {
+        (aponRes.data || []).forEach((a: any) => {
           if (!aponMap[a.card_id]) aponMap[a.card_id] = [];
           if (a.profiles) aponMap[a.card_id].push(a.profiles);
+        });
+        (execRes.data || []).forEach((e: any) => {
+          if (!progressMap[e.card_id]) progressMap[e.card_id] = { total: 0, concluidas: 0 };
+          progressMap[e.card_id].total++;
+          if (e.status === "concluida") progressMap[e.card_id].concluidas++;
         });
       }
 
@@ -367,6 +372,7 @@ export default function Agenda() {
           pausado: card?.pausado || false,
           card_iniciado_em: card?.iniciado_em || null,
           sla_horas: card?.sla_horas || 0,
+          progresso: progressMap[ag.card_id] || null,
         };
       });
     },
