@@ -420,6 +420,12 @@ export function getStatusGeracaoBadge(statusGeracao: string | null, contratoStat
       </Badge>
     );
   }
+  if (statusGeracao === "Manual")
+    return (
+      <Badge className="bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100 text-xs flex items-center gap-1 w-fit">
+        Retroativo
+      </Badge>
+    );
   if (statusGeracao === "Gerado")
     return (
       <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 text-xs flex items-center gap-1 w-fit">
