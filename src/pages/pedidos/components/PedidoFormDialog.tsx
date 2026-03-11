@@ -427,6 +427,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                         </div>
                         <Button
                           type="button" variant="ghost" size="icon"
+                          tabIndex={-1}
                           className="h-7 w-7 text-destructive hover:text-destructive"
                           onClick={() => onRemoverServico(s.servico_id)}
                         >
