@@ -185,37 +185,49 @@ export default function Agenda() {
       const cardsMap: Record<string, any> = {};
       cards.forEach((c: any) => { cardsMap[c.id] = c; });
 
-      // Step 4: fetch técnicos, apontados, estrutura da jornada e progresso real do checklist
+      // Step 4: fetch técnicos, apontados, execuções e progresso real do checklist
       let tecnicos: any[] = [];
       let apontados: any[] = [];
       let atividadeExecucao: any[] = [];
       let checklistProgressRows: any[] = [];
       let jornadaAtividades: any[] = [];
       let jornadaEtapas: any[] = [];
+      let jornadasByPlano: Record<string, string> = {};
       if (cardIds.length > 0) {
-        const jornadaIds = [...new Set(cards.map((c: any) => c.jornada_id).filter(Boolean))];
-        const [tecRes, aponRes, execRes, checklistRes, etapasRes] = await Promise.all([
+        const planoIds = [...new Set(cards.map((c: any) => c.plano_id).filter(Boolean))];
+        const [tecRes, aponRes, execRes, checklistRes, jornadasRes] = await Promise.all([
           supabase.from("painel_tecnicos").select("card_id, tecnico_id, profiles:tecnico_id(id, full_name, avatar_url)").in("card_id", cardIds),
           supabase.from("painel_apontamentos").select("card_id, usuario_id, profiles:usuario_id(id, full_name, avatar_url)").in("card_id", cardIds),
           supabase.from("painel_atividade_execucao").select("card_id, atividade_id, etapa_id, status").in("card_id", cardIds).not("atividade_id", "is", null),
           supabase.from("painel_checklist_progresso").select("card_id, atividade_id, checklist_index, concluido").in("card_id", cardIds).eq("concluido", true),
-          jornadaIds.length > 0
-            ? supabase.from("jornada_etapas").select("id, jornada_id, nome").in("jornada_id", jornadaIds)
+          planoIds.length > 0
+            ? supabase.from("jornadas").select("id, vinculo_id").eq("ativo", true).eq("vinculo_tipo", "plano").in("vinculo_id", planoIds)
             : Promise.resolve({ data: [] }),
         ]);
         tecnicos = tecRes.data || [];
         apontados = aponRes.data || [];
         atividadeExecucao = execRes.data || [];
         checklistProgressRows = checklistRes.data || [];
-        jornadaEtapas = etapasRes.data || [];
+        (jornadasRes.data || []).forEach((j: any) => {
+          jornadasByPlano[j.vinculo_id] = j.id;
+        });
 
-        const etapaIds = jornadaEtapas.map((e: any) => e.id);
-        if (etapaIds.length > 0) {
-          const { data: atividadesData } = await supabase
-            .from("jornada_atividades")
-            .select("id, etapa_id, checklist")
-            .in("etapa_id", etapaIds);
-          jornadaAtividades = atividadesData || [];
+        const jornadaIds = [...new Set(cards.map((c: any) => c.jornada_id || (c.plano_id ? jornadasByPlano[c.plano_id] : null)).filter(Boolean))];
+        if (jornadaIds.length > 0) {
+          const { data: etapasData } = await supabase
+            .from("jornada_etapas")
+            .select("id, jornada_id, nome")
+            .in("jornada_id", jornadaIds);
+          jornadaEtapas = etapasData || [];
+
+          const etapaIds = jornadaEtapas.map((e: any) => e.id);
+          if (etapaIds.length > 0) {
+            const { data: atividadesData } = await supabase
+              .from("jornada_atividades")
+              .select("id, etapa_id, checklist")
+              .in("etapa_id", etapaIds);
+            jornadaAtividades = atividadesData || [];
+          }
         }
       }
       const tecMap: Record<string, any[]> = {};
@@ -228,6 +240,17 @@ export default function Agenda() {
         if (!aponMap[a.card_id]) aponMap[a.card_id] = [];
         if (a.profiles) aponMap[a.card_id].push(a.profiles);
       });
+
+      // Step 5: fetch etapa names for display - include card etapa_id as fallback
+      const etapaIdsFromAg = (rows || []).map((r: any) => r.etapa_id).filter(Boolean);
+      const etapaIdsFromCards = Object.values(cardsMap).map((c: any) => c.etapa_id).filter(Boolean);
+      const etapaIds = [...new Set([...etapaIdsFromAg, ...etapaIdsFromCards])];
+      let etapasMap: Record<string, { nome: string; cor: string | null }> = {};
+      if (etapaIds.length > 0) {
+        const { data: etapasData } = await supabase.from("painel_etapas").select("id, nome, cor").in("id", etapaIds);
+        (etapasData || []).forEach((e: any) => { etapasMap[e.id] = { nome: e.nome, cor: e.cor }; });
+      }
+
       // Progress maps alinhados com o card do projeto
       const progressMap: Record<string, { total: number; concluidas: number }> = {};
       const progressEtapaMap: Record<string, { total: number; concluidas: number }> = {};
@@ -250,42 +273,37 @@ export default function Agenda() {
         atividadesByEtapa[a.etapa_id].push(a);
       });
 
-      cards.forEach((card: any) => {
-        const totalProjeto = (atividadesByJornada[card.jornada_id] || []).reduce((acc: number, a: any) => {
-          const checklist = Array.isArray(a.checklist) ? a.checklist : [];
-          return acc + checklist.length;
-        }, 0);
-        const concluidasProjeto = checklistProgressRows.filter((r: any) => r.card_id === card.id).length;
-        progressMap[card.id] = { total: totalProjeto, concluidas: concluidasProjeto };
-
-        const etapaAtual = jornadaEtapas.find((e: any) => e.jornada_id === card.jornada_id && e.nome === (etapasMapTemp[card.etapa_id]?.nome || ""));
-        const atividadesEtapaAtual = etapaAtual ? (atividadesByEtapa[etapaAtual.id] || []) : [];
-        const totalEtapa = atividadesEtapaAtual.reduce((acc: number, a: any) => {
-          const checklist = Array.isArray(a.checklist) ? a.checklist : [];
-          return acc + checklist.length;
-        }, 0);
-        const atividadeIdsEtapa = new Set(atividadesEtapaAtual.map((a: any) => a.id));
-        const concluidasEtapa = checklistProgressRows.filter((r: any) => r.card_id === card.id && r.atividade_id && atividadeIdsEtapa.has(r.atividade_id)).length;
-        if (card.etapa_id) {
-          progressEtapaMap[`${card.id}__${card.etapa_id}`] = { total: totalEtapa, concluidas: concluidasEtapa };
-        }
-      });
-
       atividadeExecucao.forEach((e: any) => {
         if (e.atividade_id) {
           activityStatusMap[`${e.card_id}__${e.atividade_id}`] = e.status;
         }
       });
 
-      // Step 5: fetch etapa names for display - include card etapa_id as fallback
-      const etapaIdsFromAg = (rows || []).map((r: any) => r.etapa_id).filter(Boolean);
-      const etapaIdsFromCards = Object.values(cardsMap).map((c: any) => c.etapa_id).filter(Boolean);
-      const etapaIds = [...new Set([...etapaIdsFromAg, ...etapaIdsFromCards])];
-      let etapasMap: Record<string, { nome: string; cor: string | null }> = {};
-      if (etapaIds.length > 0) {
-        const { data: etapasData } = await supabase.from("painel_etapas").select("id, nome, cor").in("id", etapaIds);
-        (etapasData || []).forEach((e: any) => { etapasMap[e.id] = { nome: e.nome, cor: e.cor }; });
-      }
+      cards.forEach((card: any) => {
+        const resolvedJornadaId = card.jornada_id || (card.plano_id ? jornadasByPlano[card.plano_id] : null);
+        const atividadesProjeto = resolvedJornadaId ? (atividadesByJornada[resolvedJornadaId] || []) : [];
+        const totalProjeto = atividadesProjeto.reduce((acc: number, a: any) => {
+          const checklist = Array.isArray(a.checklist) ? a.checklist : [];
+          return acc + checklist.length;
+        }, 0);
+        const concluidasProjeto = checklistProgressRows.filter((r: any) => r.card_id === card.id).length;
+        progressMap[card.id] = { total: totalProjeto, concluidas: concluidasProjeto };
+
+        const etapaAtualNome = card.etapa_id ? etapasMap[card.etapa_id]?.nome || null : null;
+        const etapaJornadaAtual = etapaAtualNome && resolvedJornadaId
+          ? jornadaEtapas.find((e: any) => e.jornada_id === resolvedJornadaId && e.nome === etapaAtualNome)
+          : null;
+        const atividadesEtapaAtual = etapaJornadaAtual ? (atividadesByEtapa[etapaJornadaAtual.id] || []) : [];
+        const atividadeIdsEtapa = new Set(atividadesEtapaAtual.map((a: any) => a.id));
+        const totalEtapa = atividadesEtapaAtual.reduce((acc: number, a: any) => {
+          const checklist = Array.isArray(a.checklist) ? a.checklist : [];
+          return acc + checklist.length;
+        }, 0);
+        const concluidasEtapa = checklistProgressRows.filter((r: any) => r.card_id === card.id && r.atividade_id && atividadeIdsEtapa.has(r.atividade_id)).length;
+        if (card.etapa_id) {
+          progressEtapaMap[`${card.id}__${card.etapa_id}`] = { total: totalEtapa, concluidas: concluidasEtapa };
+        }
+      });
 
       // Enrich
       const enriched = (rows || []).map((ag: any) => {
