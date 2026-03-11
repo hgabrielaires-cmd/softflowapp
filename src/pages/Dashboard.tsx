@@ -98,6 +98,8 @@ interface PedidoRow {
   numero_exibicao: string;
   created_at: string;
   motivo_cancelamento: string | null;
+  cancelado_em: string | null;
+  cancelado_por_nome: string | null;
 }
 
 interface PlanoInfo {
