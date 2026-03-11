@@ -1293,9 +1293,9 @@ export default function PainelAtendimento() {
             </div>
           )}
           {detailCard && (
-            <DialogFooter className="border-t pt-3 flex flex-col gap-2">
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2">
+            <DialogFooter className="border-t pt-3 flex-col !items-stretch gap-0">
+              <div className="flex items-start justify-between w-full gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {(podePausarProjeto || podeRecusarProjeto || podeGerenciarApontamento || podeResetarProjeto) && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="gap-1.5"><MoreHorizontal className="h-4 w-4" />Ações</Button></DropdownMenuTrigger>
@@ -1318,15 +1318,14 @@ export default function PainelAtendimento() {
                   const bloqueado = checklistIncompleto || atividadesPendentes || finalizando;
                   const motivo = atividadesPendentes ? "Conclua todas as atividades" : checklistIncompleto ? "Conclua o checklist" : null;
                   return (
-                    <div className="flex flex-col items-end gap-0.5">
+                    <div className="flex flex-col items-end gap-1 shrink-0">
                       <Button size="sm" className="h-9 px-4" onClick={finalizarEtapa} disabled={bloqueado}><ChevronRight className="h-4 w-4 mr-1" />{finalizando ? "Finalizando..." : "Finalizar Etapa"}</Button>
                       {bloqueado && motivo && <span className="text-[9px] text-destructive">{motivo}</span>}
+                      {checklistIncompleto && <span className="text-[9px] text-muted-foreground">Complete o checklist para finalizar</span>}
                     </div>
                   );
                 })()}
               </div>
-              {!isChecklistCompleto(checklistEtapa, checklistProgresso) && <p className="text-[10px] text-muted-foreground text-right">Complete todos os itens do checklist para finalizar</p>}
-              {isChecklistCompleto(checklistEtapa, checklistProgresso) && checklistEtapa.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, checklistEtapa.map((a: any) => a.id)) && <p className="text-[10px] text-amber-600 font-medium text-right">Conclua todas as atividades da etapa para finalizar</p>}
             </DialogFooter>
           )}
         </DialogContent>
