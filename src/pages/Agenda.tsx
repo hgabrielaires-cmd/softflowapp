@@ -610,11 +610,14 @@ export default function Agenda() {
               )}
             </div>
             <p className="font-medium text-sm text-foreground truncate">
-              {ag.titulo || ag.cliente_nome}
+              {ag.cliente_nome}
             </p>
             <p className="text-xs text-muted-foreground">
               Contrato: {ag.contrato_numero} · <span className="font-medium" style={{ color: ag.mesa_cor || undefined }}>{ag.atividade_nome}</span>
             </p>
+            {ag.titulo && (
+              <p className="text-xs text-muted-foreground truncate">{ag.titulo}</p>
+            )}
             {ag.etapa_atual_nome && ag.etapa_atual_nome !== "—" && (
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className="text-xs font-medium" style={{ color: ag.etapa_atual_cor || undefined }}>
