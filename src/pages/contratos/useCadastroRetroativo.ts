@@ -348,6 +348,7 @@ export function useCadastroRetroativo({ profileFilialId, loadData }: UseCadastro
       pagamento_mensalidade_forma: retroForm.pagamento_mensalidade_forma || null,
       pagamento_mensalidade_observacao: retroForm.pagamento_mensalidade_observacao.trim() || null,
       segmento_id: retroForm.segmento_id || null,
+      dia_mensalidade: retroForm.dia_mensalidade ? parseInt(retroForm.dia_mensalidade) : null,
       created_at: dataLancamento,
     };
 
