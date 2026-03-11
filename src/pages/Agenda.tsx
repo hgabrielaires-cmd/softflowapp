@@ -185,19 +185,38 @@ export default function Agenda() {
       const cardsMap: Record<string, any> = {};
       cards.forEach((c: any) => { cardsMap[c.id] = c; });
 
-      // Step 4: fetch técnicos, apontados & activity progress for these cards
+      // Step 4: fetch técnicos, apontados, estrutura da jornada e progresso real do checklist
       let tecnicos: any[] = [];
       let apontados: any[] = [];
       let atividadeExecucao: any[] = [];
+      let checklistProgressRows: any[] = [];
+      let jornadaAtividades: any[] = [];
+      let jornadaEtapas: any[] = [];
       if (cardIds.length > 0) {
-        const [tecRes, aponRes, execRes] = await Promise.all([
+        const jornadaIds = [...new Set(cards.map((c: any) => c.jornada_id).filter(Boolean))];
+        const [tecRes, aponRes, execRes, checklistRes, etapasRes] = await Promise.all([
           supabase.from("painel_tecnicos").select("card_id, tecnico_id, profiles:tecnico_id(id, full_name, avatar_url)").in("card_id", cardIds),
           supabase.from("painel_apontamentos").select("card_id, usuario_id, profiles:usuario_id(id, full_name, avatar_url)").in("card_id", cardIds),
           supabase.from("painel_atividade_execucao").select("card_id, atividade_id, etapa_id, status").in("card_id", cardIds).not("atividade_id", "is", null),
+          supabase.from("painel_checklist_progresso").select("card_id, atividade_id, checklist_index, concluido").in("card_id", cardIds).eq("concluido", true),
+          jornadaIds.length > 0
+            ? supabase.from("jornada_etapas").select("id, jornada_id, nome").in("jornada_id", jornadaIds)
+            : Promise.resolve({ data: [] }),
         ]);
         tecnicos = tecRes.data || [];
         apontados = aponRes.data || [];
         atividadeExecucao = execRes.data || [];
+        checklistProgressRows = checklistRes.data || [];
+        jornadaEtapas = etapasRes.data || [];
+
+        const etapaIds = jornadaEtapas.map((e: any) => e.id);
+        if (etapaIds.length > 0) {
+          const { data: atividadesData } = await supabase
+            .from("jornada_atividades")
+            .select("id, etapa_id, checklist")
+            .in("etapa_id", etapaIds);
+          jornadaAtividades = atividadesData || [];
+        }
       }
       const tecMap: Record<string, any[]> = {};
       tecnicos.forEach((t: any) => {
