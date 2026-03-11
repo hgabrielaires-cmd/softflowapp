@@ -450,6 +450,12 @@ export function CadastroRetroativoDialog(props: CadastroRetroativoDialogProps) {
                   </div>
                 </div>
 
+                {/* Dia da mensalidade */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Dia da Mensalidade</Label>
+                  <Input type="number" min="1" max="31" placeholder="Ex: 10" value={retroForm.dia_mensalidade || ""} onChange={(e) => setRetroForm(f => ({ ...f, dia_mensalidade: e.target.value }))} className="w-32" />
+                </div>
+
                 {retroDescontoAtivo && (
                   <div className="space-y-3 border-t border-border pt-3">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Descontos</p>
