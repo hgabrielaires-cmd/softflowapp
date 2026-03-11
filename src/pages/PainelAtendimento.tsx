@@ -1106,7 +1106,11 @@ export default function PainelAtendimento() {
                                          )}
                                       </div>
                                       {item.tipo === "texto" && (
-                                        <Input className="h-7 w-full text-xs px-2 mt-0.5" placeholder="Texto..." value={prog.valor_texto || ""} disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onChange={(e) => saveChecklistItem(atividade.id, idx, { valor_texto: e.target.value, concluido: !!e.target.value.trim() })} />
+                                        <ChecklistTextoInput
+                                          initialValue={prog.valor_texto || ""}
+                                          disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)}
+                                          onSave={(val) => saveChecklistItem(atividade.id, idx, { valor_texto: val, concluido: !!val.trim() })}
+                                        />
                                       )}
                                       {prog.concluido && prog.concluido_por_nome && (
                                         <div className="flex items-center gap-1.5 pl-6 text-[10px] text-muted-foreground">
