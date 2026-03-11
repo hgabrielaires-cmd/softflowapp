@@ -87,6 +87,7 @@ interface PedidoRow {
   tipo_pedido: string;
   plano_id: string;
   contrato_id: string | null;
+  contrato_relacionado_id: string | null;
   modulos_adicionais: any;
   cliente_id: string;
   plano_origem_id: string | null;
