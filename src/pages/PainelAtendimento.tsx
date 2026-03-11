@@ -61,9 +61,9 @@ import { HistoricoDialog } from "./painel-atendimento/components/HistoricoDialog
 
 // ─── Checklist Texto Input (local state + save on blur) ─────────────────────
 function ChecklistTextoInput({ initialValue, disabled, onSave }: { initialValue: string; disabled: boolean; onSave: (val: string) => void }) {
-  const [value, setValue] = React.useState(initialValue);
-  const savedRef = React.useRef(initialValue);
-  React.useEffect(() => { setValue(initialValue); savedRef.current = initialValue; }, [initialValue]);
+  const [value, setValue] = useState(initialValue);
+  const savedRef = useRef(initialValue);
+  useEffect(() => { setValue(initialValue); savedRef.current = initialValue; }, [initialValue]);
   const handleBlur = () => { if (value !== savedRef.current) { savedRef.current = value; onSave(value); } };
   return <Input className="h-7 w-full text-xs px-2 mt-0.5" placeholder="Texto..." value={value} disabled={disabled} onChange={(e) => setValue(e.target.value)} onBlur={handleBlur} onKeyDown={(e) => { if (e.key === "Enter") { e.currentTarget.blur(); } }} />;
 }
