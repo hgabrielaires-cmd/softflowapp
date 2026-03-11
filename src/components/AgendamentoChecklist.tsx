@@ -29,10 +29,11 @@ interface Props {
   etapaId?: string | null;
   etapaExecucaoId?: string | null;
   titulo?: string | null;
+  allowDelete?: boolean;
   onUpdate?: (hasAgendamentos: boolean) => void;
 }
 
-export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disabled, mesaId, mesaCor, filialId, etapaId, etapaExecucaoId, titulo, onUpdate }: Props) {
+export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disabled, mesaId, mesaCor, filialId, etapaId, etapaExecucaoId, titulo, allowDelete = false, onUpdate }: Props) {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [loading, setLoading] = useState(true);
@@ -243,6 +244,16 @@ export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disa
                   placeholder="Fim"
                 />
               </div>
+              {allowDelete && !disabled && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 shrink-0"
+                  onClick={() => ag.id && removeAgendamento(ag.id)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
             </div>
           ))}
         </div>
