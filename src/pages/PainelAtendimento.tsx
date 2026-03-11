@@ -1100,7 +1100,7 @@ export default function PainelAtendimento() {
                                           </div>
                                         )}
                                         {(item.tipo as string) === "data" && <Input type="date" className="h-5 w-32 text-[10px] px-1" value={prog.valor_data || ""} disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onChange={(e) => saveChecklistItem(atividade.id, idx, { valor_data: e.target.value, concluido: !!e.target.value })} />}
-                                        {item.tipo === "texto" && <Input className="h-5 w-40 text-[10px] px-1" placeholder="Valor..." value={prog.valor_texto || ""} disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onChange={(e) => saveChecklistItem(atividade.id, idx, { valor_texto: e.target.value, concluido: !!e.target.value.trim() })} />}
+                                        
                                         {detailCard.aponta_tecnico_agenda && item.tipo === "agendamento" && prog.concluido && (
                                            <AgendamentoChecklist cardId={detailCard.id} atividadeId={atividade.id} checklistIndex={idx} etapaId={detailCard.etapa_id} filialId={detailCard.filial_id} mesaId={item.mesa_id || etapaMesaInfo?.id} mesaCor={etapaMesaInfo?.cor} etapaExecucaoId={item.etapa_execucao_id || null} titulo={item.texto} />
                                          )}
