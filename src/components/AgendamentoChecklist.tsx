@@ -29,6 +29,7 @@ interface Props {
   etapaId?: string | null;
   etapaExecucaoId?: string | null;
   titulo?: string | null;
+  allowDelete?: boolean;
   onUpdate?: (hasAgendamentos: boolean) => void;
 }
 
