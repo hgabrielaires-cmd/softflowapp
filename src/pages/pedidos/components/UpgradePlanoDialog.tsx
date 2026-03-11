@@ -50,7 +50,8 @@ export function UpgradePlanoDialog({
                   const planoAtualId = planoVigenteId || contratoAtivo?.plano_id;
                   const planoAtual = planos.find((p) => p.id === planoAtualId);
                   const ordemAtual = planoAtual?.ordem ?? 0;
-                  const planosUpgrade = planos.filter((p) => p.id !== planoAtualId && p.ordem > ordemAtual);
+                  const fornecedorAtual = planoAtual?.fornecedor_id ?? null;
+                  const planosUpgrade = planos.filter((p) => p.id !== planoAtualId && p.ordem > ordemAtual && (fornecedorAtual ? p.fornecedor_id === fornecedorAtual : true));
                   return planosUpgrade.length === 0
                     ? <SelectItem value="__none__" disabled>Nenhum plano disponível para upgrade</SelectItem>
                     : planosUpgrade.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>);
