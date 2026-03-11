@@ -87,6 +87,7 @@ interface PedidoRow {
   tipo_pedido: string;
   plano_id: string;
   contrato_id: string | null;
+  contrato_relacionado_id: string | null;
   modulos_adicionais: any;
   cliente_id: string;
   plano_origem_id: string | null;
@@ -275,15 +276,31 @@ export default function Dashboard() {
         cliente_nome: p.clientes?.nome_fantasia || "Cliente",
         desconto_aprovado_por_nome: null as string | null,
         plano_origem_id: null as string | null,
+        contrato_relacionado_id: p.contrato_id || null,
         motivo_cancelamento: null as string | null,
         cancelado_em: null as string | null,
         cancelado_por_nome: null as string | null,
       })) as PedidoRow[];
 
+      const pedidoIdsMapeados = mappedPedidos.map(p => p.id);
+      if (pedidoIdsMapeados.length > 0) {
+        const { data: contratosRelacionados } = await supabase
+          .from("contratos")
+          .select("id, pedido_id")
+          .in("pedido_id", pedidoIdsMapeados);
+
+        if (contratosRelacionados) {
+          const contratoPorPedidoMap = new Map(contratosRelacionados.map((c: any) => [c.pedido_id, c.id]));
+          mappedPedidos.forEach(p => {
+            p.contrato_relacionado_id = p.contrato_id || contratoPorPedidoMap.get(p.id) || null;
+          });
+        }
+      }
+
       // Fetch cancellation reasons for cancelled pedidos
       const canceladosContratoIds = mappedPedidos
-        .filter(p => p.status_pedido === "Cancelado" && p.contrato_id)
-        .map(p => p.contrato_id!);
+        .filter(p => p.status_pedido === "Cancelado" && p.contrato_relacionado_id)
+        .map(p => p.contrato_relacionado_id!);
       if (canceladosContratoIds.length > 0) {
         const { data: cancelados } = await supabase
           .from("contratos_cancelados")
@@ -302,8 +319,8 @@ export default function Dashboard() {
           }
           const canceladoMap = new Map(cancelados.map((c: any) => [c.contrato_id, c]));
           mappedPedidos.forEach(p => {
-            if (p.status_pedido === "Cancelado" && p.contrato_id) {
-              const cancel = canceladoMap.get(p.contrato_id);
+            if (p.status_pedido === "Cancelado" && p.contrato_relacionado_id) {
+              const cancel = canceladoMap.get(p.contrato_relacionado_id);
               if (cancel) {
                 p.motivo_cancelamento = cancel.motivo || null;
                 p.cancelado_em = cancel.cancelado_em || null;
