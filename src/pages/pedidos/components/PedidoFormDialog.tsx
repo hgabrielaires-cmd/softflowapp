@@ -201,6 +201,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
             <div className="flex items-center justify-between">
               <Label>Cliente *</Label>
               <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1 text-primary hover:text-primary"
+                tabIndex={-1}
                 onClick={() => { setClienteForm(emptyClienteForm); setClienteContatos([]); setOpenClienteDialog(true); }}>
                 <UserPlus className="h-3.5 w-3.5" /> Novo cliente
               </Button>
