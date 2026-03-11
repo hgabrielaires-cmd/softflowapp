@@ -657,6 +657,11 @@ export default function Agenda() {
                 <span className="text-xs font-medium" style={{ color: ag.etapa_atual_cor || undefined }}>
                   Etapa Atual: {ag.etapa_atual_nome}
                 </span>
+                {ag.progresso_etapa && ag.progresso_etapa.total > 0 && (
+                  <Badge variant="outline" className="text-[11px] border-primary/30 text-primary font-medium">
+                    {ag.progresso_etapa.concluidas} de {ag.progresso_etapa.total}
+                  </Badge>
+                )}
                 {ag.sla_horas > 0 && ag.card_iniciado_em && (
                   <Badge variant="outline" className={cn("text-[11px]", (() => {
                     const horasDecorridas = (Date.now() - new Date(ag.card_iniciado_em).getTime()) / 3600000;
