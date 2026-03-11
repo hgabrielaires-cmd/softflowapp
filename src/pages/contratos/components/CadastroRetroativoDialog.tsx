@@ -467,7 +467,18 @@ export function CadastroRetroativoDialog(props: CadastroRetroativoDialogProps) {
                           <SelectContent><SelectItem value="R$">R$</SelectItem><SelectItem value="%">%</SelectItem></SelectContent>
                         </Select>
                         <Input type="number" min="0" step="0.01" value={retroForm.desconto_implantacao_valor} onChange={(e) => setRetroForm(f => ({ ...f, desconto_implantacao_valor: e.target.value }))} className="flex-1" placeholder="0" />
-                        <Input readOnly value={fmtBRL(retroValorImpFinal)} className="w-36 bg-background font-mono text-sm text-primary font-semibold" />
+                        <Input
+                          type="text" inputMode="decimal"
+                          defaultValue={retroValorImpFinal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          key={`retro-imp-final-${retroValorImpFinal.toFixed(2)}`}
+                          onBlur={(e) => {
+                            const raw = e.target.value.replace(/[R$\s]/g, "").replace(/\./g, "").replace(",", ".");
+                            const novoFinal = parseFloat(raw) || 0;
+                            const descontoCalc = Math.max(0, retroValorImpOriginal - novoFinal);
+                            setRetroForm(f => ({ ...f, desconto_implantacao_tipo: "R$" as const, desconto_implantacao_valor: descontoCalc.toFixed(2) }));
+                          }}
+                          className="w-36 bg-background font-mono text-sm text-primary font-semibold"
+                        />
                       </div>
                     </div>
                     <div className="space-y-1.5">
@@ -478,7 +489,18 @@ export function CadastroRetroativoDialog(props: CadastroRetroativoDialogProps) {
                           <SelectContent><SelectItem value="R$">R$</SelectItem><SelectItem value="%">%</SelectItem></SelectContent>
                         </Select>
                         <Input type="number" min="0" step="0.01" value={retroForm.desconto_mensalidade_valor} onChange={(e) => setRetroForm(f => ({ ...f, desconto_mensalidade_valor: e.target.value }))} className="flex-1" placeholder="0" />
-                        <Input readOnly value={fmtBRL(retroValorMensFinal)} className="w-36 bg-background font-mono text-sm text-primary font-semibold" />
+                        <Input
+                          type="text" inputMode="decimal"
+                          defaultValue={retroValorMensFinal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          key={`retro-mens-final-${retroValorMensFinal.toFixed(2)}`}
+                          onBlur={(e) => {
+                            const raw = e.target.value.replace(/[R$\s]/g, "").replace(/\./g, "").replace(",", ".");
+                            const novoFinal = parseFloat(raw) || 0;
+                            const descontoCalc = Math.max(0, retroValorMensOriginal - novoFinal);
+                            setRetroForm(f => ({ ...f, desconto_mensalidade_tipo: "R$" as const, desconto_mensalidade_valor: descontoCalc.toFixed(2) }));
+                          }}
+                          className="w-36 bg-background font-mono text-sm text-primary font-semibold"
+                        />
                       </div>
                     </div>
                     <div className="space-y-1.5">
