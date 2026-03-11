@@ -573,7 +573,7 @@ export default function Contratos() {
                     <TableCell>{getStatusBadge(contrato.status)}</TableCell>
                     <TableCell>{getPedidoStatusBadges(contrato)}</TableCell>
                     <TableCell>{getStatusGeracaoBadge(contrato.status_geracao, contrato.status)}</TableCell>
-                    <TableCell>{getZapSignStatusBadge(zapsignRecords[contrato.id]?.status, contrato.status)}</TableCell>
+                    <TableCell>{getZapSignStatusBadge(zapsignRecords[contrato.id]?.status, contrato.status, contrato.status_geracao)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       <div>{format(new Date(contrato.created_at), "dd/MM/yyyy", { locale: ptBR })}</div>
                       <div className="text-xs">{format(new Date(contrato.created_at), "HH:mm", { locale: ptBR })}</div>

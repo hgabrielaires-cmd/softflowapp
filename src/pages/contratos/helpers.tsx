@@ -348,7 +348,14 @@ Estou à disposição.`;
 
 // ─── Badge / Presentation Helpers ─────────────────────────────────────────
 
-export function getZapSignStatusBadge(status: string | undefined, contratoStatus?: string) {
+export function getZapSignStatusBadge(status: string | undefined, contratoStatus?: string, statusGeracao?: string | null) {
+  if (!status && statusGeracao === "Manual") {
+    return (
+      <Badge className="bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100 text-xs flex items-center gap-1 w-fit">
+        Retroativo
+      </Badge>
+    );
+  }
   if (!status) return null;
   const canceladoBadge = contratoStatus === "Encerrado" ? (
     <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 text-xs flex items-center gap-1 w-fit">
@@ -420,6 +427,12 @@ export function getStatusGeracaoBadge(statusGeracao: string | null, contratoStat
       </Badge>
     );
   }
+  if (statusGeracao === "Manual")
+    return (
+      <Badge className="bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100 text-xs flex items-center gap-1 w-fit">
+        Retroativo
+      </Badge>
+    );
   if (statusGeracao === "Gerado")
     return (
       <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 text-xs flex items-center gap-1 w-fit">
