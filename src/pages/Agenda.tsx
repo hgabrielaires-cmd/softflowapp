@@ -177,7 +177,7 @@ export default function Agenda() {
       if (cardIds.length > 0) {
         const { data: cardsData } = await supabase
           .from("painel_atendimento")
-          .select("id, cliente_id, contrato_id, pedido_id, filial_id, tipo_atendimento_local, status_projeto, pausado, iniciado_em, sla_horas, responsavel_id, etapa_id, clientes(nome_fantasia, cnpj_cpf), contratos(numero_exibicao), filiais(nome), profiles:responsavel_id(full_name)")
+          .select("id, cliente_id, contrato_id, pedido_id, filial_id, plano_id, jornada_id, tipo_atendimento_local, status_projeto, pausado, iniciado_em, sla_horas, responsavel_id, etapa_id, clientes(nome_fantasia, cnpj_cpf), contratos(numero_exibicao), filiais(nome), profiles:responsavel_id(full_name)")
           .in("id", cardIds)
           .neq("status_projeto", "cancelado");
         cards = cardsData || [];
