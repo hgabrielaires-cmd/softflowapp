@@ -224,6 +224,13 @@ export default function Agenda() {
           if (e.status === "concluida") progressEtapaMap[key].concluidas++;
         }
       });
+      // Activity status map: { card_id__atividade_id: status }
+      const activityStatusMap: Record<string, string> = {};
+      atividadeExecucao.forEach((e: any) => {
+        if (e.atividade_id) {
+          activityStatusMap[`${e.card_id}__${e.atividade_id}`] = e.status;
+        }
+      });
 
       // Step 5: fetch etapa names for display - include card etapa_id as fallback
       const etapaIdsFromAg = (rows || []).map((r: any) => r.etapa_id).filter(Boolean);
