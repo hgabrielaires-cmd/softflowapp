@@ -105,6 +105,7 @@ const defaultRetroForm: RetroForm = {
   pagamento_implantacao_forma: "", pagamento_implantacao_parcelas: "",
   pagamento_implantacao_observacao: "", pagamento_mensalidade_forma: "",
   pagamento_mensalidade_observacao: "",
+  dia_mensalidade: "",
 };
 
 export const emptyRetroClienteForm: RetroClienteFormData = {
