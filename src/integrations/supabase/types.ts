@@ -2437,6 +2437,7 @@ export type Database = {
           desconto_implantacao_valor: number
           desconto_mensalidade_tipo: string
           desconto_mensalidade_valor: number
+          dia_mensalidade: number | null
           filial_id: string
           financeiro_aprovado_em: string | null
           financeiro_aprovado_por: string | null
@@ -2494,6 +2495,7 @@ export type Database = {
           desconto_implantacao_valor?: number
           desconto_mensalidade_tipo?: string
           desconto_mensalidade_valor?: number
+          dia_mensalidade?: number | null
           filial_id: string
           financeiro_aprovado_em?: string | null
           financeiro_aprovado_por?: string | null
@@ -2551,6 +2553,7 @@ export type Database = {
           desconto_implantacao_valor?: number
           desconto_mensalidade_tipo?: string
           desconto_mensalidade_valor?: number
+          dia_mensalidade?: number | null
           filial_id?: string
           financeiro_aprovado_em?: string | null
           financeiro_aprovado_por?: string | null
