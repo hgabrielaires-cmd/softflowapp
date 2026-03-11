@@ -94,6 +94,7 @@ export interface RetroFormState {
   pagamento_implantacao_observacao: string;
   pagamento_mensalidade_forma: string;
   pagamento_mensalidade_observacao: string;
+  dia_mensalidade: string;
 }
 
 export interface RetroClienteFormState {
