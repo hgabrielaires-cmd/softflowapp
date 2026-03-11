@@ -1053,7 +1053,21 @@ export default function PainelAtendimento() {
                                     <CheckSquare className="h-4 w-4" />Concluir
                                   </Button>
                                 )}
-                                {statusAtiv === "em_andamento" && <Badge className="text-[9px] px-1.5 py-0 bg-accent text-accent-foreground">Em andamento</Badge>}
+                                {statusAtiv === "em_andamento" && (
+                                  <Badge className="text-[9px] px-1.5 py-0 bg-emerald-500 text-white border-emerald-500">Em andamento</Badge>
+                                )}
+                                {statusAtiv === "em_andamento" && atividade.horas_estimadas > 0 && execAtiv?.iniciado_em && (() => {
+                                  const horasDecorridas = (Date.now() - new Date(execAtiv.iniciado_em).getTime()) / (1000 * 60 * 60);
+                                  if (horasDecorridas <= atividade.horas_estimadas) return null;
+                                  const excedido = horasDecorridas - atividade.horas_estimadas;
+                                  const hExc = Math.floor(excedido);
+                                  const mExc = Math.round((excedido - hExc) * 60);
+                                  return (
+                                    <Badge variant="destructive" className="text-[9px] px-1.5 py-0 gap-0.5">
+                                      <AlertTriangle className="h-2.5 w-2.5" />SLA +{hExc > 0 ? `${hExc}h` : ""}{mExc > 0 ? `${mExc}min` : hExc === 0 ? "0min" : ""}
+                                    </Badge>
+                                  );
+                                })()}
                                 {statusAtiv === "concluida" && !emAtraso && <Badge className="text-[9px] px-1.5 py-0 bg-primary text-primary-foreground">Concluída</Badge>}
                                 {statusAtiv === "concluida" && emAtraso && <Badge variant="destructive" className="text-[9px] px-1.5 py-0 gap-0.5"><AlertTriangle className="h-2.5 w-2.5" />Concluída em atraso</Badge>}
                               </div>
