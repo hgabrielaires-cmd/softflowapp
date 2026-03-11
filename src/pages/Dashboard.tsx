@@ -98,6 +98,8 @@ interface PedidoRow {
   numero_exibicao: string;
   created_at: string;
   motivo_cancelamento: string | null;
+  cancelado_em: string | null;
+  cancelado_por_nome: string | null;
 }
 
 interface PlanoInfo {
@@ -274,6 +276,8 @@ export default function Dashboard() {
         desconto_aprovado_por_nome: null as string | null,
         plano_origem_id: null as string | null,
         motivo_cancelamento: null as string | null,
+        cancelado_em: null as string | null,
+        cancelado_por_nome: null as string | null,
       })) as PedidoRow[];
 
       // Fetch cancellation reasons for cancelled pedidos
@@ -283,13 +287,28 @@ export default function Dashboard() {
       if (canceladosContratoIds.length > 0) {
         const { data: cancelados } = await supabase
           .from("contratos_cancelados")
-          .select("contrato_id, motivo")
+          .select("contrato_id, motivo, cancelado_em, cancelado_por")
           .in("contrato_id", canceladosContratoIds);
-        if (cancelados) {
-          const motivoMap = new Map(cancelados.map((c: any) => [c.contrato_id, c.motivo]));
+        if (cancelados && cancelados.length > 0) {
+          // Fetch profile names for cancelado_por
+          const canceladorIds = [...new Set(cancelados.map((c: any) => c.cancelado_por).filter(Boolean))];
+          let canceladorMap = new Map<string, string>();
+          if (canceladorIds.length > 0) {
+            const { data: canceladorProfiles } = await supabase
+              .from("profiles")
+              .select("user_id, full_name")
+              .in("user_id", canceladorIds);
+            (canceladorProfiles || []).forEach((cp: any) => canceladorMap.set(cp.user_id, cp.full_name));
+          }
+          const canceladoMap = new Map(cancelados.map((c: any) => [c.contrato_id, c]));
           mappedPedidos.forEach(p => {
             if (p.status_pedido === "Cancelado" && p.contrato_id) {
-              p.motivo_cancelamento = motivoMap.get(p.contrato_id) || null;
+              const cancel = canceladoMap.get(p.contrato_id);
+              if (cancel) {
+                p.motivo_cancelamento = cancel.motivo || null;
+                p.cancelado_em = cancel.cancelado_em || null;
+                p.cancelado_por_nome = cancel.cancelado_por ? canceladorMap.get(cancel.cancelado_por) || null : null;
+              }
             }
           });
         }
@@ -1158,7 +1177,19 @@ export default function Dashboard() {
                                     🧩 Módulos Adicionais: <span className="font-medium text-foreground">{modulosTexto}</span>
                                   </p>
                                 )}
-                                <div className="mt-1.5 pt-1.5 border-t border-border/50">
+                                <div className="mt-1.5 pt-1.5 border-t border-border/50 space-y-1">
+                                  {(p.cancelado_em || p.cancelado_por_nome) && (
+                                    <p className="text-xs text-muted-foreground">
+                                      📅 Cancelado em: <span className="font-medium text-foreground">
+                                        {p.cancelado_em
+                                          ? `${new Date(p.cancelado_em).toLocaleDateString("pt-BR")} às ${new Date(p.cancelado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                                          : "—"}
+                                      </span>
+                                      {p.cancelado_por_nome && (
+                                        <> por <span className="font-medium text-foreground">{p.cancelado_por_nome}</span></>
+                                      )}
+                                    </p>
+                                  )}
                                   <p className="text-xs text-destructive font-medium">
                                     🚫 Motivo do cancelamento:
                                   </p>
