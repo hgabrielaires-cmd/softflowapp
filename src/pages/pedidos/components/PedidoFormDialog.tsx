@@ -1016,6 +1016,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                             type="button"
                             variant="ghost"
                             size="icon"
+                            tabIndex={-1}
                             className="h-5 w-5"
                             onClick={() => {
                               setEditingDraftIdx(idx);
