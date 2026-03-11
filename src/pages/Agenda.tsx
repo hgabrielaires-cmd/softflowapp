@@ -193,7 +193,7 @@ export default function Agenda() {
         const [tecRes, aponRes, execRes] = await Promise.all([
           supabase.from("painel_tecnicos").select("card_id, tecnico_id, profiles:tecnico_id(id, full_name, avatar_url)").in("card_id", cardIds),
           supabase.from("painel_apontamentos").select("card_id, usuario_id, profiles:usuario_id(id, full_name, avatar_url)").in("card_id", cardIds),
-          supabase.from("painel_atividade_execucao").select("card_id, etapa_id, status").in("card_id", cardIds),
+          supabase.from("painel_atividade_execucao").select("card_id, atividade_id, etapa_id, status").in("card_id", cardIds).not("atividade_id", "is", null),
         ]);
         tecnicos = tecRes.data || [];
         apontados = aponRes.data || [];
@@ -222,6 +222,13 @@ export default function Agenda() {
           if (!progressEtapaMap[key]) progressEtapaMap[key] = { total: 0, concluidas: 0 };
           progressEtapaMap[key].total++;
           if (e.status === "concluida") progressEtapaMap[key].concluidas++;
+        }
+      });
+      // Activity status map: { card_id__atividade_id: status }
+      const activityStatusMap: Record<string, string> = {};
+      atividadeExecucao.forEach((e: any) => {
+        if (e.atividade_id) {
+          activityStatusMap[`${e.card_id}__${e.atividade_id}`] = e.status;
         }
       });
 
@@ -261,8 +268,9 @@ export default function Agenda() {
           card_iniciado_em: card?.iniciado_em || null,
           sla_horas: card?.sla_horas || 0,
            tipo_atendimento: card?.tipo_atendimento_local || null,
-          progresso: progressMap[ag.card_id] || null,
+           progresso: progressMap[ag.card_id] || null,
           progresso_etapa: cardEtapaId ? (progressEtapaMap[`${ag.card_id}__${cardEtapaId}`] || null) : null,
+          atividade_status: ag.atividade_id ? (activityStatusMap[`${ag.card_id}__${ag.atividade_id}`] || 'pendente') : null,
         };
       });
 
@@ -328,11 +336,12 @@ export default function Agenda() {
       let aponMap: Record<string, any[]> = {};
       let progressMap: Record<string, { total: number; concluidas: number }> = {};
       let progressEtapaMap: Record<string, { total: number; concluidas: number }> = {};
+      let calActStatusMap: Record<string, string> = {};
       if (cardIds.length > 0) {
         const [tecRes, aponRes, execRes] = await Promise.all([
           supabase.from("painel_tecnicos").select("card_id, tecnico_id, profiles:tecnico_id(id, full_name, avatar_url)").in("card_id", cardIds),
           supabase.from("painel_apontamentos").select("card_id, usuario_id, profiles:usuario_id(id, full_name, avatar_url)").in("card_id", cardIds),
-          supabase.from("painel_atividade_execucao").select("card_id, etapa_id, status").in("card_id", cardIds),
+          supabase.from("painel_atividade_execucao").select("card_id, atividade_id, etapa_id, status").in("card_id", cardIds).not("atividade_id", "is", null),
         ]);
         (tecRes.data || []).forEach((t: any) => {
           if (!tecMap[t.card_id]) tecMap[t.card_id] = [];
@@ -351,6 +360,9 @@ export default function Agenda() {
             if (!progressEtapaMap[key]) progressEtapaMap[key] = { total: 0, concluidas: 0 };
             progressEtapaMap[key].total++;
             if (e.status === "concluida") progressEtapaMap[key].concluidas++;
+          }
+          if (e.atividade_id) {
+            calActStatusMap[`${e.card_id}__${e.atividade_id}`] = e.status;
           }
         });
       }
@@ -390,6 +402,7 @@ export default function Agenda() {
           sla_horas: card?.sla_horas || 0,
           progresso: progressMap[ag.card_id] || null,
           progresso_etapa: cardEtapaId ? (progressEtapaMap[`${ag.card_id}__${cardEtapaId}`] || null) : null,
+          atividade_status: ag.atividade_id ? (calActStatusMap[`${ag.card_id}__${ag.atividade_id}`] || 'pendente') : null,
         };
       });
     },
@@ -636,6 +649,16 @@ export default function Agenda() {
               <Badge variant="outline" className={cn("text-xs", statusInfo.color)}>
                 {statusInfo.label}
               </Badge>
+              {ag.atividade_status && (
+                <Badge className={cn("text-xs border-transparent text-white", 
+                  ag.atividade_status === "concluida" ? "bg-emerald-500" :
+                  ag.atividade_status === "em_andamento" ? "bg-primary" :
+                  "bg-muted-foreground"
+                )}>
+                  {ag.atividade_status === "concluida" ? "Concluída" :
+                   ag.atividade_status === "em_andamento" ? "Em Andamento" : "Pendente"}
+                </Badge>
+              )}
               {ag.mesa_nome && ag.mesa_nome !== "—" && (
                 <Badge className="text-xs text-white border-transparent font-medium" style={{ backgroundColor: ag.mesa_cor || "hsl(var(--muted-foreground))" }}>
                   <span className="h-2 w-2 rounded-full mr-1 inline-block bg-white/30" />
