@@ -319,8 +319,8 @@ export default function Dashboard() {
           }
           const canceladoMap = new Map(cancelados.map((c: any) => [c.contrato_id, c]));
           mappedPedidos.forEach(p => {
-            if (p.status_pedido === "Cancelado" && p.contrato_id) {
-              const cancel = canceladoMap.get(p.contrato_id);
+            if (p.status_pedido === "Cancelado" && p.contrato_relacionado_id) {
+              const cancel = canceladoMap.get(p.contrato_relacionado_id);
               if (cancel) {
                 p.motivo_cancelamento = cancel.motivo || null;
                 p.cancelado_em = cancel.cancelado_em || null;
