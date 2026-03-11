@@ -226,7 +226,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                 }}
               />
               {form.cliente_id && (
-                <button type="button" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                <button type="button" tabIndex={-1} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   onClick={() => { setForm(f => ({ ...f, cliente_id: "", plano_id: "", tipo_pedido: "Novo", contrato_id: null })); setClienteSearch(""); }}>
                   <XCircle className="h-4 w-4" />
                 </button>
