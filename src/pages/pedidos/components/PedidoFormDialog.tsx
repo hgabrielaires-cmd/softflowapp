@@ -570,7 +570,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                     onChange={(e) => setModuloBuscaQtd(e.target.value)}
                   />
                 </div>
-                <Button type="button" variant="outline" onClick={onAdicionarModulo} className="gap-1.5">
+                <Button type="button" variant="outline" tabIndex={-1} onClick={onAdicionarModulo} className="gap-1.5">
                   <Plus className="h-4 w-4" /> Adicionar
                 </Button>
               </div>
