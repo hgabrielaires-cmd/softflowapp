@@ -251,7 +251,8 @@ export default function Agenda() {
           pausado: card?.pausado || false,
           card_iniciado_em: card?.iniciado_em || null,
           sla_horas: card?.sla_horas || 0,
-          tipo_atendimento: card?.tipo_atendimento_local || null,
+           tipo_atendimento: card?.tipo_atendimento_local || null,
+          progresso: progressMap[ag.card_id] || null,
         };
       });
 
