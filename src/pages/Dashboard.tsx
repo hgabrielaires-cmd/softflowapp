@@ -97,6 +97,7 @@ interface PedidoRow {
   status_pedido: string;
   numero_exibicao: string;
   created_at: string;
+  motivo_cancelamento: string | null;
 }
 
 interface PlanoInfo {
