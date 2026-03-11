@@ -361,6 +361,14 @@ export default function Agenda() {
             if (e.status === "concluida") progressEtapaMap[key].concluidas++;
           }
         });
+        // Activity status map for calendar
+        const calActivityStatusMap: Record<string, string> = {};
+        (execRes.data || []).forEach((e: any) => {
+          if (e.atividade_id) {
+            calActivityStatusMap[`${e.card_id}__${e.atividade_id}`] = e.status;
+          }
+        });
+        Object.assign(progressMap, { __activityStatusMap: calActivityStatusMap });
       }
       // Fetch etapa data - include both agendamento etapa_id and card etapa_id as fallback
       const etapaIdsFromAg = (rows || []).map((r: any) => r.etapa_id).filter(Boolean);
