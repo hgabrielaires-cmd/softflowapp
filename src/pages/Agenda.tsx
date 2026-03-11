@@ -193,7 +193,7 @@ export default function Agenda() {
         const [tecRes, aponRes, execRes] = await Promise.all([
           supabase.from("painel_tecnicos").select("card_id, tecnico_id, profiles:tecnico_id(id, full_name, avatar_url)").in("card_id", cardIds),
           supabase.from("painel_apontamentos").select("card_id, usuario_id, profiles:usuario_id(id, full_name, avatar_url)").in("card_id", cardIds),
-          supabase.from("painel_atividade_execucao").select("card_id, etapa_id, status").in("card_id", cardIds),
+          supabase.from("painel_atividade_execucao").select("card_id, atividade_id, etapa_id, status").in("card_id", cardIds).not("atividade_id", "is", null),
         ]);
         tecnicos = tecRes.data || [];
         apontados = aponRes.data || [];
