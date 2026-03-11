@@ -193,7 +193,7 @@ export default function Agenda() {
         const [tecRes, aponRes, execRes] = await Promise.all([
           supabase.from("painel_tecnicos").select("card_id, tecnico_id, profiles:tecnico_id(id, full_name, avatar_url)").in("card_id", cardIds),
           supabase.from("painel_apontamentos").select("card_id, usuario_id, profiles:usuario_id(id, full_name, avatar_url)").in("card_id", cardIds),
-          supabase.from("painel_atividade_execucao").select("card_id, status").in("card_id", cardIds),
+          supabase.from("painel_atividade_execucao").select("card_id, etapa_id, status").in("card_id", cardIds),
         ]);
         tecnicos = tecRes.data || [];
         apontados = aponRes.data || [];
@@ -209,12 +209,20 @@ export default function Agenda() {
         if (!aponMap[a.card_id]) aponMap[a.card_id] = [];
         if (a.profiles) aponMap[a.card_id].push(a.profiles);
       });
-      // Progress map: { card_id: { total, concluidas } }
+      // Progress map (total project): { card_id: { total, concluidas } }
       const progressMap: Record<string, { total: number; concluidas: number }> = {};
+      // Progress map (per stage): { card_id__etapa_id: { total, concluidas } }
+      const progressEtapaMap: Record<string, { total: number; concluidas: number }> = {};
       atividadeExecucao.forEach((e: any) => {
         if (!progressMap[e.card_id]) progressMap[e.card_id] = { total: 0, concluidas: 0 };
         progressMap[e.card_id].total++;
         if (e.status === "concluida") progressMap[e.card_id].concluidas++;
+        if (e.etapa_id) {
+          const key = `${e.card_id}__${e.etapa_id}`;
+          if (!progressEtapaMap[key]) progressEtapaMap[key] = { total: 0, concluidas: 0 };
+          progressEtapaMap[key].total++;
+          if (e.status === "concluida") progressEtapaMap[key].concluidas++;
+        }
       });
 
       // Step 5: fetch etapa names for display - include card etapa_id as fallback
