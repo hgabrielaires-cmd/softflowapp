@@ -201,6 +201,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
             <div className="flex items-center justify-between">
               <Label>Cliente *</Label>
               <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1 text-primary hover:text-primary"
+                tabIndex={-1}
                 onClick={() => { setClienteForm(emptyClienteForm); setClienteContatos([]); setOpenClienteDialog(true); }}>
                 <UserPlus className="h-3.5 w-3.5" /> Novo cliente
               </Button>
@@ -225,7 +226,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                 }}
               />
               {form.cliente_id && (
-                <button type="button" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                <button type="button" tabIndex={-1} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   onClick={() => { setForm(f => ({ ...f, cliente_id: "", plano_id: "", tipo_pedido: "Novo", contrato_id: null })); setClienteSearch(""); }}>
                   <XCircle className="h-4 w-4" />
                 </button>
@@ -404,7 +405,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                     onChange={(e) => setServicoBuscaQtd(e.target.value)}
                   />
                 </div>
-                <Button type="button" variant="outline" onClick={onAdicionarServico} className="gap-1.5">
+                <Button type="button" variant="outline" tabIndex={-1} onClick={onAdicionarServico} className="gap-1.5">
                   <Plus className="h-4 w-4" /> Adicionar
                 </Button>
               </div>
@@ -426,6 +427,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                         </div>
                         <Button
                           type="button" variant="ghost" size="icon"
+                          tabIndex={-1}
                           className="h-7 w-7 text-destructive hover:text-destructive"
                           onClick={() => onRemoverServico(s.servico_id)}
                         >
@@ -569,7 +571,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                     onChange={(e) => setModuloBuscaQtd(e.target.value)}
                   />
                 </div>
-                <Button type="button" variant="outline" onClick={onAdicionarModulo} className="gap-1.5">
+                <Button type="button" variant="outline" tabIndex={-1} onClick={onAdicionarModulo} className="gap-1.5">
                   <Plus className="h-4 w-4" /> Adicionar
                 </Button>
               </div>
@@ -595,6 +597,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                         </div>
                         <Button
                           type="button" variant="ghost" size="icon"
+                          tabIndex={-1}
                           className="h-7 w-7 text-destructive hover:text-destructive"
                           onClick={() => onRemoverModulo(m.modulo_id)}
                         >
@@ -987,6 +990,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                 type="button"
                 variant="outline"
                 size="sm"
+                tabIndex={-1}
                 className="text-xs gap-1"
                 onClick={() => {
                   setEditingDraftIdx(null);
@@ -1012,6 +1016,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                             type="button"
                             variant="ghost"
                             size="icon"
+                            tabIndex={-1}
                             className="h-5 w-5"
                             onClick={() => {
                               setEditingDraftIdx(idx);
@@ -1027,6 +1032,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                             type="button"
                             variant="ghost"
                             size="icon"
+                            tabIndex={-1}
                             className="h-5 w-5"
                             onClick={() => setDraftComentarios(prev => prev.filter((_, i) => i !== idx))}
                           >
