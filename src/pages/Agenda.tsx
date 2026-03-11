@@ -649,6 +649,16 @@ export default function Agenda() {
               <Badge variant="outline" className={cn("text-xs", statusInfo.color)}>
                 {statusInfo.label}
               </Badge>
+              {ag.atividade_status && (
+                <Badge className={cn("text-xs border-transparent text-white", 
+                  ag.atividade_status === "concluida" ? "bg-emerald-500" :
+                  ag.atividade_status === "em_andamento" ? "bg-primary" :
+                  "bg-muted-foreground"
+                )}>
+                  {ag.atividade_status === "concluida" ? "Concluída" :
+                   ag.atividade_status === "em_andamento" ? "Em Andamento" : "Pendente"}
+                </Badge>
+              )}
               {ag.mesa_nome && ag.mesa_nome !== "—" && (
                 <Badge className="text-xs text-white border-transparent font-medium" style={{ backgroundColor: ag.mesa_cor || "hsl(var(--muted-foreground))" }}>
                   <span className="h-2 w-2 rounded-full mr-1 inline-block bg-white/30" />
