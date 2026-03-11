@@ -1147,6 +1147,26 @@ export default function Dashboard() {
                                 <span>→</span>
                                 <span className="font-medium text-foreground">{planoNome}</span>
                               </p>
+                            ) : dialogType === "cancelados" ? (
+                              // Cancelados: show cancellation reason
+                              <>
+                                <p className="text-xs text-muted-foreground">
+                                  📦 Plano: <span className="font-medium text-foreground">{planoNome}</span>
+                                </p>
+                                {modulosTexto && (
+                                  <p className="text-xs text-muted-foreground">
+                                    🧩 Módulos Adicionais: <span className="font-medium text-foreground">{modulosTexto}</span>
+                                  </p>
+                                )}
+                                <div className="mt-1.5 pt-1.5 border-t border-border/50">
+                                  <p className="text-xs text-destructive font-medium">
+                                    🚫 Motivo do cancelamento:
+                                  </p>
+                                  <p className="text-xs text-foreground mt-0.5">
+                                    {p.motivo_cancelamento || "Não informado"}
+                                  </p>
+                                </div>
+                              </>
                             ) : (
                               // Other types: show plan + modules
                               <>
