@@ -105,6 +105,7 @@ export function useJornadaForm({ planos, modulos, servicos, mesas }: UseJornadaF
         if (error) throw error;
         jornadaId = editing.id;
 
+        // 1. Fetch old etapas/atividades and build remap keys
         const { data: oldEtapas } = await supabase
           .from("jornada_etapas")
           .select("id, nome, ordem")
@@ -129,8 +130,15 @@ export function useJornadaForm({ planos, modulos, servicos, mesas }: UseJornadaF
               oldAtivMap[key] = a.id;
             });
           }
+
+          // 2. DELETE old data FIRST to avoid duplicates
+          const { error: delAtivErr } = await supabase.from("jornada_atividades").delete().in("etapa_id", oldEtapaIds);
+          if (delAtivErr) throw delAtivErr;
+          const { error: delEtapaErr } = await supabase.from("jornada_etapas").delete().in("id", oldEtapaIds);
+          if (delEtapaErr) throw delEtapaErr;
         }
 
+        // 3. INSERT new etapas/atividades
         const newAtivMap: Record<string, string> = {};
 
         for (const etapa of etapas) {
@@ -170,6 +178,7 @@ export function useJornadaForm({ planos, modulos, servicos, mesas }: UseJornadaF
           }
         }
 
+        // 4. Remap references from old atividade IDs to new ones
         for (const [key, oldId] of Object.entries(oldAtivMap)) {
           const newId = newAtivMap[key];
           if (newId && newId !== oldId) {
@@ -178,12 +187,6 @@ export function useJornadaForm({ planos, modulos, servicos, mesas }: UseJornadaF
               supabase.from("painel_checklist_progresso").update({ atividade_id: newId }).eq("atividade_id", oldId),
             ]);
           }
-        }
-
-        if (oldEtapas && oldEtapas.length > 0) {
-          const oldEtapaIds = oldEtapas.map(e => e.id);
-          await supabase.from("jornada_atividades").delete().in("etapa_id", oldEtapaIds);
-          await supabase.from("jornada_etapas").delete().eq("jornada_id", jornadaId).in("id", oldEtapaIds);
         }
       } else {
         const { data, error } = await supabase.from("jornadas").insert(payload).select("id").single();
