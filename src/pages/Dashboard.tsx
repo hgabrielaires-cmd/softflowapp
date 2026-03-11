@@ -276,6 +276,8 @@ export default function Dashboard() {
         desconto_aprovado_por_nome: null as string | null,
         plano_origem_id: null as string | null,
         motivo_cancelamento: null as string | null,
+        cancelado_em: null as string | null,
+        cancelado_por_nome: null as string | null,
       })) as PedidoRow[];
 
       // Fetch cancellation reasons for cancelled pedidos
@@ -285,13 +287,28 @@ export default function Dashboard() {
       if (canceladosContratoIds.length > 0) {
         const { data: cancelados } = await supabase
           .from("contratos_cancelados")
-          .select("contrato_id, motivo")
+          .select("contrato_id, motivo, cancelado_em, cancelado_por")
           .in("contrato_id", canceladosContratoIds);
-        if (cancelados) {
-          const motivoMap = new Map(cancelados.map((c: any) => [c.contrato_id, c.motivo]));
+        if (cancelados && cancelados.length > 0) {
+          // Fetch profile names for cancelado_por
+          const canceladorIds = [...new Set(cancelados.map((c: any) => c.cancelado_por).filter(Boolean))];
+          let canceladorMap = new Map<string, string>();
+          if (canceladorIds.length > 0) {
+            const { data: canceladorProfiles } = await supabase
+              .from("profiles")
+              .select("user_id, full_name")
+              .in("user_id", canceladorIds);
+            (canceladorProfiles || []).forEach((cp: any) => canceladorMap.set(cp.user_id, cp.full_name));
+          }
+          const canceladoMap = new Map(cancelados.map((c: any) => [c.contrato_id, c]));
           mappedPedidos.forEach(p => {
             if (p.status_pedido === "Cancelado" && p.contrato_id) {
-              p.motivo_cancelamento = motivoMap.get(p.contrato_id) || null;
+              const cancel = canceladoMap.get(p.contrato_id);
+              if (cancel) {
+                p.motivo_cancelamento = cancel.motivo || null;
+                p.cancelado_em = cancel.cancelado_em || null;
+                p.cancelado_por_nome = cancel.cancelado_por ? canceladorMap.get(cancel.cancelado_por) || null : null;
+              }
             }
           });
         }
