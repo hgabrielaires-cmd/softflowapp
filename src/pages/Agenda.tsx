@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TablePagination } from "@/components/TablePagination";
+import { Progress } from "@/components/ui/progress";
 import {
   CalendarDays, Clock, User, Building2, Filter, MapPin, ExternalLink,
   Layers, List, Search, ChevronLeft, ChevronRight, Play, CheckCircle2,
@@ -184,16 +185,19 @@ export default function Agenda() {
       const cardsMap: Record<string, any> = {};
       cards.forEach((c: any) => { cardsMap[c.id] = c; });
 
-      // Step 4: fetch técnicos & apontados for these cards
+      // Step 4: fetch técnicos, apontados & activity progress for these cards
       let tecnicos: any[] = [];
       let apontados: any[] = [];
+      let atividadeExecucao: any[] = [];
       if (cardIds.length > 0) {
-        const [tecRes, aponRes] = await Promise.all([
+        const [tecRes, aponRes, execRes] = await Promise.all([
           supabase.from("painel_tecnicos").select("card_id, tecnico_id, profiles:tecnico_id(id, full_name, avatar_url)").in("card_id", cardIds),
           supabase.from("painel_apontamentos").select("card_id, usuario_id, profiles:usuario_id(id, full_name, avatar_url)").in("card_id", cardIds),
+          supabase.from("painel_atividade_execucao").select("card_id, status").in("card_id", cardIds),
         ]);
         tecnicos = tecRes.data || [];
         apontados = aponRes.data || [];
+        atividadeExecucao = execRes.data || [];
       }
       const tecMap: Record<string, any[]> = {};
       tecnicos.forEach((t: any) => {
@@ -204,6 +208,13 @@ export default function Agenda() {
       apontados.forEach((a: any) => {
         if (!aponMap[a.card_id]) aponMap[a.card_id] = [];
         if (a.profiles) aponMap[a.card_id].push(a.profiles);
+      });
+      // Progress map: { card_id: { total, concluidas } }
+      const progressMap: Record<string, { total: number; concluidas: number }> = {};
+      atividadeExecucao.forEach((e: any) => {
+        if (!progressMap[e.card_id]) progressMap[e.card_id] = { total: 0, concluidas: 0 };
+        progressMap[e.card_id].total++;
+        if (e.status === "concluida") progressMap[e.card_id].concluidas++;
       });
 
       // Step 5: fetch etapa names for display - include card etapa_id as fallback
@@ -241,7 +252,8 @@ export default function Agenda() {
           pausado: card?.pausado || false,
           card_iniciado_em: card?.iniciado_em || null,
           sla_horas: card?.sla_horas || 0,
-          tipo_atendimento: card?.tipo_atendimento_local || null,
+           tipo_atendimento: card?.tipo_atendimento_local || null,
+          progresso: progressMap[ag.card_id] || null,
         };
       });
 
@@ -302,23 +314,28 @@ export default function Agenda() {
         (cardsData || []).forEach((c: any) => { cardsMap[c.id] = c; });
       }
 
-      // Técnicos
+      // Técnicos, Apontados & Progress
       let tecMap: Record<string, any[]> = {};
+      let aponMap: Record<string, any[]> = {};
+      let progressMap: Record<string, { total: number; concluidas: number }> = {};
       if (cardIds.length > 0) {
-        const { data: tecData } = await supabase.from("painel_tecnicos").select("card_id, tecnico_id, profiles:tecnico_id(id, full_name, avatar_url)").in("card_id", cardIds);
-        (tecData || []).forEach((t: any) => {
+        const [tecRes, aponRes, execRes] = await Promise.all([
+          supabase.from("painel_tecnicos").select("card_id, tecnico_id, profiles:tecnico_id(id, full_name, avatar_url)").in("card_id", cardIds),
+          supabase.from("painel_apontamentos").select("card_id, usuario_id, profiles:usuario_id(id, full_name, avatar_url)").in("card_id", cardIds),
+          supabase.from("painel_atividade_execucao").select("card_id, status").in("card_id", cardIds),
+        ]);
+        (tecRes.data || []).forEach((t: any) => {
           if (!tecMap[t.card_id]) tecMap[t.card_id] = [];
           if (t.profiles) tecMap[t.card_id].push(t.profiles);
         });
-      }
-
-      // Apontados
-      let aponMap: Record<string, any[]> = {};
-      if (cardIds.length > 0) {
-        const { data: aponData } = await supabase.from("painel_apontamentos").select("card_id, usuario_id, profiles:usuario_id(id, full_name, avatar_url)").in("card_id", cardIds);
-        (aponData || []).forEach((a: any) => {
+        (aponRes.data || []).forEach((a: any) => {
           if (!aponMap[a.card_id]) aponMap[a.card_id] = [];
           if (a.profiles) aponMap[a.card_id].push(a.profiles);
+        });
+        (execRes.data || []).forEach((e: any) => {
+          if (!progressMap[e.card_id]) progressMap[e.card_id] = { total: 0, concluidas: 0 };
+          progressMap[e.card_id].total++;
+          if (e.status === "concluida") progressMap[e.card_id].concluidas++;
         });
       }
 
@@ -356,6 +373,7 @@ export default function Agenda() {
           pausado: card?.pausado || false,
           card_iniciado_em: card?.iniciado_em || null,
           sla_horas: card?.sla_horas || 0,
+          progresso: progressMap[ag.card_id] || null,
         };
       });
     },
@@ -649,6 +667,15 @@ export default function Agenda() {
                     SLA: {ag.sla_horas}h
                   </Badge>
                 )}
+              </div>
+            )}
+            {/* Barra de progresso do projeto */}
+            {ag.progresso && ag.progresso.total > 0 && (
+              <div className="flex items-center gap-2 mt-1.5">
+                <Progress value={Math.round((ag.progresso.concluidas / ag.progresso.total) * 100)} className="h-2 flex-1" />
+                <span className="text-[10px] text-muted-foreground font-medium shrink-0">
+                  {ag.progresso.concluidas}/{ag.progresso.total} atividades
+                </span>
               </div>
             )}
             {!compact && ag.tecnicos.length > 0 && (
