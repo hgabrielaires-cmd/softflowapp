@@ -273,7 +273,27 @@ export default function Dashboard() {
         cliente_nome: p.clientes?.nome_fantasia || "Cliente",
         desconto_aprovado_por_nome: null as string | null,
         plano_origem_id: null as string | null,
+        motivo_cancelamento: null as string | null,
       })) as PedidoRow[];
+
+      // Fetch cancellation reasons for cancelled pedidos
+      const canceladosContratoIds = mappedPedidos
+        .filter(p => p.status_pedido === "Cancelado" && p.contrato_id)
+        .map(p => p.contrato_id!);
+      if (canceladosContratoIds.length > 0) {
+        const { data: cancelados } = await supabase
+          .from("contratos_cancelados")
+          .select("contrato_id, motivo")
+          .in("contrato_id", canceladosContratoIds);
+        if (cancelados) {
+          const motivoMap = new Map(cancelados.map((c: any) => [c.contrato_id, c.motivo]));
+          mappedPedidos.forEach(p => {
+            if (p.status_pedido === "Cancelado" && p.contrato_id) {
+              p.motivo_cancelamento = motivoMap.get(p.contrato_id) || null;
+            }
+          });
+        }
+      }
 
       // Fetch old plan for upgrade pedidos via contrato
       const upgradeContratoIds = mappedPedidos
