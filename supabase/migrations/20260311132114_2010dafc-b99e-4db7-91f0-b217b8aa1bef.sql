@@ -1,0 +1,1 @@
+ALTER TABLE public.solicitacoes_desconto ADD CONSTRAINT solicitacoes_desconto_pedido_id_unique UNIQUE (pedido_id);
