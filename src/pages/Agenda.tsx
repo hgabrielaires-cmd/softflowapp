@@ -327,6 +327,7 @@ export default function Agenda() {
       let tecMap: Record<string, any[]> = {};
       let aponMap: Record<string, any[]> = {};
       let progressMap: Record<string, { total: number; concluidas: number }> = {};
+      let progressEtapaMap: Record<string, { total: number; concluidas: number }> = {};
       if (cardIds.length > 0) {
         const [tecRes, aponRes, execRes] = await Promise.all([
           supabase.from("painel_tecnicos").select("card_id, tecnico_id, profiles:tecnico_id(id, full_name, avatar_url)").in("card_id", cardIds),
@@ -341,7 +342,6 @@ export default function Agenda() {
           if (!aponMap[a.card_id]) aponMap[a.card_id] = [];
           if (a.profiles) aponMap[a.card_id].push(a.profiles);
         });
-        const progressEtapaMap: Record<string, { total: number; concluidas: number }> = {};
         (execRes.data || []).forEach((e: any) => {
           if (!progressMap[e.card_id]) progressMap[e.card_id] = { total: 0, concluidas: 0 };
           progressMap[e.card_id].total++;
@@ -353,7 +353,7 @@ export default function Agenda() {
             if (e.status === "concluida") progressEtapaMap[key].concluidas++;
           }
         });
-
+      }
       // Fetch etapa data - include both agendamento etapa_id and card etapa_id as fallback
       const etapaIdsFromAg = (rows || []).map((r: any) => r.etapa_id).filter(Boolean);
       const etapaIdsFromCards = Object.values(cardsMap).map((c: any) => c.etapa_id).filter(Boolean);
