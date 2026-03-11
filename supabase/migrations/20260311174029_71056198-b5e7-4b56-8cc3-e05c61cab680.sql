@@ -1,0 +1,1 @@
+ALTER TABLE public.painel_atividade_execucao ALTER COLUMN atividade_id DROP NOT NULL;
