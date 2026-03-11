@@ -243,16 +243,6 @@ export function AgendamentoChecklist({ cardId, atividadeId, checklistIndex, disa
                   placeholder="Fim"
                 />
               </div>
-              {!disabled && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-5 w-5 shrink-0"
-                  onClick={() => ag.id && removeAgendamento(ag.id)}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
             </div>
           ))}
         </div>
