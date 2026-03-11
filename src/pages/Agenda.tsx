@@ -262,6 +262,7 @@ export default function Agenda() {
           sla_horas: card?.sla_horas || 0,
            tipo_atendimento: card?.tipo_atendimento_local || null,
           progresso: progressMap[ag.card_id] || null,
+          progresso_etapa: cardEtapaId ? (progressEtapaMap[`${ag.card_id}__${cardEtapaId}`] || null) : null,
         };
       });
 
