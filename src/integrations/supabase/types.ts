@@ -1805,7 +1805,7 @@ export type Database = {
       }
       painel_atividade_execucao: {
         Row: {
-          atividade_id: string
+          atividade_id: string | null
           card_id: string
           concluido_em: string | null
           concluido_por: string | null
@@ -1819,7 +1819,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          atividade_id: string
+          atividade_id?: string | null
           card_id: string
           concluido_em?: string | null
           concluido_por?: string | null
@@ -1833,7 +1833,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          atividade_id?: string
+          atividade_id?: string | null
           card_id?: string
           concluido_em?: string | null
           concluido_por?: string | null
