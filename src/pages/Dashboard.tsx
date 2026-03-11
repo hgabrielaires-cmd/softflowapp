@@ -1177,7 +1177,19 @@ export default function Dashboard() {
                                     🧩 Módulos Adicionais: <span className="font-medium text-foreground">{modulosTexto}</span>
                                   </p>
                                 )}
-                                <div className="mt-1.5 pt-1.5 border-t border-border/50">
+                                <div className="mt-1.5 pt-1.5 border-t border-border/50 space-y-1">
+                                  {(p.cancelado_em || p.cancelado_por_nome) && (
+                                    <p className="text-xs text-muted-foreground">
+                                      📅 Cancelado em: <span className="font-medium text-foreground">
+                                        {p.cancelado_em
+                                          ? `${new Date(p.cancelado_em).toLocaleDateString("pt-BR")} às ${new Date(p.cancelado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                                          : "—"}
+                                      </span>
+                                      {p.cancelado_por_nome && (
+                                        <> por <span className="font-medium text-foreground">{p.cancelado_por_nome}</span></>
+                                      )}
+                                    </p>
+                                  )}
                                   <p className="text-xs text-destructive font-medium">
                                     🚫 Motivo do cancelamento:
                                   </p>
