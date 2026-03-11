@@ -1097,8 +1097,8 @@ export default function PainelAtendimento() {
                                   return (
                                     <li key={idx} className="flex flex-col gap-0.5 text-xs border-b border-border/30 pb-1.5 last:border-0 last:pb-0">
                                       <div className="flex items-center gap-2">
-                                        {/* Checkbox only for 'check' and 'agendamento' types */}
-                                        {(item.tipo === "check" || item.tipo === "agendamento") && (
+                                        {/* Checkbox for check, agendamento, and anexo types */}
+                                        {(item.tipo === "check" || item.tipo === "agendamento" || item.tipo === "anexo") && (
                                           <Checkbox checked={prog.concluido} disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onCheckedChange={(checked) => saveChecklistItem(atividade.id, idx, { concluido: !!checked })} className="shrink-0" />
                                         )}
                                         <span className={cn("flex-1", prog.concluido && "line-through text-muted-foreground")}>{item.texto || "(sem texto)"}</span>
@@ -1114,7 +1114,7 @@ export default function PainelAtendimento() {
                                            <AgendamentoChecklist cardId={detailCard.id} atividadeId={atividade.id} checklistIndex={idx} etapaId={detailCard.etapa_id} filialId={detailCard.filial_id} mesaId={item.mesa_id || etapaMesaInfo?.id} mesaCor={etapaMesaInfo?.cor} etapaExecucaoId={item.etapa_execucao_id || null} titulo={item.texto} />
                                          )}
                                       </div>
-                                      {item.tipo === "texto" && (
+                                      {(item.tipo === "texto" || item.tipo === "quantitativo") && (
                                         <ChecklistTextoInput
                                           initialValue={prog.valor_texto || ""}
                                           disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)}
