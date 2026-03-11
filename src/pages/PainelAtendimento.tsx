@@ -1102,13 +1102,13 @@ export default function PainelAtendimento() {
                                            <Checkbox checked={prog.concluido} disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onCheckedChange={(checked) => saveChecklistItem(atividade.id, idx, { concluido: !!checked })} className="shrink-0" />
                                          )}
                                          <span className={cn("flex-1", prog.concluido && "line-through text-muted-foreground")}>{item.texto || "(sem texto)"}</span>
-                                         {item.tipo === "sim_nao" && (
-                                           <div className="flex gap-1 shrink-0">
-                                             <Button variant={prog.valor_texto === "sim" ? "default" : "outline"} size="sm" className="h-5 px-1.5 text-[10px]" disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onClick={() => saveChecklistItem(atividade.id, idx, { valor_texto: prog.valor_texto === "sim" ? "" : "sim", concluido: prog.valor_texto === "sim" ? false : true })}>Sim</Button>
-                                             <Button variant={prog.valor_texto === "nao" ? "destructive" : "outline"} size="sm" className="h-5 px-1.5 text-[10px]" disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onClick={() => saveChecklistItem(atividade.id, idx, { valor_texto: prog.valor_texto === "nao" ? "" : "nao", concluido: prog.valor_texto === "nao" ? false : true })}>Não</Button>
-                                           </div>
-                                         )}
                                        </div>
+                                       {item.tipo === "sim_nao" && (
+                                         <div className="flex gap-1 pl-1 mt-0.5">
+                                           <Button variant={prog.valor_texto === "sim" ? "default" : "outline"} size="sm" className="h-5 px-1.5 text-[10px]" disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onClick={() => saveChecklistItem(atividade.id, idx, { valor_texto: prog.valor_texto === "sim" ? "" : "sim", concluido: prog.valor_texto === "sim" ? false : true })}>Sim</Button>
+                                           <Button variant={prog.valor_texto === "nao" ? "destructive" : "outline"} size="sm" className="h-5 px-1.5 text-[10px]" disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onClick={() => saveChecklistItem(atividade.id, idx, { valor_texto: prog.valor_texto === "nao" ? "" : "nao", concluido: prog.valor_texto === "nao" ? false : true })}>Não</Button>
+                                         </div>
+                                       )}
                                        {(item.tipo as string) === "data" && (
                                          <div className="pl-1 mt-0.5">
                                            <Input type="date" className="h-6 w-36 text-[10px] px-1" value={prog.valor_data || ""} disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onChange={(e) => saveChecklistItem(atividade.id, idx, { valor_data: e.target.value, concluido: !!e.target.value })} />
