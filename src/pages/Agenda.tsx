@@ -268,8 +268,9 @@ export default function Agenda() {
           card_iniciado_em: card?.iniciado_em || null,
           sla_horas: card?.sla_horas || 0,
            tipo_atendimento: card?.tipo_atendimento_local || null,
-          progresso: progressMap[ag.card_id] || null,
+           progresso: progressMap[ag.card_id] || null,
           progresso_etapa: cardEtapaId ? (progressEtapaMap[`${ag.card_id}__${cardEtapaId}`] || null) : null,
+          atividade_status: ag.atividade_id ? (activityStatusMap[`${ag.card_id}__${ag.atividade_id}`] || 'pendente') : null,
         };
       });
 
