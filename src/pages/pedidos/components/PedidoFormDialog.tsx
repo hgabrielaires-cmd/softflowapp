@@ -751,10 +751,10 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                       />
                       <Input
                         type="text" inputMode="decimal"
-                        defaultValue={valorImplantacaoFinal.toFixed(2)}
+                        defaultValue={valorImplantacaoFinal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         key={`imp-final-${valorImplantacaoFinal.toFixed(2)}`}
                         onBlur={(e) => {
-                          const raw = e.target.value.replace(",", ".");
+                          const raw = e.target.value.replace(/[R$\s]/g, "").replace(/\./g, "").replace(",", ".");
                           const novoFinal = parseFloat(raw) || 0;
                           const descontoCalc = Math.max(0, valorImpComAcrescimo - novoFinal);
                           setForm((f) => ({
@@ -793,12 +793,12 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                           className={`flex-1 ${descontoMensExcedido ? "border-destructive" : ""}`}
                           placeholder="0"
                         />
-                        <Input
+                          <Input
                           type="text" inputMode="decimal"
-                          defaultValue={valorMensalidadeFinal.toFixed(2)}
+                          defaultValue={valorMensalidadeFinal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           key={`mens-final-${valorMensalidadeFinal.toFixed(2)}`}
                           onBlur={(e) => {
-                            const raw = e.target.value.replace(",", ".");
+                            const raw = e.target.value.replace(/[R$\s]/g, "").replace(/\./g, "").replace(",", ".");
                             const novoFinal = parseFloat(raw) || 0;
                             const descontoCalc = Math.max(0, valorMensComAcrescimo - novoFinal);
                             setForm((f) => ({
