@@ -402,6 +402,7 @@ export default function Agenda() {
           sla_horas: card?.sla_horas || 0,
           progresso: progressMap[ag.card_id] || null,
           progresso_etapa: cardEtapaId ? (progressEtapaMap[`${ag.card_id}__${cardEtapaId}`] || null) : null,
+          atividade_status: ag.atividade_id ? (calActStatusMap[`${ag.card_id}__${ag.atividade_id}`] || 'pendente') : null,
         };
       });
     },
