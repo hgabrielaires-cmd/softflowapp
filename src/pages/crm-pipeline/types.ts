@@ -20,6 +20,8 @@ export interface CrmOportunidade {
   // Joins
   clientes?: { nome_fantasia: string; apelido?: string | null; filial_id?: string | null } | null;
   profiles?: { full_name: string } | null;
+  // Task status
+  tarefas_status?: "sem_tarefa" | "vencida" | "ok";
 }
 
 export interface CrmFunilSimples {
