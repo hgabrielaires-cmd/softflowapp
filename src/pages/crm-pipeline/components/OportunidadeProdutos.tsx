@@ -44,10 +44,16 @@ const formatCurrency = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export function OportunidadeProdutos({ oportunidadeId }: Props) {
+  const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [items, setItems] = useState<ProdutoItem[]>([]);
   const [addType, setAddType] = useState<"plano" | "modulo">("plano");
   const [addRef, setAddRef] = useState("");
+  const [descontoImplantacao, setDescontoImplantacao] = useState(0);
+  const [descontoMensalidade, setDescontoMensalidade] = useState(0);
+
+  const limiteImplantacao = profile?.desconto_limite_implantacao ?? 0;
+  const limiteMensalidade = profile?.desconto_limite_mensalidade ?? 0;
 
   const planosQuery = useQuery({
     queryKey: ["crm_planos_catalogo"],
