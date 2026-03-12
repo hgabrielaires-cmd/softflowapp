@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { useCrmPipelineQueries } from "./crm-pipeline/useCrmPipelineQueries";
+import { useCrmCamposPersonalizados } from "./crm-parametros/useCrmParametrosQueries";
 import { useCrmPipelineForm } from "./crm-pipeline/useCrmPipelineForm";
 import { PipelineCard } from "./crm-pipeline/components/PipelineCard";
 import { OportunidadeFormDialog } from "./crm-pipeline/components/OportunidadeFormDialog";
