@@ -65,7 +65,18 @@ export function FunisTab() {
     setShowCreateFunil(false);
   }
 
-  async function handleCreateEtapa() {
+  function handleOpenEditFunil(funil: { id: string; nome: string; descricao: string | null }) {
+    setEditFunil({ id: funil.id, nome: funil.nome, descricao: funil.descricao || "" });
+    setEditFunilNome(funil.nome);
+    setEditFunilDesc(funil.descricao || "");
+  }
+
+  async function handleSaveEditFunil() {
+    if (!editFunil || !editFunilNome.trim()) return;
+    await updateFunil.mutateAsync({ id: editFunil.id, nome: editFunilNome.trim(), descricao: editFunilDesc.trim() || null });
+    setEditFunil(null);
+  }
+
     if (!novaEtapaNome.trim() || !selectedFunilId) return;
     await createEtapa.mutateAsync({ funil_id: selectedFunilId, nome: novaEtapaNome.trim(), cor: novaEtapaCor, ordem: nextOrdem(etapasFunil) });
     setNovaEtapaNome("");
