@@ -232,7 +232,7 @@ export function OportunidadeDetailView({
                       <div className="flex items-center gap-2 border rounded-md px-3 py-1.5 bg-muted/30">
                         <span className="text-xs font-medium truncate">{contato.nome || "Sem nome"}</span>
                         <span className="text-[10px] text-muted-foreground">•</span>
-                        <span className="text-xs text-muted-foreground truncate">{contato.telefone || "Sem telefone"}</span>
+                        <span className="text-xs text-muted-foreground truncate">{formatPhoneDisplay(contato.telefone) || "Sem telefone"}</span>
                         {cargoNome && (
                           <>
                             <span className="text-[10px] text-muted-foreground">•</span>
