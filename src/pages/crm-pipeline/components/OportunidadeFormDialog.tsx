@@ -135,7 +135,7 @@ export function OportunidadeFormDialog({
             </Select>
           </div>
           <div>
-            <Label>Segmento</Label>
+            <Label>Segmento *</Label>
             <Select value={segmentoId || "__none__"} onValueChange={(v) => setSegmentoId(v === "__none__" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>
