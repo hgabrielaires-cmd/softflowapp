@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { UserAvatar } from "@/components/UserAvatar";
+import { MentionInput, renderMentionText } from "@/components/MentionInput";
 
 const PRIORIDADES = [
   { value: "normal", label: "Normal", emoji: "🟢" },
