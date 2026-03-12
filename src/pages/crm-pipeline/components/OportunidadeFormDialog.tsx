@@ -80,7 +80,7 @@ export function OportunidadeFormDialog({
         <div className="space-y-3 overflow-y-auto flex-1 pr-1 pb-2 min-h-0">
           <div>
             <Label>Título *</Label>
-            <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Nome da oportunidade" />
+            <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Nome/Empresa" />
           </div>
           <div>
             <Label>Etapa</Label>
