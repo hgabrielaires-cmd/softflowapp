@@ -84,7 +84,7 @@ export default function CrmPipeline() {
     let result = oportunidades;
 
     if (filterFilialId !== "__all__") {
-      result = result.filter(o => o.clientes?.filial_id === filterFilialId);
+      result = result.filter(o => !o.clientes || o.clientes.filial_id === filterFilialId);
     }
     if (filterVendedorId !== "__all__") {
       result = result.filter(o => o.responsavel_id === filterVendedorId);
