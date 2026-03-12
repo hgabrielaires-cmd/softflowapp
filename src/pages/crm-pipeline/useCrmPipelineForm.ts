@@ -3,6 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { CrmOportunidade } from "./types";
 
+interface ContatoInput {
+  id?: string;
+  nome: string;
+  telefone: string;
+  cargo_id: string;
+  email: string;
+}
+
 interface OportunidadeInput {
   funil_id: string;
   etapa_id: string;
@@ -15,6 +23,25 @@ interface OportunidadeInput {
   origem?: string | null;
   data_previsao_fechamento?: string | null;
   campos_personalizados?: Record<string, string>;
+  segmento_ids?: string[];
+  _contatos?: ContatoInput[];
+}
+
+async function saveContatos(oportunidadeId: string, contatos: ContatoInput[]) {
+  // Delete existing contacts
+  await supabase.from("crm_oportunidade_contatos").delete().eq("oportunidade_id", oportunidadeId);
+  // Insert new ones
+  if (contatos.length > 0) {
+    const rows = contatos.map(c => ({
+      oportunidade_id: oportunidadeId,
+      nome: c.nome,
+      telefone: c.telefone,
+      cargo_id: c.cargo_id || null,
+      email: c.email || null,
+    }));
+    const { error } = await supabase.from("crm_oportunidade_contatos").insert(rows);
+    if (error) throw error;
+  }
 }
 
 export function useCrmPipelineForm(funilId?: string) {
@@ -23,29 +50,37 @@ export function useCrmPipelineForm(funilId?: string) {
 
   const createMutation = useMutation({
     mutationFn: async (input: OportunidadeInput) => {
-      const { error } = await supabase.from("crm_oportunidades").insert({
-        funil_id: input.funil_id,
-        etapa_id: input.etapa_id,
-        titulo: input.titulo,
-        cliente_id: input.cliente_id || null,
-        contato_id: input.contato_id || null,
-        responsavel_id: input.responsavel_id || null,
-        valor: input.valor || 0,
-        observacoes: input.observacoes || null,
-        origem: input.origem || null,
-        data_previsao_fechamento: input.data_previsao_fechamento || null,
-        campos_personalizados: input.campos_personalizados || {},
-      });
+      const { _contatos, ...rest } = input;
+      const { data, error } = await supabase.from("crm_oportunidades").insert({
+        funil_id: rest.funil_id,
+        etapa_id: rest.etapa_id,
+        titulo: rest.titulo,
+        cliente_id: rest.cliente_id || null,
+        contato_id: rest.contato_id || null,
+        responsavel_id: rest.responsavel_id || null,
+        valor: rest.valor || 0,
+        observacoes: rest.observacoes || null,
+        origem: rest.origem || null,
+        data_previsao_fechamento: rest.data_previsao_fechamento || null,
+        campos_personalizados: rest.campos_personalizados || {},
+        segmento_ids: rest.segmento_ids || [],
+      }).select("id").single();
       if (error) throw error;
+      if (_contatos && _contatos.length > 0 && data?.id) {
+        await saveContatos(data.id, _contatos);
+      }
     },
     onSuccess: () => { toast.success("Oportunidade criada!"); invalidate(); },
     onError: () => toast.error("Erro ao criar oportunidade"),
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, ...rest }: Partial<CrmOportunidade> & { id: string }) => {
+    mutationFn: async ({ id, _contatos, ...rest }: Partial<CrmOportunidade> & { id: string; _contatos?: ContatoInput[] }) => {
       const { error } = await supabase.from("crm_oportunidades").update(rest).eq("id", id);
       if (error) throw error;
+      if (_contatos) {
+        await saveContatos(id, _contatos);
+      }
     },
     onSuccess: () => { toast.success("Oportunidade atualizada!"); invalidate(); },
     onError: () => toast.error("Erro ao atualizar oportunidade"),
