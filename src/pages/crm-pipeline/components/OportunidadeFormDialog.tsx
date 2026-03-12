@@ -23,7 +23,7 @@ interface Props {
 }
 
 export function OportunidadeFormDialog({
-  open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving, exibeCliente = true,
+  open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving, exibeCliente = true, currentUserId,
 }: Props) {
   const [titulo, setTitulo] = useState("");
   const [clienteId, setClienteId] = useState<string>("");
