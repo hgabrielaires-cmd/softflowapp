@@ -2970,6 +2970,7 @@ export type Database = {
           filial_favorita_id: string | null
           filial_id: string | null
           full_name: string
+          funil_favorito_id: string | null
           gestor_desconto: boolean | null
           id: string
           is_tecnico: boolean
@@ -3003,6 +3004,7 @@ export type Database = {
           filial_favorita_id?: string | null
           filial_id?: string | null
           full_name: string
+          funil_favorito_id?: string | null
           gestor_desconto?: boolean | null
           id?: string
           is_tecnico?: boolean
@@ -3036,6 +3038,7 @@ export type Database = {
           filial_favorita_id?: string | null
           filial_id?: string | null
           full_name?: string
+          funil_favorito_id?: string | null
           gestor_desconto?: boolean | null
           id?: string
           is_tecnico?: boolean
@@ -3065,6 +3068,13 @@ export type Database = {
             columns: ["filial_id"]
             isOneToOne: false
             referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_funil_favorito_id_fkey"
+            columns: ["funil_favorito_id"]
+            isOneToOne: false
+            referencedRelation: "crm_funis"
             referencedColumns: ["id"]
           },
           {

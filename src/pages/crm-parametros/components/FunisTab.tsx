@@ -4,12 +4,15 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, ChevronRight, Loader2, GripVertical, Pencil } from "lucide-react";
+import { Plus, Trash2, ChevronRight, Loader2, GripVertical, Pencil, Star } from "lucide-react";
 import { useCrmFunis, useCrmEtapas } from "../useCrmParametrosQueries";
 import { useCreateFunil, useUpdateFunil, useDeleteFunil, useCreateEtapa, useUpdateEtapa, useDeleteEtapa } from "../useCrmParametrosForm";
 import { CORES_ETAPA, COR_PADRAO } from "../constants";
 import { nextOrdem, sortByOrdem } from "../helpers";
 import type { CrmEtapa } from "../types";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -19,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export function FunisTab() {
+  const { profile, refreshProfile } = useAuth();
   const { data: funis = [], isLoading } = useCrmFunis();
   const { data: todasEtapas = [] } = useCrmEtapas();
   const createFunil = useCreateFunil();
@@ -27,6 +31,15 @@ export function FunisTab() {
   const createEtapa = useCreateEtapa();
   const updateEtapa = useUpdateEtapa();
   const deleteEtapa = useDeleteEtapa();
+
+  async function handleToggleFavorito(funilId: string) {
+    if (!profile) return;
+    const newId = profile.funil_favorito_id === funilId ? null : funilId;
+    const { error } = await supabase.from("profiles").update({ funil_favorito_id: newId }).eq("id", profile.id);
+    if (error) { toast.error("Erro ao salvar favorito"); return; }
+    toast.success(newId ? "Funil favorito definido!" : "Favorito removido");
+    await refreshProfile();
+  }
 
   const [selectedFunilId, setSelectedFunilId] = useState<string | null>(null);
   const [showCreateFunil, setShowCreateFunil] = useState(false);
@@ -169,6 +182,11 @@ export function FunisTab() {
                   {funil.descricao && <span className="text-xs text-muted-foreground truncate">{funil.descricao}</span>}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-7 w-7"
+                    onClick={(e) => { e.stopPropagation(); handleToggleFavorito(funil.id); }}
+                    title={profile?.funil_favorito_id === funil.id ? "Remover favorito" : "Marcar como favorito"}>
+                    <Star className={`h-3.5 w-3.5 ${profile?.funil_favorito_id === funil.id ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
+                  </Button>
                   <Badge variant="secondary" className="text-[10px] hidden sm:inline-flex">{count} etapas</Badge>
                   <Switch
                     checked={funil.ativo}
