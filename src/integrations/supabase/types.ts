@@ -841,6 +841,10 @@ export type Database = {
           contato_id: string | null
           created_at: string
           data_previsao_fechamento: string | null
+          desconto_implantacao: number
+          desconto_implantacao_tipo: string
+          desconto_mensalidade: number
+          desconto_mensalidade_tipo: string
           etapa_id: string
           funil_id: string
           id: string
@@ -862,6 +866,10 @@ export type Database = {
           contato_id?: string | null
           created_at?: string
           data_previsao_fechamento?: string | null
+          desconto_implantacao?: number
+          desconto_implantacao_tipo?: string
+          desconto_mensalidade?: number
+          desconto_mensalidade_tipo?: string
           etapa_id: string
           funil_id: string
           id?: string
@@ -883,6 +891,10 @@ export type Database = {
           contato_id?: string | null
           created_at?: string
           data_previsao_fechamento?: string | null
+          desconto_implantacao?: number
+          desconto_implantacao_tipo?: string
+          desconto_mensalidade?: number
+          desconto_mensalidade_tipo?: string
           etapa_id?: string
           funil_id?: string
           id?: string
