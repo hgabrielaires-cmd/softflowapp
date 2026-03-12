@@ -64,7 +64,7 @@ export function OportunidadeFormDialog({
   }, [open, oportunidade, etapaIdInicial, etapas]);
 
   const handleSave = () => {
-    if (!titulo.trim()) return;
+    if (!titulo.trim() || !segmentoId) return;
     for (const campo of activeCampos) {
       if (campo.obrigatorio && !camposValues[campo.id]?.trim()) return;
     }
