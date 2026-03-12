@@ -346,6 +346,7 @@ export default function CrmPipeline() {
         saving={createMutation.isPending || updateMutation.isPending}
         exibeCliente={funis.find(f => f.id === selectedFunilId)?.exibe_cliente ?? true}
         currentUserId={user?.id}
+        camposPersonalizados={camposPersonalizados}
       />
     </AppLayout>
   );
