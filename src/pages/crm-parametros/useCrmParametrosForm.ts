@@ -7,7 +7,7 @@ import { toast } from "sonner";
 export function useCreateFunil() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { nome: string; descricao?: string; ordem: number }) => {
+    mutationFn: async (data: { nome: string; descricao?: string; ordem: number; exibe_cliente?: boolean }) => {
       const { error } = await supabase.from("crm_funis").insert(data);
       if (error) throw error;
     },
