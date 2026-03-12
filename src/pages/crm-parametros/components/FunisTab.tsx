@@ -1,14 +1,14 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, ChevronRight, Loader2, GripVertical } from "lucide-react";
+import { Plus, Trash2, ChevronRight, Loader2, GripVertical, Pencil } from "lucide-react";
 import { useCrmFunis, useCrmEtapas } from "../useCrmParametrosQueries";
 import { useCreateFunil, useUpdateFunil, useDeleteFunil, useCreateEtapa, useUpdateEtapa, useDeleteEtapa } from "../useCrmParametrosForm";
 import { CORES_ETAPA, COR_PADRAO } from "../constants";
 import { nextOrdem, sortByOrdem } from "../helpers";
-import type { CrmFunil, CrmEtapa } from "../types";
+import type { CrmEtapa } from "../types";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -37,8 +37,17 @@ export function FunisTab() {
   const [novaEtapaNome, setNovaEtapaNome] = useState("");
   const [novaEtapaCor, setNovaEtapaCor] = useState(COR_PADRAO);
 
+  // Etapa editing
+  const [editEtapa, setEditEtapa] = useState<CrmEtapa | null>(null);
+  const [editEtapaNome, setEditEtapaNome] = useState("");
+  const [editEtapaCor, setEditEtapaCor] = useState(COR_PADRAO);
+
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<{ type: "funil" | "etapa"; id: string; nome: string } | null>(null);
+
+  // Drag and drop
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
 
   const selectedFunil = funis.find((f) => f.id === selectedFunilId);
   const etapasFunil = sortByOrdem(todasEtapas.filter((e) => e.funil_id === selectedFunilId));
@@ -59,6 +68,18 @@ export function FunisTab() {
     setShowCreateEtapa(false);
   }
 
+  function handleOpenEditEtapa(etapa: CrmEtapa) {
+    setEditEtapa(etapa);
+    setEditEtapaNome(etapa.nome);
+    setEditEtapaCor(etapa.cor);
+  }
+
+  async function handleSaveEditEtapa() {
+    if (!editEtapa || !editEtapaNome.trim()) return;
+    await updateEtapa.mutateAsync({ id: editEtapa.id, nome: editEtapaNome.trim(), cor: editEtapaCor });
+    setEditEtapa(null);
+  }
+
   async function handleDelete() {
     if (!deleteTarget) return;
     if (deleteTarget.type === "funil") {
@@ -68,6 +89,31 @@ export function FunisTab() {
       await deleteEtapa.mutateAsync(deleteTarget.id);
     }
     setDeleteTarget(null);
+  }
+
+  async function handleDragEnd() {
+    if (dragItem.current === null || dragOverItem.current === null || dragItem.current === dragOverItem.current) {
+      dragItem.current = null;
+      dragOverItem.current = null;
+      return;
+    }
+
+    const reordered = [...etapasFunil];
+    const [removed] = reordered.splice(dragItem.current, 1);
+    reordered.splice(dragOverItem.current, 0, removed);
+
+    // Update ordem for each moved etapa
+    const updates = reordered.map((etapa, idx) => {
+      if (etapa.ordem !== idx) {
+        return updateEtapa.mutateAsync({ id: etapa.id, ordem: idx });
+      }
+      return null;
+    }).filter(Boolean);
+
+    dragItem.current = null;
+    dragOverItem.current = null;
+
+    await Promise.all(updates);
   }
 
   if (isLoading) {
@@ -137,8 +183,17 @@ export function FunisTab() {
               </Button>
             </div>
             <div className="space-y-2">
-              {etapasFunil.map((etapa) => (
-                <div key={etapa.id} className="flex items-center gap-3 p-3 rounded-lg border border-border">
+              {etapasFunil.map((etapa, idx) => (
+                <div
+                  key={etapa.id}
+                  draggable
+                  onDragStart={() => { dragItem.current = idx; }}
+                  onDragEnter={() => { dragOverItem.current = idx; }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDragEnd={handleDragEnd}
+                  className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background hover:shadow-sm transition-shadow cursor-grab active:cursor-grabbing"
+                >
+                  <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: etapa.cor }} />
                   <span className="text-sm font-medium flex-1">{etapa.nome}</span>
                   <Switch
@@ -156,6 +211,10 @@ export function FunisTab() {
                       />
                     ))}
                   </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                    onClick={() => handleOpenEditEtapa(etapa)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
                     onClick={() => setDeleteTarget({ type: "etapa", id: etapa.id, nome: etapa.nome })}>
                     <Trash2 className="h-3.5 w-3.5" />
@@ -229,20 +288,52 @@ export function FunisTab() {
         </DialogContent>
       </Dialog>
 
+      {/* Dialog: Editar Etapa */}
+      <Dialog open={!!editEtapa} onOpenChange={(open) => !open && setEditEtapa(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Editar Etapa</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Nome *</label>
+              <Input value={editEtapaNome} onChange={(e) => setEditEtapaNome(e.target.value)} placeholder="Nome da etapa" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Cor</label>
+              <div className="flex gap-2 flex-wrap mt-1">
+                {CORES_ETAPA.map((cor) => (
+                  <button
+                    key={cor}
+                    onClick={() => setEditEtapaCor(cor)}
+                    className={`w-7 h-7 rounded-full border-2 transition-all ${editEtapaCor === cor ? "border-foreground scale-110" : "border-transparent hover:scale-105"}`}
+                    style={{ backgroundColor: cor }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditEtapa(null)}>Cancelar</Button>
+            <Button onClick={handleSaveEditEtapa} disabled={!editEtapaNome.trim() || updateEtapa.isPending}>
+              {updateEtapa.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* AlertDialog: Confirmar exclusão */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogTitle>Deseja excluir?</AlertDialogTitle>
             <AlertDialogDescription>
               Deseja remover {deleteTarget?.type === "funil" ? "o funil" : "a etapa"} <strong>{deleteTarget?.nome}</strong>?
               {deleteTarget?.type === "funil" && " Todas as etapas vinculadas também serão removidas."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Não</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Remover
+              Sim
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
