@@ -303,6 +303,14 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/crm-parametros"
+              element={
+                <ProtectedRoute>
+                  <CrmParametros />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
