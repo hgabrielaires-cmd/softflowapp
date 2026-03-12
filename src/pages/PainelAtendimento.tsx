@@ -47,7 +47,9 @@ import {
 } from "./painel-atendimento/helpers";
 import { usePainelQueries } from "./painel-atendimento/usePainelQueries";
 import { usePainelAtividadeActions } from "./painel-atendimento/usePainelAtividadeActions";
+import { usePainelCardActions } from "./painel-atendimento/usePainelCardActions";
 import { KanbanCard } from "./painel-atendimento/components/KanbanCard";
+import { ChecklistTextoInput } from "./painel-atendimento/components/ChecklistTextoInput";
 import { PausarDialog } from "./painel-atendimento/components/PausarDialog";
 import { RecusarDialog } from "./painel-atendimento/components/RecusarDialog";
 import { ResetarDialog } from "./painel-atendimento/components/ResetarDialog";
@@ -58,15 +60,6 @@ import { RetomarDialog } from "./painel-atendimento/components/RetomarDialog";
 import { VerPedidoDialog } from "./painel-atendimento/components/VerPedidoDialog";
 import { DetalhesDialog } from "./painel-atendimento/components/DetalhesDialog";
 import { HistoricoDialog } from "./painel-atendimento/components/HistoricoDialog";
-
-// ─── Checklist Texto Input (local state + save on blur) ─────────────────────
-function ChecklistTextoInput({ initialValue, disabled, onSave }: { initialValue: string; disabled: boolean; onSave: (val: string) => void }) {
-  const [value, setValue] = useState(initialValue);
-  const savedRef = useRef(initialValue);
-  useEffect(() => { setValue(initialValue); savedRef.current = initialValue; }, [initialValue]);
-  const handleBlur = () => { if (value !== savedRef.current) { savedRef.current = value; onSave(value); } };
-  return <Input className="h-7 w-full text-xs px-2 mt-0.5" placeholder="Texto..." value={value} disabled={disabled} onChange={(e) => setValue(e.target.value)} onBlur={handleBlur} onKeyDown={(e) => { if (e.key === "Enter") { e.currentTarget.blur(); } }} />;
-}
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
