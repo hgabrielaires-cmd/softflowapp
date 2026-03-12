@@ -32,6 +32,7 @@ export default function CrmPipeline() {
   const [editOportunidade, setEditOportunidade] = useState<CrmOportunidade | null>(null);
   const [detailOportunidade, setDetailOportunidade] = useState<CrmOportunidade | null>(null);
   const [newEtapaId, setNewEtapaId] = useState<string>("");
+  const [detailDefaultTab, setDetailDefaultTab] = useState<string | undefined>(undefined);
 
   // Filtros
   const [filterFilialId, setFilterFilialId] = useState<string>("__all__");
@@ -125,6 +126,7 @@ export default function CrmPipeline() {
   };
 
   const handleCardClick = (op: CrmOportunidade) => {
+    setDetailDefaultTab(undefined);
     setDetailOportunidade(op);
   };
 
@@ -135,7 +137,20 @@ export default function CrmPipeline() {
       });
     } else {
       createMutation.mutate({ funil_id: selectedFunilId, ...data } as CrmOportunidade, {
-        onSuccess: () => setDialogOpen(false),
+        onSuccess: (created) => {
+          setDialogOpen(false);
+          if (created) {
+            setDetailOportunidade({
+              ...created,
+              campos_personalizados: (created.campos_personalizados || {}) as Record<string, string>,
+              profiles: null,
+              tarefas_status: "sem_tarefa",
+              total_implantacao: 0,
+              total_mensalidade: 0,
+            } as CrmOportunidade);
+            setDetailDefaultTab("tarefas");
+          }
+        },
       });
     }
   };
@@ -165,6 +180,7 @@ export default function CrmPipeline() {
             camposPersonalizados={camposPersonalizados}
             segmentos={segmentos}
             cargos={cargos}
+            defaultTab={detailDefaultTab}
           />
         ) : (
         <>

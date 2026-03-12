@@ -39,6 +39,7 @@ interface Props {
   camposPersonalizados?: CrmCampoPersonalizado[];
   segmentos?: { id: string; nome: string }[];
   cargos?: { id: string; nome: string }[];
+  defaultTab?: string;
 }
 
 const emptyContato = (): ContatoLocal => ({ nome: "", telefone: "", cargo_id: "", email: "" });
@@ -46,6 +47,7 @@ const emptyContato = (): ContatoLocal => ({ nome: "", telefone: "", cargo_id: ""
 export function OportunidadeDetailView({
   oportunidade, etapas, clientes, responsaveis, onSave, onBack, saving,
   exibeCliente = true, camposPersonalizados = [], segmentos = [], cargos = [],
+  defaultTab,
 }: Props) {
   const [titulo, setTitulo] = useState(oportunidade.titulo);
   const [clienteId, setClienteId] = useState(oportunidade.cliente_id || "");
@@ -182,7 +184,7 @@ export function OportunidadeDetailView({
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="geral" className="flex-1 flex flex-col min-h-0">
+      <Tabs defaultValue={defaultTab || "geral"} className="flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between mx-4 mt-2">
           <TabsList className="w-fit">
             <TabsTrigger value="geral">Geral</TabsTrigger>
