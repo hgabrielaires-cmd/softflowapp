@@ -398,22 +398,26 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                 disabled={!!qtdLocked}
               />
               <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={item.valor_implantacao}
-                onChange={(e) => updateItemLocal(idx, "valor_implantacao", parseFloat(e.target.value) || 0)}
+                type="text"
+                inputMode="decimal"
+                value={formatCurrency(item.valor_implantacao)}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/[R$\s.]/g, "").replace(",", ".");
+                  updateItemLocal(idx, "valor_implantacao", parseFloat(raw) || 0);
+                }}
                 onBlur={() => handleUpdateItem(item)}
-                className="h-8 text-xs text-right"
+                className="h-8 text-xs text-right font-mono"
               />
               <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={item.valor_mensalidade}
-                onChange={(e) => updateItemLocal(idx, "valor_mensalidade", parseFloat(e.target.value) || 0)}
+                type="text"
+                inputMode="decimal"
+                value={formatCurrency(item.valor_mensalidade)}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/[R$\s.]/g, "").replace(",", ".");
+                  updateItemLocal(idx, "valor_mensalidade", parseFloat(raw) || 0);
+                }}
                 onBlur={() => handleUpdateItem(item)}
-                className="h-8 text-xs text-right"
+                className="h-8 text-xs text-right font-mono"
               />
               <Button
                 variant="ghost"
