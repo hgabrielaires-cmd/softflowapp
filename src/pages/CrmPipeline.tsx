@@ -30,6 +30,7 @@ export default function CrmPipeline() {
   const [dragCardId, setDragCardId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editOportunidade, setEditOportunidade] = useState<CrmOportunidade | null>(null);
+  const [detailOportunidade, setDetailOportunidade] = useState<CrmOportunidade | null>(null);
   const [newEtapaId, setNewEtapaId] = useState<string>("");
 
   // Filtros
