@@ -213,7 +213,26 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
 
   const updateItemLocal = (index: number, field: keyof ProdutoItem, value: number) => {
     setItems((prev) =>
-      prev.map((it, i) => (i === index ? { ...it, [field]: value } : it))
+      prev.map((it, i) => {
+        if (i !== index) return it;
+        let newValue = value;
+        // Validate quantidade limits
+        if (field === "quantidade") {
+          if (it.tipo === "plano") {
+            newValue = 1; // plano always 1
+          } else {
+            const modulo = modulosQuery.data?.find(m => m.id === it.referencia_id);
+            if (modulo && !modulo.permite_revenda) {
+              newValue = 1;
+            }
+            if (modulo?.quantidade_maxima && newValue > modulo.quantidade_maxima) {
+              toast.error(`Limite máximo: ${modulo.quantidade_maxima} unidade(s) para "${it.nome}".`);
+              newValue = modulo.quantidade_maxima;
+            }
+          }
+        }
+        return { ...it, [field]: newValue };
+      })
     );
   };
 
