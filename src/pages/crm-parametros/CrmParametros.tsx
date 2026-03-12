@@ -28,6 +28,9 @@ export default function CrmParametros() {
             <TabsTrigger value="campos" className="gap-1.5">
               <Settings2 className="h-4 w-4" /> Campos Personalizados
             </TabsTrigger>
+            <TabsTrigger value="cargos" className="gap-1.5">
+              <Briefcase className="h-4 w-4" /> Cargos
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="funis">
@@ -36,6 +39,10 @@ export default function CrmParametros() {
 
           <TabsContent value="campos">
             <CamposPersonalizadosTab />
+          </TabsContent>
+
+          <TabsContent value="cargos">
+            <CargosTab />
           </TabsContent>
         </Tabs>
       </div>
