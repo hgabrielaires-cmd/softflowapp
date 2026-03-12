@@ -94,10 +94,10 @@ export function OportunidadeFormDialog({
           </div>
           <div>
             <Label>Cliente</Label>
-            <Select value={clienteId} onValueChange={setClienteId}>
+            <Select value={clienteId || "__none__"} onValueChange={(v) => setClienteId(v === "__none__" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="__none__">Nenhum</SelectItem>
                 {clientes.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>
                 ))}
