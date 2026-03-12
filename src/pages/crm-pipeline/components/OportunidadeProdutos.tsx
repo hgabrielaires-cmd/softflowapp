@@ -519,7 +519,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                     </span>
                   </div>
                   <div className={`flex gap-2 ${excedeLimiteMens ? "ring-1 ring-destructive rounded-md p-1" : ""}`}>
-                    <Select value={descontoMensalidadeTipo} onValueChange={(v) => setDescontoMensalidadeTipo(v as "R$" | "%")}>
+                    <Select value={descontoMensalidadeTipo} onValueChange={(v) => { setDescontoMensalidadeTipo(v as "R$" | "%"); persistDescontos(descontoImplantacao, descontoImplantacaoTipo, descontoMensalidade, v); }}>
                       <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="R$">R$</SelectItem>
@@ -530,6 +530,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                       type="number" min={0} step="0.01"
                       value={descontoMensalidade || ""}
                       onChange={(e) => setDescontoMensalidade(parseFloat(e.target.value) || 0)}
+                      onBlur={() => persistDescontos(descontoImplantacao, descontoImplantacaoTipo, descontoMensalidade, descontoMensalidadeTipo)}
                       className={`flex-1 ${excedeLimiteMens ? "border-destructive" : ""}`}
                       placeholder="0"
                     />
@@ -543,6 +544,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                         const descontoCalc = Math.max(0, totalMensalidade - novoFinal);
                         setDescontoMensalidadeTipo("R$");
                         setDescontoMensalidade(parseFloat(descontoCalc.toFixed(2)));
+                        persistDescontos(descontoImplantacao, descontoImplantacaoTipo, parseFloat(descontoCalc.toFixed(2)), "R$");
                       }}
                       className="w-36 bg-background font-mono text-sm text-primary font-semibold"
                     />
