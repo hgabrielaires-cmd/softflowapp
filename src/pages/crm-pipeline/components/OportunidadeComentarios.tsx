@@ -267,7 +267,7 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
       </p>
       {!readOnly && (
         <div className="space-y-2 bg-muted/30 rounded-md p-3">
-          <Textarea placeholder="Escreva um comentário..." value={texto} onChange={(e) => setTexto(e.target.value)} className="min-h-[60px] text-sm" />
+          <MentionInput value={texto} onChange={setTexto} users={allUsers} placeholder="Escreva um comentário... Use @nome para mencionar" className="min-h-[60px]" />
           <div className="flex flex-wrap items-center gap-2">
             <Label className="text-xs text-muted-foreground">Prioridade:</Label>
             {PRIORIDADES.map((p) => (
