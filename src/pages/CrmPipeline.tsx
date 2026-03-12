@@ -152,6 +152,22 @@ export default function CrmPipeline() {
   return (
     <AppLayout>
       <div className="flex flex-col h-[calc(100vh-64px)]">
+        {detailOportunidade ? (
+          <OportunidadeDetailView
+            oportunidade={detailOportunidade}
+            etapas={etapas}
+            clientes={clientes}
+            responsaveis={responsaveis}
+            onSave={handleDetailSave}
+            onBack={() => setDetailOportunidade(null)}
+            saving={updateMutation.isPending}
+            exibeCliente={funis.find(f => f.id === selectedFunilId)?.exibe_cliente ?? true}
+            camposPersonalizados={camposPersonalizados}
+            segmentos={segmentos}
+            cargos={cargos}
+          />
+        ) : (
+        <>
         {/* Header */}
         <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b bg-background">
           <h1 className="text-lg font-bold text-foreground mr-auto sm:mr-0">Pipeline de Vendas</h1>
