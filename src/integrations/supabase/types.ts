@@ -795,6 +795,7 @@ export type Database = {
       crm_oportunidades: {
         Row: {
           campos_personalizados: Json
+          classificacao: number
           cliente_id: string | null
           contato_id: string | null
           created_at: string
@@ -815,6 +816,7 @@ export type Database = {
         }
         Insert: {
           campos_personalizados?: Json
+          classificacao?: number
           cliente_id?: string | null
           contato_id?: string | null
           created_at?: string
@@ -835,6 +837,7 @@ export type Database = {
         }
         Update: {
           campos_personalizados?: Json
+          classificacao?: number
           cliente_id?: string | null
           contato_id?: string | null
           created_at?: string

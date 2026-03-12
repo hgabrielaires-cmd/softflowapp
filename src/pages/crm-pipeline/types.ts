@@ -13,6 +13,7 @@ export interface CrmOportunidade {
   data_previsao_fechamento: string | null;
   motivo_perda: string | null;
   segmento_ids: string[] | null;
+  classificacao: number;
   status: string;
   ordem: number;
   created_at: string;

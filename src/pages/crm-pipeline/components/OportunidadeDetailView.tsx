@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
-import { ArrowLeft, Check, X, ChevronsUpDown, Plus, Trash2, ListChecks, Package, FolderOpen, Save, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Check, X, ChevronsUpDown, Plus, Trash2, ListChecks, Package, FolderOpen, Save, Eye, EyeOff, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { OportunidadeComentarios } from "./OportunidadeComentarios";
@@ -54,6 +54,7 @@ export function OportunidadeDetailView({
   const [segmentoPopoverOpen, setSegmentoPopoverOpen] = useState(false);
   const [contatos, setContatos] = useState<ContatoLocal[]>([emptyContato()]);
   const [editingContatoIdx, setEditingContatoIdx] = useState<number | null>(null);
+  const [classificacao, setClassificacao] = useState(oportunidade.classificacao || 0);
 
   const activeCampos = camposPersonalizados.filter(
     c => c.ativo && !CAMPOS_EXCLUIDOS.includes(c.nome.toLowerCase())
@@ -99,6 +100,7 @@ export function OportunidadeDetailView({
       cliente_id: clienteId || null, responsavel_id: responsavelId || null,
       segmento_ids: segmentoIds, valor: 0, origem: null, observacoes: null,
       data_previsao_fechamento: null, campos_personalizados: camposValues,
+      classificacao,
       _contatos: contatos,
     });
   };
@@ -129,6 +131,14 @@ export function OportunidadeDetailView({
           {currentEtapa && (
             <Badge variant="outline" className="text-[10px] shrink-0">{currentEtapa.nome}</Badge>
           )}
+          {/* Classificação estrelas */}
+          <div className="flex items-center gap-0.5 shrink-0">
+            {[1, 2, 3, 4, 5].map(i => (
+              <button key={i} type="button" onClick={() => setClassificacao(i === classificacao ? 0 : i)} className="focus:outline-none">
+                <Star className={cn("h-4 w-4 transition-colors", i <= classificacao ? "text-primary fill-primary" : "text-muted-foreground/30")} />
+              </button>
+            ))}
+          </div>
         </div>
         <Button size="sm" className="h-8 shrink-0 gap-1" onClick={handleSave} disabled={!titulo.trim() || segmentoIds.length === 0 || !contatosValid || saving}>
           <Save className="h-3.5 w-3.5" />
