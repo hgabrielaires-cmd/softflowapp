@@ -66,7 +66,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("modulos")
-        .select("id, nome, valor_implantacao_modulo, valor_mensalidade_modulo")
+        .select("id, nome, valor_implantacao_modulo, valor_mensalidade_modulo, permite_revenda, quantidade_maxima")
         .eq("ativo", true)
         .order("nome");
       if (error) throw error;
