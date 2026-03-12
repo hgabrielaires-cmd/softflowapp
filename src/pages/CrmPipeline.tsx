@@ -37,6 +37,8 @@ export default function CrmPipeline() {
   const [filterVendedorId, setFilterVendedorId] = useState<string>("__all__");
   const [filtersReady, setFiltersReady] = useState(false);
 
+  const isVendedor = roles.includes("vendedor");
+
   const { funisQuery, etapasQuery, oportunidadesQuery, responsaveisQuery } = useCrmPipelineQueries(selectedFunilId);
   const { createMutation, updateMutation, moveToEtapaMutation } = useCrmPipelineForm(selectedFunilId);
 
