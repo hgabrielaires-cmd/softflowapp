@@ -124,6 +124,33 @@ export default function PainelAtendimento() {
 
   const { iniciarAtividade, concluirAtividade, getStatusAtividade, todasAtividadesConcluidas } = usePainelAtividadeActions();
 
+  const {
+    moverCard, atribuirResponsavel, iniciarAtendimento,
+    saveChecklistItem, fetchDetalhes, fetchVerPedido, fetchHistorico,
+    registrarEntradaEtapa, registrarSaidaEtapa, notificarSeguidoresAvanco,
+    handlePausarProjeto, handleRecusarProjeto, handleResetarProjeto, handleCancelarProjeto,
+    handleRemoverAgendamentosCancelados, handleApontamento, handleRemoverApontamento,
+    handleDespausar, finalizarEtapa,
+    pausarOpen, setPausarOpen, pausarMotivo, setPausarMotivo, pausando,
+    recusarOpen, setRecusarOpen, recusarMotivo, setRecusarMotivo, recusando,
+    apontamentoOpen, setApontamentoOpen, apontamentoCardId, setApontamentoCardId,
+    apontamentoUsuarios, setApontamentoUsuarios, apontando,
+    buscaApontamento, setBuscaApontamento,
+    retomarOpen, setRetomarOpen, retomarComentario, setRetomarComentario, retomando,
+    resetarOpen, setResetarOpen, resetarMotivo, setResetarMotivo, resetando,
+    cancelarOpen, setCancelarOpen, cancelarMotivo, setCancelarMotivo, cancelando,
+    agendamentosCancelOpen, setAgendamentosCancelOpen, agendamentosCancelados, removendoAgendamentos,
+    verPedidoOpen, setVerPedidoOpen, verPedidoData, verPedidoLoading,
+    finalizando,
+    detalhesOpen, setDetalhesOpen, detalhesData, detalhesLoading,
+    historicoOpen, setHistoricoOpen, historicoData, historicoLoading,
+  } = usePainelCardActions({
+    detailCard, setDetailCard, etapas, profile, responsaveis, cards,
+    jornadaSlaMap, checklistEtapa, checklistProgresso, setChecklistProgresso,
+    slaEtapaJornada, atividadeExecucaoMap, todasAtividadesConcluidas,
+    cardApontamentosDetalhado,
+  });
+
   // Auto-refresh atrasado status every 60s
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60_000);
