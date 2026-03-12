@@ -363,17 +363,67 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
             );
           })}
 
+          {/* Subtotals */}
+          <div className="grid grid-cols-[1fr_80px_120px_120px_40px] gap-2 items-center px-2 pt-2 border-t">
+            <span className="text-xs text-muted-foreground">Subtotal</span>
+            <span />
+            <span className="text-xs text-right text-muted-foreground">{formatCurrency(totalImplantacao)}</span>
+            <span className="text-xs text-right text-muted-foreground">{formatCurrency(totalMensalidade)}</span>
+            <span />
+          </div>
+
+          {/* Discounts */}
+          <div className="grid grid-cols-[1fr_80px_120px_120px_40px] gap-2 items-center px-2">
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-medium">Desconto (R$)</span>
+              <span className="text-[10px] text-muted-foreground">(Limite: {limiteImplantacao}% impl. / {limiteMensalidade}% mens.)</span>
+            </div>
+            <span />
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={descontoImplantacao || ""}
+              onChange={(e) => setDescontoImplantacao(parseFloat(e.target.value) || 0)}
+              placeholder="0,00"
+              className={`h-8 text-xs text-right ${excedeLimiteImpl ? "border-amber-500 focus-visible:ring-amber-500" : ""}`}
+            />
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={descontoMensalidade || ""}
+              onChange={(e) => setDescontoMensalidade(parseFloat(e.target.value) || 0)}
+              placeholder="0,00"
+              className={`h-8 text-xs text-right ${excedeLimiteMens ? "border-amber-500 focus-visible:ring-amber-500" : ""}`}
+            />
+            <span />
+          </div>
+
+          {/* Warning */}
+          {precisaAprovacao && (
+            <div className="flex items-center gap-2 px-2 py-2 rounded-md bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
+              <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+              <span className="text-xs text-amber-700 dark:text-amber-400">
+                Desconto acima do seu limite ({excedeLimiteImpl ? `Impl: ${percImplantacao.toFixed(1)}% > ${limiteImplantacao}%` : ""}
+                {excedeLimiteImpl && excedeLimiteMens ? " | " : ""}
+                {excedeLimiteMens ? `Mens: ${percMensalidade.toFixed(1)}% > ${limiteMensalidade}%` : ""}
+                ). Será necessária aprovação do gestor.
+              </span>
+            </div>
+          )}
+
           {/* Totals */}
           <div className="grid grid-cols-[1fr_80px_120px_120px_40px] gap-2 items-center px-2 pt-2 border-t">
             <span className="text-sm font-bold flex items-center gap-1">
-              <DollarSign className="h-4 w-4 text-primary" /> Total
+              <DollarSign className="h-4 w-4 text-primary" /> Total Final
             </span>
             <span />
             <span className="text-sm font-bold text-right text-emerald-600">
-              {formatCurrency(totalImplantacao)}
+              {formatCurrency(totalImplFinal)}
             </span>
             <span className="text-sm font-bold text-right text-primary">
-              {formatCurrency(totalMensalidade)}
+              {formatCurrency(totalMensFinal)}
             </span>
             <span />
           </div>
