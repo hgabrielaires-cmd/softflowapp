@@ -182,6 +182,11 @@ export function FunisTab() {
                   {funil.descricao && <span className="text-xs text-muted-foreground truncate">{funil.descricao}</span>}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-7 w-7"
+                    onClick={(e) => { e.stopPropagation(); handleToggleFavorito(funil.id); }}
+                    title={profile?.funil_favorito_id === funil.id ? "Remover favorito" : "Marcar como favorito"}>
+                    <Star className={`h-3.5 w-3.5 ${profile?.funil_favorito_id === funil.id ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
+                  </Button>
                   <Badge variant="secondary" className="text-[10px] hidden sm:inline-flex">{count} etapas</Badge>
                   <Switch
                     checked={funil.ativo}
