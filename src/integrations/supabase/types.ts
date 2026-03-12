@@ -884,6 +884,53 @@ export type Database = {
           },
         ]
       }
+      crm_tarefas: {
+        Row: {
+          concluido_em: string | null
+          concluido_por: string | null
+          created_at: string
+          criado_por: string
+          data_reuniao: string | null
+          descricao: string
+          id: string
+          oportunidade_id: string
+          tipo_atendimento: string
+          updated_at: string
+        }
+        Insert: {
+          concluido_em?: string | null
+          concluido_por?: string | null
+          created_at?: string
+          criado_por: string
+          data_reuniao?: string | null
+          descricao?: string
+          id?: string
+          oportunidade_id: string
+          tipo_atendimento?: string
+          updated_at?: string
+        }
+        Update: {
+          concluido_em?: string | null
+          concluido_por?: string | null
+          created_at?: string
+          criado_por?: string
+          data_reuniao?: string | null
+          descricao?: string
+          id?: string
+          oportunidade_id?: string
+          tipo_atendimento?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_tarefas_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "crm_oportunidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custos: {
         Row: {
           created_at: string
