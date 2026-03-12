@@ -101,9 +101,6 @@ export default function PainelAtendimento() {
   const [likesPopoverOpen, setLikesPopoverOpen] = useState<string | null>(null);
   const [tecnicosSelecionados, setTecnicosSelecionados] = useState<string[]>([]);
   const [buscaTecnico, setBuscaTecnico] = useState<string | null>(null);
-  const [historicoOpen, setHistoricoOpen] = useState(false);
-  const [historicoData, setHistoricoData] = useState<any[]>([]);
-  const [historicoLoading, setHistoricoLoading] = useState(false);
   const [configEditMode, setConfigEditMode] = useState(false);
   const [checklistEditMode, setChecklistEditMode] = useState(false);
   const [cardAgendamentos, setCardAgendamentos] = useState<any[]>([]);
