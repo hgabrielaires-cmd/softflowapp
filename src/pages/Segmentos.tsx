@@ -203,7 +203,7 @@ export default function Segmentos() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtrados.map(seg => (
+                paginados.map(seg => (
                   <TableRow key={seg.id}>
                     <TableCell className="font-medium">{seg.nome}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{filialNome(seg.filial_id)}</TableCell>
