@@ -37,7 +37,7 @@ export function useCrmPipelineQueries(funilId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("crm_oportunidades")
-        .select("*, clientes(nome_fantasia, apelido)")
+        .select("*, clientes(nome_fantasia, apelido, filial_id)")
         .eq("funil_id", funilId!)
         .eq("status", "aberta")
         .order("ordem");
