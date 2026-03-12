@@ -231,97 +231,104 @@ export function OportunidadeDetailView({
                 })}
               </div>
 
-              <div>
-                <Label>Etapa</Label>
-                <Select value={etapaId} onValueChange={setEtapaId}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {etapas.map((e) => (<SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {exibeCliente && (
+              {/* Etapa + Responsável lado a lado */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Cliente</Label>
-                  <Select value={clienteId || "__none__"} onValueChange={(v) => setClienteId(v === "__none__" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <Label>Etapa</Label>
+                  <Select value={etapaId} onValueChange={setEtapaId}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Nenhum</SelectItem>
-                      {clientes.map((c) => (<SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>))}
+                      {etapas.map((e) => (<SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>))}
                     </SelectContent>
                   </Select>
                 </div>
-              )}
-
-              <div>
-                <Label>Responsável</Label>
-                <Select value={responsavelId || "__none__"} onValueChange={(v) => setResponsavelId(v === "__none__" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Nenhum</SelectItem>
-                    {responsaveis.map((r) => (<SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>))}
-                  </SelectContent>
-                </Select>
+                <div>
+                  <Label>Responsável</Label>
+                  <Select value={responsavelId || "__none__"} onValueChange={(v) => setResponsavelId(v === "__none__" ? "" : v)}>
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Nenhum</SelectItem>
+                      {responsaveis.map((r) => (<SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              {/* Segmento */}
-              <div>
-                <Label>Segmento *</Label>
-                <Popover open={segmentoPopoverOpen} onOpenChange={setSegmentoPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={segmentoPopoverOpen} className="w-full justify-between font-normal h-auto min-h-10">
-                      {segmentoIds.length === 0 ? (
-                        <span className="text-muted-foreground">Buscar segmento...</span>
-                      ) : (
-                        <div className="flex flex-wrap gap-1">
-                          {segmentoIds.map(id => (
-                            <Badge key={id} variant="secondary" className="text-xs gap-1">
-                              {getSegmentoNome(id)}
-                              <button type="button" className="ml-0.5 hover:text-destructive" onClick={(e) => { e.stopPropagation(); removeSegmento(id); }}>
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Digitar para buscar..." />
-                      <CommandList>
-                        <CommandEmpty>Nenhum segmento encontrado</CommandEmpty>
-                        {segmentos.map((s) => (
-                          <CommandItem key={s.id} value={s.nome} onSelect={() => toggleSegmento(s.id)}>
-                            <Check className={cn("mr-2 h-4 w-4", segmentoIds.includes(s.id) ? "opacity-100" : "opacity-0")} />
-                            {s.nome}
-                          </CommandItem>
-                        ))}
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* Campos Personalizados */}
-              {activeCampos.map((campo) => (
-                <div key={campo.id}>
-                  <Label>{campo.nome}{campo.obrigatorio ? " *" : ""}</Label>
-                  {campo.tipo === "select" ? (
-                    <Select value={camposValues[campo.id] || "__none__"} onValueChange={(v) => setCampoValue(campo.id, v === "__none__" ? "" : v)}>
+              {/* Cliente + Segmento lado a lado */}
+              <div className={cn("grid gap-3", exibeCliente ? "grid-cols-2" : "grid-cols-1")}>
+                {exibeCliente && (
+                  <div>
+                    <Label>Cliente</Label>
+                    <Select value={clienteId || "__none__"} onValueChange={(v) => setClienteId(v === "__none__" ? "" : v)}>
                       <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none__">Nenhum</SelectItem>
-                        {campo.opcoes.map((opcao) => (<SelectItem key={opcao} value={opcao}>{opcao}</SelectItem>))}
+                        {clientes.map((c) => (<SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>))}
                       </SelectContent>
                     </Select>
-                  ) : (
-                    <Input value={camposValues[campo.id] || ""} onChange={(e) => setCampoValue(campo.id, e.target.value)} placeholder={campo.nome} />
-                  )}
+                  </div>
+                )}
+                <div>
+                  <Label>Segmento *</Label>
+                  <Popover open={segmentoPopoverOpen} onOpenChange={setSegmentoPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" role="combobox" aria-expanded={segmentoPopoverOpen} className="w-full justify-between font-normal h-auto min-h-10">
+                        {segmentoIds.length === 0 ? (
+                          <span className="text-muted-foreground">Buscar segmento...</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {segmentoIds.map(id => (
+                              <Badge key={id} variant="secondary" className="text-xs gap-1">
+                                {getSegmentoNome(id)}
+                                <button type="button" className="ml-0.5 hover:text-destructive" onClick={(e) => { e.stopPropagation(); removeSegmento(id); }}>
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Digitar para buscar..." />
+                        <CommandList>
+                          <CommandEmpty>Nenhum segmento encontrado</CommandEmpty>
+                          {segmentos.map((s) => (
+                            <CommandItem key={s.id} value={s.nome} onSelect={() => toggleSegmento(s.id)}>
+                              <Check className={cn("mr-2 h-4 w-4", segmentoIds.includes(s.id) ? "opacity-100" : "opacity-0")} />
+                              {s.nome}
+                            </CommandItem>
+                          ))}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
-              ))}
+              </div>
+
+              {/* Campos Personalizados em grid de 2 colunas */}
+              {activeCampos.length > 0 && (
+                <div className="grid grid-cols-2 gap-3">
+                  {activeCampos.map((campo) => (
+                    <div key={campo.id}>
+                      <Label>{campo.nome}{campo.obrigatorio ? " *" : ""}</Label>
+                      {campo.tipo === "select" ? (
+                        <Select value={camposValues[campo.id] || "__none__"} onValueChange={(v) => setCampoValue(campo.id, v === "__none__" ? "" : v)}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Nenhum</SelectItem>
+                            {campo.opcoes.map((opcao) => (<SelectItem key={opcao} value={opcao}>{opcao}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input value={camposValues[campo.id] || ""} onChange={(e) => setCampoValue(campo.id, e.target.value)} placeholder={campo.nome} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Right: Comunicação */}
