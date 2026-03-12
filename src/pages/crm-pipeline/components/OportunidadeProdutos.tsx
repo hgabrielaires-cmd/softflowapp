@@ -55,9 +55,62 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
   const [descontoImplantacaoTipo, setDescontoImplantacaoTipo] = useState<"R$" | "%">("R$");
   const [descontoMensalidade, setDescontoMensalidade] = useState(0);
   const [descontoMensalidadeTipo, setDescontoMensalidadeTipo] = useState<"R$" | "%">("R$");
+  const [descontosLoaded, setDescontosLoaded] = useState(false);
 
   const limiteImplantacao = profile?.desconto_limite_implantacao ?? 0;
   const limiteMensalidade = profile?.desconto_limite_mensalidade ?? 0;
+
+  // Load discounts from oportunidade
+  const descontosQuery = useQuery({
+    queryKey: ["crm_oportunidade_descontos", oportunidadeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crm_oportunidades")
+        .select("desconto_implantacao, desconto_implantacao_tipo, desconto_mensalidade, desconto_mensalidade_tipo")
+        .eq("id", oportunidadeId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    if (descontosQuery.data && !descontosLoaded) {
+      const d = descontosQuery.data as any;
+      const hasDesconto = (d.desconto_implantacao > 0 || d.desconto_mensalidade > 0);
+      setDescontoAtivo(hasDesconto);
+      setDescontoImplantacao(d.desconto_implantacao || 0);
+      setDescontoImplantacaoTipo(d.desconto_implantacao_tipo || "R$");
+      setDescontoMensalidade(d.desconto_mensalidade || 0);
+      setDescontoMensalidadeTipo(d.desconto_mensalidade_tipo || "R$");
+      setDescontosLoaded(true);
+    }
+  }, [descontosQuery.data, descontosLoaded]);
+
+  // Save discounts mutation
+  const saveDescontosMutation = useMutation({
+    mutationFn: async (params: { desconto_implantacao: number; desconto_implantacao_tipo: string; desconto_mensalidade: number; desconto_mensalidade_tipo: string }) => {
+      const { error } = await supabase
+        .from("crm_oportunidades")
+        .update(params)
+        .eq("id", oportunidadeId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm_oportunidade_descontos", oportunidadeId] });
+    },
+  });
+
+  const persistDescontos = (
+    impl: number, implTipo: string, mens: number, mensTipo: string
+  ) => {
+    saveDescontosMutation.mutate({
+      desconto_implantacao: impl,
+      desconto_implantacao_tipo: implTipo,
+      desconto_mensalidade: mens,
+      desconto_mensalidade_tipo: mensTipo,
+    });
+  };
 
   const planosQuery = useQuery({
     queryKey: ["crm_planos_catalogo"],
@@ -345,22 +398,26 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                 disabled={!!qtdLocked}
               />
               <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={item.valor_implantacao}
-                onChange={(e) => updateItemLocal(idx, "valor_implantacao", parseFloat(e.target.value) || 0)}
+                type="text"
+                inputMode="decimal"
+                value={formatCurrency(item.valor_implantacao)}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/[R$\s.]/g, "").replace(",", ".");
+                  updateItemLocal(idx, "valor_implantacao", parseFloat(raw) || 0);
+                }}
                 onBlur={() => handleUpdateItem(item)}
-                className="h-8 text-xs text-right"
+                className="h-8 text-xs text-right font-mono"
               />
               <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={item.valor_mensalidade}
-                onChange={(e) => updateItemLocal(idx, "valor_mensalidade", parseFloat(e.target.value) || 0)}
+                type="text"
+                inputMode="decimal"
+                value={formatCurrency(item.valor_mensalidade)}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/[R$\s.]/g, "").replace(",", ".");
+                  updateItemLocal(idx, "valor_mensalidade", parseFloat(raw) || 0);
+                }}
                 onBlur={() => handleUpdateItem(item)}
-                className="h-8 text-xs text-right"
+                className="h-8 text-xs text-right font-mono"
               />
               <Button
                 variant="ghost"
@@ -390,6 +447,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                     if (!v) {
                       setDescontoImplantacao(0);
                       setDescontoMensalidade(0);
+                      persistDescontos(0, "R$", 0, "R$");
                     }
                   }}
                 />
@@ -421,7 +479,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                     </span>
                   </div>
                   <div className={`flex gap-2 ${excedeLimiteImpl ? "ring-1 ring-destructive rounded-md p-1" : ""}`}>
-                    <Select value={descontoImplantacaoTipo} onValueChange={(v) => setDescontoImplantacaoTipo(v as "R$" | "%")}>
+                    <Select value={descontoImplantacaoTipo} onValueChange={(v) => { setDescontoImplantacaoTipo(v as "R$" | "%"); persistDescontos(descontoImplantacao, v, descontoMensalidade, descontoMensalidadeTipo); }}>
                       <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="R$">R$</SelectItem>
@@ -432,6 +490,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                       type="number" min={0} step="0.01"
                       value={descontoImplantacao || ""}
                       onChange={(e) => setDescontoImplantacao(parseFloat(e.target.value) || 0)}
+                      onBlur={() => persistDescontos(descontoImplantacao, descontoImplantacaoTipo, descontoMensalidade, descontoMensalidadeTipo)}
                       className={`flex-1 ${excedeLimiteImpl ? "border-destructive" : ""}`}
                       placeholder="0"
                     />
@@ -445,6 +504,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                         const descontoCalc = Math.max(0, totalImplantacao - novoFinal);
                         setDescontoImplantacaoTipo("R$");
                         setDescontoImplantacao(parseFloat(descontoCalc.toFixed(2)));
+                        persistDescontos(parseFloat(descontoCalc.toFixed(2)), "R$", descontoMensalidade, descontoMensalidadeTipo);
                       }}
                       className="w-36 bg-background font-mono text-sm text-primary font-semibold"
                     />
@@ -459,7 +519,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                     </span>
                   </div>
                   <div className={`flex gap-2 ${excedeLimiteMens ? "ring-1 ring-destructive rounded-md p-1" : ""}`}>
-                    <Select value={descontoMensalidadeTipo} onValueChange={(v) => setDescontoMensalidadeTipo(v as "R$" | "%")}>
+                    <Select value={descontoMensalidadeTipo} onValueChange={(v) => { setDescontoMensalidadeTipo(v as "R$" | "%"); persistDescontos(descontoImplantacao, descontoImplantacaoTipo, descontoMensalidade, v); }}>
                       <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="R$">R$</SelectItem>
@@ -470,6 +530,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                       type="number" min={0} step="0.01"
                       value={descontoMensalidade || ""}
                       onChange={(e) => setDescontoMensalidade(parseFloat(e.target.value) || 0)}
+                      onBlur={() => persistDescontos(descontoImplantacao, descontoImplantacaoTipo, descontoMensalidade, descontoMensalidadeTipo)}
                       className={`flex-1 ${excedeLimiteMens ? "border-destructive" : ""}`}
                       placeholder="0"
                     />
@@ -483,6 +544,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                         const descontoCalc = Math.max(0, totalMensalidade - novoFinal);
                         setDescontoMensalidadeTipo("R$");
                         setDescontoMensalidade(parseFloat(descontoCalc.toFixed(2)));
+                        persistDescontos(descontoImplantacao, descontoImplantacaoTipo, parseFloat(descontoCalc.toFixed(2)), "R$");
                       }}
                       className="w-36 bg-background font-mono text-sm text-primary font-semibold"
                     />
