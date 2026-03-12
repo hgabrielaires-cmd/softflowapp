@@ -249,6 +249,8 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm_oportunidade_produtos", oportunidadeId] });
+      queryClient.invalidateQueries({ queryKey: ["crm_oportunidades"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-produtos-totais", oportunidadeId] });
       toast.success("Item removido");
     },
   });
