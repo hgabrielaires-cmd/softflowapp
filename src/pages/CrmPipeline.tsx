@@ -50,7 +50,6 @@ export default function CrmPipeline() {
   // Inicializar filtros com filial do usuário e vendedor logado
   useEffect(() => {
     if (filtersReady) return;
-    const isVendedor = roles.includes("vendedor");
     if (filialPadraoId) {
       setFilterFilialId(filialPadraoId);
     }
@@ -58,7 +57,7 @@ export default function CrmPipeline() {
       setFilterVendedorId(user.id);
     }
     setFiltersReady(true);
-  }, [filialPadraoId, roles, user?.id, filtersReady]);
+  }, [filialPadraoId, isVendedor, user?.id, filtersReady]);
 
   // Selecionar funil favorito ou primeiro ao carregar
   useEffect(() => {
