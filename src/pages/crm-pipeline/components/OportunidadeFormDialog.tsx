@@ -352,9 +352,14 @@ export function OportunidadeFormDialog({
             </div>
           ))}
 
-          {/* Comunicação - apenas ao editar */}
-          {oportunidade && (
+          {/* Comunicação */}
+          {oportunidade ? (
             <OportunidadeComentarios oportunidadeId={oportunidade.id} />
+          ) : (
+            <div className="border rounded-lg p-4 bg-muted/30 text-center">
+              <Label className="text-sm font-semibold">Comunicação</Label>
+              <p className="text-xs text-muted-foreground mt-1">Salve a oportunidade para habilitar os comentários.</p>
+            </div>
           )}
         </div>
         <DialogFooter>
