@@ -18,10 +18,11 @@ interface Props {
   responsaveis: { id: string; user_id: string; full_name: string }[];
   onSave: (data: Record<string, unknown>) => void;
   saving?: boolean;
+  exibeCliente?: boolean;
 }
 
 export function OportunidadeFormDialog({
-  open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving,
+  open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving, exibeCliente = true,
 }: Props) {
   const [titulo, setTitulo] = useState("");
   const [clienteId, setClienteId] = useState<string>("");
@@ -92,18 +93,20 @@ export function OportunidadeFormDialog({
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label>Cliente</Label>
-            <Select value={clienteId || "__none__"} onValueChange={(v) => setClienteId(v === "__none__" ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Nenhum</SelectItem>
-                {clientes.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {exibeCliente && (
+            <div>
+              <Label>Cliente</Label>
+              <Select value={clienteId || "__none__"} onValueChange={(v) => setClienteId(v === "__none__" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Nenhum</SelectItem>
+                  {clientes.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <Label>Responsável</Label>
             <Select value={responsavelId || "__none__"} onValueChange={(v) => setResponsavelId(v === "__none__" ? "" : v)}>

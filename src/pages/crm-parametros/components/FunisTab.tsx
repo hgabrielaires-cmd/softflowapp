@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { Plus, Trash2, ChevronRight, Loader2, GripVertical, Pencil } from "lucide-react";
 import { useCrmFunis, useCrmEtapas } from "../useCrmParametrosQueries";
 import { useCreateFunil, useUpdateFunil, useDeleteFunil, useCreateEtapa, useUpdateEtapa, useDeleteEtapa } from "../useCrmParametrosForm";
@@ -31,11 +32,13 @@ export function FunisTab() {
   const [showCreateFunil, setShowCreateFunil] = useState(false);
   const [novoFunilNome, setNovoFunilNome] = useState("");
   const [novoFunilDesc, setNovoFunilDesc] = useState("");
+  const [novoFunilExibeCliente, setNovoFunilExibeCliente] = useState(true);
 
   // Funil editing
-  const [editFunil, setEditFunil] = useState<{ id: string; nome: string; descricao: string } | null>(null);
+  const [editFunil, setEditFunil] = useState<{ id: string; nome: string; descricao: string; exibe_cliente: boolean } | null>(null);
   const [editFunilNome, setEditFunilNome] = useState("");
   const [editFunilDesc, setEditFunilDesc] = useState("");
+  const [editFunilExibeCliente, setEditFunilExibeCliente] = useState(true);
 
   // Etapa creation
   const [showCreateEtapa, setShowCreateEtapa] = useState(false);
@@ -59,21 +62,23 @@ export function FunisTab() {
 
   async function handleCreateFunil() {
     if (!novoFunilNome.trim()) return;
-    await createFunil.mutateAsync({ nome: novoFunilNome.trim(), descricao: novoFunilDesc.trim() || undefined, ordem: nextOrdem(funis) });
+    await createFunil.mutateAsync({ nome: novoFunilNome.trim(), descricao: novoFunilDesc.trim() || undefined, ordem: nextOrdem(funis), exibe_cliente: novoFunilExibeCliente });
     setNovoFunilNome("");
     setNovoFunilDesc("");
+    setNovoFunilExibeCliente(true);
     setShowCreateFunil(false);
   }
 
-  function handleOpenEditFunil(funil: { id: string; nome: string; descricao: string | null }) {
-    setEditFunil({ id: funil.id, nome: funil.nome, descricao: funil.descricao || "" });
+  function handleOpenEditFunil(funil: { id: string; nome: string; descricao: string | null; exibe_cliente?: boolean }) {
+    setEditFunil({ id: funil.id, nome: funil.nome, descricao: funil.descricao || "", exibe_cliente: funil.exibe_cliente ?? true });
     setEditFunilNome(funil.nome);
     setEditFunilDesc(funil.descricao || "");
+    setEditFunilExibeCliente(funil.exibe_cliente ?? true);
   }
 
   async function handleSaveEditFunil() {
     if (!editFunil || !editFunilNome.trim()) return;
-    await updateFunil.mutateAsync({ id: editFunil.id, nome: editFunilNome.trim(), descricao: editFunilDesc.trim() || null });
+    await updateFunil.mutateAsync({ id: editFunil.id, nome: editFunilNome.trim(), descricao: editFunilDesc.trim() || null, exibe_cliente: editFunilExibeCliente });
     setEditFunil(null);
   }
 
@@ -267,6 +272,10 @@ export function FunisTab() {
               <label className="text-sm font-medium">Descrição</label>
               <Input value={novoFunilDesc} onChange={(e) => setNovoFunilDesc(e.target.value)} placeholder="Descrição opcional" />
             </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="novo-exibe-cliente" className="text-sm font-medium">Buscar cliente no cadastro</Label>
+              <Switch id="novo-exibe-cliente" checked={novoFunilExibeCliente} onCheckedChange={setNovoFunilExibeCliente} />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateFunil(false)}>Cancelar</Button>
@@ -372,6 +381,10 @@ export function FunisTab() {
             <div>
               <label className="text-sm font-medium">Descrição</label>
               <Input value={editFunilDesc} onChange={(e) => setEditFunilDesc(e.target.value)} placeholder="Descrição opcional" />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="edit-exibe-cliente" className="text-sm font-medium">Buscar cliente no cadastro</Label>
+              <Switch id="edit-exibe-cliente" checked={editFunilExibeCliente} onCheckedChange={setEditFunilExibeCliente} />
             </div>
           </div>
           <DialogFooter>

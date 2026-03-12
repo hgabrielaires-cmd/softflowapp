@@ -8,7 +8,7 @@ export function useCrmPipelineQueries(funilId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("crm_funis")
-        .select("id, nome, ordem, ativo")
+        .select("id, nome, ordem, ativo, exibe_cliente")
         .eq("ativo", true)
         .order("ordem");
       if (error) throw error;

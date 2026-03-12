@@ -612,6 +612,7 @@ export type Database = {
           ativo: boolean
           created_at: string
           descricao: string | null
+          exibe_cliente: boolean
           id: string
           nome: string
           ordem: number
@@ -621,6 +622,7 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           descricao?: string | null
+          exibe_cliente?: boolean
           id?: string
           nome: string
           ordem?: number
@@ -630,6 +632,7 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           descricao?: string | null
+          exibe_cliente?: boolean
           id?: string
           nome?: string
           ordem?: number

@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_funis ADD COLUMN exibe_cliente BOOLEAN NOT NULL DEFAULT true;

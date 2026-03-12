@@ -4,6 +4,7 @@ export interface CrmFunil {
   descricao: string | null;
   ativo: boolean;
   ordem: number;
+  exibe_cliente: boolean;
   created_at: string;
   updated_at: string;
 }
