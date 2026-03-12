@@ -637,6 +637,95 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_oportunidades: {
+        Row: {
+          campos_personalizados: Json
+          cliente_id: string | null
+          contato_id: string | null
+          created_at: string
+          data_previsao_fechamento: string | null
+          etapa_id: string
+          funil_id: string
+          id: string
+          motivo_perda: string | null
+          observacoes: string | null
+          ordem: number
+          origem: string | null
+          responsavel_id: string | null
+          status: string
+          titulo: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          campos_personalizados?: Json
+          cliente_id?: string | null
+          contato_id?: string | null
+          created_at?: string
+          data_previsao_fechamento?: string | null
+          etapa_id: string
+          funil_id: string
+          id?: string
+          motivo_perda?: string | null
+          observacoes?: string | null
+          ordem?: number
+          origem?: string | null
+          responsavel_id?: string | null
+          status?: string
+          titulo: string
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          campos_personalizados?: Json
+          cliente_id?: string | null
+          contato_id?: string | null
+          created_at?: string
+          data_previsao_fechamento?: string | null
+          etapa_id?: string
+          funil_id?: string
+          id?: string
+          motivo_perda?: string | null
+          observacoes?: string | null
+          ordem?: number
+          origem?: string | null
+          responsavel_id?: string | null
+          status?: string
+          titulo?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_oportunidades_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_oportunidades_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "cliente_contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_oportunidades_etapa_id_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "crm_etapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_oportunidades_funil_id_fkey"
+            columns: ["funil_id"]
+            isOneToOne: false
+            referencedRelation: "crm_funis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custos: {
         Row: {
           created_at: string
