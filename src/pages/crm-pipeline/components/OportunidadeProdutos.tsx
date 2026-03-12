@@ -50,8 +50,11 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
   const [items, setItems] = useState<ProdutoItem[]>([]);
   const [addType, setAddType] = useState<"plano" | "modulo">("plano");
   const [addRef, setAddRef] = useState("");
+  const [descontoAtivo, setDescontoAtivo] = useState(false);
   const [descontoImplantacao, setDescontoImplantacao] = useState(0);
+  const [descontoImplantacaoTipo, setDescontoImplantacaoTipo] = useState<"R$" | "%">("R$");
   const [descontoMensalidade, setDescontoMensalidade] = useState(0);
+  const [descontoMensalidadeTipo, setDescontoMensalidadeTipo] = useState<"R$" | "%">("R$");
 
   const limiteImplantacao = profile?.desconto_limite_implantacao ?? 0;
   const limiteMensalidade = profile?.desconto_limite_mensalidade ?? 0;
