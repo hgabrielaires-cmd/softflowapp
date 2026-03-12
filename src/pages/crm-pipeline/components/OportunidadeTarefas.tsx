@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ConcluirTarefaDialog } from "./ConcluirTarefaDialog";
+import { VisualizarTarefaDialog } from "./VisualizarTarefaDialog";
 
 interface Tarefa {
   id: string;
