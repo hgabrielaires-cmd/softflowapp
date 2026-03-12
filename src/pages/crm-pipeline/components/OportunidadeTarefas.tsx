@@ -292,17 +292,20 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais }
                     {t.canal && (
                       <Badge variant="outline" className="text-[10px]">{t.canal}</Badge>
                     )}
-                    {hist.length > 0 && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 w-6 p-0"
-                        onClick={() => setExpandedHistorico(isExpanded ? null : t.id)}
-                        title={`${hist.length} registro(s) de histórico`}
-                      >
-                        <History className="h-3.5 w-3.5 text-muted-foreground" />
-                      </Button>
+                    {adiamentos.length > 0 && (
+                      <Badge variant="outline" className="text-[10px] gap-1 text-amber-600 border-amber-300">
+                        <RotateCcw className="h-3 w-3" /> {adiamentos.length}x
+                      </Badge>
                     )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0"
+                      onClick={() => { setVisualizarTarefa(t); setVisualizarOpen(true); }}
+                      title="Ver detalhes da tarefa"
+                    >
+                      <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
                     {concluida ? (
                       <Badge variant="secondary" className="text-[10px] gap-1 bg-emerald-100 text-emerald-700">
                         <CheckCircle2 className="h-3 w-3" /> Concluída
