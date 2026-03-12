@@ -94,10 +94,10 @@ export function OportunidadeFormDialog({
           </div>
           <div>
             <Label>Cliente</Label>
-            <Select value={clienteId} onValueChange={setClienteId}>
+            <Select value={clienteId || "__none__"} onValueChange={(v) => setClienteId(v === "__none__" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="__none__">Nenhum</SelectItem>
                 {clientes.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>
                 ))}
@@ -106,10 +106,10 @@ export function OportunidadeFormDialog({
           </div>
           <div>
             <Label>Responsável</Label>
-            <Select value={responsavelId} onValueChange={setResponsavelId}>
+            <Select value={responsavelId || "__none__"} onValueChange={(v) => setResponsavelId(v === "__none__" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="__none__">Nenhum</SelectItem>
                 {responsaveis.map((r) => (
                   <SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>
                 ))}
@@ -122,10 +122,10 @@ export function OportunidadeFormDialog({
           </div>
           <div>
             <Label>Origem</Label>
-            <Select value={origem} onValueChange={setOrigem}>
+            <Select value={origem || "__none__"} onValueChange={(v) => setOrigem(v === "__none__" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhuma</SelectItem>
+                <SelectItem value="__none__">Nenhuma</SelectItem>
                 {ORIGENS.map((o) => (
                   <SelectItem key={o} value={o}>{o}</SelectItem>
                 ))}
