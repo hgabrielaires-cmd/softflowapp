@@ -344,7 +344,8 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
-          ))}
+            );
+          })}
 
           {/* Totals */}
           <div className="grid grid-cols-[1fr_80px_120px_120px_40px] gap-2 items-center px-2 pt-2 border-t">
