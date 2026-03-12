@@ -112,6 +112,45 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
     });
   };
 
+  // Get client's filial_id from the oportunidade
+  const filialQuery = useQuery({
+    queryKey: ["crm_oportunidade_filial", oportunidadeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crm_oportunidades")
+        .select("cliente_id, clientes(filial_id)")
+        .eq("id", oportunidadeId)
+        .single();
+      if (error) throw error;
+      return (data?.clientes as any)?.filial_id as string | null;
+    },
+  });
+
+  const filialId = filialQuery.data ?? null;
+
+  // Fetch branch-specific prices
+  const precosFilialQuery = useQuery({
+    queryKey: ["crm_precos_filial", filialId],
+    enabled: !!filialId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("precos_filial")
+        .select("*")
+        .eq("filial_id", filialId!);
+      if (error) throw error;
+      const map: Record<string, { valor_implantacao: number; valor_mensalidade: number }> = {};
+      (data || []).forEach((p: any) => {
+        map[`${p.tipo}:${p.referencia_id}`] = {
+          valor_implantacao: p.valor_implantacao,
+          valor_mensalidade: p.valor_mensalidade,
+        };
+      });
+      return map;
+    },
+  });
+
+  const precosMap = precosFilialQuery.data || {};
+
   const planosQuery = useQuery({
     queryKey: ["crm_planos_catalogo"],
     queryFn: async () => {
