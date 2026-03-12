@@ -55,6 +55,20 @@ export function PipelineCard({ oportunidade, etapa, onDragStart, onClick }: Pipe
           </div>
         </div>
 
+        {/* Valores Implantação e Mensalidade */}
+        {((oportunidade.total_implantacao ?? 0) > 0 || (oportunidade.total_mensalidade ?? 0) > 0) && (
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1" title="Valor Implantação">
+              <span className="h-2.5 w-2.5 rounded-full bg-purple-500 shrink-0" />
+              <span className="text-[11px] font-semibold text-foreground">{formatValor(oportunidade.total_implantacao ?? 0)}</span>
+            </div>
+            <div className="flex items-center gap-1" title="Valor Mensalidade">
+              <span className="h-2.5 w-2.5 rounded-full bg-green-500 shrink-0" />
+              <span className="text-[11px] font-semibold text-foreground">{formatValor(oportunidade.total_mensalidade ?? 0)}</span>
+            </div>
+          </div>
+        )}
+
         {/* Client */}
         {oportunidade.clientes && (
           <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
