@@ -958,7 +958,7 @@ export default function Agenda() {
             <div className="flex items-center gap-2 flex-wrap">
               <Filter className="h-4 w-4 text-muted-foreground" />
               <Select value={filtroFilial} onValueChange={setFiltroFilial}>
-                <SelectTrigger className="w-[180px] h-9">
+                <SelectTrigger className="w-[260px] h-9">
                   <Building2 className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
                   <SelectValue placeholder="Filial" />
                 </SelectTrigger>
