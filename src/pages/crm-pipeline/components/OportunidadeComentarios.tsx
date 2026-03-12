@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { UserAvatar } from "@/components/UserAvatar";
+import { MentionInput, renderMentionText } from "@/components/MentionInput";
 
 const PRIORIDADES = [
   { value: "normal", label: "Normal", emoji: "🟢" },
@@ -52,6 +53,7 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
   const { user } = useAuth();
   const [comentarios, setComentarios] = useState<Comentario[]>([]);
   const [profiles, setProfiles] = useState<Record<string, ProfileInfo>>({});
+  const [allUsers, setAllUsers] = useState<{ id: string; user_id: string; full_name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [texto, setTexto] = useState("");
@@ -62,6 +64,13 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
   const [replyTexto, setReplyTexto] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
   const [likes, setLikes] = useState<Record<string, { count: number; likedByMe: boolean }>>({});
+
+  // Fetch all users for mention dropdown
+  useEffect(() => {
+    supabase.from("profiles").select("id, user_id, full_name").then(({ data }) => {
+      if (data) setAllUsers(data as any[]);
+    });
+  }, []);
 
   const fetchComentarios = async () => {
     const { data } = await (supabase as any)
@@ -226,7 +235,7 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
             <span className="text-[10px] text-muted-foreground">{format(new Date(c.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}</span>
           </div>
         </div>
-        <p className="text-xs whitespace-pre-wrap">{c.texto}</p>
+        <p className="text-xs whitespace-pre-wrap">{renderMentionText(c.texto, allUsers)}</p>
         {c.anexo_url && c.anexo_nome && (
           <a href={c.anexo_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline">
             <Download className="h-3 w-3" /> {c.anexo_nome}
@@ -258,7 +267,7 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
       </p>
       {!readOnly && (
         <div className="space-y-2 bg-muted/30 rounded-md p-3">
-          <Textarea placeholder="Escreva um comentário..." value={texto} onChange={(e) => setTexto(e.target.value)} className="min-h-[60px] text-sm" />
+          <MentionInput value={texto} onChange={setTexto} users={allUsers} placeholder="Escreva um comentário... Use @nome para mencionar" className="min-h-[60px]" />
           <div className="flex flex-wrap items-center gap-2">
             <Label className="text-xs text-muted-foreground">Prioridade:</Label>
             {PRIORIDADES.map((p) => (
@@ -302,7 +311,7 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
                 )}
                 {replyingTo === c.id && (
                   <div className="ml-4 flex gap-2 items-start">
-                    <Textarea placeholder="Escreva sua resposta..." value={replyTexto} onChange={(e) => setReplyTexto(e.target.value)} className="min-h-[40px] text-xs flex-1" />
+                    <MentionInput value={replyTexto} onChange={setReplyTexto} users={allUsers} placeholder="Escreva sua resposta... Use @nome" className="min-h-[40px]" />
                     <Button size="sm" className="text-xs h-8" disabled={sendingReply || !replyTexto.trim()} onClick={() => handleEnviarResposta(c)}>
                       {sendingReply ? <Loader2 className="h-3 w-3 animate-spin" /> : "Enviar"}
                     </Button>
