@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { OportunidadeComentarios } from "./OportunidadeComentarios";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -39,7 +39,7 @@ export function OportunidadeFormDialog({
   const [responsavelId, setResponsavelId] = useState<string>("");
   const [etapaId, setEtapaId] = useState("");
   const [segmentoIds, setSegmentoIds] = useState<string[]>([]);
-  const [observacoes, setObservacoes] = useState("");
+  
   const [camposValues, setCamposValues] = useState<Record<string, string>>({});
   const [segmentoPopoverOpen, setSegmentoPopoverOpen] = useState(false);
 
@@ -55,7 +55,7 @@ export function OportunidadeFormDialog({
         setResponsavelId(oportunidade.responsavel_id || "");
         setEtapaId(oportunidade.etapa_id);
         setSegmentoIds((oportunidade as any).segmento_ids || []);
-        setObservacoes(oportunidade.observacoes || "");
+        
         setCamposValues(oportunidade.campos_personalizados || {});
       } else {
         setTitulo("");
@@ -63,7 +63,7 @@ export function OportunidadeFormDialog({
         setResponsavelId(currentUserId || "");
         setEtapaId(etapaIdInicial || etapas[0]?.id || "");
         setSegmentoIds([]);
-        setObservacoes("");
+        
         setCamposValues({});
       }
     }
@@ -82,7 +82,7 @@ export function OportunidadeFormDialog({
       segmento_ids: segmentoIds,
       valor: 0,
       origem: null,
-      observacoes: observacoes || null,
+      observacoes: null,
       data_previsao_fechamento: null,
       campos_personalizados: camposValues,
     });
@@ -233,10 +233,10 @@ export function OportunidadeFormDialog({
             </div>
           ))}
 
-          <div>
-            <Label>Observações</Label>
-            <Textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={3} />
-          </div>
+          {/* Comunicação - apenas ao editar */}
+          {oportunidade && (
+            <OportunidadeComentarios oportunidadeId={oportunidade.id} />
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
