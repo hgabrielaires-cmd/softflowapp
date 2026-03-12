@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { TablePagination } from "@/components/TablePagination";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -35,6 +36,7 @@ export default function Segmentos() {
   const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("segmentos", roles);
   const canAccess = isAdmin || crudIncluir || crudEditar;
   const [segmentos, setSegmentos] = useState<Segmento[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
   const [novoSegmento, setNovoSegmento] = useState("");
@@ -100,6 +102,13 @@ export default function Segmentos() {
   const filtrados = segmentos.filter(s =>
     !busca || s.nome.toLowerCase().includes(busca.toLowerCase())
   );
+
+  const ITEMS_PER_PAGE = 15;
+  const totalPages = Math.max(1, Math.ceil(filtrados.length / ITEMS_PER_PAGE));
+  const paginados = filtrados.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [busca, filtroFilial]);
 
   return (
     <AppLayout>
@@ -195,7 +204,7 @@ export default function Segmentos() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtrados.map(seg => (
+                paginados.map(seg => (
                   <TableRow key={seg.id}>
                     <TableCell className="font-medium">{seg.nome}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{filialNome(seg.filial_id)}</TableCell>
@@ -221,10 +230,19 @@ export default function Segmentos() {
             </TableBody>
           </Table>
           {!loading && (
-            <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground flex items-center gap-1.5">
-              <Tag className="h-3.5 w-3.5" />
-              {filtrados.length} segmento(s)
-            </div>
+            <>
+              <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5" />
+                {filtrados.length} segmento(s)
+              </div>
+              <TablePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filtrados.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={setCurrentPage}
+              />
+            </>
           )}
         </div>
       </div>
