@@ -48,7 +48,7 @@ export function OportunidadeDetailView({
   const [clienteId, setClienteId] = useState(oportunidade.cliente_id || "");
   const [responsavelId, setResponsavelId] = useState(oportunidade.responsavel_id || "");
   const [etapaId, setEtapaId] = useState(oportunidade.etapa_id);
-  const [segmentoIds, setSegmentoIds] = useState<string[]>((oportunidade as any).segmento_ids || []);
+  const [segmentoIds, setSegmentoIds] = useState<string[]>(oportunidade.segmento_ids || []);
   const [camposValues, setCamposValues] = useState<Record<string, string>>(oportunidade.campos_personalizados || {});
   const [segmentoPopoverOpen, setSegmentoPopoverOpen] = useState(false);
   const [contatos, setContatos] = useState<ContatoLocal[]>([emptyContato()]);

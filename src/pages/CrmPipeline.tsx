@@ -134,7 +134,7 @@ export default function CrmPipeline() {
         onSuccess: () => setDialogOpen(false),
       });
     } else {
-      createMutation.mutate({ funil_id: selectedFunilId, ...data } as any, {
+      createMutation.mutate({ funil_id: selectedFunilId, ...data } as CrmOportunidade, {
         onSuccess: () => setDialogOpen(false),
       });
     }
