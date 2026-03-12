@@ -61,7 +61,9 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais }
   const [showForm, setShowForm] = useState(false);
   const [forcarNovaTarefa, setForcarNovaTarefa] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [expandedHistorico, setExpandedHistorico] = useState<string | null>(null);
+  // Visualizar dialog
+  const [visualizarOpen, setVisualizarOpen] = useState(false);
+  const [visualizarTarefa, setVisualizarTarefa] = useState<Tarefa | null>(null);
 
   // Concluir dialog
   const [concluirOpen, setConcluirOpen] = useState(false);
