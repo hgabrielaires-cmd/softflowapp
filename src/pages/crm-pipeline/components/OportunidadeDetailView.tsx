@@ -11,6 +11,7 @@ import { ArrowLeft, Check, X, ChevronsUpDown, Plus, Trash2, ListChecks, Package,
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { OportunidadeComentarios } from "./OportunidadeComentarios";
+import { OportunidadeTarefas } from "./OportunidadeTarefas";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
 import type { CrmCampoPersonalizado } from "@/pages/crm-parametros/types";
 
