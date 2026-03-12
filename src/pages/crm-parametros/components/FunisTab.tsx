@@ -62,21 +62,23 @@ export function FunisTab() {
 
   async function handleCreateFunil() {
     if (!novoFunilNome.trim()) return;
-    await createFunil.mutateAsync({ nome: novoFunilNome.trim(), descricao: novoFunilDesc.trim() || undefined, ordem: nextOrdem(funis) });
+    await createFunil.mutateAsync({ nome: novoFunilNome.trim(), descricao: novoFunilDesc.trim() || undefined, ordem: nextOrdem(funis), exibe_cliente: novoFunilExibeCliente });
     setNovoFunilNome("");
     setNovoFunilDesc("");
+    setNovoFunilExibeCliente(true);
     setShowCreateFunil(false);
   }
 
-  function handleOpenEditFunil(funil: { id: string; nome: string; descricao: string | null }) {
-    setEditFunil({ id: funil.id, nome: funil.nome, descricao: funil.descricao || "" });
+  function handleOpenEditFunil(funil: { id: string; nome: string; descricao: string | null; exibe_cliente?: boolean }) {
+    setEditFunil({ id: funil.id, nome: funil.nome, descricao: funil.descricao || "", exibe_cliente: funil.exibe_cliente ?? true });
     setEditFunilNome(funil.nome);
     setEditFunilDesc(funil.descricao || "");
+    setEditFunilExibeCliente(funil.exibe_cliente ?? true);
   }
 
   async function handleSaveEditFunil() {
     if (!editFunil || !editFunilNome.trim()) return;
-    await updateFunil.mutateAsync({ id: editFunil.id, nome: editFunilNome.trim(), descricao: editFunilDesc.trim() || null });
+    await updateFunil.mutateAsync({ id: editFunil.id, nome: editFunilNome.trim(), descricao: editFunilDesc.trim() || null, exibe_cliente: editFunilExibeCliente });
     setEditFunil(null);
   }
 
