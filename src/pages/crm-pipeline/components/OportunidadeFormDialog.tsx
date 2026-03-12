@@ -200,8 +200,8 @@ export function OportunidadeFormDialog({
                   <div>
                     <Label className="text-xs">Telefone *</Label>
                     <Input
-                      value={contato.telefone}
-                      onChange={(e) => updateContato(idx, "telefone", e.target.value)}
+                      value={applyPhoneMask(contato.telefone)}
+                      onChange={(e) => updateContato(idx, "telefone", e.target.value.replace(/\D/g, ""))}
                       placeholder="(00) 00000-0000"
                       className="h-8 text-xs"
                     />

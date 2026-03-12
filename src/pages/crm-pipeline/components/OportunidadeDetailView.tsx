@@ -266,7 +266,7 @@ export function OportunidadeDetailView({
                             </div>
                             <div>
                               <Label className="text-xs">Telefone *</Label>
-                              <Input value={contato.telefone} onChange={(e) => updateContato(idx, "telefone", e.target.value)} placeholder="(00) 00000-0000" className="h-8 text-xs" />
+                              <Input value={applyPhoneMask(contato.telefone)} onChange={(e) => updateContato(idx, "telefone", e.target.value.replace(/\D/g, ""))} placeholder="(00) 00000-0000" className="h-8 text-xs" />
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2">
