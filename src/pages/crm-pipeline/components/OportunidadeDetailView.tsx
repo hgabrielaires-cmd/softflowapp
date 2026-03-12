@@ -362,12 +362,7 @@ export function OportunidadeDetailView({
 
         {/* Produtos e Serviços */}
         <TabsContent value="produtos" className="flex-1 overflow-y-auto px-4 pb-4 mt-0">
-          <div className="flex items-center justify-center h-64 text-muted-foreground">
-            <div className="text-center space-y-2">
-              <Package className="h-10 w-10 mx-auto opacity-40" />
-              <p className="text-sm">Em breve: Produtos e serviços vinculados à oportunidade.</p>
-            </div>
-          </div>
+          <OportunidadeProdutos oportunidadeId={oportunidade.id} />
         </TabsContent>
 
         {/* Arquivos */}
