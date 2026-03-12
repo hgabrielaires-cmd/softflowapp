@@ -363,7 +363,7 @@ export function ClienteFormDialog({
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Telefone</Label>
-                    <Input className="h-8 text-sm" value={inlineContatoForm.telefone} onChange={(e) => setInlineContatoForm((prev) => ({ ...prev, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
+                    <Input className="h-8 text-sm" value={applyPhoneMask(inlineContatoForm.telefone)} onChange={(e) => setInlineContatoForm((prev) => ({ ...prev, telefone: e.target.value.replace(/\D/g, "") }))} placeholder="(00) 00000-0000" />
                   </div>
                   <div className="col-span-2 space-y-1">
                     <Label className="text-xs">E-mail *</Label>
