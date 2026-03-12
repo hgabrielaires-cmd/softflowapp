@@ -106,10 +106,10 @@ export function OportunidadeFormDialog({
           </div>
           <div>
             <Label>Responsável</Label>
-            <Select value={responsavelId} onValueChange={setResponsavelId}>
+            <Select value={responsavelId || "__none__"} onValueChange={(v) => setResponsavelId(v === "__none__" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="__none__">Nenhum</SelectItem>
                 {responsaveis.map((r) => (
                   <SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>
                 ))}
