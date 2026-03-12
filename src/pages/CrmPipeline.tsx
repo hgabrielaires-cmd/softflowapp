@@ -33,6 +33,7 @@ export default function CrmPipeline() {
   const [detailOportunidade, setDetailOportunidade] = useState<CrmOportunidade | null>(null);
   const [newEtapaId, setNewEtapaId] = useState<string>("");
   const [detailDefaultTab, setDetailDefaultTab] = useState<string | undefined>(undefined);
+  const [visibleCountMap, setVisibleCountMap] = useState<Record<string, number>>({});
 
   // Filtros
   const [filterFilialId, setFilterFilialId] = useState<string>("__all__");
