@@ -233,10 +233,10 @@ export function OportunidadeFormDialog({
             </div>
           ))}
 
-          <div>
-            <Label>Observações</Label>
-            <Textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={3} />
-          </div>
+          {/* Comunicação - apenas ao editar */}
+          {oportunidade && (
+            <OportunidadeComentarios oportunidadeId={oportunidade.id} />
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
