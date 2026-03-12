@@ -9,6 +9,7 @@ import {
 import { Plus, Phone, Mail, Pencil, Loader2, AlertCircle, Star, Users } from "lucide-react";
 import { Cliente } from "@/lib/supabase-types";
 import type { ClienteContato } from "@/pages/clientes/types";
+import { formatPhoneDisplay } from "@/lib/utils";
 
 interface ClienteContatosDialogProps {
   open: boolean;
