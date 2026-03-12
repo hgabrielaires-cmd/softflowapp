@@ -35,6 +35,7 @@ export default function Segmentos() {
   const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("segmentos", roles);
   const canAccess = isAdmin || crudIncluir || crudEditar;
   const [segmentos, setSegmentos] = useState<Segmento[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
   const [novoSegmento, setNovoSegmento] = useState("");
