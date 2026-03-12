@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { useCrmPipelineQueries } from "./crm-pipeline/useCrmPipelineQueries";
+import { useCrmCamposPersonalizados } from "./crm-parametros/useCrmParametrosQueries";
 import { useCrmPipelineForm } from "./crm-pipeline/useCrmPipelineForm";
 import { PipelineCard } from "./crm-pipeline/components/PipelineCard";
 import { OportunidadeFormDialog } from "./crm-pipeline/components/OportunidadeFormDialog";
@@ -41,6 +42,7 @@ export default function CrmPipeline() {
 
   const { funisQuery, etapasQuery, oportunidadesQuery, responsaveisQuery } = useCrmPipelineQueries(selectedFunilId);
   const { createMutation, updateMutation, moveToEtapaMutation } = useCrmPipelineForm(selectedFunilId);
+  const { data: camposPersonalizados = [] } = useCrmCamposPersonalizados();
 
   const funis = funisQuery.data || [];
   const etapas = etapasQuery.data || [];
@@ -344,6 +346,7 @@ export default function CrmPipeline() {
         saving={createMutation.isPending || updateMutation.isPending}
         exibeCliente={funis.find(f => f.id === selectedFunilId)?.exibe_cliente ?? true}
         currentUserId={user?.id}
+        camposPersonalizados={camposPersonalizados}
       />
     </AppLayout>
   );
