@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { User, Building2, Clock, DollarSign, AlertTriangle, ListChecks, Star } from "lucide-react";
+import { User, Building2, Clock, DollarSign, AlertTriangle, ListChecks, Star, CalendarCheck } from "lucide-react";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
 import { formatValor, getTempoDesdeCreacao } from "../helpers";
 
@@ -29,22 +29,24 @@ export function PipelineCard({ oportunidade, etapa, onDragStart, onClick }: Pipe
 
         {/* Task status + Stars row */}
         <div className="flex items-center justify-between gap-2">
-          {tarefaStatus !== "ok" ? (
+          {tarefaStatus === "sem_tarefa" && (
             <div className="flex items-center gap-1.5">
-              {tarefaStatus === "sem_tarefa" && (
-                <>
-                  <ListChecks className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                  <span className="text-[10px] text-amber-600">Sem tarefas</span>
-                </>
-              )}
-              {tarefaStatus === "vencida" && (
-                <>
-                  <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
-                  <span className="text-[10px] text-destructive">Tarefa vencida</span>
-                </>
-              )}
+              <ListChecks className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+              <span className="text-[10px] text-amber-600">Sem tarefas</span>
             </div>
-          ) : <div />}
+          )}
+          {tarefaStatus === "vencida" && (
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+              <span className="text-[10px] text-destructive">Tarefa vencida</span>
+            </div>
+          )}
+          {tarefaStatus === "ok" && (
+            <div className="flex items-center gap-1.5">
+              <CalendarCheck className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span className="text-[10px] text-primary">Tarefa agendada</span>
+            </div>
+          )}
           {/* Stars */}
           <div className="flex items-center gap-px shrink-0">
             {[1, 2, 3, 4, 5].map(i => (
