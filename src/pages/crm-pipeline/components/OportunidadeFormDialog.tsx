@@ -19,10 +19,11 @@ interface Props {
   onSave: (data: Record<string, unknown>) => void;
   saving?: boolean;
   exibeCliente?: boolean;
+  currentUserId?: string;
 }
 
 export function OportunidadeFormDialog({
-  open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving, exibeCliente = true,
+  open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving, exibeCliente = true, currentUserId,
 }: Props) {
   const [titulo, setTitulo] = useState("");
   const [clienteId, setClienteId] = useState<string>("");
@@ -47,7 +48,7 @@ export function OportunidadeFormDialog({
       } else {
         setTitulo("");
         setClienteId("");
-        setResponsavelId("");
+        setResponsavelId(currentUserId || "");
         setEtapaId(etapaIdInicial || etapas[0]?.id || "");
         setValor("");
         setOrigem("");
