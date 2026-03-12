@@ -107,36 +107,6 @@ export default function PainelAtendimento() {
   const [configEditMode, setConfigEditMode] = useState(false);
   const [checklistEditMode, setChecklistEditMode] = useState(false);
   const [cardAgendamentos, setCardAgendamentos] = useState<any[]>([]);
-  const [pausarOpen, setPausarOpen] = useState(false);
-  const [pausarMotivo, setPausarMotivo] = useState("");
-  const [pausando, setPausando] = useState(false);
-  const [recusarOpen, setRecusarOpen] = useState(false);
-  const [recusarMotivo, setRecusarMotivo] = useState("");
-  const [recusando, setRecusando] = useState(false);
-  const [apontamentoOpen, setApontamentoOpen] = useState(false);
-  const [apontamentoCardId, setApontamentoCardId] = useState<string | null>(null);
-  const [apontamentoUsuarios, setApontamentoUsuarios] = useState<string[]>([]);
-  const [apontando, setApontando] = useState(false);
-  const [buscaApontamento, setBuscaApontamento] = useState("");
-  const [retomarOpen, setRetomarOpen] = useState(false);
-  const [retomarComentario, setRetomarComentario] = useState("");
-  const [retomando, setRetomando] = useState(false);
-  const [seguindoProjeto, setSeguindoProjeto] = useState(false);
-  const [seguindoLoading, setSeguindoLoading] = useState(false);
-  const [seguidoresList, setSeguidoresList] = useState<any[]>([]);
-  const [seguidoresPopupOpen, setSeguidoresPopupOpen] = useState(false);
-  const [resetarOpen, setResetarOpen] = useState(false);
-  const [resetarMotivo, setResetarMotivo] = useState("");
-  const [resetando, setResetando] = useState(false);
-  const [cancelarOpen, setCancelarOpen] = useState(false);
-  const [cancelarMotivo, setCancelarMotivo] = useState("");
-  const [cancelando, setCancelando] = useState(false);
-  const [agendamentosCancelOpen, setAgendamentosCancelOpen] = useState(false);
-  const [agendamentosCancelados, setAgendamentosCancelados] = useState<any[]>([]);
-  const [removendoAgendamentos, setRemovendoAgendamentos] = useState(false);
-  const [verPedidoOpen, setVerPedidoOpen] = useState(false);
-  const [verPedidoData, setVerPedidoData] = useState<any>(null);
-  const [verPedidoLoading, setVerPedidoLoading] = useState(false);
 
   // ─── Data from extracted queries hook ─────────────────────────────────────
   const {
