@@ -26,6 +26,7 @@ export interface CrmFunilSimples {
   nome: string;
   ordem: number;
   ativo: boolean;
+  exibe_cliente: boolean;
 }
 
 export interface CrmEtapaSimples {
