@@ -162,6 +162,16 @@ const MENU_TREE: MenuNode[] = [
     key: "menu.setores", label: "Setores", description: "Gerenciar setores vinculados aos templates de mensagens",
     icon: <Building2 className="h-4 w-4" />,
   },
+  // CRM
+  {
+    key: "menu.crm", label: "CRM", description: "Módulo de gestão comercial (CRM)",
+    icon: <Target className="h-4 w-4" />,
+    children: [
+      { key: "menu.crm_pipeline", label: "Pipeline de Vendas", description: "Kanban de oportunidades de vendas", icon: <Kanban className="h-4 w-4" />, children: crudChildren("crm_oportunidades") },
+      { key: "menu.crm_agenda", label: "Agenda CRM", description: "Agenda de atividades do CRM", icon: <CalendarDays className="h-4 w-4" /> },
+      { key: "menu.crm_parametros", label: "Parâmetros CRM", description: "Configurar funis, etapas e campos personalizados", icon: <SlidersHorizontal className="h-4 w-4" /> },
+    ],
+  },
 ];
 
 // Group menus into sections for display
