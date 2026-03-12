@@ -168,12 +168,24 @@ export function OportunidadeDetailView({
 
       {/* Tabs */}
       <Tabs defaultValue="geral" className="flex-1 flex flex-col min-h-0">
-        <TabsList className="mx-4 mt-2 w-fit">
-          <TabsTrigger value="geral">Geral</TabsTrigger>
-          <TabsTrigger value="tarefas" className="gap-1"><ListChecks className="h-3.5 w-3.5" /> Tarefas</TabsTrigger>
-          <TabsTrigger value="produtos" className="gap-1"><Package className="h-3.5 w-3.5" /> Produtos e Serviços</TabsTrigger>
-          <TabsTrigger value="arquivos" className="gap-1"><FolderOpen className="h-3.5 w-3.5" /> Arquivos</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between mx-4 mt-2">
+          <TabsList className="w-fit">
+            <TabsTrigger value="geral">Geral</TabsTrigger>
+            <TabsTrigger value="tarefas" className="gap-1"><ListChecks className="h-3.5 w-3.5" /> Tarefas</TabsTrigger>
+            <TabsTrigger value="produtos" className="gap-1"><Package className="h-3.5 w-3.5" /> Produtos e Serviços</TabsTrigger>
+            <TabsTrigger value="arquivos" className="gap-1"><FolderOpen className="h-3.5 w-3.5" /> Arquivos</TabsTrigger>
+          </TabsList>
+          <div className="flex items-center gap-4 pr-1">
+            <div className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-full bg-purple-500 shrink-0" />
+              <span className="text-sm font-semibold">{formatCurrency(produtosTotais?.implantacao ?? 0)}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-full bg-green-500 shrink-0" />
+              <span className="text-sm font-semibold">{formatCurrency(produtosTotais?.mensalidade ?? 0)}</span>
+            </div>
+          </div>
+        </div>
 
         {/* Geral */}
         <TabsContent value="geral" className="flex-1 overflow-y-auto px-4 pb-4 mt-0">
