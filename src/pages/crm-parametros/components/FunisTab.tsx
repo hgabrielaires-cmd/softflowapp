@@ -4,12 +4,15 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, ChevronRight, Loader2, GripVertical, Pencil } from "lucide-react";
+import { Plus, Trash2, ChevronRight, Loader2, GripVertical, Pencil, Star } from "lucide-react";
 import { useCrmFunis, useCrmEtapas } from "../useCrmParametrosQueries";
 import { useCreateFunil, useUpdateFunil, useDeleteFunil, useCreateEtapa, useUpdateEtapa, useDeleteEtapa } from "../useCrmParametrosForm";
 import { CORES_ETAPA, COR_PADRAO } from "../constants";
 import { nextOrdem, sortByOrdem } from "../helpers";
 import type { CrmEtapa } from "../types";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
