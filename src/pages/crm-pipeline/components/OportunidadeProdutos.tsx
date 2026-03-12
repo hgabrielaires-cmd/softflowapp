@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Package, DollarSign } from "lucide-react";
+import { Plus, Trash2, Package, DollarSign, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 interface Plano {
@@ -43,10 +44,16 @@ const formatCurrency = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export function OportunidadeProdutos({ oportunidadeId }: Props) {
+  const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [items, setItems] = useState<ProdutoItem[]>([]);
   const [addType, setAddType] = useState<"plano" | "modulo">("plano");
   const [addRef, setAddRef] = useState("");
+  const [descontoImplantacao, setDescontoImplantacao] = useState(0);
+  const [descontoMensalidade, setDescontoMensalidade] = useState(0);
+
+  const limiteImplantacao = profile?.desconto_limite_implantacao ?? 0;
+  const limiteMensalidade = profile?.desconto_limite_mensalidade ?? 0;
 
   const planosQuery = useQuery({
     queryKey: ["crm_planos_catalogo"],
@@ -239,6 +246,15 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
   const totalImplantacao = items.reduce((sum, it) => sum + it.valor_implantacao * it.quantidade, 0);
   const totalMensalidade = items.reduce((sum, it) => sum + it.valor_mensalidade * it.quantidade, 0);
 
+  const percImplantacao = totalImplantacao > 0 ? (descontoImplantacao / totalImplantacao) * 100 : 0;
+  const percMensalidade = totalMensalidade > 0 ? (descontoMensalidade / totalMensalidade) * 100 : 0;
+  const excedeLimiteImpl = percImplantacao > limiteImplantacao && descontoImplantacao > 0;
+  const excedeLimiteMens = percMensalidade > limiteMensalidade && descontoMensalidade > 0;
+  const precisaAprovacao = excedeLimiteImpl || excedeLimiteMens;
+
+  const totalImplFinal = Math.max(0, totalImplantacao - descontoImplantacao);
+  const totalMensFinal = Math.max(0, totalMensalidade - descontoMensalidade);
+
   const catalogo = addType === "plano" ? planosQuery.data || [] : modulosQuery.data || [];
 
   return (
@@ -347,17 +363,67 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
             );
           })}
 
+          {/* Subtotals */}
+          <div className="grid grid-cols-[1fr_80px_120px_120px_40px] gap-2 items-center px-2 pt-2 border-t">
+            <span className="text-xs text-muted-foreground">Subtotal</span>
+            <span />
+            <span className="text-xs text-right text-muted-foreground">{formatCurrency(totalImplantacao)}</span>
+            <span className="text-xs text-right text-muted-foreground">{formatCurrency(totalMensalidade)}</span>
+            <span />
+          </div>
+
+          {/* Discounts */}
+          <div className="grid grid-cols-[1fr_80px_120px_120px_40px] gap-2 items-center px-2">
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-medium">Desconto (R$)</span>
+              <span className="text-[10px] text-muted-foreground">(Limite: {limiteImplantacao}% impl. / {limiteMensalidade}% mens.)</span>
+            </div>
+            <span />
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={descontoImplantacao || ""}
+              onChange={(e) => setDescontoImplantacao(parseFloat(e.target.value) || 0)}
+              placeholder="0,00"
+              className={`h-8 text-xs text-right ${excedeLimiteImpl ? "border-amber-500 focus-visible:ring-amber-500" : ""}`}
+            />
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={descontoMensalidade || ""}
+              onChange={(e) => setDescontoMensalidade(parseFloat(e.target.value) || 0)}
+              placeholder="0,00"
+              className={`h-8 text-xs text-right ${excedeLimiteMens ? "border-amber-500 focus-visible:ring-amber-500" : ""}`}
+            />
+            <span />
+          </div>
+
+          {/* Warning */}
+          {precisaAprovacao && (
+            <div className="flex items-center gap-2 px-2 py-2 rounded-md bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
+              <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+              <span className="text-xs text-amber-700 dark:text-amber-400">
+                Desconto acima do seu limite ({excedeLimiteImpl ? `Impl: ${percImplantacao.toFixed(1)}% > ${limiteImplantacao}%` : ""}
+                {excedeLimiteImpl && excedeLimiteMens ? " | " : ""}
+                {excedeLimiteMens ? `Mens: ${percMensalidade.toFixed(1)}% > ${limiteMensalidade}%` : ""}
+                ). Será necessária aprovação do gestor.
+              </span>
+            </div>
+          )}
+
           {/* Totals */}
           <div className="grid grid-cols-[1fr_80px_120px_120px_40px] gap-2 items-center px-2 pt-2 border-t">
             <span className="text-sm font-bold flex items-center gap-1">
-              <DollarSign className="h-4 w-4 text-primary" /> Total
+              <DollarSign className="h-4 w-4 text-primary" /> Total Final
             </span>
             <span />
             <span className="text-sm font-bold text-right text-emerald-600">
-              {formatCurrency(totalImplantacao)}
+              {formatCurrency(totalImplFinal)}
             </span>
             <span className="text-sm font-bold text-right text-primary">
-              {formatCurrency(totalMensalidade)}
+              {formatCurrency(totalMensFinal)}
             </span>
             <span />
           </div>
