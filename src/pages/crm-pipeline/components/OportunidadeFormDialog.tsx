@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
-import { ORIGENS } from "../constants";
+import type { CrmCampoPersonalizado } from "@/pages/crm-parametros/types";
 
 interface Props {
   open: boolean;
@@ -20,19 +20,20 @@ interface Props {
   saving?: boolean;
   exibeCliente?: boolean;
   currentUserId?: string;
+  camposPersonalizados?: CrmCampoPersonalizado[];
 }
 
 export function OportunidadeFormDialog({
-  open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving, exibeCliente = true, currentUserId,
+  open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving, exibeCliente = true, currentUserId, camposPersonalizados = [],
 }: Props) {
   const [titulo, setTitulo] = useState("");
   const [clienteId, setClienteId] = useState<string>("");
   const [responsavelId, setResponsavelId] = useState<string>("");
   const [etapaId, setEtapaId] = useState("");
-  const [valor, setValor] = useState("");
-  const [origem, setOrigem] = useState("");
   const [observacoes, setObservacoes] = useState("");
-  const [dataPrevisao, setDataPrevisao] = useState("");
+  const [camposValues, setCamposValues] = useState<Record<string, string>>({});
+
+  const activeCampos = camposPersonalizados.filter(c => c.ativo);
 
   useEffect(() => {
     if (open) {
@@ -41,35 +42,40 @@ export function OportunidadeFormDialog({
         setClienteId(oportunidade.cliente_id || "");
         setResponsavelId(oportunidade.responsavel_id || "");
         setEtapaId(oportunidade.etapa_id);
-        setValor(oportunidade.valor?.toString() || "");
-        setOrigem(oportunidade.origem || "");
         setObservacoes(oportunidade.observacoes || "");
-        setDataPrevisao(oportunidade.data_previsao_fechamento || "");
+        setCamposValues(oportunidade.campos_personalizados || {});
       } else {
         setTitulo("");
         setClienteId("");
         setResponsavelId(currentUserId || "");
         setEtapaId(etapaIdInicial || etapas[0]?.id || "");
-        setValor("");
-        setOrigem("");
         setObservacoes("");
-        setDataPrevisao("");
+        setCamposValues({});
       }
     }
   }, [open, oportunidade, etapaIdInicial, etapas]);
 
   const handleSave = () => {
     if (!titulo.trim()) return;
+    // Check required custom fields
+    for (const campo of activeCampos) {
+      if (campo.obrigatorio && !camposValues[campo.id]?.trim()) return;
+    }
     onSave({
       titulo: titulo.trim(),
       etapa_id: etapaId,
       cliente_id: clienteId || null,
       responsavel_id: responsavelId || null,
-      valor: parseFloat(valor) || 0,
-      origem: origem || null,
+      valor: 0,
+      origem: null,
       observacoes: observacoes || null,
-      data_previsao_fechamento: dataPrevisao || null,
+      data_previsao_fechamento: null,
+      campos_personalizados: camposValues,
     });
+  };
+
+  const setCampoValue = (campoId: string, value: string) => {
+    setCamposValues(prev => ({ ...prev, [campoId]: value }));
   };
 
   return (
@@ -120,26 +126,34 @@ export function OportunidadeFormDialog({
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label>Valor (R$)</Label>
-            <Input type="number" min="0" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" />
-          </div>
-          <div>
-            <Label>Origem</Label>
-            <Select value={origem || "__none__"} onValueChange={(v) => setOrigem(v === "__none__" ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Nenhuma</SelectItem>
-                {ORIGENS.map((o) => (
-                  <SelectItem key={o} value={o}>{o}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Previsão de Fechamento</Label>
-            <Input type="date" value={dataPrevisao} onChange={(e) => setDataPrevisao(e.target.value)} />
-          </div>
+
+          {/* Campos Personalizados */}
+          {activeCampos.map((campo) => (
+            <div key={campo.id}>
+              <Label>{campo.nome}{campo.obrigatorio ? " *" : ""}</Label>
+              {campo.tipo === "select" ? (
+                <Select
+                  value={camposValues[campo.id] || "__none__"}
+                  onValueChange={(v) => setCampoValue(campo.id, v === "__none__" ? "" : v)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Nenhum</SelectItem>
+                    {campo.opcoes.map((opcao) => (
+                      <SelectItem key={opcao} value={opcao}>{opcao}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  value={camposValues[campo.id] || ""}
+                  onChange={(e) => setCampoValue(campo.id, e.target.value)}
+                  placeholder={campo.nome}
+                />
+              )}
+            </div>
+          ))}
+
           <div>
             <Label>Observações</Label>
             <Textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={3} />
