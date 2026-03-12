@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2, Paperclip, Download, Trash2, MessageSquare, Reply, Heart } from "lucide-react";
 import { toast } from "sonner";
@@ -44,6 +43,12 @@ interface ProfileInfo {
   avatar_url: string | null;
 }
 
+interface MentionUser {
+  id: string;
+  user_id: string;
+  full_name: string;
+}
+
 interface Props {
   oportunidadeId: string;
   readOnly?: boolean;
@@ -53,7 +58,7 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
   const { user } = useAuth();
   const [comentarios, setComentarios] = useState<Comentario[]>([]);
   const [profiles, setProfiles] = useState<Record<string, ProfileInfo>>({});
-  const [allUsers, setAllUsers] = useState<{ id: string; user_id: string; full_name: string }[]>([]);
+  const [allUsers, setAllUsers] = useState<MentionUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [texto, setTexto] = useState("");
@@ -65,15 +70,14 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
   const [sendingReply, setSendingReply] = useState(false);
   const [likes, setLikes] = useState<Record<string, { count: number; likedByMe: boolean }>>({});
 
-  // Fetch all users for mention dropdown
   useEffect(() => {
     supabase.from("profiles").select("id, user_id, full_name").then(({ data }) => {
-      if (data) setAllUsers(data as any[]);
+      if (data) setAllUsers(data as MentionUser[]);
     });
   }, []);
 
   const fetchComentarios = async () => {
-    const { data } = await (supabase as any)
+    const { data } = await supabase
       .from("crm_comentarios")
       .select("*")
       .eq("oportunidade_id", oportunidadeId)
@@ -81,7 +85,7 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
 
     if (data) {
       setComentarios(data as Comentario[]);
-      const userIds = [...new Set((data as any[]).map((c: any) => c.user_id))] as string[];
+      const userIds = [...new Set(data.map(c => c.user_id))] as string[];
       if (userIds.length > 0) {
         const { data: profs } = await supabase
           .from("profiles")
@@ -89,24 +93,24 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
           .in("user_id", userIds);
         if (profs) {
           const map: Record<string, ProfileInfo> = {};
-          profs.forEach((p: any) => { map[p.user_id] = { full_name: p.full_name, avatar_url: p.avatar_url }; });
+          profs.forEach(p => { map[p.user_id] = { full_name: p.full_name, avatar_url: p.avatar_url }; });
           setProfiles(map);
         }
       }
-      const commentIds = data.map((c: any) => c.id);
+      const commentIds = data.map(c => c.id);
       if (commentIds.length > 0) await fetchLikes(commentIds);
     }
     setLoading(false);
   };
 
   const fetchLikes = async (commentIds: string[]) => {
-    const { data: allLikes } = await (supabase as any)
+    const { data: allLikes } = await supabase
       .from("crm_curtidas")
       .select("comentario_id, user_id")
       .in("comentario_id", commentIds);
 
     const likesMap: Record<string, { count: number; likedByMe: boolean }> = {};
-    (allLikes || []).forEach((l: any) => {
+    (allLikes || []).forEach(l => {
       if (!likesMap[l.comentario_id]) likesMap[l.comentario_id] = { count: 0, likedByMe: false };
       likesMap[l.comentario_id].count++;
       if (l.user_id === user?.id) likesMap[l.comentario_id].likedByMe = true;
@@ -120,9 +124,9 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
     if (!user) return;
     const likeInfo = likes[comentario.id];
     if (likeInfo?.likedByMe) {
-      await (supabase as any).from("crm_curtidas").delete().eq("comentario_id", comentario.id).eq("user_id", user.id);
+      await supabase.from("crm_curtidas").delete().eq("comentario_id", comentario.id).eq("user_id", user.id);
     } else {
-      await (supabase as any).from("crm_curtidas").insert({ comentario_id: comentario.id, user_id: user.id });
+      await supabase.from("crm_curtidas").insert({ comentario_id: comentario.id, user_id: user.id });
       if (comentario.user_id !== user.id) {
         const meuNome = profiles[user.id]?.full_name || "Usuário";
         await supabase.from("notificacoes").insert({
@@ -160,7 +164,7 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
         anexo_url = signedData?.signedUrl || null;
         anexo_nome = arquivo.name;
       }
-      const { error } = await (supabase as any).from("crm_comentarios").insert({
+      const { error } = await supabase.from("crm_comentarios").insert({
         oportunidade_id: oportunidadeId,
         user_id: user.id,
         texto: texto.trim(),
@@ -173,8 +177,9 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
       if (fileRef.current) fileRef.current.value = "";
       toast.success("Comentário adicionado!");
       fetchComentarios();
-    } catch (err: any) {
-      toast.error("Erro ao enviar: " + err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error("Erro ao enviar: " + message);
     } finally { setSending(false); }
   };
 
@@ -182,7 +187,7 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
     if (!replyTexto.trim() || !user) return;
     setSendingReply(true);
     try {
-      const { error } = await (supabase as any).from("crm_comentarios").insert({
+      const { error } = await supabase.from("crm_comentarios").insert({
         oportunidade_id: oportunidadeId,
         user_id: user.id,
         texto: replyTexto.trim(),
@@ -203,8 +208,9 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
       setReplyTexto(""); setReplyingTo(null);
       toast.success("Resposta enviada!");
       fetchComentarios();
-    } catch (err: any) {
-      toast.error("Erro ao enviar resposta: " + err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error("Erro ao enviar resposta: " + message);
     } finally { setSendingReply(false); }
   };
 
