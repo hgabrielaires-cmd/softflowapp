@@ -792,6 +792,47 @@ export type Database = {
           },
         ]
       }
+      crm_oportunidade_produtos: {
+        Row: {
+          created_at: string
+          id: string
+          oportunidade_id: string
+          quantidade: number
+          referencia_id: string
+          tipo: string
+          valor_implantacao: number
+          valor_mensalidade: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          oportunidade_id: string
+          quantidade?: number
+          referencia_id: string
+          tipo: string
+          valor_implantacao?: number
+          valor_mensalidade?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          oportunidade_id?: string
+          quantidade?: number
+          referencia_id?: string
+          tipo?: string
+          valor_implantacao?: number
+          valor_mensalidade?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_oportunidade_produtos_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "crm_oportunidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_oportunidades: {
         Row: {
           campos_personalizados: Json
