@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,12 +8,28 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
-import { Check, X, ChevronsUpDown } from "lucide-react";
+import { Check, X, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
 import type { CrmCampoPersonalizado } from "@/pages/crm-parametros/types";
 
 const CAMPOS_EXCLUIDOS = ["sistema anterior", "tipo de atendimento"];
+
+interface ContatoLocal {
+  id?: string;
+  nome: string;
+  telefone: string;
+  cargo_id: string;
+  email: string;
+}
+
+interface Cargo {
+  id: string;
+  nome: string;
+}
 
 interface Props {
   open: boolean;
@@ -31,6 +47,8 @@ interface Props {
   segmentos?: { id: string; nome: string }[];
 }
 
+const emptyContato = (): ContatoLocal => ({ nome: "", telefone: "", cargo_id: "", email: "" });
+
 export function OportunidadeFormDialog({
   open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving, exibeCliente = true, currentUserId, camposPersonalizados = [], segmentos = [],
 }: Props) {
@@ -39,13 +57,53 @@ export function OportunidadeFormDialog({
   const [responsavelId, setResponsavelId] = useState<string>("");
   const [etapaId, setEtapaId] = useState("");
   const [segmentoIds, setSegmentoIds] = useState<string[]>([]);
-  
   const [camposValues, setCamposValues] = useState<Record<string, string>>({});
   const [segmentoPopoverOpen, setSegmentoPopoverOpen] = useState(false);
+
+  // Contatos
+  const [contatos, setContatos] = useState<ContatoLocal[]>([emptyContato()]);
+
+  // Cargos from CRM params
+  const { data: cargos = [] } = useQuery({
+    queryKey: ["crm_cargos_ativos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crm_cargos")
+        .select("id, nome")
+        .eq("ativo", true)
+        .order("ordem");
+      if (error) throw error;
+      return data as Cargo[];
+    },
+  });
 
   const activeCampos = camposPersonalizados.filter(
     c => c.ativo && !CAMPOS_EXCLUIDOS.includes(c.nome.toLowerCase())
   );
+
+  // Load existing contacts when editing
+  useEffect(() => {
+    if (open && oportunidade) {
+      supabase
+        .from("crm_oportunidade_contatos")
+        .select("id, nome, telefone, cargo_id, email")
+        .eq("oportunidade_id", oportunidade.id)
+        .order("created_at")
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            setContatos(data.map(c => ({
+              id: c.id,
+              nome: c.nome,
+              telefone: c.telefone,
+              cargo_id: c.cargo_id || "",
+              email: c.email || "",
+            })));
+          } else {
+            setContatos([emptyContato()]);
+          }
+        });
+    }
+  }, [open, oportunidade]);
 
   useEffect(() => {
     if (open) {
@@ -55,7 +113,6 @@ export function OportunidadeFormDialog({
         setResponsavelId(oportunidade.responsavel_id || "");
         setEtapaId(oportunidade.etapa_id);
         setSegmentoIds((oportunidade as any).segmento_ids || []);
-        
         setCamposValues(oportunidade.campos_personalizados || {});
       } else {
         setTitulo("");
@@ -63,17 +120,31 @@ export function OportunidadeFormDialog({
         setResponsavelId(currentUserId || "");
         setEtapaId(etapaIdInicial || etapas[0]?.id || "");
         setSegmentoIds([]);
-        
         setCamposValues({});
+        setContatos([emptyContato()]);
       }
     }
   }, [open, oportunidade, etapaIdInicial, etapas]);
 
-  const handleSave = () => {
-    if (!titulo.trim() || segmentoIds.length === 0) return;
+  const updateContato = (index: number, field: keyof ContatoLocal, value: string) => {
+    setContatos(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c));
+  };
+
+  const addContato = () => setContatos(prev => [...prev, emptyContato()]);
+
+  const removeContato = (index: number) => {
+    if (contatos.length <= 1) return;
+    setContatos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const contatosValid = contatos.every(c => c.nome.trim() && c.telefone.trim());
+
+  const handleSave = async () => {
+    if (!titulo.trim() || segmentoIds.length === 0 || !contatosValid) return;
     for (const campo of activeCampos) {
       if (campo.obrigatorio && !camposValues[campo.id]?.trim()) return;
     }
+
     onSave({
       titulo: titulo.trim(),
       etapa_id: etapaId,
@@ -85,6 +156,7 @@ export function OportunidadeFormDialog({
       observacoes: null,
       data_previsao_fechamento: null,
       campos_personalizados: camposValues,
+      _contatos: contatos,
     });
   };
 
@@ -115,6 +187,76 @@ export function OportunidadeFormDialog({
             <Label>Nome/Nome da Empresa *</Label>
             <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Nome/Empresa" />
           </div>
+
+          {/* Contatos */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-semibold">Contatos *</Label>
+              <Button type="button" variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addContato}>
+                <Plus className="h-3 w-3" /> Adicionar
+              </Button>
+            </div>
+            {contatos.map((contato, idx) => (
+              <div key={idx} className="border rounded-lg p-3 space-y-2 bg-muted/30 relative">
+                {contatos.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-1 right-1 h-6 w-6 text-destructive"
+                    onClick={() => removeContato(idx)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Nome *</Label>
+                    <Input
+                      value={contato.nome}
+                      onChange={(e) => updateContato(idx, "nome", e.target.value)}
+                      placeholder="Nome do contato"
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Telefone *</Label>
+                    <Input
+                      value={contato.telefone}
+                      onChange={(e) => updateContato(idx, "telefone", e.target.value)}
+                      placeholder="(00) 00000-0000"
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Cargo</Label>
+                    <Select value={contato.cargo_id || "__none__"} onValueChange={(v) => updateContato(idx, "cargo_id", v === "__none__" ? "" : v)}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Nenhum</SelectItem>
+                        {cargos.map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Email</Label>
+                    <Input
+                      value={contato.email}
+                      onChange={(e) => updateContato(idx, "email", e.target.value)}
+                      placeholder="email@exemplo.com"
+                      className="h-8 text-xs"
+                      type="email"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
           <div>
             <Label>Etapa</Label>
             <Select value={etapaId} onValueChange={setEtapaId}>
@@ -240,7 +382,7 @@ export function OportunidadeFormDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={!titulo.trim() || segmentoIds.length === 0 || saving}>
+          <Button onClick={handleSave} disabled={!titulo.trim() || segmentoIds.length === 0 || !contatosValid || saving}>
             {saving ? "Salvando..." : "Salvar"}
           </Button>
         </DialogFooter>
