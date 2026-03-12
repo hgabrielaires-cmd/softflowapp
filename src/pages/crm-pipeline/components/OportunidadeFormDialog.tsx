@@ -63,7 +63,7 @@ export function OportunidadeFormDialog({
         setResponsavelId(currentUserId || "");
         setEtapaId(etapaIdInicial || etapas[0]?.id || "");
         setSegmentoIds([]);
-        setObservacoes("");
+        
         setCamposValues({});
       }
     }
