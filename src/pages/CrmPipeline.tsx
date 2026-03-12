@@ -151,112 +151,108 @@ export default function CrmPipeline() {
     <AppLayout>
       <div className="flex flex-col h-[calc(100vh-64px)]">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center gap-3 px-4 py-3 border-b bg-background">
-          <h1 className="text-lg font-bold text-foreground">Pipeline de Vendas</h1>
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b bg-background">
+          <h1 className="text-lg font-bold text-foreground mr-auto sm:mr-0">Pipeline de Vendas</h1>
 
-          <div className="flex items-center gap-2 flex-1 flex-wrap">
-            {/* Funil selector */}
-            <Select value={selectedFunilId} onValueChange={setSelectedFunilId}>
-              <SelectTrigger className="w-[220px]">
-                <SelectValue placeholder="Selecione o funil" />
-              </SelectTrigger>
-              <SelectContent>
-                {funis.map(f => (
-                  <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Funil selector */}
+          <Select value={selectedFunilId} onValueChange={setSelectedFunilId}>
+            <SelectTrigger className="w-[180px] h-9">
+              <SelectValue placeholder="Selecione o funil" />
+            </SelectTrigger>
+            <SelectContent>
+              {funis.map(f => (
+                <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-            {/* Search */}
-            <div className="relative flex-1 min-w-[180px] max-w-[300px]">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar oportunidade..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 h-9"
-              />
-            </div>
-
-            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => queryClient.invalidateQueries({ queryKey: ["crm_oportunidades"] })}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+          {/* Search */}
+          <div className="relative w-[180px]">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8 h-9"
+            />
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Filtros Popover */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="relative">
-                  <Filter className="h-4 w-4 mr-1" />
-                  Filtros
-                  {activeFilterCount > 0 && (
-                    <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
-                      {activeFilterCount}
-                    </Badge>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-72" align="end">
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-sm text-foreground">Filtros</h4>
+          <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => queryClient.invalidateQueries({ queryKey: ["crm_oportunidades"] })}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
 
-                  {/* Filial */}
+          {/* Filtros Popover */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="relative h-9 shrink-0">
+                <Filter className="h-4 w-4 mr-1" />
+                Filtros
+                {activeFilterCount > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72" align="end">
+              <div className="space-y-4">
+                <h4 className="font-semibold text-sm text-foreground">Filtros</h4>
+
+                {/* Filial */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Filial</Label>
+                  <Select value={filterFilialId} onValueChange={setFilterFilialId}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Todas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">Todas as Filiais</SelectItem>
+                      {filiaisDoUsuario.map(f => (
+                        <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Vendedor - oculto para vendedores (só veem as próprias) */}
+                {!isVendedor && (
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Filial</Label>
-                    <Select value={filterFilialId} onValueChange={setFilterFilialId}>
+                    <Label className="text-xs text-muted-foreground">Vendedor</Label>
+                    <Select value={filterVendedorId} onValueChange={setFilterVendedorId}>
                       <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Todas" />
+                        <SelectValue placeholder="Todos" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__all__">Todas as Filiais</SelectItem>
-                        {filiaisDoUsuario.map(f => (
-                          <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                        <SelectItem value="__all__">Todos os Vendedores</SelectItem>
+                        {responsaveis.map(r => (
+                          <SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
+                )}
 
-                  {/* Vendedor - oculto para vendedores (só veem as próprias) */}
-                  {!isVendedor && (
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Vendedor</Label>
-                      <Select value={filterVendedorId} onValueChange={setFilterVendedorId}>
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Todos" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__all__">Todos os Vendedores</SelectItem>
-                          {responsaveis.map(r => (
-                            <SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                {/* Limpar filtros */}
+                {activeFilterCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-xs"
+                    onClick={() => {
+                      setFilterFilialId("__all__");
+                      setFilterVendedorId("__all__");
+                    }}
+                  >
+                    Limpar filtros
+                  </Button>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
 
-                  {/* Limpar filtros */}
-                  {activeFilterCount > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full text-xs"
-                      onClick={() => {
-                        setFilterFilialId("__all__");
-                        setFilterVendedorId("__all__");
-                      }}
-                    >
-                      Limpar filtros
-                    </Button>
-                  )}
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            <Button size="sm" onClick={() => handleNewOportunidade()}>
-              <Plus className="h-4 w-4 mr-1" /> Nova Oportunidade
-            </Button>
-          </div>
+          <Button size="sm" className="h-9 shrink-0" onClick={() => handleNewOportunidade()}>
+            <Plus className="h-4 w-4 mr-1" /> Nova Oportunidade
+          </Button>
         </div>
 
         {/* Kanban */}
