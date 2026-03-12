@@ -90,6 +90,7 @@ export default function PainelAtendimento() {
   const [detalhesLoading, setDetalhesLoading] = useState(false);
   const [planoAnteriorNome, setPlanoAnteriorNome] = useState<string | null>(null);
   const [dragCardId, setDragCardId] = useState<string | null>(null);
+  const [kanbanVisibleCount, setKanbanVisibleCount] = useState<Record<string, number>>({});
   const [syncing, setSyncing] = useState(false);
   const [slaEtapaJornada, setSlaEtapaJornada] = useState<number | null>(null);
   const [slaProjeto, setSlaProjeto] = useState<number | null>(null);
