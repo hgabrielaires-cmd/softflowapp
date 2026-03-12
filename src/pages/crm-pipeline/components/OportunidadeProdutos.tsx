@@ -21,6 +21,8 @@ interface Modulo {
   nome: string;
   valor_implantacao_modulo: number | null;
   valor_mensalidade_modulo: number | null;
+  permite_revenda: boolean;
+  quantidade_maxima: number | null;
 }
 
 interface ProdutoItem {
@@ -64,7 +66,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("modulos")
-        .select("id, nome, valor_implantacao_modulo, valor_mensalidade_modulo")
+        .select("id, nome, valor_implantacao_modulo, valor_mensalidade_modulo, permite_revenda, quantidade_maxima")
         .eq("ativo", true)
         .order("nome");
       if (error) throw error;
@@ -151,6 +153,11 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
     let nome = "";
 
     if (addType === "plano") {
+      // Plano: só pode ter 1
+      if (items.some(it => it.tipo === "plano")) {
+        toast.error("Já existe um plano na proposta. Remova o atual para adicionar outro.");
+        return;
+      }
       const plano = planosQuery.data?.find((p) => p.id === addRef);
       if (!plano) return;
       valor_implantacao = plano.valor_implantacao_padrao;
@@ -159,6 +166,21 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
     } else {
       const modulo = modulosQuery.data?.find((m) => m.id === addRef);
       if (!modulo) return;
+      // Módulo sem revenda: não pode adicionar se já existe
+      if (!modulo.permite_revenda && items.some(it => it.tipo === "modulo" && it.referencia_id === addRef)) {
+        toast.error(`O módulo "${modulo.nome}" não permite venda duplicada.`);
+        return;
+      }
+      // Módulo com quantidade_maxima: validar total
+      if (modulo.quantidade_maxima) {
+        const qtdExistente = items
+          .filter(it => it.tipo === "modulo" && it.referencia_id === addRef)
+          .reduce((sum, it) => sum + it.quantidade, 0);
+        if (qtdExistente >= modulo.quantidade_maxima) {
+          toast.error(`Limite máximo de ${modulo.quantidade_maxima} unidade(s) para "${modulo.nome}" já atingido.`);
+          return;
+        }
+      }
       valor_implantacao = modulo.valor_implantacao_modulo || 0;
       valor_mensalidade = modulo.valor_mensalidade_modulo || 0;
       nome = modulo.nome;
@@ -191,7 +213,26 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
 
   const updateItemLocal = (index: number, field: keyof ProdutoItem, value: number) => {
     setItems((prev) =>
-      prev.map((it, i) => (i === index ? { ...it, [field]: value } : it))
+      prev.map((it, i) => {
+        if (i !== index) return it;
+        let newValue = value;
+        // Validate quantidade limits
+        if (field === "quantidade") {
+          if (it.tipo === "plano") {
+            newValue = 1; // plano always 1
+          } else {
+            const modulo = modulosQuery.data?.find(m => m.id === it.referencia_id);
+            if (modulo && !modulo.permite_revenda) {
+              newValue = 1;
+            }
+            if (modulo?.quantidade_maxima && newValue > modulo.quantidade_maxima) {
+              toast.error(`Limite máximo: ${modulo.quantidade_maxima} unidade(s) para "${it.nome}".`);
+              newValue = modulo.quantidade_maxima;
+            }
+          }
+        }
+        return { ...it, [field]: newValue };
+      })
     );
   };
 
@@ -250,24 +291,30 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
             <span />
           </div>
 
-          {items.map((item, idx) => (
+          {items.map((item, idx) => {
+            const isPlano = item.tipo === "plano";
+            const modulo = !isPlano ? modulosQuery.data?.find(m => m.id === item.referencia_id) : null;
+            const qtdLocked = isPlano || (modulo && !modulo.permite_revenda);
+            return (
             <div
               key={item.id || idx}
               className="grid grid-cols-[1fr_80px_120px_120px_40px] gap-2 items-center border rounded-md px-2 py-2 bg-muted/20"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <Badge variant={item.tipo === "plano" ? "default" : "secondary"} className="text-[10px] shrink-0">
-                  {item.tipo === "plano" ? "Plano" : "Módulo"}
+                <Badge variant={isPlano ? "default" : "secondary"} className="text-[10px] shrink-0">
+                  {isPlano ? "Plano" : "Módulo"}
                 </Badge>
                 <span className="text-sm font-medium truncate">{item.nome}</span>
               </div>
               <Input
                 type="number"
                 min={1}
+                max={modulo?.quantidade_maxima || undefined}
                 value={item.quantidade}
                 onChange={(e) => updateItemLocal(idx, "quantidade", parseInt(e.target.value) || 1)}
                 onBlur={() => handleUpdateItem(item)}
                 className="h-8 text-xs text-center"
+                disabled={!!qtdLocked}
               />
               <Input
                 type="number"
@@ -297,7 +344,8 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
-          ))}
+            );
+          })}
 
           {/* Totals */}
           <div className="grid grid-cols-[1fr_80px_120px_120px_40px] gap-2 items-center px-2 pt-2 border-t">
