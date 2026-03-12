@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export function FunisTab() {
+  const { profile, refreshProfile } = useAuth();
   const { data: funis = [], isLoading } = useCrmFunis();
   const { data: todasEtapas = [] } = useCrmEtapas();
   const createFunil = useCreateFunil();
@@ -30,6 +31,15 @@ export function FunisTab() {
   const createEtapa = useCreateEtapa();
   const updateEtapa = useUpdateEtapa();
   const deleteEtapa = useDeleteEtapa();
+
+  async function handleToggleFavorito(funilId: string) {
+    if (!profile) return;
+    const newId = profile.funil_favorito_id === funilId ? null : funilId;
+    const { error } = await supabase.from("profiles").update({ funil_favorito_id: newId }).eq("id", profile.id);
+    if (error) { toast.error("Erro ao salvar favorito"); return; }
+    toast.success(newId ? "Funil favorito definido!" : "Favorito removido");
+    await refreshProfile();
+  }
 
   const [selectedFunilId, setSelectedFunilId] = useState<string | null>(null);
   const [showCreateFunil, setShowCreateFunil] = useState(false);
