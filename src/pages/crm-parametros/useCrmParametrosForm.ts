@@ -19,7 +19,7 @@ export function useCreateFunil() {
 export function useUpdateFunil() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...data }: { id: string; nome?: string; descricao?: string | null; ativo?: boolean; ordem?: number }) => {
+    mutationFn: async ({ id, ...data }: { id: string; nome?: string; descricao?: string | null; ativo?: boolean; ordem?: number; exibe_cliente?: boolean }) => {
       const { error } = await supabase.from("crm_funis").update({ ...data, updated_at: new Date().toISOString() }).eq("id", id);
       if (error) throw error;
     },
