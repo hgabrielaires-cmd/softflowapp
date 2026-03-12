@@ -32,6 +32,11 @@ export function FunisTab() {
   const [novoFunilNome, setNovoFunilNome] = useState("");
   const [novoFunilDesc, setNovoFunilDesc] = useState("");
 
+  // Funil editing
+  const [editFunil, setEditFunil] = useState<{ id: string; nome: string; descricao: string } | null>(null);
+  const [editFunilNome, setEditFunilNome] = useState("");
+  const [editFunilDesc, setEditFunilDesc] = useState("");
+
   // Etapa creation
   const [showCreateEtapa, setShowCreateEtapa] = useState(false);
   const [novaEtapaNome, setNovaEtapaNome] = useState("");
@@ -58,6 +63,18 @@ export function FunisTab() {
     setNovoFunilNome("");
     setNovoFunilDesc("");
     setShowCreateFunil(false);
+  }
+
+  function handleOpenEditFunil(funil: { id: string; nome: string; descricao: string | null }) {
+    setEditFunil({ id: funil.id, nome: funil.nome, descricao: funil.descricao || "" });
+    setEditFunilNome(funil.nome);
+    setEditFunilDesc(funil.descricao || "");
+  }
+
+  async function handleSaveEditFunil() {
+    if (!editFunil || !editFunilNome.trim()) return;
+    await updateFunil.mutateAsync({ id: editFunil.id, nome: editFunilNome.trim(), descricao: editFunilDesc.trim() || null });
+    setEditFunil(null);
   }
 
   async function handleCreateEtapa() {
@@ -153,6 +170,10 @@ export function FunisTab() {
                     onCheckedChange={(ativo) => updateFunil.mutate({ id: funil.id, ativo })}
                     onClick={(e) => e.stopPropagation()}
                   />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                    onClick={(e) => { e.stopPropagation(); handleOpenEditFunil(funil); }}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
                     onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: "funil", id: funil.id, nome: funil.nome }); }}>
                     <Trash2 className="h-3.5 w-3.5" />
@@ -338,6 +359,29 @@ export function FunisTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog: Editar Funil */}
+      <Dialog open={!!editFunil} onOpenChange={(open) => !open && setEditFunil(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Editar Funil</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Nome *</label>
+              <Input value={editFunilNome} onChange={(e) => setEditFunilNome(e.target.value)} placeholder="Nome do funil" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Descrição</label>
+              <Input value={editFunilDesc} onChange={(e) => setEditFunilDesc(e.target.value)} placeholder="Descrição opcional" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditFunil(null)}>Cancelar</Button>
+            <Button onClick={handleSaveEditFunil} disabled={!editFunilNome.trim() || updateFunil.isPending}>
+              {updateFunil.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
