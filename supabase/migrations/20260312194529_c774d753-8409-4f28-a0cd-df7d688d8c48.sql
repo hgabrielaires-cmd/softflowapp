@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_tarefas ADD COLUMN canal text NOT NULL DEFAULT '';

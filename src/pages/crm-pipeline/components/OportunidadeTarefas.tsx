@@ -19,6 +19,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 interface Tarefa {
   id: string;
   tipo_atendimento: string;
+  canal: string;
   data_reuniao: string | null;
   descricao: string;
   criado_por: string;
@@ -35,9 +36,10 @@ interface ProfileInfo {
 interface Props {
   oportunidadeId: string;
   tiposAtendimento: string[];
+  canais: string[];
 }
 
-export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento }: Props) {
+export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais }: Props) {
   const { user } = useAuth();
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
   const [profiles, setProfiles] = useState<Record<string, ProfileInfo>>({});
@@ -47,6 +49,7 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento }: Props)
 
   // Form
   const [tipoAtendimento, setTipoAtendimento] = useState("");
+  const [canal, setCanal] = useState("");
   const [dataReuniao, setDataReuniao] = useState<Date | undefined>();
   const [horaReuniao, setHoraReuniao] = useState("09:00");
   const [descricao, setDescricao] = useState("");
@@ -80,14 +83,17 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento }: Props)
 
   const resetForm = () => {
     setTipoAtendimento("");
+    setCanal("");
     setDataReuniao(undefined);
     setHoraReuniao("09:00");
     setDescricao("");
     setShowForm(false);
   };
 
+  const formValido = descricao.trim() && tipoAtendimento && canal;
+
   const handleCriar = async () => {
-    if (!user || !descricao.trim()) return;
+    if (!user || !formValido) return;
     setSaving(true);
     try {
       let dataReuniaoFinal: string | null = null;
@@ -100,6 +106,7 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento }: Props)
       const { error } = await supabase.from("crm_tarefas").insert({
         oportunidade_id: oportunidadeId,
         tipo_atendimento: tipoAtendimento,
+        canal,
         data_reuniao: dataReuniaoFinal,
         descricao: descricao.trim(),
         criado_por: user.id,
@@ -142,31 +149,41 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento }: Props)
         <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Tipo de Atendimento</Label>
+              <Label className="text-xs">Tipo de Atendimento *</Label>
               <Select value={tipoAtendimento || "__none__"} onValueChange={(v) => setTipoAtendimento(v === "__none__" ? "" : v)}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">Nenhum</SelectItem>
+                  <SelectItem value="__none__">Selecione...</SelectItem>
                   {tiposAtendimento.map(t => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Data e Hora da Reunião</Label>
-              <div className="flex gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("flex-1 justify-start text-left font-normal h-9 text-xs", !dataReuniao && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
-                      {dataReuniao ? format(dataReuniao, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={dataReuniao} onSelect={setDataReuniao} initialFocus className="p-3 pointer-events-auto" />
-                  </PopoverContent>
-                </Popover>
-                <Input type="time" value={horaReuniao} onChange={(e) => setHoraReuniao(e.target.value)} className="w-24 h-9 text-xs" />
-              </div>
+              <Label className="text-xs">Canal *</Label>
+              <Select value={canal || "__none__"} onValueChange={(v) => setCanal(v === "__none__" ? "" : v)}>
+                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Selecione...</SelectItem>
+                  {canais.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Data e Hora da Reunião</Label>
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("flex-1 justify-start text-left font-normal h-9 text-xs", !dataReuniao && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                    {dataReuniao ? format(dataReuniao, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={dataReuniao} onSelect={setDataReuniao} initialFocus className="p-3 pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+              <Input type="time" value={horaReuniao} onChange={(e) => setHoraReuniao(e.target.value)} className="w-24 h-9 text-xs" />
             </div>
           </div>
           <div>
@@ -175,7 +192,7 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento }: Props)
           </div>
           <div className="flex gap-2 justify-end">
             <Button variant="ghost" size="sm" className="text-xs h-8" onClick={resetForm}>Cancelar</Button>
-            <Button size="sm" className="text-xs h-8" onClick={handleCriar} disabled={saving || !descricao.trim()}>
+            <Button size="sm" className="text-xs h-8" onClick={handleCriar} disabled={saving || !formValido}>
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null} Criar
             </Button>
           </div>
@@ -206,6 +223,9 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento }: Props)
                   <div className="flex items-center gap-2 shrink-0">
                     {t.tipo_atendimento && (
                       <Badge variant="outline" className="text-[10px]">{t.tipo_atendimento}</Badge>
+                    )}
+                    {t.canal && (
+                      <Badge variant="outline" className="text-[10px]">{t.canal}</Badge>
                     )}
                     {concluida ? (
                       <Badge variant="secondary" className="text-[10px] gap-1 bg-emerald-100 text-emerald-700">
