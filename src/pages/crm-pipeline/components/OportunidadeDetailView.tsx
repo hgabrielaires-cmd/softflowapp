@@ -184,7 +184,7 @@ export function OportunidadeDetailView({
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="geral" className="flex-1 flex flex-col min-h-0">
+      <Tabs defaultValue={defaultTab || "geral"} className="flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between mx-4 mt-2">
           <TabsList className="w-fit">
             <TabsTrigger value="geral">Geral</TabsTrigger>
