@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -6,10 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, DollarSign, RefreshCw } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import { Plus, Search, DollarSign, RefreshCw, Filter } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { useCrmPipelineQueries } from "./crm-pipeline/useCrmPipelineQueries";
 import { useCrmPipelineForm } from "./crm-pipeline/useCrmPipelineForm";
 import { PipelineCard } from "./crm-pipeline/components/PipelineCard";
@@ -18,8 +21,9 @@ import { formatValor, totalValorEtapa } from "./crm-pipeline/helpers";
 import type { CrmOportunidade, CrmEtapaSimples } from "./crm-pipeline/types";
 
 export default function CrmPipeline() {
-  const { profile } = useAuth();
+  const { profile, user, roles } = useAuth();
   const queryClient = useQueryClient();
+  const { filiaisDoUsuario, filialPadraoId } = useUserFiliais();
 
   const [selectedFunilId, setSelectedFunilId] = useState<string>("");
   const [search, setSearch] = useState("");
@@ -28,6 +32,11 @@ export default function CrmPipeline() {
   const [editOportunidade, setEditOportunidade] = useState<CrmOportunidade | null>(null);
   const [newEtapaId, setNewEtapaId] = useState<string>("");
 
+  // Filtros
+  const [filterFilialId, setFilterFilialId] = useState<string>("__all__");
+  const [filterVendedorId, setFilterVendedorId] = useState<string>("__all__");
+  const [filtersReady, setFiltersReady] = useState(false);
+
   const { funisQuery, etapasQuery, oportunidadesQuery, responsaveisQuery } = useCrmPipelineQueries(selectedFunilId);
   const { createMutation, updateMutation, moveToEtapaMutation } = useCrmPipelineForm(selectedFunilId);
 
@@ -35,6 +44,19 @@ export default function CrmPipeline() {
   const etapas = etapasQuery.data || [];
   const oportunidades = oportunidadesQuery.data || [];
   const responsaveis = responsaveisQuery.data || [];
+
+  // Inicializar filtros com filial do usuário e vendedor logado
+  useEffect(() => {
+    if (filtersReady) return;
+    const isVendedor = roles.includes("vendedor");
+    if (filialPadraoId) {
+      setFilterFilialId(filialPadraoId);
+    }
+    if (isVendedor && user?.id) {
+      setFilterVendedorId(user.id);
+    }
+    setFiltersReady(true);
+  }, [filialPadraoId, roles, user?.id, filtersReady]);
 
   // Selecionar funil favorito ou primeiro ao carregar
   useEffect(() => {
@@ -53,13 +75,33 @@ export default function CrmPipeline() {
     });
   }, []);
 
-  // Filtro
-  const filtered = search
-    ? oportunidades.filter(o =>
-        o.titulo.toLowerCase().includes(search.toLowerCase()) ||
-        o.clientes?.nome_fantasia?.toLowerCase().includes(search.toLowerCase())
-      )
-    : oportunidades;
+  // Contar filtros ativos
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filterFilialId !== "__all__") count++;
+    if (filterVendedorId !== "__all__") count++;
+    return count;
+  }, [filterFilialId, filterVendedorId]);
+
+  // Filtro combinado: texto + filial + vendedor
+  const filtered = useMemo(() => {
+    let result = oportunidades;
+
+    if (filterFilialId !== "__all__") {
+      result = result.filter(o => o.clientes?.filial_id === filterFilialId);
+    }
+    if (filterVendedorId !== "__all__") {
+      result = result.filter(o => o.responsavel_id === filterVendedorId);
+    }
+    if (search) {
+      const s = search.toLowerCase();
+      result = result.filter(o =>
+        o.titulo.toLowerCase().includes(s) ||
+        o.clientes?.nome_fantasia?.toLowerCase().includes(s)
+      );
+    }
+    return result;
+  }, [oportunidades, filterFilialId, filterVendedorId, search]);
 
   const getOpsForEtapa = useCallback((etapaId: string) => {
     return filtered.filter(o => o.etapa_id === etapaId);
@@ -140,9 +182,78 @@ export default function CrmPipeline() {
             </Button>
           </div>
 
-          <Button size="sm" onClick={() => handleNewOportunidade()}>
-            <Plus className="h-4 w-4 mr-1" /> Nova Oportunidade
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Filtros Popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="relative">
+                  <Filter className="h-4 w-4 mr-1" />
+                  Filtros
+                  {activeFilterCount > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                      {activeFilterCount}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72" align="end">
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-sm text-foreground">Filtros</h4>
+
+                  {/* Filial */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Filial</Label>
+                    <Select value={filterFilialId} onValueChange={setFilterFilialId}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Todas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">Todas as Filiais</SelectItem>
+                        {filiaisDoUsuario.map(f => (
+                          <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Vendedor */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Vendedor</Label>
+                    <Select value={filterVendedorId} onValueChange={setFilterVendedorId}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">Todos os Vendedores</SelectItem>
+                        {responsaveis.map(r => (
+                          <SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Limpar filtros */}
+                  {activeFilterCount > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={() => {
+                        setFilterFilialId("__all__");
+                        setFilterVendedorId("__all__");
+                      }}
+                    >
+                      Limpar filtros
+                    </Button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <Button size="sm" onClick={() => handleNewOportunidade()}>
+              <Plus className="h-4 w-4 mr-1" /> Nova Oportunidade
+            </Button>
+          </div>
         </div>
 
         {/* Kanban */}

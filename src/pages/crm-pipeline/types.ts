@@ -17,7 +17,7 @@ export interface CrmOportunidade {
   created_at: string;
   updated_at: string;
   // Joins
-  clientes?: { nome_fantasia: string; apelido?: string | null } | null;
+  clientes?: { nome_fantasia: string; apelido?: string | null; filial_id?: string | null } | null;
   profiles?: { full_name: string } | null;
 }
 
