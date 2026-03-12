@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 import type { ClienteContato, ContatoFormState } from "@/pages/clientes/types";
+import { applyPhoneMask } from "@/lib/utils";
 
 interface ContatoFormDialogProps {
   open: boolean;
