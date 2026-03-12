@@ -348,6 +348,8 @@ export default function CrmPipeline() {
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
 
       <OportunidadeFormDialog
