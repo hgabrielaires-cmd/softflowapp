@@ -354,6 +354,7 @@ export default function CrmPipeline() {
         exibeCliente={funis.find(f => f.id === selectedFunilId)?.exibe_cliente ?? true}
         currentUserId={user?.id}
         camposPersonalizados={camposPersonalizados}
+        segmentos={segmentos}
       />
     </AppLayout>
   );
