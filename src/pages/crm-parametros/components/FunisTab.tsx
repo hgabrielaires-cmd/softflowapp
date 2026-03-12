@@ -272,6 +272,10 @@ export function FunisTab() {
               <label className="text-sm font-medium">Descrição</label>
               <Input value={novoFunilDesc} onChange={(e) => setNovoFunilDesc(e.target.value)} placeholder="Descrição opcional" />
             </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="novo-exibe-cliente" className="text-sm font-medium">Buscar cliente no cadastro</Label>
+              <Switch id="novo-exibe-cliente" checked={novoFunilExibeCliente} onCheckedChange={setNovoFunilExibeCliente} />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateFunil(false)}>Cancelar</Button>
