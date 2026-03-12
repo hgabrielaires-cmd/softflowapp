@@ -18,10 +18,11 @@ interface Props {
   responsaveis: { id: string; user_id: string; full_name: string }[];
   onSave: (data: Record<string, unknown>) => void;
   saving?: boolean;
+  exibeCliente?: boolean;
 }
 
 export function OportunidadeFormDialog({
-  open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving,
+  open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving, exibeCliente = true,
 }: Props) {
   const [titulo, setTitulo] = useState("");
   const [clienteId, setClienteId] = useState<string>("");
