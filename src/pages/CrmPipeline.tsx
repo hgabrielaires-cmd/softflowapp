@@ -140,6 +140,13 @@ export default function CrmPipeline() {
     }
   };
 
+  const handleDetailSave = (data: Record<string, unknown>) => {
+    if (!detailOportunidade) return;
+    updateMutation.mutate({ id: detailOportunidade.id, ...data } as CrmOportunidade, {
+      onSuccess: () => setDetailOportunidade(null),
+    });
+  };
+
   const isLoading = funisQuery.isLoading || etapasQuery.isLoading || oportunidadesQuery.isLoading;
 
   return (
