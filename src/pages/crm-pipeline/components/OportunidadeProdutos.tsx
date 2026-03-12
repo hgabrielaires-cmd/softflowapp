@@ -490,6 +490,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                       type="number" min={0} step="0.01"
                       value={descontoImplantacao || ""}
                       onChange={(e) => setDescontoImplantacao(parseFloat(e.target.value) || 0)}
+                      onBlur={() => persistDescontos(descontoImplantacao, descontoImplantacaoTipo, descontoMensalidade, descontoMensalidadeTipo)}
                       className={`flex-1 ${excedeLimiteImpl ? "border-destructive" : ""}`}
                       placeholder="0"
                     />
@@ -503,6 +504,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                         const descontoCalc = Math.max(0, totalImplantacao - novoFinal);
                         setDescontoImplantacaoTipo("R$");
                         setDescontoImplantacao(parseFloat(descontoCalc.toFixed(2)));
+                        persistDescontos(parseFloat(descontoCalc.toFixed(2)), "R$", descontoMensalidade, descontoMensalidadeTipo);
                       }}
                       className="w-36 bg-background font-mono text-sm text-primary font-semibold"
                     />
