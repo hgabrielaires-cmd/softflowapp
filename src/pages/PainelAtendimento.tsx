@@ -78,9 +78,9 @@ export default function PainelAtendimento() {
   const [filtroMesa, setFiltroMesa] = useState<string>("todos");
   const [detailCard, setDetailCard] = useState<PainelCard | null>(null);
   const [openedFrom, setOpenedFrom] = useState<string | null>(null);
-  const [detalhesOpen, setDetalhesOpen] = useState(false);
-  const [detalhesData, setDetalhesData] = useState<any>(null);
-  const [detalhesLoading, setDetalhesLoading] = useState(false);
+  const [seguindoProjeto, setSeguindoProjeto] = useState(false);
+  const [seguidoresList, setSeguidoresList] = useState<any[]>([]);
+  const [seguindoLoading, setSeguindoLoading] = useState(false);
   const [planoAnteriorNome, setPlanoAnteriorNome] = useState<string | null>(null);
   const [dragCardId, setDragCardId] = useState<string | null>(null);
   const [kanbanVisibleCount, setKanbanVisibleCount] = useState<Record<string, number>>({});
