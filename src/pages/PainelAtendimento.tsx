@@ -90,6 +90,7 @@ export default function PainelAtendimento() {
   const [detalhesLoading, setDetalhesLoading] = useState(false);
   const [planoAnteriorNome, setPlanoAnteriorNome] = useState<string | null>(null);
   const [dragCardId, setDragCardId] = useState<string | null>(null);
+  const [kanbanVisibleCount, setKanbanVisibleCount] = useState<Record<string, number>>({});
   const [syncing, setSyncing] = useState(false);
   const [slaEtapaJornada, setSlaEtapaJornada] = useState<number | null>(null);
   const [slaProjeto, setSlaProjeto] = useState<number | null>(null);
@@ -827,21 +828,40 @@ export default function PainelAtendimento() {
                   <div className="bg-muted/20 rounded-b-lg border border-t-0 border-border/40 min-h-[200px] p-2 space-y-2">
                     {etapaCards.length === 0 ? (
                       <p className="text-xs text-muted-foreground text-center py-8 italic">Nenhum card</p>
-                    ) : etapaCards.map((card) => (
-                      <KanbanCard
-                        key={card.id}
-                        card={card}
-                        etapas={etapas}
-                        jornadaSlaMap={jornadaSlaMap}
-                        totalChecklistPorPlano={totalChecklistPorPlano}
-                        cardProgressMap={cardProgressMap}
-                        cardApontamentosMap={cardApontamentosMap}
-                        pedidoPrioridadeMap={pedidoPrioridadeMap}
-                        responsaveis={responsaveis}
-                        onDragStart={(id) => setDragCardId(id)}
-                        onClick={(c) => setDetailCard(c)}
-                      />
-                    ))}
+                    ) : (() => {
+                      const limit = kanbanVisibleCount[etapa.id] || 15;
+                      const visible = etapaCards.slice(0, limit);
+                      const hasMore = etapaCards.length > limit;
+                      return (
+                        <>
+                          {visible.map((card) => (
+                            <KanbanCard
+                              key={card.id}
+                              card={card}
+                              etapas={etapas}
+                              jornadaSlaMap={jornadaSlaMap}
+                              totalChecklistPorPlano={totalChecklistPorPlano}
+                              cardProgressMap={cardProgressMap}
+                              cardApontamentosMap={cardApontamentosMap}
+                              pedidoPrioridadeMap={pedidoPrioridadeMap}
+                              responsaveis={responsaveis}
+                              onDragStart={(id) => setDragCardId(id)}
+                              onClick={(c) => setDetailCard(c)}
+                            />
+                          ))}
+                          {hasMore && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full text-xs"
+                              onClick={() => setKanbanVisibleCount(prev => ({ ...prev, [etapa.id]: limit + 15 }))}
+                            >
+                              Carregar mais ({etapaCards.length - limit} restantes)
+                            </Button>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               );
