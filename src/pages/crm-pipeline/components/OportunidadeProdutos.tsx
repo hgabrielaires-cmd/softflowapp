@@ -443,6 +443,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                     if (!v) {
                       setDescontoImplantacao(0);
                       setDescontoMensalidade(0);
+                      persistDescontos(0, "R$", 0, "R$");
                     }
                   }}
                 />
