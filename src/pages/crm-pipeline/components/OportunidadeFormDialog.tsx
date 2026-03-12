@@ -77,7 +77,7 @@ export function OportunidadeFormDialog({
         <DialogHeader>
           <DialogTitle>{oportunidade ? "Editar Oportunidade" : "Nova Oportunidade"}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 overflow-y-auto flex-1 pr-1">
+        <div className="space-y-3 overflow-y-auto flex-1 pr-1 pb-2 min-h-0">
           <div>
             <Label>Título *</Label>
             <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Nome da oportunidade" />
