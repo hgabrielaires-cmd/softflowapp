@@ -324,7 +324,7 @@ const App = () => {
               path="/crm-pipeline"
               element={
                 <ProtectedRoute>
-                  <ComingSoon module="CRM" title="Pipeline de Vendas" description="Em desenvolvimento. Visualização do pipeline de vendas." />
+                  <CrmPipeline />
                 </ProtectedRoute>
               }
             />
