@@ -250,7 +250,7 @@ export default function CrmPipeline() {
             </PopoverContent>
           </Popover>
 
-          <Button size="sm" className="h-9 shrink-0" onClick={() => handleNewOportunidade()}>
+          <Button size="sm" className="h-9 shrink-0 w-full sm:w-auto" onClick={() => handleNewOportunidade()}>
             <Plus className="h-4 w-4 mr-1" /> Nova Oportunidade
           </Button>
         </div>
