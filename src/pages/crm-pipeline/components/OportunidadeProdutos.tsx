@@ -349,22 +349,6 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
   const totalImplantacao = items.reduce((sum, it) => sum + it.valor_implantacao * it.quantidade, 0);
   const totalMensalidade = items.reduce((sum, it) => sum + it.valor_mensalidade * it.quantidade, 0);
 
-  // Calculate actual discount values based on type (R$ or %)
-  const descontoImplValor = descontoImplantacaoTipo === "%" 
-    ? (totalImplantacao * descontoImplantacao) / 100 
-    : descontoImplantacao;
-  const descontoMensValor = descontoMensalidadeTipo === "%" 
-    ? (totalMensalidade * descontoMensalidade) / 100 
-    : descontoMensalidade;
-
-  const percImplantacao = totalImplantacao > 0 ? (descontoImplValor / totalImplantacao) * 100 : 0;
-  const percMensalidade = totalMensalidade > 0 ? (descontoMensValor / totalMensalidade) * 100 : 0;
-  const excedeLimiteImpl = percImplantacao > limiteImplantacao && descontoImplValor > 0;
-  const excedeLimiteMens = percMensalidade > limiteMensalidade && descontoMensValor > 0;
-  const precisaAprovacao = excedeLimiteImpl || excedeLimiteMens;
-
-  const totalImplFinal = Math.max(0, totalImplantacao - descontoImplValor);
-  const totalMensFinal = Math.max(0, totalMensalidade - descontoMensValor);
 
   const catalogo = addType === "plano" ? planosQuery.data || [] : modulosQuery.data || [];
 
