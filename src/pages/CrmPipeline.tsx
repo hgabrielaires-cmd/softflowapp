@@ -36,12 +36,14 @@ export default function CrmPipeline() {
   const oportunidades = oportunidadesQuery.data || [];
   const responsaveis = responsaveisQuery.data || [];
 
-  // Selecionar primeiro funil ao carregar
+  // Selecionar funil favorito ou primeiro ao carregar
   useEffect(() => {
     if (funis.length > 0 && !selectedFunilId) {
-      setSelectedFunilId(funis[0].id);
+      const favId = profile?.funil_favorito_id;
+      const favExists = favId && funis.some(f => f.id === favId);
+      setSelectedFunilId(favExists ? favId! : funis[0].id);
     }
-  }, [funis, selectedFunilId]);
+  }, [funis, selectedFunilId, profile?.funil_favorito_id]);
 
   // Buscar clientes
   const [clientes, setClientes] = useState<{ id: string; nome_fantasia: string }[]>([]);
