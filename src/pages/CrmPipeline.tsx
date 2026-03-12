@@ -319,7 +319,7 @@ export default function CrmPipeline() {
                     </div>
 
                     {/* Cards */}
-                    <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                    <div className="p-2 space-y-2">
                       {ops.map(op => (
                         <PipelineCard
                           key={op.id}
