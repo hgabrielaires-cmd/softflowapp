@@ -77,6 +77,7 @@ export function FunisTab() {
     setEditFunil(null);
   }
 
+  async function handleCreateEtapa() {
     if (!novaEtapaNome.trim() || !selectedFunilId) return;
     await createEtapa.mutateAsync({ funil_id: selectedFunilId, nome: novaEtapaNome.trim(), cor: novaEtapaCor, ordem: nextOrdem(etapasFunil) });
     setNovaEtapaNome("");
