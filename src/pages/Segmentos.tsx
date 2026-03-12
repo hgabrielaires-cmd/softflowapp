@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { TablePagination } from "@/components/TablePagination";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
