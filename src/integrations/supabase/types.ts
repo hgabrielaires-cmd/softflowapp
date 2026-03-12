@@ -566,6 +566,33 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_cargos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          nome: string
+          ordem: number
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+          ordem?: number
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       crm_comentarios: {
         Row: {
           anexo_nome: string | null
@@ -719,6 +746,51 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      crm_oportunidade_contatos: {
+        Row: {
+          cargo_id: string | null
+          created_at: string
+          email: string | null
+          id: string
+          nome: string
+          oportunidade_id: string
+          telefone: string
+        }
+        Insert: {
+          cargo_id?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome: string
+          oportunidade_id: string
+          telefone: string
+        }
+        Update: {
+          cargo_id?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string
+          oportunidade_id?: string
+          telefone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_oportunidade_contatos_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "crm_cargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_oportunidade_contatos_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "crm_oportunidades"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       crm_oportunidades: {
         Row: {
