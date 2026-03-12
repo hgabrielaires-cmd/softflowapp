@@ -479,7 +479,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                     </span>
                   </div>
                   <div className={`flex gap-2 ${excedeLimiteImpl ? "ring-1 ring-destructive rounded-md p-1" : ""}`}>
-                    <Select value={descontoImplantacaoTipo} onValueChange={(v) => setDescontoImplantacaoTipo(v as "R$" | "%")}>
+                    <Select value={descontoImplantacaoTipo} onValueChange={(v) => { setDescontoImplantacaoTipo(v as "R$" | "%"); persistDescontos(descontoImplantacao, v, descontoMensalidade, descontoMensalidadeTipo); }}>
                       <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="R$">R$</SelectItem>
