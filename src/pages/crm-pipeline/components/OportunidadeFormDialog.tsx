@@ -39,7 +39,7 @@ export function OportunidadeFormDialog({
   const [responsavelId, setResponsavelId] = useState<string>("");
   const [etapaId, setEtapaId] = useState("");
   const [segmentoIds, setSegmentoIds] = useState<string[]>([]);
-  const [observacoes, setObservacoes] = useState("");
+  
   const [camposValues, setCamposValues] = useState<Record<string, string>>({});
   const [segmentoPopoverOpen, setSegmentoPopoverOpen] = useState(false);
 
