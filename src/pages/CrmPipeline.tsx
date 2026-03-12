@@ -345,15 +345,34 @@ export default function CrmPipeline() {
 
                     {/* Cards */}
                     <div className="p-2 space-y-2">
-                      {ops.map(op => (
-                        <PipelineCard
-                          key={op.id}
-                          oportunidade={op}
-                          etapa={etapa}
-                          onDragStart={setDragCardId}
-                          onClick={handleCardClick}
-                        />
-                      ))}
+                      {(() => {
+                        const limit = visibleCountMap[etapa.id] || 15;
+                        const visible = ops.slice(0, limit);
+                        const hasMore = ops.length > limit;
+                        return (
+                          <>
+                            {visible.map(op => (
+                              <PipelineCard
+                                key={op.id}
+                                oportunidade={op}
+                                etapa={etapa}
+                                onDragStart={setDragCardId}
+                                onClick={handleCardClick}
+                              />
+                            ))}
+                            {hasMore && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full text-xs"
+                                onClick={() => setVisibleCountMap(prev => ({ ...prev, [etapa.id]: limit + 15 }))}
+                              >
+                                Carregar mais ({ops.length - limit} restantes)
+                              </Button>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
 
                     {/* Add button */}
