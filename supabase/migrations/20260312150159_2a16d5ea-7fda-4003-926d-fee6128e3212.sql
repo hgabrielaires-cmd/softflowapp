@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN funil_favorito_id UUID REFERENCES public.crm_funis(id) ON DELETE SET NULL DEFAULT NULL;
