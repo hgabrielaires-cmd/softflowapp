@@ -330,7 +330,7 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais }
                     Concluída por {concluidor.full_name} em {format(new Date(t.concluido_em!), "dd/MM/yy HH:mm", { locale: ptBR })}
                   </div>
                 )}
-
+              </div>
             );
           })}
         </div>
@@ -343,6 +343,15 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais }
         onClose={() => { setConcluirOpen(false); setConcluirTarefa(null); }}
         onConcluido={handleConcluido}
         onCriarNova={handleCriarNovaAposConcluir}
+      />
+
+      {/* Dialog de visualização */}
+      <VisualizarTarefaDialog
+        open={visualizarOpen}
+        onOpenChange={setVisualizarOpen}
+        tarefa={visualizarTarefa}
+        historico={visualizarTarefa ? (historicos[visualizarTarefa.id] || []) : []}
+        profiles={profiles}
       />
     </div>
   );
