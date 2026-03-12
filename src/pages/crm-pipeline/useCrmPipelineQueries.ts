@@ -42,7 +42,6 @@ export function useCrmPipelineQueries(funilId?: string) {
         .eq("status", "aberta")
         .order("ordem");
       if (error) throw error;
-      // Fetch profiles separately for responsavel names
       const ids = [...new Set((data || []).map(d => d.responsavel_id).filter(Boolean))] as string[];
       let profilesMap: Record<string, string> = {};
       if (ids.length > 0) {
@@ -61,8 +60,6 @@ export function useCrmPipelineQueries(funilId?: string) {
           ? { full_name: profilesMap[d.responsavel_id] }
           : null,
       })) as CrmOportunidade[];
-      if (error) throw error;
-      return (data || []) as CrmOportunidade[];
     },
   });
 
@@ -79,5 +76,44 @@ export function useCrmPipelineQueries(funilId?: string) {
     },
   });
 
-  return { funisQuery, etapasQuery, oportunidadesQuery, responsaveisQuery };
+  const segmentosQuery = useQuery({
+    queryKey: ["crm_segmentos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("segmentos")
+        .select("id, nome")
+        .eq("ativo", true)
+        .order("nome");
+      if (error) throw error;
+      return (data || []) as { id: string; nome: string }[];
+    },
+  });
+
+  const clientesQuery = useQuery({
+    queryKey: ["crm_clientes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clientes")
+        .select("id, nome_fantasia")
+        .eq("ativo", true)
+        .order("nome_fantasia");
+      if (error) throw error;
+      return (data || []) as { id: string; nome_fantasia: string }[];
+    },
+  });
+
+  const cargosQuery = useQuery({
+    queryKey: ["crm_cargos_ativos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crm_cargos")
+        .select("id, nome")
+        .eq("ativo", true)
+        .order("ordem");
+      if (error) throw error;
+      return (data || []) as { id: string; nome: string }[];
+    },
+  });
+
+  return { funisQuery, etapasQuery, oportunidadesQuery, responsaveisQuery, segmentosQuery, clientesQuery, cargosQuery };
 }

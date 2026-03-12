@@ -11,8 +11,6 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@
 import { Check, X, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
 import type { CrmCampoPersonalizado } from "@/pages/crm-parametros/types";
 
@@ -24,11 +22,6 @@ interface ContatoLocal {
   telefone: string;
   cargo_id: string;
   email: string;
-}
-
-interface Cargo {
-  id: string;
-  nome: string;
 }
 
 interface Props {
@@ -45,12 +38,13 @@ interface Props {
   currentUserId?: string;
   camposPersonalizados?: CrmCampoPersonalizado[];
   segmentos?: { id: string; nome: string }[];
+  cargos?: { id: string; nome: string }[];
 }
 
 const emptyContato = (): ContatoLocal => ({ nome: "", telefone: "", cargo_id: "", email: "" });
 
 export function OportunidadeFormDialog({
-  open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving, exibeCliente = true, currentUserId, camposPersonalizados = [], segmentos = [],
+  open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving, exibeCliente = true, currentUserId, camposPersonalizados = [], segmentos = [], cargos = [],
 }: Props) {
   const [titulo, setTitulo] = useState("");
   const [clienteId, setClienteId] = useState<string>("");
@@ -59,23 +53,7 @@ export function OportunidadeFormDialog({
   const [segmentoIds, setSegmentoIds] = useState<string[]>([]);
   const [camposValues, setCamposValues] = useState<Record<string, string>>({});
   const [segmentoPopoverOpen, setSegmentoPopoverOpen] = useState(false);
-
-  // Contatos
   const [contatos, setContatos] = useState<ContatoLocal[]>([emptyContato()]);
-
-  // Cargos from CRM params
-  const { data: cargos = [] } = useQuery({
-    queryKey: ["crm_cargos_ativos"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("crm_cargos")
-        .select("id, nome")
-        .eq("ativo", true)
-        .order("ordem");
-      if (error) throw error;
-      return data as Cargo[];
-    },
-  });
 
   const activeCampos = camposPersonalizados.filter(
     c => c.ativo && !CAMPOS_EXCLUIDOS.includes(c.nome.toLowerCase())
@@ -139,12 +117,11 @@ export function OportunidadeFormDialog({
 
   const contatosValid = contatos.every(c => c.nome.trim() && c.telefone.trim());
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!titulo.trim() || segmentoIds.length === 0 || !contatosValid) return;
     for (const campo of activeCampos) {
       if (campo.obrigatorio && !camposValues[campo.id]?.trim()) return;
     }
-
     onSave({
       titulo: titulo.trim(),
       etapa_id: etapaId,
