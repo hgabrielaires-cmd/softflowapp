@@ -125,9 +125,7 @@ export default function CrmPipeline() {
   };
 
   const handleCardClick = (op: CrmOportunidade) => {
-    setEditOportunidade(op);
-    setNewEtapaId("");
-    setDialogOpen(true);
+    setDetailOportunidade(op);
   };
 
   const handleSave = (data: Record<string, unknown>) => {
