@@ -181,7 +181,7 @@ export function OportunidadeFormDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={!titulo.trim() || saving}>
+          <Button onClick={handleSave} disabled={!titulo.trim() || !segmentoId || saving}>
             {saving ? "Salvando..." : "Salvar"}
           </Button>
         </DialogFooter>
