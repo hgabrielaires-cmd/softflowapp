@@ -346,47 +346,6 @@ export default function PainelAtendimento() {
     })();
   }, [detailCard?.id, detailCard?.etapa_id, etapas]);
 
-  async function finalizarEtapa() {
-    if (!detailCard) return;
-    setFinalizando(true);
-    try {
-      // Validar se todas as atividades da etapa estão concluídas
-      const atividadeIds = checklistEtapa.map((a: any) => a.id);
-      if (atividadeIds.length > 0 && !todasAtividadesConcluidas(atividadeExecucaoMap, detailCard.id, atividadeIds)) {
-        toast.error("Conclua todas as atividades da etapa antes de finalizar.");
-        setFinalizando(false);
-        return;
-      }
-      // Validar se checklist obrigatório da etapa está concluído
-      if (checklistEtapa.length > 0) {
-        const totalItens = checklistEtapa.reduce((acc: number, a: any) => acc + (Array.isArray(a.checklist) ? a.checklist.length : 0), 0);
-        const totalConcluidos = checklistEtapa.reduce((acc: number, a: any) => {
-          const items = Array.isArray(a.checklist) ? a.checklist : [];
-          return acc + items.filter((_: any, idx: number) => checklistProgresso[`${a.id}_${idx}`]?.concluido).length;
-        }, 0);
-        if (totalItens > 0 && totalConcluidos < totalItens) {
-          toast.error("Conclua todos os itens do checklist antes de finalizar a etapa.");
-          setFinalizando(false);
-          return;
-        }
-      }
-      const etapasOrdenadas = [...etapas].sort((a, b) => a.ordem - b.ordem);
-      const etapaAtualIdx = etapasOrdenadas.findIndex((e) => e.id === detailCard.etapa_id);
-      if (etapaAtualIdx === -1) { toast.error("Etapa atual não encontrada na lista de etapas ativas. Verifique a configuração."); return; }
-      const proximaEtapa = etapasOrdenadas[etapaAtualIdx + 1];
-      if (!proximaEtapa) { toast.error("Não há próxima etapa configurada após a etapa atual."); return; }
-      await registrarSaidaEtapa(detailCard.id, detailCard.etapa_id, slaEtapaJornada);
-      await registrarEntradaEtapa(detailCard.id, proximaEtapa.id, proximaEtapa.nome);
-      const { error } = await supabase.from("painel_atendimento").update({ etapa_id: proximaEtapa.id, iniciado_em: null, iniciado_por: null }).eq("id", detailCard.id);
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
-      queryClient.invalidateQueries({ queryKey: ["painel_atividade_execucao"] });
-      toast.success(`Avançado para etapa: ${proximaEtapa.nome}`);
-      const clienteNomeNotif = detailCard.clientes?.apelido || detailCard.clientes?.nome_fantasia || "Projeto";
-      notificarSeguidoresAvanco(detailCard.id, proximaEtapa.nome, clienteNomeNotif);
-      setDetailCard(null);
-    } catch { toast.error("Erro ao finalizar etapa."); } finally { setFinalizando(false); }
-  }
 
   // ─── Filtered cards ───────────────────────────────────────────────────────
   const filtered = useMemo(() => {
