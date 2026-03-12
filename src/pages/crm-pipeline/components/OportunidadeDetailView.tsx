@@ -191,11 +191,11 @@ export function OportunidadeDetailView({
             <TabsTrigger value="arquivos" className="gap-1"><FolderOpen className="h-3.5 w-3.5" /> Arquivos</TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-4 pr-1">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5" title="Valor Implantação (com desconto)">
               <span className="h-3 w-3 rounded-full bg-purple-500 shrink-0" />
               <span className="text-sm font-semibold">{formatCurrency(produtosTotais?.implantacao ?? 0)}</span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5" title="Valor Mensalidade (com desconto)">
               <span className="h-3 w-3 rounded-full bg-green-500 shrink-0" />
               <span className="text-sm font-semibold">{formatCurrency(produtosTotais?.mensalidade ?? 0)}</span>
             </div>
