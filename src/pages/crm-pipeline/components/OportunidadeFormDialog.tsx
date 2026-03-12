@@ -122,10 +122,10 @@ export function OportunidadeFormDialog({
           </div>
           <div>
             <Label>Origem</Label>
-            <Select value={origem} onValueChange={setOrigem}>
+            <Select value={origem || "__none__"} onValueChange={(v) => setOrigem(v === "__none__" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhuma</SelectItem>
+                <SelectItem value="__none__">Nenhuma</SelectItem>
                 {ORIGENS.map((o) => (
                   <SelectItem key={o} value={o}>{o}</SelectItem>
                 ))}
