@@ -189,11 +189,11 @@ export function FunisTab() {
                   onDragEnter={() => { dragOverItem.current = idx; }}
                   onDragOver={(e) => e.preventDefault()}
                   onDragEnd={handleDragEnd}
-                  className="flex flex-wrap items-center gap-2 p-3 rounded-lg border border-border bg-background hover:shadow-sm transition-shadow cursor-grab active:cursor-grabbing"
+                  className="flex items-center gap-2 p-3 rounded-lg border border-border bg-background hover:shadow-sm transition-shadow cursor-grab active:cursor-grabbing overflow-hidden"
                 >
                   <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: etapa.cor }} />
-                  <span className="text-sm font-medium flex-1 min-w-[80px]">{etapa.nome}</span>
+                  <span className="text-sm font-medium truncate flex-1">{etapa.nome}</span>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <Switch
                       checked={etapa.ativo}
