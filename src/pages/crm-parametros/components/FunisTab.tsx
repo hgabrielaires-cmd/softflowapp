@@ -359,6 +359,29 @@ export function FunisTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog: Editar Funil */}
+      <Dialog open={!!editFunil} onOpenChange={(open) => !open && setEditFunil(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Editar Funil</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Nome *</label>
+              <Input value={editFunilNome} onChange={(e) => setEditFunilNome(e.target.value)} placeholder="Nome do funil" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Descrição</label>
+              <Input value={editFunilDesc} onChange={(e) => setEditFunilDesc(e.target.value)} placeholder="Descrição opcional" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditFunil(null)}>Cancelar</Button>
+            <Button onClick={handleSaveEditFunil} disabled={!editFunilNome.trim() || updateFunil.isPending}>
+              {updateFunil.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
