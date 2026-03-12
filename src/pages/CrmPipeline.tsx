@@ -343,6 +343,7 @@ export default function CrmPipeline() {
         onSave={handleSave}
         saving={createMutation.isPending || updateMutation.isPending}
         exibeCliente={funis.find(f => f.id === selectedFunilId)?.exibe_cliente ?? true}
+        currentUserId={user?.id}
       />
     </AppLayout>
   );
