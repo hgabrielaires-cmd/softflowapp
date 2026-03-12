@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 import type { ClienteContato, ContatoFormState } from "@/pages/clientes/types";
+import { applyPhoneMask } from "@/lib/utils";
 
 interface ContatoFormDialogProps {
   open: boolean;
@@ -49,7 +50,7 @@ export function ContatoFormDialog({
           </div>
           <div className="space-y-1.5">
             <Label>Telefone</Label>
-            <Input value={form.telefone} onChange={(e) => onFormChange((f) => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
+            <Input value={applyPhoneMask(form.telefone)} onChange={(e) => onFormChange((f) => ({ ...f, telefone: e.target.value.replace(/\D/g, "") }))} placeholder="(00) 00000-0000" />
           </div>
           <div className="space-y-1.5">
             <Label>E-mail</Label>

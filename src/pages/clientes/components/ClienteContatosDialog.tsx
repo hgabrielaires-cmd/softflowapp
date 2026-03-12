@@ -9,6 +9,7 @@ import {
 import { Plus, Phone, Mail, Pencil, Loader2, AlertCircle, Star, Users } from "lucide-react";
 import { Cliente } from "@/lib/supabase-types";
 import type { ClienteContato } from "@/pages/clientes/types";
+import { formatPhoneDisplay } from "@/lib/utils";
 
 interface ClienteContatosDialogProps {
   open: boolean;
@@ -81,7 +82,7 @@ export function ClienteContatosDialog({
                   <div className="flex gap-3 mt-1">
                     {c.telefone && (
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Phone className="h-3 w-3" />{c.telefone}
+                        <Phone className="h-3 w-3" />{formatPhoneDisplay(c.telefone)}
                       </span>
                     )}
                     {c.email && (

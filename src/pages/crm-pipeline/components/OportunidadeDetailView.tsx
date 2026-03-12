@@ -12,6 +12,7 @@ import { ArrowLeft, Check, X, ChevronsUpDown, Plus, Trash2, ListChecks, Package,
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { OportunidadeComentarios } from "./OportunidadeComentarios";
+import { formatPhoneDisplay, applyPhoneMask } from "@/lib/utils";
 import { OportunidadeTarefas } from "./OportunidadeTarefas";
 import { OportunidadeProdutos } from "./OportunidadeProdutos";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
@@ -231,7 +232,7 @@ export function OportunidadeDetailView({
                       <div className="flex items-center gap-2 border rounded-md px-3 py-1.5 bg-muted/30">
                         <span className="text-xs font-medium truncate">{contato.nome || "Sem nome"}</span>
                         <span className="text-[10px] text-muted-foreground">•</span>
-                        <span className="text-xs text-muted-foreground truncate">{contato.telefone || "Sem telefone"}</span>
+                        <span className="text-xs text-muted-foreground truncate">{formatPhoneDisplay(contato.telefone) || "Sem telefone"}</span>
                         {cargoNome && (
                           <>
                             <span className="text-[10px] text-muted-foreground">•</span>
@@ -265,7 +266,7 @@ export function OportunidadeDetailView({
                             </div>
                             <div>
                               <Label className="text-xs">Telefone *</Label>
-                              <Input value={contato.telefone} onChange={(e) => updateContato(idx, "telefone", e.target.value)} placeholder="(00) 00000-0000" className="h-8 text-xs" />
+                              <Input value={applyPhoneMask(contato.telefone)} onChange={(e) => updateContato(idx, "telefone", e.target.value.replace(/\D/g, ""))} placeholder="(00) 00000-0000" className="h-8 text-xs" />
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2">

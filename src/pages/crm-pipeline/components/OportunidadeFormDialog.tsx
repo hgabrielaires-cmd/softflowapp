@@ -12,6 +12,7 @@ import { Check, X, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
+import { applyPhoneMask } from "@/lib/utils";
 import type { CrmCampoPersonalizado } from "@/pages/crm-parametros/types";
 
 const CAMPOS_EXCLUIDOS = ["sistema anterior", "tipo de atendimento"];
@@ -199,8 +200,8 @@ export function OportunidadeFormDialog({
                   <div>
                     <Label className="text-xs">Telefone *</Label>
                     <Input
-                      value={contato.telefone}
-                      onChange={(e) => updateContato(idx, "telefone", e.target.value)}
+                      value={applyPhoneMask(contato.telefone)}
+                      onChange={(e) => updateContato(idx, "telefone", e.target.value.replace(/\D/g, ""))}
                       placeholder="(00) 00000-0000"
                       className="h-8 text-xs"
                     />

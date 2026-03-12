@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Loader2, MapPin, AlertCircle, Users, Star, Trash2 } from "lucide-react";
 import { UF_LIST, emptyContatoForm } from "@/pages/clientes/constants";
 import type { ClienteFormState, ContatoFormState } from "@/pages/clientes/types";
+import { applyPhoneMask } from "@/lib/utils";
 import type { InlineContato } from "@/pages/clientes/useClienteForm";
 
 interface ClienteFormDialogProps {
@@ -362,7 +363,7 @@ export function ClienteFormDialog({
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Telefone</Label>
-                    <Input className="h-8 text-sm" value={inlineContatoForm.telefone} onChange={(e) => setInlineContatoForm((prev) => ({ ...prev, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
+                    <Input className="h-8 text-sm" value={applyPhoneMask(inlineContatoForm.telefone)} onChange={(e) => setInlineContatoForm((prev) => ({ ...prev, telefone: e.target.value.replace(/\D/g, "") }))} placeholder="(00) 00000-0000" />
                   </div>
                   <div className="col-span-2 space-y-1">
                     <Label className="text-xs">E-mail *</Label>
