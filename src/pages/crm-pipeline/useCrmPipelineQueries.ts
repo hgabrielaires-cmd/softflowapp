@@ -53,13 +53,40 @@ export function useCrmPipelineQueries(funilId?: string) {
           profilesMap = Object.fromEntries(profiles.map(p => [p.user_id, p.full_name]));
         }
       }
-      return (data || []).map(d => ({
-        ...d,
-        campos_personalizados: (d.campos_personalizados || {}) as Record<string, string>,
-        profiles: d.responsavel_id && profilesMap[d.responsavel_id]
-          ? { full_name: profilesMap[d.responsavel_id] }
-          : null,
-      })) as CrmOportunidade[];
+      // Fetch tarefas status per oportunidade
+      const opIds = (data || []).map(d => d.id);
+      let tarefasMap: Record<string, { total: number; vencidas: number }> = {};
+      if (opIds.length > 0) {
+        const { data: tarefas } = await supabase
+          .from("crm_tarefas")
+          .select("oportunidade_id, data_reuniao, concluido_em")
+          .in("oportunidade_id", opIds);
+        if (tarefas) {
+          const now = new Date();
+          tarefas.forEach(t => {
+            if (!tarefasMap[t.oportunidade_id]) tarefasMap[t.oportunidade_id] = { total: 0, vencidas: 0 };
+            tarefasMap[t.oportunidade_id].total++;
+            if (!t.concluido_em && t.data_reuniao && new Date(t.data_reuniao) < now) {
+              tarefasMap[t.oportunidade_id].vencidas++;
+            }
+          });
+        }
+      }
+      return (data || []).map(d => {
+        const info = tarefasMap[d.id];
+        let tarefas_status: "sem_tarefa" | "vencida" | "ok" = "sem_tarefa";
+        if (info && info.total > 0) {
+          tarefas_status = info.vencidas > 0 ? "vencida" : "ok";
+        }
+        return {
+          ...d,
+          campos_personalizados: (d.campos_personalizados || {}) as Record<string, string>,
+          profiles: d.responsavel_id && profilesMap[d.responsavel_id]
+            ? { full_name: profilesMap[d.responsavel_id] }
+            : null,
+          tarefas_status,
+        };
+      }) as CrmOportunidade[];
     },
   });
 
