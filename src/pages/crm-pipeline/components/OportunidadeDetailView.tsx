@@ -405,6 +405,9 @@ export function OportunidadeDetailView({
             tiposAtendimento={
               (camposPersonalizados.find(c => c.nome.toLowerCase() === "tipo de atendimento")?.opcoes || []) as string[]
             }
+            canais={
+              (camposPersonalizados.find(c => c.nome.toLowerCase() === "canal")?.opcoes || []) as string[]
+            }
           />
         </TabsContent>
 
