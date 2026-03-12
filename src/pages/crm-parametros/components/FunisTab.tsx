@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { Plus, Trash2, ChevronRight, Loader2, GripVertical, Pencil } from "lucide-react";
 import { useCrmFunis, useCrmEtapas } from "../useCrmParametrosQueries";
 import { useCreateFunil, useUpdateFunil, useDeleteFunil, useCreateEtapa, useUpdateEtapa, useDeleteEtapa } from "../useCrmParametrosForm";
