@@ -151,6 +151,25 @@ export function DetalhesDialog({ open, onOpenChange, data, loading, detailCard, 
                     </div>
                   </div>
                 )}
+                {/* Valores Implantação e Mensalidade */}
+                {podeVerValores && data.pedidoInfo && (
+                  <div className="ml-9 pt-2 border-t space-y-1.5">
+                    <div className="flex items-center gap-2" title="Valor Implantação">
+                      <span className="h-3 w-3 rounded-full bg-purple-500 shrink-0" />
+                      <span className="text-xs text-muted-foreground">Implantação:</span>
+                      <span className="text-sm font-semibold text-foreground">
+                        {(data.pedidoInfo.valor_implantacao_final ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2" title="Valor Mensalidade">
+                      <span className="h-3 w-3 rounded-full bg-green-500 shrink-0" />
+                      <span className="text-xs text-muted-foreground">Mensalidade:</span>
+                      <span className="text-sm font-semibold text-foreground">
+                        {(data.pedidoInfo.valor_mensalidade_final ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
