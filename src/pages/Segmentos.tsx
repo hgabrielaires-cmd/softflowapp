@@ -11,9 +11,6 @@ import { Switch } from "@/components/ui/switch";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { Plus, Loader2, Tag, Trash2, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -22,13 +19,7 @@ interface Segmento {
   id: string;
   nome: string;
   ativo: boolean;
-  filial_id: string;
   created_at: string;
-}
-
-interface Filial {
-  id: string;
-  nome: string;
 }
 
 export default function Segmentos() {
@@ -37,52 +28,29 @@ export default function Segmentos() {
   const canAccess = isAdmin || crudIncluir || crudEditar;
   const [segmentos, setSegmentos] = useState<Segmento[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [filiais, setFiliais] = useState<Filial[]>([]);
   const [loading, setLoading] = useState(true);
   const [novoSegmento, setNovoSegmento] = useState("");
-  const [filialSelecionada, setFilialSelecionada] = useState<string>("todas");
-  const [filtroFilial, setFiltroFilial] = useState<string>("todas");
   const [saving, setSaving] = useState(false);
   const [busca, setBusca] = useState("");
 
   if (!canAccess) return <Navigate to="/dashboard" replace />;
 
-  async function loadFiliais() {
-    const { data } = await supabase.from("filiais").select("id, nome").eq("ativa", true).order("nome");
-    if (data) {
-      setFiliais(data);
-    }
-  }
-
   async function loadSegmentos() {
     setLoading(true);
-    let query = supabase.from("segmentos").select("*").order("nome");
-    if (filtroFilial !== "todas") query = query.eq("filial_id", filtroFilial);
-    const { data, error } = await query;
+    const { data, error } = await supabase.from("segmentos").select("*").order("nome");
     if (error) toast.error("Erro ao carregar segmentos");
     else setSegmentos((data as Segmento[]) || []);
     setLoading(false);
   }
 
-  useEffect(() => { loadFiliais(); }, []);
-  useEffect(() => { loadSegmentos(); }, [filtroFilial]);
+  useEffect(() => { loadSegmentos(); }, []);
 
   async function handleAdd() {
     if (!novoSegmento.trim()) return;
-    if (!filialSelecionada) { toast.error("Selecione uma filial"); return; }
     setSaving(true);
-
-    if (filialSelecionada === "todas") {
-      const inserts = filiais.map(f => ({ nome: novoSegmento.trim(), filial_id: f.id }));
-      const { error } = await supabase.from("segmentos").insert(inserts);
-      if (error) toast.error("Erro ao adicionar segmento");
-      else { toast.success(`Segmento adicionado em ${filiais.length} filiais`); setNovoSegmento(""); loadSegmentos(); }
-    } else {
-      const { error } = await supabase.from("segmentos").insert({ nome: novoSegmento.trim(), filial_id: filialSelecionada });
-      if (error) toast.error("Erro ao adicionar segmento");
-      else { toast.success("Segmento adicionado"); setNovoSegmento(""); loadSegmentos(); }
-    }
-
+    const { error } = await supabase.from("segmentos").insert({ nome: novoSegmento.trim() });
+    if (error) toast.error("Erro ao adicionar segmento");
+    else { toast.success("Segmento adicionado"); setNovoSegmento(""); loadSegmentos(); }
     setSaving(false);
   }
 
@@ -97,8 +65,6 @@ export default function Segmentos() {
     else { toast.success("Segmento removido"); loadSegmentos(); }
   }
 
-  const filialNome = (filialId: string) => filiais.find(f => f.id === filialId)?.nome || "—";
-
   const filtrados = segmentos.filter(s =>
     !busca || s.nome.toLowerCase().includes(busca.toLowerCase())
   );
@@ -107,8 +73,7 @@ export default function Segmentos() {
   const totalPages = Math.max(1, Math.ceil(filtrados.length / ITEMS_PER_PAGE));
   const paginados = filtrados.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  // Reset page when filters change
-  useEffect(() => { setCurrentPage(1); }, [busca, filtroFilial]);
+  useEffect(() => { setCurrentPage(1); }, [busca]);
 
   return (
     <AppLayout>
@@ -125,19 +90,6 @@ export default function Segmentos() {
             Novo Segmento
           </h3>
           <div className="flex gap-2 items-end flex-wrap">
-            <div className="space-y-1 flex-1 min-w-[200px]">
-              <Select value={filialSelecionada} onValueChange={setFilialSelecionada}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a filial" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas as filiais</SelectItem>
-                  {filiais.map(f => (
-                    <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <div className="flex-1 min-w-[200px]">
               <Input
                 placeholder="Nome do segmento..."
@@ -153,19 +105,8 @@ export default function Segmentos() {
           </div>
         </div>
 
-        {/* Filtros */}
+        {/* Busca */}
         <div className="flex gap-3 items-center flex-wrap">
-          <Select value={filtroFilial} onValueChange={setFiltroFilial}>
-            <SelectTrigger className="w-[220px]">
-              <SelectValue placeholder="Filtrar por filial" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas as filiais</SelectItem>
-              {filiais.map(f => (
-                <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -183,7 +124,6 @@ export default function Segmentos() {
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead>Segmento</TableHead>
-                <TableHead>Filial</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Criado em</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -192,13 +132,13 @@ export default function Segmentos() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12">
+                  <TableCell colSpan={4} className="text-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : filtrados.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
                     <Tag className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     Nenhum segmento encontrado
                   </TableCell>
@@ -207,7 +147,6 @@ export default function Segmentos() {
                 paginados.map(seg => (
                   <TableRow key={seg.id}>
                     <TableCell className="font-medium">{seg.nome}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{filialNome(seg.filial_id)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Switch checked={seg.ativo} onCheckedChange={() => toggleAtivo(seg)} />
