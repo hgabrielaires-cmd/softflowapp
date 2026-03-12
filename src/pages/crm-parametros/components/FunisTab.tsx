@@ -32,11 +32,13 @@ export function FunisTab() {
   const [showCreateFunil, setShowCreateFunil] = useState(false);
   const [novoFunilNome, setNovoFunilNome] = useState("");
   const [novoFunilDesc, setNovoFunilDesc] = useState("");
+  const [novoFunilExibeCliente, setNovoFunilExibeCliente] = useState(true);
 
   // Funil editing
-  const [editFunil, setEditFunil] = useState<{ id: string; nome: string; descricao: string } | null>(null);
+  const [editFunil, setEditFunil] = useState<{ id: string; nome: string; descricao: string; exibe_cliente: boolean } | null>(null);
   const [editFunilNome, setEditFunilNome] = useState("");
   const [editFunilDesc, setEditFunilDesc] = useState("");
+  const [editFunilExibeCliente, setEditFunilExibeCliente] = useState(true);
 
   // Etapa creation
   const [showCreateEtapa, setShowCreateEtapa] = useState(false);
