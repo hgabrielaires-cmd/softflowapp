@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_oportunidades ADD COLUMN classificacao SMALLINT NOT NULL DEFAULT 0;
