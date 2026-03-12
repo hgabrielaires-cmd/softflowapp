@@ -153,6 +153,11 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
     let nome = "";
 
     if (addType === "plano") {
+      // Plano: só pode ter 1
+      if (items.some(it => it.tipo === "plano")) {
+        toast.error("Já existe um plano na proposta. Remova o atual para adicionar outro.");
+        return;
+      }
       const plano = planosQuery.data?.find((p) => p.id === addRef);
       if (!plano) return;
       valor_implantacao = plano.valor_implantacao_padrao;
@@ -161,6 +166,21 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
     } else {
       const modulo = modulosQuery.data?.find((m) => m.id === addRef);
       if (!modulo) return;
+      // Módulo sem revenda: não pode adicionar se já existe
+      if (!modulo.permite_revenda && items.some(it => it.tipo === "modulo" && it.referencia_id === addRef)) {
+        toast.error(`O módulo "${modulo.nome}" não permite venda duplicada.`);
+        return;
+      }
+      // Módulo com quantidade_maxima: validar total
+      if (modulo.quantidade_maxima) {
+        const qtdExistente = items
+          .filter(it => it.tipo === "modulo" && it.referencia_id === addRef)
+          .reduce((sum, it) => sum + it.quantidade, 0);
+        if (qtdExistente >= modulo.quantidade_maxima) {
+          toast.error(`Limite máximo de ${modulo.quantidade_maxima} unidade(s) para "${modulo.nome}" já atingido.`);
+          return;
+        }
+      }
       valor_implantacao = modulo.valor_implantacao_modulo || 0;
       valor_mensalidade = modulo.valor_mensalidade_modulo || 0;
       nome = modulo.nome;
