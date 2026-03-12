@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { OportunidadeComentarios } from "./OportunidadeComentarios";
 import { OportunidadeTarefas } from "./OportunidadeTarefas";
+import { OportunidadeProdutos } from "./OportunidadeProdutos";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
 import type { CrmCampoPersonalizado } from "@/pages/crm-parametros/types";
 
