@@ -32,6 +32,11 @@ export function FunisTab() {
   const [novoFunilNome, setNovoFunilNome] = useState("");
   const [novoFunilDesc, setNovoFunilDesc] = useState("");
 
+  // Funil editing
+  const [editFunil, setEditFunil] = useState<{ id: string; nome: string; descricao: string } | null>(null);
+  const [editFunilNome, setEditFunilNome] = useState("");
+  const [editFunilDesc, setEditFunilDesc] = useState("");
+
   // Etapa creation
   const [showCreateEtapa, setShowCreateEtapa] = useState(false);
   const [novaEtapaNome, setNovaEtapaNome] = useState("");
