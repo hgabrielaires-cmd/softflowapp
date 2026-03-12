@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
 import type { CrmCampoPersonalizado } from "@/pages/crm-parametros/types";
 
+const CAMPOS_EXCLUIDOS = ["sistema anterior", "tipo de atendimento"];
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -21,19 +23,23 @@ interface Props {
   exibeCliente?: boolean;
   currentUserId?: string;
   camposPersonalizados?: CrmCampoPersonalizado[];
+  segmentos?: { id: string; nome: string }[];
 }
 
 export function OportunidadeFormDialog({
-  open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving, exibeCliente = true, currentUserId, camposPersonalizados = [],
+  open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving, exibeCliente = true, currentUserId, camposPersonalizados = [], segmentos = [],
 }: Props) {
   const [titulo, setTitulo] = useState("");
   const [clienteId, setClienteId] = useState<string>("");
   const [responsavelId, setResponsavelId] = useState<string>("");
   const [etapaId, setEtapaId] = useState("");
+  const [segmentoId, setSegmentoId] = useState<string>("");
   const [observacoes, setObservacoes] = useState("");
   const [camposValues, setCamposValues] = useState<Record<string, string>>({});
 
-  const activeCampos = camposPersonalizados.filter(c => c.ativo);
+  const activeCampos = camposPersonalizados.filter(
+    c => c.ativo && !CAMPOS_EXCLUIDOS.includes(c.nome.toLowerCase())
+  );
 
   useEffect(() => {
     if (open) {
@@ -42,6 +48,7 @@ export function OportunidadeFormDialog({
         setClienteId(oportunidade.cliente_id || "");
         setResponsavelId(oportunidade.responsavel_id || "");
         setEtapaId(oportunidade.etapa_id);
+        setSegmentoId((oportunidade as any).segmento_id || "");
         setObservacoes(oportunidade.observacoes || "");
         setCamposValues(oportunidade.campos_personalizados || {});
       } else {
@@ -49,6 +56,7 @@ export function OportunidadeFormDialog({
         setClienteId("");
         setResponsavelId(currentUserId || "");
         setEtapaId(etapaIdInicial || etapas[0]?.id || "");
+        setSegmentoId("");
         setObservacoes("");
         setCamposValues({});
       }
@@ -57,7 +65,6 @@ export function OportunidadeFormDialog({
 
   const handleSave = () => {
     if (!titulo.trim()) return;
-    // Check required custom fields
     for (const campo of activeCampos) {
       if (campo.obrigatorio && !camposValues[campo.id]?.trim()) return;
     }
@@ -66,6 +73,7 @@ export function OportunidadeFormDialog({
       etapa_id: etapaId,
       cliente_id: clienteId || null,
       responsavel_id: responsavelId || null,
+      segmento_id: segmentoId || null,
       valor: 0,
       origem: null,
       observacoes: observacoes || null,
@@ -122,6 +130,18 @@ export function OportunidadeFormDialog({
                 <SelectItem value="__none__">Nenhum</SelectItem>
                 {responsaveis.map((r) => (
                   <SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Segmento</Label>
+            <Select value={segmentoId || "__none__"} onValueChange={(v) => setSegmentoId(v === "__none__" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Nenhum</SelectItem>
+                {segmentos.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

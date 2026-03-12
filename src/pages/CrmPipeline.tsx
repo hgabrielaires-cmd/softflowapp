@@ -44,6 +44,13 @@ export default function CrmPipeline() {
   const { createMutation, updateMutation, moveToEtapaMutation } = useCrmPipelineForm(selectedFunilId);
   const { data: camposPersonalizados = [] } = useCrmCamposPersonalizados();
 
+  // Carregar segmentos
+  const [segmentos, setSegmentos] = useState<{ id: string; nome: string }[]>([]);
+  useEffect(() => {
+    supabase.from("segmentos").select("id, nome").eq("ativo", true).order("nome")
+      .then(({ data }) => setSegmentos(data || []));
+  }, []);
+
   const funis = funisQuery.data || [];
   const etapas = etapasQuery.data || [];
   const oportunidades = oportunidadesQuery.data || [];
@@ -347,6 +354,7 @@ export default function CrmPipeline() {
         exibeCliente={funis.find(f => f.id === selectedFunilId)?.exibe_cliente ?? true}
         currentUserId={user?.id}
         camposPersonalizados={camposPersonalizados}
+        segmentos={segmentos}
       />
     </AppLayout>
   );
