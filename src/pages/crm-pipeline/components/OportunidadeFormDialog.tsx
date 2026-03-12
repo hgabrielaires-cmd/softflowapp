@@ -82,7 +82,7 @@ export function OportunidadeFormDialog({
       segmento_ids: segmentoIds,
       valor: 0,
       origem: null,
-      observacoes: observacoes || null,
+      observacoes: null,
       data_previsao_fechamento: null,
       campos_personalizados: camposValues,
     });
