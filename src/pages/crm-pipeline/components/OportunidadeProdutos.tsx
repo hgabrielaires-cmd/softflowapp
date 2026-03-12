@@ -481,7 +481,6 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
             limiteMensalidade={limiteMensalidade}
           />
         </div>
-        </div>
       )}
     </div>
   );
