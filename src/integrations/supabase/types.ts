@@ -942,6 +942,7 @@ export type Database = {
       }
       crm_tarefas: {
         Row: {
+          canal: string
           concluido_em: string | null
           concluido_por: string | null
           created_at: string
@@ -954,6 +955,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          canal?: string
           concluido_em?: string | null
           concluido_por?: string | null
           created_at?: string
@@ -966,6 +968,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          canal?: string
           concluido_em?: string | null
           concluido_por?: string | null
           created_at?: string
