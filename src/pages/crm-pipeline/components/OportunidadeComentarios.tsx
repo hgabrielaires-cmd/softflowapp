@@ -311,7 +311,7 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
                 )}
                 {replyingTo === c.id && (
                   <div className="ml-4 flex gap-2 items-start">
-                    <Textarea placeholder="Escreva sua resposta..." value={replyTexto} onChange={(e) => setReplyTexto(e.target.value)} className="min-h-[40px] text-xs flex-1" />
+                    <MentionInput value={replyTexto} onChange={setReplyTexto} users={allUsers} placeholder="Escreva sua resposta... Use @nome" className="min-h-[40px]" />
                     <Button size="sm" className="text-xs h-8" disabled={sendingReply || !replyTexto.trim()} onClick={() => handleEnviarResposta(c)}>
                       {sendingReply ? <Loader2 className="h-3 w-3 animate-spin" /> : "Enviar"}
                     </Button>
