@@ -198,6 +198,11 @@ const MENU_SECTIONS: MenuSection[] = [
     items: MENU_TREE.filter(m => ["menu.clientes", "menu.planos", "menu.modulos", "menu.fornecedores", "menu.servicos"].includes(m.key)),
   },
   {
+    title: "CRM",
+    icon: <Target className="h-4 w-4" />,
+    items: MENU_TREE.filter(m => m.key === "menu.crm"),
+  },
+  {
     title: "Vendas",
     icon: <ShoppingCart className="h-4 w-4" />,
     items: MENU_TREE.filter(m => m.key === "menu.pedidos"),
