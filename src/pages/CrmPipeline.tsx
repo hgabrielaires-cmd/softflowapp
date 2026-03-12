@@ -16,6 +16,7 @@ import { useCrmCamposPersonalizados } from "./crm-parametros/useCrmParametrosQue
 import { useCrmPipelineForm } from "./crm-pipeline/useCrmPipelineForm";
 import { PipelineCard } from "./crm-pipeline/components/PipelineCard";
 import { OportunidadeFormDialog } from "./crm-pipeline/components/OportunidadeFormDialog";
+import { OportunidadeDetailView } from "./crm-pipeline/components/OportunidadeDetailView";
 import { formatValor, totalValorEtapa } from "./crm-pipeline/helpers";
 import type { CrmOportunidade, CrmEtapaSimples } from "./crm-pipeline/types";
 
@@ -29,6 +30,7 @@ export default function CrmPipeline() {
   const [dragCardId, setDragCardId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editOportunidade, setEditOportunidade] = useState<CrmOportunidade | null>(null);
+  const [detailOportunidade, setDetailOportunidade] = useState<CrmOportunidade | null>(null);
   const [newEtapaId, setNewEtapaId] = useState<string>("");
 
   // Filtros
@@ -123,9 +125,7 @@ export default function CrmPipeline() {
   };
 
   const handleCardClick = (op: CrmOportunidade) => {
-    setEditOportunidade(op);
-    setNewEtapaId("");
-    setDialogOpen(true);
+    setDetailOportunidade(op);
   };
 
   const handleSave = (data: Record<string, unknown>) => {
@@ -140,11 +140,34 @@ export default function CrmPipeline() {
     }
   };
 
+  const handleDetailSave = (data: Record<string, unknown>) => {
+    if (!detailOportunidade) return;
+    updateMutation.mutate({ id: detailOportunidade.id, ...data } as CrmOportunidade, {
+      onSuccess: () => setDetailOportunidade(null),
+    });
+  };
+
   const isLoading = funisQuery.isLoading || etapasQuery.isLoading || oportunidadesQuery.isLoading;
 
   return (
     <AppLayout>
       <div className="flex flex-col h-[calc(100vh-64px)]">
+        {detailOportunidade ? (
+          <OportunidadeDetailView
+            oportunidade={detailOportunidade}
+            etapas={etapas}
+            clientes={clientes}
+            responsaveis={responsaveis}
+            onSave={handleDetailSave}
+            onBack={() => setDetailOportunidade(null)}
+            saving={updateMutation.isPending}
+            exibeCliente={funis.find(f => f.id === selectedFunilId)?.exibe_cliente ?? true}
+            camposPersonalizados={camposPersonalizados}
+            segmentos={segmentos}
+            cargos={cargos}
+          />
+        ) : (
+        <>
         {/* Header */}
         <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b bg-background">
           <h1 className="text-lg font-bold text-foreground mr-auto sm:mr-0">Pipeline de Vendas</h1>
@@ -325,6 +348,8 @@ export default function CrmPipeline() {
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
 
       <OportunidadeFormDialog
