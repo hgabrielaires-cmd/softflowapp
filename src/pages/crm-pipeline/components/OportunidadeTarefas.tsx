@@ -279,7 +279,7 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais }
               <div key={t.id} className={cn("border rounded-lg p-3 space-y-1.5", concluida ? "bg-muted/20 opacity-75" : "bg-background")}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <UserAvatar avatarUrl={criador?.avatar_url} fullName={criador?.full_name} size="xs" />
+                    <UserAvatar avatarUrl={criador?.avatar_url} fullName={criador?.full_name} size="md" />
                     <span className="text-xs font-medium truncate">{criador?.full_name || "Usuário"}</span>
                     <span className="text-[10px] text-muted-foreground shrink-0">
                       {format(new Date(t.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
