@@ -79,7 +79,7 @@ export function OportunidadeFormDialog({
         </DialogHeader>
         <div className="space-y-3 overflow-y-auto flex-1 pr-1 pb-2 min-h-0">
           <div>
-            <Label>Título *</Label>
+            <Label>Nome/Nome da Empresa *</Label>
             <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Nome/Empresa" />
           </div>
           <div>
