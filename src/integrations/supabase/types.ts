@@ -655,7 +655,7 @@ export type Database = {
           ordem: number
           origem: string | null
           responsavel_id: string | null
-          segmento_id: string | null
+          segmento_ids: string[] | null
           status: string
           titulo: string
           updated_at: string
@@ -675,7 +675,7 @@ export type Database = {
           ordem?: number
           origem?: string | null
           responsavel_id?: string | null
-          segmento_id?: string | null
+          segmento_ids?: string[] | null
           status?: string
           titulo: string
           updated_at?: string
@@ -695,7 +695,7 @@ export type Database = {
           ordem?: number
           origem?: string | null
           responsavel_id?: string | null
-          segmento_id?: string | null
+          segmento_ids?: string[] | null
           status?: string
           titulo?: string
           updated_at?: string
@@ -728,13 +728,6 @@ export type Database = {
             columns: ["funil_id"]
             isOneToOne: false
             referencedRelation: "crm_funis"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "crm_oportunidades_segmento_id_fkey"
-            columns: ["segmento_id"]
-            isOneToOne: false
-            referencedRelation: "segmentos"
             referencedColumns: ["id"]
           },
         ]
