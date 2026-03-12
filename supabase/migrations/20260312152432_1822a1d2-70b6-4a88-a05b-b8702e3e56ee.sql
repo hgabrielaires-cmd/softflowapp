@@ -1,0 +1,1 @@
+DROP POLICY "Vendedor visualiza todas oportunidades" ON public.crm_oportunidades;
