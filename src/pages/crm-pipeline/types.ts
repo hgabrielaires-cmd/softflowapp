@@ -23,6 +23,9 @@ export interface CrmOportunidade {
   profiles?: { full_name: string } | null;
   // Task status
   tarefas_status?: "sem_tarefa" | "vencida" | "ok";
+  // Product totals (after discount)
+  total_implantacao?: number;
+  total_mensalidade?: number;
 }
 
 export interface CrmFunilSimples {

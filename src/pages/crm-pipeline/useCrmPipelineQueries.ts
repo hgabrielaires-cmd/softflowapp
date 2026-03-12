@@ -72,12 +72,34 @@ export function useCrmPipelineQueries(funilId?: string) {
           });
         }
       }
+      // Fetch product totals per oportunidade
+      let prodTotalsMap: Record<string, { impl: number; mens: number }> = {};
+      if (opIds.length > 0) {
+        const { data: prods } = await supabase
+          .from("crm_oportunidade_produtos")
+          .select("oportunidade_id, valor_implantacao, valor_mensalidade, quantidade")
+          .in("oportunidade_id", opIds);
+        if (prods) {
+          prods.forEach(p => {
+            if (!prodTotalsMap[p.oportunidade_id]) prodTotalsMap[p.oportunidade_id] = { impl: 0, mens: 0 };
+            prodTotalsMap[p.oportunidade_id].impl += (p.valor_implantacao || 0) * (p.quantidade || 1);
+            prodTotalsMap[p.oportunidade_id].mens += (p.valor_mensalidade || 0) * (p.quantidade || 1);
+          });
+        }
+      }
       return (data || []).map(d => {
         const info = tarefasMap[d.id];
         let tarefas_status: "sem_tarefa" | "vencida" | "ok" = "sem_tarefa";
         if (info && info.total > 0) {
           tarefas_status = info.vencidas > 0 ? "vencida" : "ok";
         }
+        const raw = prodTotalsMap[d.id] || { impl: 0, mens: 0 };
+        const di = (d as any).desconto_implantacao || 0;
+        const dit = (d as any).desconto_implantacao_tipo || "R$";
+        const dm = (d as any).desconto_mensalidade || 0;
+        const dmt = (d as any).desconto_mensalidade_tipo || "R$";
+        const descImpl = dit === "%" ? raw.impl * di / 100 : di;
+        const descMens = dmt === "%" ? raw.mens * dm / 100 : dm;
         return {
           ...d,
           campos_personalizados: (d.campos_personalizados || {}) as Record<string, string>,
@@ -85,6 +107,8 @@ export function useCrmPipelineQueries(funilId?: string) {
             ? { full_name: profilesMap[d.responsavel_id] }
             : null,
           tarefas_status,
+          total_implantacao: Math.max(0, raw.impl - descImpl),
+          total_mensalidade: Math.max(0, raw.mens - descMens),
         };
       }) as CrmOportunidade[];
     },

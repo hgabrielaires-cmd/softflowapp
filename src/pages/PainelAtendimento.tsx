@@ -397,7 +397,7 @@ export default function PainelAtendimento() {
     try {
       let pedidoInfo: any = null;
       if (card.pedido_id) {
-        const { data: ped } = await supabase.from("pedidos").select("numero_exibicao, created_at, vendedor_id, tipo_pedido, modulos_adicionais, servicos_pedido, tipo_atendimento, valor_implantacao_final, valor_mensalidade_final").eq("id", card.pedido_id).single();
+        const { data: ped } = await supabase.from("pedidos").select("numero_exibicao, created_at, vendedor_id, tipo_pedido, modulos_adicionais, servicos_pedido, tipo_atendimento").eq("id", card.pedido_id).single();
         if (ped) { const { data: vendProf } = await supabase.from("profiles").select("full_name").eq("user_id", ped.vendedor_id).single(); pedidoInfo = { ...ped, vendedor_nome: vendProf?.full_name || "—" }; }
       }
       let contratoInfo: any = null;
