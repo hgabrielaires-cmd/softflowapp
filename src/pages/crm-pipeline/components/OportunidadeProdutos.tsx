@@ -55,9 +55,62 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
   const [descontoImplantacaoTipo, setDescontoImplantacaoTipo] = useState<"R$" | "%">("R$");
   const [descontoMensalidade, setDescontoMensalidade] = useState(0);
   const [descontoMensalidadeTipo, setDescontoMensalidadeTipo] = useState<"R$" | "%">("R$");
+  const [descontosLoaded, setDescontosLoaded] = useState(false);
 
   const limiteImplantacao = profile?.desconto_limite_implantacao ?? 0;
   const limiteMensalidade = profile?.desconto_limite_mensalidade ?? 0;
+
+  // Load discounts from oportunidade
+  const descontosQuery = useQuery({
+    queryKey: ["crm_oportunidade_descontos", oportunidadeId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crm_oportunidades")
+        .select("desconto_implantacao, desconto_implantacao_tipo, desconto_mensalidade, desconto_mensalidade_tipo")
+        .eq("id", oportunidadeId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    if (descontosQuery.data && !descontosLoaded) {
+      const d = descontosQuery.data as any;
+      const hasDesconto = (d.desconto_implantacao > 0 || d.desconto_mensalidade > 0);
+      setDescontoAtivo(hasDesconto);
+      setDescontoImplantacao(d.desconto_implantacao || 0);
+      setDescontoImplantacaoTipo(d.desconto_implantacao_tipo || "R$");
+      setDescontoMensalidade(d.desconto_mensalidade || 0);
+      setDescontoMensalidadeTipo(d.desconto_mensalidade_tipo || "R$");
+      setDescontosLoaded(true);
+    }
+  }, [descontosQuery.data, descontosLoaded]);
+
+  // Save discounts mutation
+  const saveDescontosMutation = useMutation({
+    mutationFn: async (params: { desconto_implantacao: number; desconto_implantacao_tipo: string; desconto_mensalidade: number; desconto_mensalidade_tipo: string }) => {
+      const { error } = await supabase
+        .from("crm_oportunidades")
+        .update(params)
+        .eq("id", oportunidadeId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm_oportunidade_descontos", oportunidadeId] });
+    },
+  });
+
+  const persistDescontos = (
+    impl: number, implTipo: string, mens: number, mensTipo: string
+  ) => {
+    saveDescontosMutation.mutate({
+      desconto_implantacao: impl,
+      desconto_implantacao_tipo: implTipo,
+      desconto_mensalidade: mens,
+      desconto_mensalidade_tipo: mensTipo,
+    });
+  };
 
   const planosQuery = useQuery({
     queryKey: ["crm_planos_catalogo"],
