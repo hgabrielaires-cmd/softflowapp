@@ -64,6 +64,24 @@ export function OportunidadeDetailView({
 
   const currentEtapa = etapas.find(e => e.id === etapaId);
 
+  const formatCurrency = (v: number) =>
+    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const { data: produtosTotais } = useQuery({
+    queryKey: ["crm-produtos-totais", oportunidade.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("crm_oportunidade_produtos")
+        .select("valor_implantacao, valor_mensalidade, quantidade")
+        .eq("oportunidade_id", oportunidade.id);
+      if (!data) return { implantacao: 0, mensalidade: 0 };
+      return {
+        implantacao: data.reduce((s, i) => s + (i.valor_implantacao || 0) * (i.quantidade || 1), 0),
+        mensalidade: data.reduce((s, i) => s + (i.valor_mensalidade || 0) * (i.quantidade || 1), 0),
+      };
+    },
+  });
+
   useEffect(() => {
     supabase
       .from("crm_oportunidade_contatos")
