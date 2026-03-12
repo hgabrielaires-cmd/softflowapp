@@ -98,6 +98,8 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm_oportunidade_descontos", oportunidadeId] });
+      queryClient.invalidateQueries({ queryKey: ["crm_oportunidades"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-produtos-totais", oportunidadeId] });
     },
   });
 
