@@ -166,7 +166,7 @@ export default function CrmPipeline() {
 
   return (
     <AppLayout>
-      <div className="flex flex-col h-[calc(100vh-64px)]">
+      <div className="flex flex-col min-h-[calc(100vh-64px)]">
         {detailOportunidade ? (
           <OportunidadeDetailView
             oportunidade={detailOportunidade}
