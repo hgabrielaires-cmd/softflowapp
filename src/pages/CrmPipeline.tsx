@@ -180,6 +180,7 @@ export default function CrmPipeline() {
             camposPersonalizados={camposPersonalizados}
             segmentos={segmentos}
             cargos={cargos}
+            defaultTab={detailDefaultTab}
           />
         ) : (
         <>
