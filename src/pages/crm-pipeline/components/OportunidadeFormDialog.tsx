@@ -64,7 +64,7 @@ export function OportunidadeFormDialog({
   }, [open, oportunidade, etapaIdInicial, etapas]);
 
   const handleSave = () => {
-    if (!titulo.trim()) return;
+    if (!titulo.trim() || !segmentoId) return;
     for (const campo of activeCampos) {
       if (campo.obrigatorio && !camposValues[campo.id]?.trim()) return;
     }
@@ -135,7 +135,7 @@ export function OportunidadeFormDialog({
             </Select>
           </div>
           <div>
-            <Label>Segmento</Label>
+            <Label>Segmento *</Label>
             <Select value={segmentoId || "__none__"} onValueChange={(v) => setSegmentoId(v === "__none__" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>
@@ -181,7 +181,7 @@ export function OportunidadeFormDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={!titulo.trim() || saving}>
+          <Button onClick={handleSave} disabled={!titulo.trim() || !segmentoId || saving}>
             {saving ? "Salvando..." : "Salvar"}
           </Button>
         </DialogFooter>
