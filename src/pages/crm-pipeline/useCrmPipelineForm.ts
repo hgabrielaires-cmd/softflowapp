@@ -64,11 +64,12 @@ export function useCrmPipelineForm(funilId?: string) {
         data_previsao_fechamento: rest.data_previsao_fechamento || null,
         campos_personalizados: rest.campos_personalizados || {},
         segmento_ids: rest.segmento_ids || [],
-      }).select("id").single();
+      }).select("*").single();
       if (error) throw error;
       if (_contatos && _contatos.length > 0 && data?.id) {
         await saveContatos(data.id, _contatos);
       }
+      return data;
     },
     onSuccess: () => { toast.success("Oportunidade criada!"); invalidate(); },
     onError: () => toast.error("Erro ao criar oportunidade"),
