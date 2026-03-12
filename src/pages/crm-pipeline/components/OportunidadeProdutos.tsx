@@ -473,7 +473,19 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
                       className={`flex-1 ${excedeLimiteMens ? "border-destructive" : ""}`}
                       placeholder="0"
                     />
-                    <Input readOnly value={formatCurrency(totalMensFinal)} className="w-36 bg-background font-mono text-sm text-primary font-semibold" />
+                    <Input
+                      type="text" inputMode="decimal"
+                      defaultValue={totalMensFinal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      key={`mens-final-${totalMensFinal.toFixed(2)}`}
+                      onBlur={(e) => {
+                        const raw = e.target.value.replace(/[R$\s]/g, "").replace(/\./g, "").replace(",", ".");
+                        const novoFinal = parseFloat(raw) || 0;
+                        const descontoCalc = Math.max(0, totalMensalidade - novoFinal);
+                        setDescontoMensalidadeTipo("R$");
+                        setDescontoMensalidade(parseFloat(descontoCalc.toFixed(2)));
+                      }}
+                      className="w-36 bg-background font-mono text-sm text-primary font-semibold"
+                    />
                   </div>
                 </div>
 
