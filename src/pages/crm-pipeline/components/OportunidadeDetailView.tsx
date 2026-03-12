@@ -100,6 +100,7 @@ export function OportunidadeDetailView({
       cliente_id: clienteId || null, responsavel_id: responsavelId || null,
       segmento_ids: segmentoIds, valor: 0, origem: null, observacoes: null,
       data_previsao_fechamento: null, campos_personalizados: camposValues,
+      classificacao,
       _contatos: contatos,
     });
   };
