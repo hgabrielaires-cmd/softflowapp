@@ -126,6 +126,7 @@ export default function CrmPipeline() {
   };
 
   const handleCardClick = (op: CrmOportunidade) => {
+    setDetailDefaultTab(undefined);
     setDetailOportunidade(op);
   };
 
