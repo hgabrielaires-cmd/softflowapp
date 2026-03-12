@@ -235,7 +235,7 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
             <span className="text-[10px] text-muted-foreground">{format(new Date(c.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}</span>
           </div>
         </div>
-        <p className="text-xs whitespace-pre-wrap">{c.texto}</p>
+        <p className="text-xs whitespace-pre-wrap">{renderMentionText(c.texto, allUsers)}</p>
         {c.anexo_url && c.anexo_nome && (
           <a href={c.anexo_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline">
             <Download className="h-3 w-3" /> {c.anexo_nome}
