@@ -566,6 +566,86 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_comentarios: {
+        Row: {
+          anexo_nome: string | null
+          anexo_url: string | null
+          created_at: string
+          id: string
+          oportunidade_id: string
+          parent_id: string | null
+          prioridade: string
+          texto: string
+          user_id: string
+        }
+        Insert: {
+          anexo_nome?: string | null
+          anexo_url?: string | null
+          created_at?: string
+          id?: string
+          oportunidade_id: string
+          parent_id?: string | null
+          prioridade?: string
+          texto: string
+          user_id: string
+        }
+        Update: {
+          anexo_nome?: string | null
+          anexo_url?: string | null
+          created_at?: string
+          id?: string
+          oportunidade_id?: string
+          parent_id?: string | null
+          prioridade?: string
+          texto?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_comentarios_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "crm_oportunidades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_comentarios_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "crm_comentarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_curtidas: {
+        Row: {
+          comentario_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comentario_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comentario_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_curtidas_comentario_id_fkey"
+            columns: ["comentario_id"]
+            isOneToOne: false
+            referencedRelation: "crm_comentarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_etapas: {
         Row: {
           ativo: boolean
