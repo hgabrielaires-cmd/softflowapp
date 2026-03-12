@@ -138,18 +138,16 @@ export function FunisTab() {
               <div
                 key={funil.id}
                 onClick={() => setSelectedFunilId(funil.id)}
-                className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
+                className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all gap-2 ${
                   isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/30 hover:bg-muted/50"
                 }`}
               >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="flex flex-col min-w-0">
-                    <span className="font-medium text-sm truncate">{funil.nome}</span>
-                    {funil.descricao && <span className="text-xs text-muted-foreground truncate">{funil.descricao}</span>}
-                  </div>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="font-medium text-sm truncate">{funil.nome}</span>
+                  {funil.descricao && <span className="text-xs text-muted-foreground truncate">{funil.descricao}</span>}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Badge variant="secondary" className="text-[10px]">{count} etapas</Badge>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Badge variant="secondary" className="text-[10px] hidden sm:inline-flex">{count} etapas</Badge>
                   <Switch
                     checked={funil.ativo}
                     onCheckedChange={(ativo) => updateFunil.mutate({ id: funil.id, ativo })}
