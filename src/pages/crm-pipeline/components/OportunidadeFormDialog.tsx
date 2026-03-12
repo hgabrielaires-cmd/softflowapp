@@ -90,7 +90,7 @@ export function OportunidadeFormDialog({
         setClienteId(oportunidade.cliente_id || "");
         setResponsavelId(oportunidade.responsavel_id || "");
         setEtapaId(oportunidade.etapa_id);
-        setSegmentoIds((oportunidade as any).segmento_ids || []);
+        setSegmentoIds(oportunidade.segmento_ids || []);
         setCamposValues(oportunidade.campos_personalizados || {});
       } else {
         setTitulo("");
