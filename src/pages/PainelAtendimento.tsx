@@ -91,7 +91,7 @@ export default function PainelAtendimento() {
   const [checklistLoading, setChecklistLoading] = useState(false);
   const [checklistProgresso, setChecklistProgresso] = useState<Record<string, { concluido: boolean; valor_texto?: string; valor_data?: string; concluido_por?: string; concluido_em?: string; concluido_por_nome?: string }>>({});
   const [etapaMesaInfo, setEtapaMesaInfo] = useState<{ id: string; cor: string | null } | null>(null);
-  const [finalizando, setFinalizando] = useState(false);
+  
   const [, setTick] = useState(0);
   const [novoComentario, setNovoComentario] = useState("");
   const mentionedUsersRef = useRef<string[]>([]);
