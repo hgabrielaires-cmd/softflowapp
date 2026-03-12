@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { User, Building2, Clock, DollarSign, AlertTriangle, ListChecks } from "lucide-react";
 import { User, Building2, Clock, DollarSign, AlertTriangle, ListChecks } from "lucide-react";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
 import { formatValor, getTempoDesdeCreacao } from "../helpers";
