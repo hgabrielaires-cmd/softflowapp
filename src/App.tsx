@@ -311,6 +311,30 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/dashboard-crm"
+              element={
+                <ProtectedRoute>
+                  <ComingSoon module="CRM" title="Dashboard CRM" description="Em desenvolvimento. Painel de indicadores do CRM." />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/crm-pipeline"
+              element={
+                <ProtectedRoute>
+                  <ComingSoon module="CRM" title="Pipeline de Vendas" description="Em desenvolvimento. Visualização do pipeline de vendas." />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/crm-agenda"
+              element={
+                <ProtectedRoute>
+                  <ComingSoon module="CRM" title="Agenda CRM" description="Em desenvolvimento. Agenda de atividades do CRM." />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
