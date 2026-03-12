@@ -139,6 +139,7 @@ export function OportunidadeDetailView({
               </button>
             ))}
           </div>
+        </div>
         <Button size="sm" className="h-8 shrink-0 gap-1" onClick={handleSave} disabled={!titulo.trim() || segmentoIds.length === 0 || !contatosValid || saving}>
           <Save className="h-3.5 w-3.5" />
           {saving ? "Salvando..." : "Salvar"}
