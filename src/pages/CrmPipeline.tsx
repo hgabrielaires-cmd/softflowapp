@@ -306,16 +306,24 @@ export default function CrmPipeline() {
                       <div className="flex items-center gap-2">
                         <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: etapa.cor }} />
                         <span className="font-semibold text-sm truncate flex-1">{etapa.nome}</span>
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
+                        <span className="text-sm font-bold text-foreground shrink-0">
                           {ops.length}
-                        </Badge>
+                        </span>
                       </div>
-                      {total > 0 && (
-                        <div className="flex items-center gap-1 mt-1 text-[11px] text-muted-foreground">
-                          <DollarSign className="h-3 w-3" />
-                          {formatValor(total)}
+                      <div className="mt-1.5 space-y-0.5">
+                        <div className="flex items-center gap-1" title="Total Implantação da etapa">
+                          <span className="h-2.5 w-2.5 rounded-full bg-purple-500 shrink-0" />
+                          <span className="text-[11px] font-semibold text-foreground">
+                            {formatValor(ops.reduce((s, o) => s + (o.total_implantacao ?? 0), 0))}
+                          </span>
                         </div>
-                      )}
+                        <div className="flex items-center gap-1" title="Total Mensalidade da etapa">
+                          <span className="h-2.5 w-2.5 rounded-full bg-green-500 shrink-0" />
+                          <span className="text-[11px] font-semibold text-foreground">
+                            {formatValor(ops.reduce((s, o) => s + (o.total_mensalidade ?? 0), 0))}
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Cards */}
