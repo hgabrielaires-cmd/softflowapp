@@ -1,5 +1,4 @@
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { User, Building2, Clock, DollarSign, AlertTriangle, ListChecks } from "lucide-react";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
 import { formatValor, getTempoDesdeCreacao } from "../helpers";
@@ -23,31 +22,28 @@ export function PipelineCard({ oportunidade, etapa, onDragStart, onClick }: Pipe
       style={{ borderTopColor: etapa?.cor || "hsl(var(--muted))" }}
     >
       <div className="p-3 space-y-2">
-        {/* Title + task icon */}
-        <div className="flex items-start justify-between gap-1">
-          <p className="font-semibold text-sm text-foreground leading-tight truncate flex-1">
-            {oportunidade.titulo}
-          </p>
-          <TooltipProvider delayDuration={200}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="shrink-0 mt-0.5">
-                  {tarefaStatus === "sem_tarefa" && (
-                    <ListChecks className="h-3.5 w-3.5 text-amber-500" />
-                  )}
-                  {tarefaStatus === "vencida" && (
-                    <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
-                  )}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                {tarefaStatus === "sem_tarefa" && "Sem tarefas cadastradas"}
-                {tarefaStatus === "vencida" && "Tarefa vencida sem retorno"}
-                {tarefaStatus === "ok" && "Tarefas em dia"}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+        {/* Title */}
+        <p className="font-semibold text-sm text-foreground leading-tight truncate">
+          {oportunidade.titulo}
+        </p>
+
+        {/* Task status indicator */}
+        {tarefaStatus !== "ok" && (
+          <div className="flex items-center gap-1.5">
+            {tarefaStatus === "sem_tarefa" && (
+              <>
+                <ListChecks className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                <span className="text-[10px] text-amber-600">Sem tarefas</span>
+              </>
+            )}
+            {tarefaStatus === "vencida" && (
+              <>
+                <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                <span className="text-[10px] text-destructive">Tarefa vencida</span>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Client */}
         {oportunidade.clientes && (
