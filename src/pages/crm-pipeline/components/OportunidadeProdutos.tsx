@@ -21,6 +21,8 @@ interface Modulo {
   nome: string;
   valor_implantacao_modulo: number | null;
   valor_mensalidade_modulo: number | null;
+  permite_revenda: boolean;
+  quantidade_maxima: number | null;
 }
 
 interface ProdutoItem {
