@@ -37,6 +37,8 @@ export default function CrmPipeline() {
   const [filterVendedorId, setFilterVendedorId] = useState<string>("__all__");
   const [filtersReady, setFiltersReady] = useState(false);
 
+  const isVendedor = roles.includes("vendedor");
+
   const { funisQuery, etapasQuery, oportunidadesQuery, responsaveisQuery } = useCrmPipelineQueries(selectedFunilId);
   const { createMutation, updateMutation, moveToEtapaMutation } = useCrmPipelineForm(selectedFunilId);
 
@@ -48,7 +50,6 @@ export default function CrmPipeline() {
   // Inicializar filtros com filial do usuário e vendedor logado
   useEffect(() => {
     if (filtersReady) return;
-    const isVendedor = roles.includes("vendedor");
     if (filialPadraoId) {
       setFilterFilialId(filialPadraoId);
     }
@@ -56,7 +57,7 @@ export default function CrmPipeline() {
       setFilterVendedorId(user.id);
     }
     setFiltersReady(true);
-  }, [filialPadraoId, roles, user?.id, filtersReady]);
+  }, [filialPadraoId, isVendedor, user?.id, filtersReady]);
 
   // Selecionar funil favorito ou primeiro ao carregar
   useEffect(() => {
@@ -216,21 +217,23 @@ export default function CrmPipeline() {
                     </Select>
                   </div>
 
-                  {/* Vendedor */}
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Vendedor</Label>
-                    <Select value={filterVendedorId} onValueChange={setFilterVendedorId}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Todos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">Todos os Vendedores</SelectItem>
-                        {responsaveis.map(r => (
-                          <SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Vendedor - oculto para vendedores (só veem as próprias) */}
+                  {!isVendedor && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Vendedor</Label>
+                      <Select value={filterVendedorId} onValueChange={setFilterVendedorId}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Todos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__all__">Todos os Vendedores</SelectItem>
+                          {responsaveis.map(r => (
+                            <SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   {/* Limpar filtros */}
                   {activeFilterCount > 0 && (
