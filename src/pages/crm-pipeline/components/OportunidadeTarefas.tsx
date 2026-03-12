@@ -331,35 +331,6 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais }
                   </div>
                 )}
 
-                {/* Histórico expandido */}
-                {isExpanded && hist.length > 0 && (
-                  <div className="mt-2 border-t pt-2 space-y-2">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Histórico</p>
-                    {hist.map(h => {
-                      const histProfile = profiles[h.user_id];
-                      return (
-                        <div key={h.id} className="border rounded p-2 bg-muted/20 space-y-1">
-                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                            <UserAvatar avatarUrl={histProfile?.avatar_url} fullName={histProfile?.full_name} size="xs" />
-                            <span>{histProfile?.full_name || "Usuário"}</span>
-                            <span>•</span>
-                            <span>{format(new Date(h.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}</span>
-                            <Badge variant={h.tipo === "adiamento" ? "outline" : "secondary"} className="text-[9px] ml-auto">
-                              {h.tipo === "adiamento" ? "Adiado" : "Concluído"}
-                            </Badge>
-                          </div>
-                          <p className="text-[11px] text-foreground">{h.resposta}</p>
-                          {h.tipo === "adiamento" && h.data_anterior && h.data_nova && (
-                            <div className="text-[10px] text-muted-foreground">
-                              {format(new Date(h.data_anterior), "dd/MM/yy HH:mm")} → {format(new Date(h.data_nova), "dd/MM/yy HH:mm")}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
             );
           })}
         </div>
