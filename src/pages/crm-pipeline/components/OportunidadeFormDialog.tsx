@@ -93,18 +93,20 @@ export function OportunidadeFormDialog({
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label>Cliente</Label>
-            <Select value={clienteId || "__none__"} onValueChange={(v) => setClienteId(v === "__none__" ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Nenhum</SelectItem>
-                {clientes.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {exibeCliente && (
+            <div>
+              <Label>Cliente</Label>
+              <Select value={clienteId || "__none__"} onValueChange={(v) => setClienteId(v === "__none__" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Nenhum</SelectItem>
+                  {clientes.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <Label>Responsável</Label>
             <Select value={responsavelId || "__none__"} onValueChange={(v) => setResponsavelId(v === "__none__" ? "" : v)}>
