@@ -229,10 +229,19 @@ export default function Segmentos() {
             </TableBody>
           </Table>
           {!loading && (
-            <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground flex items-center gap-1.5">
-              <Tag className="h-3.5 w-3.5" />
-              {filtrados.length} segmento(s)
-            </div>
+            <>
+              <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5" />
+                {filtrados.length} segmento(s)
+              </div>
+              <TablePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filtrados.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={setCurrentPage}
+              />
+            </>
           )}
         </div>
       </div>
