@@ -70,14 +70,29 @@ export function OportunidadeDetailView({
   const { data: produtosTotais } = useQuery({
     queryKey: ["crm-produtos-totais", oportunidade.id],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("crm_oportunidade_produtos")
-        .select("valor_implantacao, valor_mensalidade, quantidade")
-        .eq("oportunidade_id", oportunidade.id);
-      if (!data) return { implantacao: 0, mensalidade: 0 };
+      const [{ data: items }, { data: oport }] = await Promise.all([
+        supabase
+          .from("crm_oportunidade_produtos")
+          .select("valor_implantacao, valor_mensalidade, quantidade")
+          .eq("oportunidade_id", oportunidade.id),
+        supabase
+          .from("crm_oportunidades")
+          .select("desconto_implantacao, desconto_implantacao_tipo, desconto_mensalidade, desconto_mensalidade_tipo")
+          .eq("id", oportunidade.id)
+          .single(),
+      ]);
+      if (!items) return { implantacao: 0, mensalidade: 0 };
+      const totalImpl = items.reduce((s, i) => s + (i.valor_implantacao || 0) * (i.quantidade || 1), 0);
+      const totalMens = items.reduce((s, i) => s + (i.valor_mensalidade || 0) * (i.quantidade || 1), 0);
+      const di = oport?.desconto_implantacao || 0;
+      const dit = oport?.desconto_implantacao_tipo || "R$";
+      const dm = oport?.desconto_mensalidade || 0;
+      const dmt = oport?.desconto_mensalidade_tipo || "R$";
+      const descImpl = dit === "%" ? totalImpl * di / 100 : di;
+      const descMens = dmt === "%" ? totalMens * dm / 100 : dm;
       return {
-        implantacao: data.reduce((s, i) => s + (i.valor_implantacao || 0) * (i.quantidade || 1), 0),
-        mensalidade: data.reduce((s, i) => s + (i.valor_mensalidade || 0) * (i.quantidade || 1), 0),
+        implantacao: Math.max(0, totalImpl - descImpl),
+        mensalidade: Math.max(0, totalMens - descMens),
       };
     },
   });
