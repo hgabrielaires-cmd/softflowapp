@@ -291,24 +291,30 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
             <span />
           </div>
 
-          {items.map((item, idx) => (
+          {items.map((item, idx) => {
+            const isPlano = item.tipo === "plano";
+            const modulo = !isPlano ? modulosQuery.data?.find(m => m.id === item.referencia_id) : null;
+            const qtdLocked = isPlano || (modulo && !modulo.permite_revenda);
+            return (
             <div
               key={item.id || idx}
               className="grid grid-cols-[1fr_80px_120px_120px_40px] gap-2 items-center border rounded-md px-2 py-2 bg-muted/20"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <Badge variant={item.tipo === "plano" ? "default" : "secondary"} className="text-[10px] shrink-0">
-                  {item.tipo === "plano" ? "Plano" : "Módulo"}
+                <Badge variant={isPlano ? "default" : "secondary"} className="text-[10px] shrink-0">
+                  {isPlano ? "Plano" : "Módulo"}
                 </Badge>
                 <span className="text-sm font-medium truncate">{item.nome}</span>
               </div>
               <Input
                 type="number"
                 min={1}
+                max={modulo?.quantidade_maxima || undefined}
                 value={item.quantidade}
                 onChange={(e) => updateItemLocal(idx, "quantidade", parseInt(e.target.value) || 1)}
                 onBlur={() => handleUpdateItem(item)}
                 className="h-8 text-xs text-center"
+                disabled={!!qtdLocked}
               />
               <Input
                 type="number"
