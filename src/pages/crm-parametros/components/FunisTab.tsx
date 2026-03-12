@@ -169,6 +169,10 @@ export function FunisTab() {
                     onCheckedChange={(ativo) => updateFunil.mutate({ id: funil.id, ativo })}
                     onClick={(e) => e.stopPropagation()}
                   />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                    onClick={(e) => { e.stopPropagation(); handleOpenEditFunil(funil); }}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
                     onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: "funil", id: funil.id, nome: funil.nome }); }}>
                     <Trash2 className="h-3.5 w-3.5" />
