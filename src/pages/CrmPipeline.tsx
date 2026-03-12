@@ -10,8 +10,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { Plus, Search, DollarSign, RefreshCw, Filter } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { useCrmPipelineQueries } from "./crm-pipeline/useCrmPipelineQueries";
 import { useCrmCamposPersonalizados } from "./crm-parametros/useCrmParametrosQueries";
@@ -40,21 +38,17 @@ export default function CrmPipeline() {
 
   const isVendedor = roles.includes("vendedor");
 
-  const { funisQuery, etapasQuery, oportunidadesQuery, responsaveisQuery } = useCrmPipelineQueries(selectedFunilId);
+  const { funisQuery, etapasQuery, oportunidadesQuery, responsaveisQuery, segmentosQuery, clientesQuery, cargosQuery } = useCrmPipelineQueries(selectedFunilId);
   const { createMutation, updateMutation, moveToEtapaMutation } = useCrmPipelineForm(selectedFunilId);
   const { data: camposPersonalizados = [] } = useCrmCamposPersonalizados();
-
-  // Carregar segmentos
-  const [segmentos, setSegmentos] = useState<{ id: string; nome: string }[]>([]);
-  useEffect(() => {
-    supabase.from("segmentos").select("id, nome").eq("ativo", true).order("nome")
-      .then(({ data }) => setSegmentos(data || []));
-  }, []);
 
   const funis = funisQuery.data || [];
   const etapas = etapasQuery.data || [];
   const oportunidades = oportunidadesQuery.data || [];
   const responsaveis = responsaveisQuery.data || [];
+  const segmentos = segmentosQuery.data || [];
+  const clientes = clientesQuery.data || [];
+  const cargos = cargosQuery.data || [];
 
   // Inicializar filtros com filial do usuário e vendedor logado
   useEffect(() => {
@@ -76,14 +70,6 @@ export default function CrmPipeline() {
       setSelectedFunilId(favExists ? favId! : funis[0].id);
     }
   }, [funis, selectedFunilId, profile?.funil_favorito_id]);
-
-  // Buscar clientes
-  const [clientes, setClientes] = useState<{ id: string; nome_fantasia: string }[]>([]);
-  useEffect(() => {
-    supabase.from("clientes").select("id, nome_fantasia").eq("ativo", true).order("nome_fantasia").then(({ data }) => {
-      if (data) setClientes(data);
-    });
-  }, []);
 
   // Contar filtros ativos
   const activeFilterCount = useMemo(() => {
@@ -355,6 +341,7 @@ export default function CrmPipeline() {
         currentUserId={user?.id}
         camposPersonalizados={camposPersonalizados}
         segmentos={segmentos}
+        cargos={cargos}
       />
     </AppLayout>
   );
