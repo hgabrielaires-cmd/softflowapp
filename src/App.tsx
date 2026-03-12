@@ -37,6 +37,7 @@ import Segmentos from "./pages/Segmentos";
 import Setores from "./pages/Setores";
 import Automacoes from "./pages/Automacoes";
 import Faturamento from "./pages/Faturamento";
+import CrmParametros from "./pages/crm-parametros/CrmParametros";
 
 const queryClient = new QueryClient();
 
