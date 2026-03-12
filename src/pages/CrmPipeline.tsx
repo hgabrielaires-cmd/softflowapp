@@ -216,21 +216,23 @@ export default function CrmPipeline() {
                     </Select>
                   </div>
 
-                  {/* Vendedor */}
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Vendedor</Label>
-                    <Select value={filterVendedorId} onValueChange={setFilterVendedorId}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Todos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">Todos os Vendedores</SelectItem>
-                        {responsaveis.map(r => (
-                          <SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Vendedor - oculto para vendedores (só veem as próprias) */}
+                  {!isVendedor && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Vendedor</Label>
+                      <Select value={filterVendedorId} onValueChange={setFilterVendedorId}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Todos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__all__">Todos os Vendedores</SelectItem>
+                          {responsaveis.map(r => (
+                            <SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   {/* Limpar filtros */}
                   {activeFilterCount > 0 && (
