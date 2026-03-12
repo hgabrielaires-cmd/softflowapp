@@ -437,7 +437,7 @@ export function usePainelCardActions(deps: CardActionsDeps) {
     retomarOpen, setRetomarOpen, retomarComentario, setRetomarComentario, retomando,
     resetarOpen, setResetarOpen, resetarMotivo, setResetarMotivo, resetando,
     cancelarOpen, setCancelarOpen, cancelarMotivo, setCancelarMotivo, cancelando,
-    agendamentosCancelOpen, setAgendamentosCancelOpen, agendamentosCancelados, removendoAgendamentos,
+    agendamentosCancelOpen, setAgendamentosCancelOpen, agendamentosCancelados, setAgendamentosCancelados, removendoAgendamentos,
     verPedidoOpen, setVerPedidoOpen, verPedidoData, verPedidoLoading,
     finalizando,
     detalhesOpen, setDetalhesOpen, detalhesData, detalhesLoading,
