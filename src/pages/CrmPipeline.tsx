@@ -290,7 +290,7 @@ export default function CrmPipeline() {
               {funis.length === 0 ? "Nenhum funil cadastrado. Configure em Parâmetros > CRM." : "Nenhuma etapa cadastrada para este funil."}
             </div>
           ) : (
-            <div className="flex gap-3 p-4 h-full">
+            <div className="flex gap-3 p-4">
               {etapas.map(etapa => {
                 const ops = getOpsForEtapa(etapa.id);
                 const total = totalValorEtapa(ops);
@@ -319,7 +319,7 @@ export default function CrmPipeline() {
                     </div>
 
                     {/* Cards */}
-                    <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                    <div className="p-2 space-y-2">
                       {ops.map(op => (
                         <PipelineCard
                           key={op.id}
