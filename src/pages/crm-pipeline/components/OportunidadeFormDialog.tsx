@@ -19,6 +19,7 @@ interface Props {
   onSave: (data: Record<string, unknown>) => void;
   saving?: boolean;
   exibeCliente?: boolean;
+  currentUserId?: string;
 }
 
 export function OportunidadeFormDialog({
