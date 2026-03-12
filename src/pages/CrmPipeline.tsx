@@ -135,7 +135,20 @@ export default function CrmPipeline() {
       });
     } else {
       createMutation.mutate({ funil_id: selectedFunilId, ...data } as CrmOportunidade, {
-        onSuccess: () => setDialogOpen(false),
+        onSuccess: (created) => {
+          setDialogOpen(false);
+          if (created) {
+            setDetailOportunidade({
+              ...created,
+              campos_personalizados: (created.campos_personalizados || {}) as Record<string, string>,
+              profiles: null,
+              tarefas_status: "sem_tarefa",
+              total_implantacao: 0,
+              total_mensalidade: 0,
+            } as CrmOportunidade);
+            setDetailDefaultTab("tarefas");
+          }
+        },
       });
     }
   };
