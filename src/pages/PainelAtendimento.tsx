@@ -78,9 +78,9 @@ export default function PainelAtendimento() {
   const [filtroMesa, setFiltroMesa] = useState<string>("todos");
   const [detailCard, setDetailCard] = useState<PainelCard | null>(null);
   const [openedFrom, setOpenedFrom] = useState<string | null>(null);
-  const [detalhesOpen, setDetalhesOpen] = useState(false);
-  const [detalhesData, setDetalhesData] = useState<any>(null);
-  const [detalhesLoading, setDetalhesLoading] = useState(false);
+  const [seguindoProjeto, setSeguindoProjeto] = useState(false);
+  const [seguidoresList, setSeguidoresList] = useState<any[]>([]);
+  const [seguindoLoading, setSeguindoLoading] = useState(false);
   const [planoAnteriorNome, setPlanoAnteriorNome] = useState<string | null>(null);
   const [dragCardId, setDragCardId] = useState<string | null>(null);
   const [kanbanVisibleCount, setKanbanVisibleCount] = useState<Record<string, number>>({});
@@ -91,7 +91,7 @@ export default function PainelAtendimento() {
   const [checklistLoading, setChecklistLoading] = useState(false);
   const [checklistProgresso, setChecklistProgresso] = useState<Record<string, { concluido: boolean; valor_texto?: string; valor_data?: string; concluido_por?: string; concluido_em?: string; concluido_por_nome?: string }>>({});
   const [etapaMesaInfo, setEtapaMesaInfo] = useState<{ id: string; cor: string | null } | null>(null);
-  const [finalizando, setFinalizando] = useState(false);
+  
   const [, setTick] = useState(0);
   const [novoComentario, setNovoComentario] = useState("");
   const mentionedUsersRef = useRef<string[]>([]);
@@ -101,9 +101,6 @@ export default function PainelAtendimento() {
   const [likesPopoverOpen, setLikesPopoverOpen] = useState<string | null>(null);
   const [tecnicosSelecionados, setTecnicosSelecionados] = useState<string[]>([]);
   const [buscaTecnico, setBuscaTecnico] = useState<string | null>(null);
-  const [historicoOpen, setHistoricoOpen] = useState(false);
-  const [historicoData, setHistoricoData] = useState<any[]>([]);
-  const [historicoLoading, setHistoricoLoading] = useState(false);
   const [configEditMode, setConfigEditMode] = useState(false);
   const [checklistEditMode, setChecklistEditMode] = useState(false);
   const [cardAgendamentos, setCardAgendamentos] = useState<any[]>([]);
@@ -139,7 +136,7 @@ export default function PainelAtendimento() {
     retomarOpen, setRetomarOpen, retomarComentario, setRetomarComentario, retomando,
     resetarOpen, setResetarOpen, resetarMotivo, setResetarMotivo, resetando,
     cancelarOpen, setCancelarOpen, cancelarMotivo, setCancelarMotivo, cancelando,
-    agendamentosCancelOpen, setAgendamentosCancelOpen, agendamentosCancelados, removendoAgendamentos,
+    agendamentosCancelOpen, setAgendamentosCancelOpen, agendamentosCancelados, setAgendamentosCancelados, removendoAgendamentos,
     verPedidoOpen, setVerPedidoOpen, verPedidoData, verPedidoLoading,
     finalizando,
     detalhesOpen, setDetalhesOpen, detalhesData, detalhesLoading,
