@@ -131,7 +131,14 @@ export function OportunidadeDetailView({
           {currentEtapa && (
             <Badge variant="outline" className="text-[10px] shrink-0">{currentEtapa.nome}</Badge>
           )}
-        </div>
+          {/* Classificação estrelas */}
+          <div className="flex items-center gap-0.5 shrink-0">
+            {[1, 2, 3, 4, 5].map(i => (
+              <button key={i} type="button" onClick={() => setClassificacao(i === classificacao ? 0 : i)} className="focus:outline-none">
+                <Star className={cn("h-4 w-4 transition-colors", i <= classificacao ? "text-primary fill-primary" : "text-muted-foreground/30")} />
+              </button>
+            ))}
+          </div>
         <Button size="sm" className="h-8 shrink-0 gap-1" onClick={handleSave} disabled={!titulo.trim() || segmentoIds.length === 0 || !contatosValid || saving}>
           <Save className="h-3.5 w-3.5" />
           {saving ? "Salvando..." : "Salvar"}
