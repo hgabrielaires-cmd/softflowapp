@@ -42,6 +42,7 @@ export default function CrmPipeline() {
 
   const { funisQuery, etapasQuery, oportunidadesQuery, responsaveisQuery } = useCrmPipelineQueries(selectedFunilId);
   const { createMutation, updateMutation, moveToEtapaMutation } = useCrmPipelineForm(selectedFunilId);
+  const { data: camposPersonalizados = [] } = useCrmCamposPersonalizados();
 
   const funis = funisQuery.data || [];
   const etapas = etapasQuery.data || [];
