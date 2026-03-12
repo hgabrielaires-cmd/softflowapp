@@ -102,6 +102,13 @@ export default function Segmentos() {
     !busca || s.nome.toLowerCase().includes(busca.toLowerCase())
   );
 
+  const ITEMS_PER_PAGE = 15;
+  const totalPages = Math.max(1, Math.ceil(filtrados.length / ITEMS_PER_PAGE));
+  const paginados = filtrados.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [busca, filtroFilial]);
+
   return (
     <AppLayout>
       <div className="space-y-5">
