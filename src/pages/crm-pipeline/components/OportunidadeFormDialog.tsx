@@ -55,7 +55,7 @@ export function OportunidadeFormDialog({
         setResponsavelId(oportunidade.responsavel_id || "");
         setEtapaId(oportunidade.etapa_id);
         setSegmentoIds((oportunidade as any).segmento_ids || []);
-        setObservacoes(oportunidade.observacoes || "");
+        
         setCamposValues(oportunidade.campos_personalizados || {});
       } else {
         setTitulo("");
