@@ -1,10 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
+import { Check, X, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
 import type { CrmCampoPersonalizado } from "@/pages/crm-parametros/types";
 
@@ -33,9 +38,10 @@ export function OportunidadeFormDialog({
   const [clienteId, setClienteId] = useState<string>("");
   const [responsavelId, setResponsavelId] = useState<string>("");
   const [etapaId, setEtapaId] = useState("");
-  const [segmentoId, setSegmentoId] = useState<string>("");
+  const [segmentoIds, setSegmentoIds] = useState<string[]>([]);
   const [observacoes, setObservacoes] = useState("");
   const [camposValues, setCamposValues] = useState<Record<string, string>>({});
+  const [segmentoPopoverOpen, setSegmentoPopoverOpen] = useState(false);
 
   const activeCampos = camposPersonalizados.filter(
     c => c.ativo && !CAMPOS_EXCLUIDOS.includes(c.nome.toLowerCase())
@@ -48,7 +54,7 @@ export function OportunidadeFormDialog({
         setClienteId(oportunidade.cliente_id || "");
         setResponsavelId(oportunidade.responsavel_id || "");
         setEtapaId(oportunidade.etapa_id);
-        setSegmentoId((oportunidade as any).segmento_id || "");
+        setSegmentoIds((oportunidade as any).segmento_ids || []);
         setObservacoes(oportunidade.observacoes || "");
         setCamposValues(oportunidade.campos_personalizados || {});
       } else {
@@ -56,7 +62,7 @@ export function OportunidadeFormDialog({
         setClienteId("");
         setResponsavelId(currentUserId || "");
         setEtapaId(etapaIdInicial || etapas[0]?.id || "");
-        setSegmentoId("");
+        setSegmentoIds([]);
         setObservacoes("");
         setCamposValues({});
       }
@@ -64,7 +70,7 @@ export function OportunidadeFormDialog({
   }, [open, oportunidade, etapaIdInicial, etapas]);
 
   const handleSave = () => {
-    if (!titulo.trim() || !segmentoId) return;
+    if (!titulo.trim() || segmentoIds.length === 0) return;
     for (const campo of activeCampos) {
       if (campo.obrigatorio && !camposValues[campo.id]?.trim()) return;
     }
@@ -73,7 +79,7 @@ export function OportunidadeFormDialog({
       etapa_id: etapaId,
       cliente_id: clienteId || null,
       responsavel_id: responsavelId || null,
-      segmento_id: segmentoId || null,
+      segmento_ids: segmentoIds,
       valor: 0,
       origem: null,
       observacoes: observacoes || null,
@@ -85,6 +91,18 @@ export function OportunidadeFormDialog({
   const setCampoValue = (campoId: string, value: string) => {
     setCamposValues(prev => ({ ...prev, [campoId]: value }));
   };
+
+  const toggleSegmento = (id: string) => {
+    setSegmentoIds(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    );
+  };
+
+  const removeSegmento = (id: string) => {
+    setSegmentoIds(prev => prev.filter(s => s !== id));
+  };
+
+  const getSegmentoNome = (id: string) => segmentos.find(s => s.id === id)?.nome || id;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -134,17 +152,58 @@ export function OportunidadeFormDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Segmento - Multi-select com busca */}
           <div>
             <Label>Segmento *</Label>
-            <Select value={segmentoId || "__none__"} onValueChange={(v) => setSegmentoId(v === "__none__" ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Nenhum</SelectItem>
-                {segmentos.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={segmentoPopoverOpen} onOpenChange={setSegmentoPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={segmentoPopoverOpen}
+                  className="w-full justify-between font-normal h-auto min-h-10"
+                >
+                  {segmentoIds.length === 0 ? (
+                    <span className="text-muted-foreground">Buscar segmento...</span>
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {segmentoIds.map(id => (
+                        <Badge key={id} variant="secondary" className="text-xs gap-1">
+                          {getSegmentoNome(id)}
+                          <button
+                            type="button"
+                            className="ml-0.5 hover:text-destructive"
+                            onClick={(e) => { e.stopPropagation(); removeSegmento(id); }}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Digitar para buscar..." />
+                  <CommandList>
+                    <CommandEmpty>Nenhum segmento encontrado</CommandEmpty>
+                    {segmentos.map((s) => (
+                      <CommandItem
+                        key={s.id}
+                        value={s.nome}
+                        onSelect={() => toggleSegmento(s.id)}
+                      >
+                        <Check className={cn("mr-2 h-4 w-4", segmentoIds.includes(s.id) ? "opacity-100" : "opacity-0")} />
+                        {s.nome}
+                      </CommandItem>
+                    ))}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Campos Personalizados */}
@@ -181,7 +240,7 @@ export function OportunidadeFormDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={!titulo.trim() || !segmentoId || saving}>
+          <Button onClick={handleSave} disabled={!titulo.trim() || segmentoIds.length === 0 || saving}>
             {saving ? "Salvando..." : "Salvar"}
           </Button>
         </DialogFooter>
