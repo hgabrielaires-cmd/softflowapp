@@ -53,6 +53,7 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
   const { user } = useAuth();
   const [comentarios, setComentarios] = useState<Comentario[]>([]);
   const [profiles, setProfiles] = useState<Record<string, ProfileInfo>>({});
+  const [allUsers, setAllUsers] = useState<{ id: string; user_id: string; full_name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [texto, setTexto] = useState("");
@@ -63,6 +64,13 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
   const [replyTexto, setReplyTexto] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
   const [likes, setLikes] = useState<Record<string, { count: number; likedByMe: boolean }>>({});
+
+  // Fetch all users for mention dropdown
+  useEffect(() => {
+    supabase.from("profiles").select("id, user_id, full_name").then(({ data }) => {
+      if (data) setAllUsers(data as any[]);
+    });
+  }, []);
 
   const fetchComentarios = async () => {
     const { data } = await (supabase as any)
