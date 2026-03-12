@@ -273,7 +273,7 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais }
             const concluidor = t.concluido_por ? profiles[t.concluido_por] : null;
             const concluida = !!t.concluido_em;
             const hist = historicos[t.id] || [];
-            const isExpanded = expandedHistorico === t.id;
+            const adiamentos = hist.filter(h => h.tipo === "adiamento");
 
             return (
               <div key={t.id} className={cn("border rounded-lg p-3 space-y-1.5", concluida ? "bg-muted/20 opacity-75" : "bg-background")}>
