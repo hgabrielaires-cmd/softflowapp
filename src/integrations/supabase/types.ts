@@ -990,6 +990,47 @@ export type Database = {
           },
         ]
       }
+      crm_tarefas_historico: {
+        Row: {
+          created_at: string
+          data_anterior: string | null
+          data_nova: string | null
+          id: string
+          resposta: string
+          tarefa_id: string
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_anterior?: string | null
+          data_nova?: string | null
+          id?: string
+          resposta: string
+          tarefa_id: string
+          tipo?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_anterior?: string | null
+          data_nova?: string | null
+          id?: string
+          resposta?: string
+          tarefa_id?: string
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_tarefas_historico_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "crm_tarefas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custos: {
         Row: {
           created_at: string
