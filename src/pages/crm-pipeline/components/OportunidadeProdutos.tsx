@@ -256,25 +256,24 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
     let nome = "";
 
     if (addType === "plano") {
-      // Plano: só pode ter 1
       if (items.some(it => it.tipo === "plano")) {
         toast.error("Já existe um plano na proposta. Remova o atual para adicionar outro.");
         return;
       }
       const plano = planosQuery.data?.find((p) => p.id === addRef);
       if (!plano) return;
-      valor_implantacao = plano.valor_implantacao_padrao;
-      valor_mensalidade = plano.valor_mensalidade_padrao;
+      // Check branch-specific pricing
+      const precoFilial = precosMap[`plano:${addRef}`];
+      valor_implantacao = precoFilial ? precoFilial.valor_implantacao : plano.valor_implantacao_padrao;
+      valor_mensalidade = precoFilial ? precoFilial.valor_mensalidade : plano.valor_mensalidade_padrao;
       nome = plano.nome;
     } else {
       const modulo = modulosQuery.data?.find((m) => m.id === addRef);
       if (!modulo) return;
-      // Módulo sem revenda: não pode adicionar se já existe
       if (!modulo.permite_revenda && items.some(it => it.tipo === "modulo" && it.referencia_id === addRef)) {
         toast.error(`O módulo "${modulo.nome}" não permite venda duplicada.`);
         return;
       }
-      // Módulo com quantidade_maxima: validar total
       if (modulo.quantidade_maxima) {
         const qtdExistente = items
           .filter(it => it.tipo === "modulo" && it.referencia_id === addRef)
@@ -284,8 +283,10 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
           return;
         }
       }
-      valor_implantacao = modulo.valor_implantacao_modulo || 0;
-      valor_mensalidade = modulo.valor_mensalidade_modulo || 0;
+      // Check branch-specific pricing
+      const precoFilial = precosMap[`modulo:${addRef}`];
+      valor_implantacao = precoFilial ? precoFilial.valor_implantacao : (modulo.valor_implantacao_modulo || 0);
+      valor_mensalidade = precoFilial ? precoFilial.valor_mensalidade : (modulo.valor_mensalidade_modulo || 0);
       nome = modulo.nome;
     }
 
