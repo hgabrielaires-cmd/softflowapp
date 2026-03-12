@@ -27,23 +27,31 @@ export function PipelineCard({ oportunidade, etapa, onDragStart, onClick }: Pipe
           {oportunidade.titulo}
         </p>
 
-        {/* Task status indicator */}
-        {tarefaStatus !== "ok" && (
-          <div className="flex items-center gap-1.5">
-            {tarefaStatus === "sem_tarefa" && (
-              <>
-                <ListChecks className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                <span className="text-[10px] text-amber-600">Sem tarefas</span>
-              </>
-            )}
-            {tarefaStatus === "vencida" && (
-              <>
-                <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
-                <span className="text-[10px] text-destructive">Tarefa vencida</span>
-              </>
-            )}
+        {/* Task status + Stars row */}
+        <div className="flex items-center justify-between gap-2">
+          {tarefaStatus !== "ok" ? (
+            <div className="flex items-center gap-1.5">
+              {tarefaStatus === "sem_tarefa" && (
+                <>
+                  <ListChecks className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                  <span className="text-[10px] text-amber-600">Sem tarefas</span>
+                </>
+              )}
+              {tarefaStatus === "vencida" && (
+                <>
+                  <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                  <span className="text-[10px] text-destructive">Tarefa vencida</span>
+                </>
+              )}
+            </div>
+          ) : <div />}
+          {/* Stars */}
+          <div className="flex items-center gap-px shrink-0">
+            {[1, 2, 3, 4, 5].map(i => (
+              <Star key={i} className={`h-3 w-3 ${i <= (oportunidade.classificacao || 0) ? "text-primary fill-primary" : "text-muted-foreground/20"}`} />
+            ))}
           </div>
-        )}
+        </div>
 
         {/* Client */}
         {oportunidade.clientes && (
