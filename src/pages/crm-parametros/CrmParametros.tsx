@@ -2,9 +2,10 @@ import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Filter, ListOrdered, Settings2 } from "lucide-react";
+import { Filter, Settings2, Briefcase } from "lucide-react";
 import { FunisTab } from "./components/FunisTab";
 import { CamposPersonalizadosTab } from "./components/CamposPersonalizadosTab";
+import { CargosTab } from "./components/CargosTab";
 
 export default function CrmParametros() {
   const { isAdmin } = useAuth();
