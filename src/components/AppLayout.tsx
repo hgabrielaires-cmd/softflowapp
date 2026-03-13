@@ -213,7 +213,9 @@ function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSign
               collapsed ? "h-10 w-10" : "h-[7.8rem]",
               "object-contain"
             )}
-            decoding="sync"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
             style={collapsed ? { filter: 'brightness(0) invert(1)' } : undefined}
           />
         </button>
