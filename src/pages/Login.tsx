@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Lock, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import logoSoftflowBranca from "@/assets/logo-softflow-branca.png";
+import logoSoftflowBranca from "@/assets/logo-softflow-branca.svg";
 import logoSoftplusAzul from "@/assets/logo-softplus-azul.png";
 
 export default function Login() {
