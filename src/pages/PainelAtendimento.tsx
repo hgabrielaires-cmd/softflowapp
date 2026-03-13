@@ -745,28 +745,26 @@ export default function PainelAtendimento() {
                                   return (
                                      <li key={idx} className="flex flex-col gap-0.5 text-xs border-b border-border/30 pb-1.5 last:border-0 last:pb-0">
                                        <div className="flex items-center gap-2">
-                                         {/* Checkbox for check, agendamento, and anexo types */}
-                                         {(item.tipo === "check" || item.tipo === "agendamento" || item.tipo === "anexo") && (
-                                           <Checkbox checked={prog.concluido} disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onCheckedChange={(checked) => saveChecklistItem(atividade.id, idx, { concluido: !!checked })} className="shrink-0" />
-                                         )}
-                                         <span className={cn("flex-1", prog.concluido && "line-through text-muted-foreground")}>{item.texto || "(sem texto)"}</span>
-                                       </div>
-                                       {item.tipo === "sim_nao" && (
-                                         <div className="flex gap-1 pl-1 mt-0.5">
-                                           <Button variant={prog.valor_texto === "sim" ? "default" : "outline"} size="sm" className="h-5 px-1.5 text-[10px]" disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onClick={() => saveChecklistItem(atividade.id, idx, { valor_texto: prog.valor_texto === "sim" ? "" : "sim", concluido: prog.valor_texto === "sim" ? false : true })}>Sim</Button>
-                                           <Button variant={prog.valor_texto === "nao" ? "destructive" : "outline"} size="sm" className="h-5 px-1.5 text-[10px]" disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onClick={() => saveChecklistItem(atividade.id, idx, { valor_texto: prog.valor_texto === "nao" ? "" : "nao", concluido: prog.valor_texto === "nao" ? false : true })}>Não</Button>
-                                         </div>
-                                       )}
-                                       {(item.tipo as string) === "data" && (
-                                         <div className="pl-1 mt-0.5">
-                                           <Input type="date" className="h-6 w-36 text-[10px] px-1" value={prog.valor_data || ""} disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onChange={(e) => saveChecklistItem(atividade.id, idx, { valor_data: e.target.value, concluido: !!e.target.value })} />
-                                         </div>
-                                       )}
-                                       {item.tipo === "agendamento" && prog.concluido && (
-                                         <div className="pl-1 mt-0.5">
-                                           <AgendamentoChecklist cardId={detailCard.id} atividadeId={atividade.id} checklistIndex={idx} etapaId={detailCard.etapa_id} filialId={detailCard.filial_id} mesaId={item.mesa_id || etapaMesaInfo?.id} mesaCor={etapaMesaInfo?.cor} etapaExecucaoId={item.etapa_execucao_id || null} titulo={item.texto} allowDelete={!!(item.etapa_execucao_id && detailCard.etapa_id === item.etapa_execucao_id)} />
-                                         </div>
-                                       )}
+                                          {/* Checkbox for check and anexo types (NOT agendamento - handled by AgendamentoChecklist) */}
+                                          {(item.tipo === "check" || item.tipo === "anexo") && (
+                                            <Checkbox checked={prog.concluido} disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onCheckedChange={(checked) => saveChecklistItem(atividade.id, idx, { concluido: !!checked })} className="shrink-0" />
+                                          )}
+                                          {item.tipo === "agendamento" && (
+                                            <Checkbox checked={prog.concluido} disabled className="shrink-0" />
+                                          )}
+                                          <span className={cn("flex-1", prog.concluido && "line-through text-muted-foreground")}>{item.texto || "(sem texto)"}</span>
+                                        </div>
+                                        {item.tipo === "sim_nao" && (
+                                          <div className="flex gap-1 pl-1 mt-0.5">
+                                            <Button variant={prog.valor_texto === "sim" ? "default" : "outline"} size="sm" className="h-5 px-1.5 text-[10px]" disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onClick={() => saveChecklistItem(atividade.id, idx, { valor_texto: prog.valor_texto === "sim" ? "" : "sim", concluido: prog.valor_texto === "sim" ? false : true })}>Sim</Button>
+                                            <Button variant={prog.valor_texto === "nao" ? "destructive" : "outline"} size="sm" className="h-5 px-1.5 text-[10px]" disabled={statusAtiv === "pendente" || statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onClick={() => saveChecklistItem(atividade.id, idx, { valor_texto: prog.valor_texto === "nao" ? "" : "nao", concluido: prog.valor_texto === "nao" ? false : true })}>Não</Button>
+                                          </div>
+                                        )}
+                                        {item.tipo === "agendamento" && statusAtiv !== "pendente" && (
+                                          <div className="pl-1 mt-0.5">
+                                            <AgendamentoChecklist cardId={detailCard.id} atividadeId={atividade.id} checklistIndex={idx} etapaId={detailCard.etapa_id} filialId={detailCard.filial_id} mesaId={item.mesa_id || etapaMesaInfo?.id} mesaCor={etapaMesaInfo?.cor} etapaExecucaoId={item.etapa_execucao_id || null} titulo={item.texto} allowDelete={!!(item.etapa_execucao_id && detailCard.etapa_id === item.etapa_execucao_id)} disabled={statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} />
+                                          </div>
+                                        )}
                                       {(item.tipo === "texto" || item.tipo === "quantitativo") && (
                                         <ChecklistTextoInput
                                           initialValue={prog.valor_texto || ""}
