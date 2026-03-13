@@ -203,7 +203,7 @@ function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSign
           </button>
         ) : (
           <button onClick={() => onNavigate("/dashboard")} className="focus:outline-none mx-auto">
-            <img src={logoSoftflowBranca} alt="Softflow" className="h-24 object-contain" loading="eager" fetchPriority="high" decoding="async" />
+            <img src="/logo-softflow-branca.svg" alt="Softflow" className="h-[7.8rem] object-contain" loading="eager" fetchPriority="high" decoding="sync" />
           </button>
         )}
       </div>
