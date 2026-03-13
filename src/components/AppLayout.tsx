@@ -190,6 +190,14 @@ function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSign
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(initialOpen);
 
+  useEffect(() => {
+    const img = new Image();
+    img.src = "/logo-softflow-branca.svg";
+    img.decoding = "async";
+    img.setAttribute("fetchpriority", "high");
+    void img.decode().catch(() => undefined);
+  }, []);
+
   function toggleGroup(label: string) {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
   }
