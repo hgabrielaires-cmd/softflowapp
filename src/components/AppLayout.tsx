@@ -322,21 +322,19 @@ function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSign
 
       <div className={cn("border-t border-sidebar-border p-3 flex-shrink-0", collapsed ? "flex justify-center" : "")}>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className={cn("flex items-center gap-3 rounded-lg p-2 w-full hover:bg-sidebar-accent transition-colors", collapsed && "w-auto justify-center")}>
-              <Avatar className="h-8 w-8 flex-shrink-0">
-                {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name} />}
-                <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-xs font-bold">{initials}</AvatarFallback>
-              </Avatar>
-              {!collapsed && (
-                <div className="text-left overflow-hidden flex-1">
-                  <p className="text-sidebar-foreground text-sm font-medium truncate leading-tight">{profile?.full_name || "Usuário"}</p>
-                  <p className="text-sidebar-foreground/40 text-[10px] truncate leading-tight mt-0.5">
-                    v{APP_VERSION} • {new Date(APP_BUILD_DATE).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                  </p>
-                </div>
-              )}
-            </button>
+          <DropdownMenuTrigger className={cn("flex items-center gap-3 rounded-lg p-2 w-full hover:bg-sidebar-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", collapsed && "w-auto justify-center")}>
+            <Avatar className="h-8 w-8 flex-shrink-0">
+              {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name} />}
+              <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-xs font-bold">{initials}</AvatarFallback>
+            </Avatar>
+            {!collapsed && (
+              <div className="text-left overflow-hidden flex-1">
+                <p className="text-sidebar-foreground text-sm font-medium truncate leading-tight">{profile?.full_name || "Usuário"}</p>
+                <p className="text-sidebar-foreground/40 text-[10px] truncate leading-tight mt-0.5">
+                  v{APP_VERSION} • {new Date(APP_BUILD_DATE).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
+            )}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="top" className="w-52">
             <DropdownMenuLabel className="font-normal">
