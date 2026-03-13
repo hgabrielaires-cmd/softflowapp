@@ -1114,11 +1114,12 @@ serve(async (req) => {
 
         const { data: cliente } = await supabase
           .from("clientes")
-          .select("nome_fantasia")
+          .select("nome_fantasia, razao_social")
           .eq("id", contrato.cliente_id)
           .maybeSingle();
 
         const clienteNome = cliente?.nome_fantasia || "N/A";
+        const clienteRazao = cliente?.razao_social || clienteNome;
         const decisorNome = body.decisor_nome || "Decisor";
         const signUrl = body.sign_url || "";
 
@@ -1126,9 +1127,12 @@ serve(async (req) => {
           return text
             .replace(/\{vendedor\.nome\}/g, vendedorProfile.full_name || "Vendedor")
             .replace(/\{cliente\.nome_fantasia\}/g, clienteNome)
+            .replace(/\{cliente\.razao_social\}/g, clienteRazao)
             .replace(/\{contrato\.numero\}/g, contrato.numero_exibicao || "N/A")
             .replace(/\{decisor\.nome\}/g, decisorNome)
+            .replace(/\{contato\.nome\}/g, decisorNome)
             .replace(/\{contrato\.sign_url\}/g, signUrl)
+            .replace(/\{link_assinatura\}/g, signUrl)
             .replace(/\{saudacao\}/g, getSaudacao());
         };
 
