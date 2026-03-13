@@ -1257,7 +1257,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     <div className="flex min-h-screen bg-background">
       {/* Desktop Sidebar */}
       <aside className={cn(
-        "hidden lg:flex flex-col flex-shrink-0 bg-sidebar border-r border-sidebar-border transition-all duration-300",
+        "hidden lg:flex flex-col flex-shrink-0 bg-sidebar border-r border-sidebar-border transition-[width] duration-150 ease-out",
         collapsed ? "w-14" : "w-60"
       )}>
         <Sidebar collapsed={collapsed} profile={profile} permissions={permissions} initials={initials} onNavigate={navigate} onSignOut={handleSignOut} />
