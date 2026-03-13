@@ -1301,13 +1301,11 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           {/* Avatar com menu de perfil/sair */}
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 rounded-full hover:bg-accent transition-colors p-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <Avatar className="h-8 w-8">
-                  {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name} />}
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">{initials}</AvatarFallback>
-                </Avatar>
-              </button>
+            <DropdownMenuTrigger className="flex items-center gap-2 rounded-full hover:bg-accent transition-colors p-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <Avatar className="h-8 w-8">
+                {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name} />}
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">{initials}</AvatarFallback>
+              </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuLabel className="font-normal">
