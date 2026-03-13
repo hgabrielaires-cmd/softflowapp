@@ -140,12 +140,12 @@ export default function Agenda() {
 
   // ===== LIST VIEW: server-side paginated =====
   const listQueryKey = useMemo(() => [
-    "agenda-list", filtroFilial, filtroMesa, listPage, listSearch, listStatus, listPeriodoDe, listPeriodoAte,
-  ], [filtroFilial, filtroMesa, listPage, listSearch, listStatus, listPeriodoDe, listPeriodoAte]);
+    "agenda-list", filtroFilial, filtroMesa, listPage, listSearch, listStatus, listPeriodoDe, listPeriodoAte, mesas.length,
+  ], [filtroFilial, filtroMesa, listPage, listSearch, listStatus, listPeriodoDe, listPeriodoAte, mesas.length]);
 
   const { data: listData, isLoading: listLoading } = useQuery({
     queryKey: listQueryKey,
-    enabled: activeView === "lista" && filtersInitialized,
+    enabled: activeView === "lista" && filtersInitialized && mesas.length > 0,
     queryFn: async () => {
       // Step 1: count
       let countQ = supabase.from("painel_agendamentos").select("id", { count: "exact", head: true });
@@ -370,8 +370,8 @@ export default function Agenda() {
   }, [calDate, calMode]);
 
   const { data: calAgendamentos = [], isLoading: calLoading } = useQuery({
-    queryKey: ["agenda-cal", calRange.start, calRange.end, filtroFilial, filtroMesa],
-    enabled: activeView === "calendario" && filtersInitialized,
+    queryKey: ["agenda-cal", calRange.start, calRange.end, filtroFilial, filtroMesa, mesas.length],
+    enabled: activeView === "calendario" && filtersInitialized && mesas.length > 0,
     queryFn: async () => {
       let q = supabase.from("painel_agendamentos")
         .select("id, card_id, atividade_id, checklist_index, data, hora_inicio, hora_fim, observacao, mesa_id, filial_id, etapa_id, titulo, cor_evento, status, iniciado_em, finalizado_em");
