@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect, useMemo } from "react";
 import { APP_VERSION, APP_BUILD_DATE } from "@/lib/app-version";
 import { useMenuPermissions } from "@/hooks/useMenuPermissions";
 import iconSoftflow from "@/assets/icon-softflow.png";
-import logoSoftflowBranca from "@/assets/logo-softflow-branca.png";
+import logoSoftflowBranca from "@/assets/logo-softflow-branca.svg";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import {
