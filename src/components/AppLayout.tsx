@@ -195,17 +195,20 @@ function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSign
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       <div className={cn("flex items-center gap-3 px-4 py-5 border-b border-sidebar-border flex-shrink-0", collapsed && "justify-center px-2")}>
-        {collapsed ? (
-          <button onClick={() => onNavigate("/dashboard")} className="focus:outline-none">
-            <img src={iconSoftflow} alt="Softflow" className="h-10 w-10 object-contain" loading="eager" fetchPriority="high" decoding="async" style={{ filter: 'brightness(0) invert(1)' }} />
-          </button>
-        ) : (
-          <button onClick={() => onNavigate("/dashboard")} className="focus:outline-none mx-auto">
-            <img src="/logo-softflow-branca.svg" alt="Softflow" className="h-[7.8rem] object-contain" loading="eager" fetchPriority="high" decoding="sync" />
-          </button>
-        )}
+        <button onClick={() => onNavigate("/dashboard")} className="focus:outline-none mx-auto">
+          <img
+            src={collapsed ? iconSoftflow : "/logo-softflow-branca.svg"}
+            alt="Softflow"
+            className={cn(
+              collapsed ? "h-10 w-10" : "h-[7.8rem]",
+              "object-contain"
+            )}
+            decoding="sync"
+            style={collapsed ? { filter: 'brightness(0) invert(1)' } : undefined}
+          />
+        </button>
       </div>
 
       <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -1257,7 +1260,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     <div className="flex min-h-screen bg-background">
       {/* Desktop Sidebar */}
       <aside className={cn(
-        "hidden lg:flex flex-col flex-shrink-0 bg-sidebar border-r border-sidebar-border transition-all duration-300",
+        "hidden lg:flex flex-col flex-shrink-0 bg-sidebar border-r border-sidebar-border transition-[width] duration-150 ease-out",
         collapsed ? "w-14" : "w-60"
       )}>
         <Sidebar collapsed={collapsed} profile={profile} permissions={permissions} initials={initials} onNavigate={navigate} onSignOut={handleSignOut} />
