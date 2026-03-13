@@ -140,8 +140,8 @@ export default function Agenda() {
 
   // ===== LIST VIEW: server-side paginated =====
   const listQueryKey = useMemo(() => [
-    "agenda-list", filtroFilial, filtroMesa, listPage, listSearch, listStatus, listPeriodoDe, listPeriodoAte,
-  ], [filtroFilial, filtroMesa, listPage, listSearch, listStatus, listPeriodoDe, listPeriodoAte]);
+    "agenda-list", filtroFilial, filtroMesa, listPage, listSearch, listStatus, listPeriodoDe, listPeriodoAte, mesas.length,
+  ], [filtroFilial, filtroMesa, listPage, listSearch, listStatus, listPeriodoDe, listPeriodoAte, mesas.length]);
 
   const { data: listData, isLoading: listLoading } = useQuery({
     queryKey: listQueryKey,
