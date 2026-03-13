@@ -108,7 +108,7 @@ export default function Login() {
     <div className="min-h-screen flex">
       {/* Left panel */}
       <div className="hidden lg:flex lg:w-1/2 gradient-hero flex-col items-center justify-center p-12">
-        <img src={logoSoftflowBranca} alt="Softflow" className="w-64 object-contain" loading="eager" fetchPriority="high" />
+        <img src="/logo-softflow-branca.svg" alt="Softflow" className="w-64 object-contain" loading="eager" fetchPriority="high" />
       </div>
 
       {/* Right panel */}
