@@ -370,8 +370,8 @@ export default function Agenda() {
   }, [calDate, calMode]);
 
   const { data: calAgendamentos = [], isLoading: calLoading } = useQuery({
-    queryKey: ["agenda-cal", calRange.start, calRange.end, filtroFilial, filtroMesa],
-    enabled: activeView === "calendario" && filtersInitialized,
+    queryKey: ["agenda-cal", calRange.start, calRange.end, filtroFilial, filtroMesa, mesas.length],
+    enabled: activeView === "calendario" && filtersInitialized && mesas.length > 0,
     queryFn: async () => {
       let q = supabase.from("painel_agendamentos")
         .select("id, card_id, atividade_id, checklist_index, data, hora_inicio, hora_fim, observacao, mesa_id, filial_id, etapa_id, titulo, cor_evento, status, iniciado_em, finalizado_em");
