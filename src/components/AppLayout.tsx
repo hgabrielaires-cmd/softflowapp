@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect, useMemo } from "react";
 import { APP_VERSION, APP_BUILD_DATE } from "@/lib/app-version";
 import { useMenuPermissions } from "@/hooks/useMenuPermissions";
 import iconSoftflow from "@/assets/icon-softflow.png";
-import logoSoftflowBranca from "@/assets/logo-softflow-branca.svg";
+// Logo branca carregada direto do public/ para carregamento instantâneo
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -203,7 +203,7 @@ function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSign
           </button>
         ) : (
           <button onClick={() => onNavigate("/dashboard")} className="focus:outline-none mx-auto">
-            <img src={logoSoftflowBranca} alt="Softflow" className="h-24 object-contain" loading="eager" fetchPriority="high" decoding="async" />
+            <img src="/logo-softflow-branca.svg" alt="Softflow" className="h-[7.8rem] object-contain" loading="eager" fetchPriority="high" decoding="sync" />
           </button>
         )}
       </div>
