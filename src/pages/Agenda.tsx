@@ -145,7 +145,7 @@ export default function Agenda() {
 
   const { data: listData, isLoading: listLoading } = useQuery({
     queryKey: listQueryKey,
-    enabled: activeView === "lista" && filtersInitialized,
+    enabled: activeView === "lista" && filtersInitialized && mesas.length > 0,
     queryFn: async () => {
       // Step 1: count
       let countQ = supabase.from("painel_agendamentos").select("id", { count: "exact", head: true });
