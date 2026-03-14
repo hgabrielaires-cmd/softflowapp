@@ -761,20 +761,262 @@ function IntegrationCard({ def, config, onOpenConfig }: IntegrationCardProps) {
   );
 }
 
+// ── Asaas Config Dialog (per-filial) ──
+
+interface AsaasFilialConfig {
+  id?: string;
+  filial_id: string;
+  filial_nome: string;
+  token: string;
+  ambiente: "sandbox" | "production";
+  ativo: boolean;
+}
+
+function AsaasConfigDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [filiais, setFiliais] = useState<{ id: string; nome: string }[]>([]);
+  const [configs, setConfigs] = useState<AsaasFilialConfig[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [showTokens, setShowTokens] = useState<Record<string, boolean>>({});
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    const [{ data: filiaisData }, { data: configsData }] = await Promise.all([
+      supabase.from("filiais").select("id, nome").eq("ativa", true).order("nome"),
+      supabase.from("asaas_config").select("*"),
+    ]);
+
+    const fList = (filiaisData || []) as { id: string; nome: string }[];
+    setFiliais(fList);
+
+    const existing = (configsData || []) as any[];
+    const mapped: AsaasFilialConfig[] = existing.map((c: any) => ({
+      id: c.id,
+      filial_id: c.filial_id,
+      filial_nome: fList.find(f => f.id === c.filial_id)?.nome || "—",
+      token: c.token || "",
+      ambiente: c.ambiente === "production" ? "production" : "sandbox",
+      ativo: c.ativo,
+    }));
+    setConfigs(mapped);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (open) loadData();
+  }, [open, loadData]);
+
+  function addFilial(filialId: string) {
+    const filial = filiais.find(f => f.id === filialId);
+    if (!filial || configs.some(c => c.filial_id === filialId)) return;
+    setConfigs(prev => [...prev, {
+      filial_id: filialId,
+      filial_nome: filial.nome,
+      token: "",
+      ambiente: "sandbox",
+      ativo: true,
+    }]);
+  }
+
+  function removeConfig(filialId: string) {
+    setConfigs(prev => prev.filter(c => c.filial_id !== filialId));
+  }
+
+  function updateConfig(filialId: string, updates: Partial<AsaasFilialConfig>) {
+    setConfigs(prev => prev.map(c => c.filial_id === filialId ? { ...c, ...updates } : c));
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      for (const cfg of configs) {
+        if (!cfg.token.trim()) continue;
+        const payload = {
+          filial_id: cfg.filial_id,
+          token: cfg.token.trim(),
+          ambiente: cfg.ambiente,
+          ativo: cfg.ativo,
+        };
+        if (cfg.id) {
+          await supabase.from("asaas_config").update(payload).eq("id", cfg.id);
+        } else {
+          await supabase.from("asaas_config").upsert(payload, { onConflict: "filial_id" });
+        }
+      }
+
+      // Delete removed configs
+      const { data: allConfigs } = await supabase.from("asaas_config").select("id, filial_id");
+      const currentFilialIds = new Set(configs.map(c => c.filial_id));
+      for (const existing of (allConfigs || []) as any[]) {
+        if (!currentFilialIds.has(existing.filial_id)) {
+          await supabase.from("asaas_config").delete().eq("id", existing.id);
+        }
+      }
+
+      toast.success("Configurações do Asaas salvas!");
+      onOpenChange(false);
+    } catch (err: any) {
+      toast.error("Erro: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const availableFiliais = filiais.filter(f => !configs.some(c => c.filial_id === f.id));
+  const hasAnyActive = configs.some(c => c.ativo && c.token.trim());
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <img src={logoAsaas} alt="Asaas" className="h-10 w-10 object-contain" />
+            <div>
+              <DialogTitle>Asaas — Gateway de Pagamentos</DialogTitle>
+              <DialogDescription>Configure o token do Asaas para cada filial</DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="space-y-4 py-2">
+            {/* Add filial */}
+            {availableFiliais.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Select onValueChange={addFilial}>
+                  <SelectTrigger className="h-9 flex-1">
+                    <Building2 className="h-3.5 w-3.5 mr-1.5" />
+                    <SelectValue placeholder="Adicionar filial..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableFiliais.map(f => (
+                      <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {configs.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Nenhuma filial configurada. Adicione uma filial acima para começar.
+              </p>
+            )}
+
+            {/* Per-filial configs */}
+            {configs.map((cfg) => (
+              <div key={cfg.filial_id} className="rounded-lg border border-border p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium text-sm">{cfg.filial_nome}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={cfg.ativo}
+                      onCheckedChange={(v) => updateConfig(cfg.filial_id, { ativo: v })}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      onClick={() => removeConfig(cfg.filial_id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Ambiente */}
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-muted-foreground">Ambiente</Label>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium ${cfg.ambiente === "sandbox" ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+                      Sandbox
+                    </span>
+                    <Switch
+                      checked={cfg.ambiente === "production"}
+                      onCheckedChange={(v) => updateConfig(cfg.filial_id, { ambiente: v ? "production" : "sandbox" })}
+                    />
+                    <span className={`text-xs font-medium ${cfg.ambiente === "production" ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                      Produção
+                    </span>
+                  </div>
+                </div>
+
+                {/* Token */}
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">API Key</Label>
+                  <div className="relative">
+                    <Input
+                      type={showTokens[cfg.filial_id] ? "text" : "password"}
+                      value={cfg.token}
+                      onChange={(e) => updateConfig(cfg.filial_id, { token: e.target.value })}
+                      placeholder="$aact_..."
+                      className="pr-10 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowTokens(prev => ({ ...prev, [cfg.filial_id]: !prev[cfg.filial_id] }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showTokens[cfg.filial_id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Status badge */}
+                <div className="flex justify-end">
+                  <Badge variant={cfg.ativo && cfg.token.trim() ? "default" : "outline"} className="text-[10px]">
+                    {cfg.ativo && cfg.token.trim()
+                      ? `✓ ${cfg.ambiente === "sandbox" ? "Sandbox" : "Produção"}`
+                      : "Inativo"
+                    }
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={saving || loading}>
+            {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+            Salvar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Page ──
 
 export default function Integracoes() {
   const [configs, setConfigs] = useState<IntegrationConfig[]>([]);
+  const [asaasConfigs, setAsaasConfigs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDef, setSelectedDef] = useState<IntegrationDef | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
+  const [asaasDialogOpen, setAsaasDialogOpen] = useState(false);
 
   async function loadConfigs() {
-    const { data, error } = await supabase.from("integracoes_config").select("*");
+    const [{ data, error }, { data: asaasData }] = await Promise.all([
+      supabase.from("integracoes_config").select("*"),
+      supabase.from("asaas_config").select("*"),
+    ]);
     if (!error && data) {
       setConfigs(data as IntegrationConfig[]);
     }
+    setAsaasConfigs(asaasData || []);
     setLoading(false);
   }
 
@@ -783,11 +1025,25 @@ export default function Integracoes() {
   }, []);
 
   function getConfig(key: string) {
+    // For asaas, check asaas_config table
+    if (key === "asaas") {
+      const hasActive = asaasConfigs.some((c: any) => c.ativo);
+      if (asaasConfigs.length > 0) {
+        return {
+          id: "asaas",
+          nome: "asaas",
+          ativo: hasActive,
+          token: "configured",
+          server_url: null,
+        } as IntegrationConfig;
+      }
+      return null;
+    }
     return configs.find((c) => c.nome === key) || null;
   }
 
   async function handleSave(nome: string, ativo: boolean, token: string, serverUrl?: string) {
-    const existing = getConfig(nome);
+    const existing = configs.find((c) => c.nome === nome);
     const payload: any = { ativo, token: token || null };
     if (serverUrl !== undefined) payload.server_url = serverUrl || null;
 
@@ -802,7 +1058,7 @@ export default function Integracoes() {
     await loadConfigs();
   }
 
-  const ativasCount = configs.filter((c) => c.ativo).length;
+  const ativasCount = integrationDefs.filter(d => getConfig(d.key)?.ativo).length;
   const inativasCount = integrationDefs.length - ativasCount;
 
   return (
@@ -838,6 +1094,8 @@ export default function Integracoes() {
                 onOpenConfig={() => {
                   if (def.hasEvolutionApi) {
                     setWhatsappDialogOpen(true);
+                  } else if (def.key === "asaas") {
+                    setAsaasDialogOpen(true);
                   } else {
                     setSelectedDef(def);
                     setDialogOpen(true);
@@ -855,6 +1113,12 @@ export default function Integracoes() {
         onOpenChange={setWhatsappDialogOpen}
         config={getConfig("whatsapp")}
         onSave={handleSave}
+      />
+
+      {/* Asaas Dialog */}
+      <AsaasConfigDialog
+        open={asaasDialogOpen}
+        onOpenChange={(v) => { setAsaasDialogOpen(v); if (!v) loadConfigs(); }}
       />
 
       {/* Generic Dialog */}
