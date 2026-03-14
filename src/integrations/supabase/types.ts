@@ -1493,6 +1493,27 @@ export type Database = {
           },
         ]
       }
+      helpdesk_tags: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       helpdesk_tipos_atendimento: {
         Row: {
           ativo: boolean

@@ -21,10 +21,35 @@ import { TICKET_PRIORIDADES, TICKET_MESAS, TICKET_PRIORIDADE_COLORS, TICKET_PRIO
 import { TICKET_STATUS_COLORS } from "./tickets/constants";
 import type { TicketFormData, TicketPrioridade, TicketMesa, TicketStatus } from "./tickets/types";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Clock, Trash2, Search, Eye } from "lucide-react";
 import { toast } from "sonner";
+
+function TagSuggestions({ input, existingTags, onSelect }: { input: string; existingTags: string[]; onSelect: (tag: string) => void }) {
+  const { data: registeredTags = [] } = useQuery({
+    queryKey: ["helpdesk_tags"],
+    queryFn: async () => {
+      const { data } = await supabase.from("helpdesk_tags").select("nome").eq("ativo", true).order("nome");
+      return (data ?? []).map((t: any) => t.nome as string);
+    },
+  });
+
+  const query = input.startsWith("#") ? input.toUpperCase() : `#${input.toUpperCase()}`;
+  const filtered = registeredTags.filter((t) => t.includes(query) && !existingTags.includes(t));
+
+  if (filtered.length === 0) return null;
+
+  return (
+    <div className="absolute z-20 top-full left-0 right-0 bg-card border rounded-lg shadow-lg mt-1 max-h-32 overflow-y-auto">
+      {filtered.map((tag) => (
+        <button key={tag} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted" onClick={() => onSelect(tag)}>
+          <Badge className="bg-blue-500 text-white text-[10px]">{tag}</Badge>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function TicketNovo() {
   const navigate = useNavigate();
@@ -50,7 +75,8 @@ export default function TicketNovo() {
   const [ticketPaiId, setTicketPaiId] = useState<string | null>(null);
   const [seguidores, setSeguidores] = useState<string[]>(userId ? [userId] : []);
   const [selfFollow, setSelfFollow] = useState(true);
-  const [tags, setTags] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
 
   // SLA calculation
   const tipoSelecionado = tipos.find((t) => t.id === tipoAtendimentoId);
@@ -185,7 +211,7 @@ export default function TicketNovo() {
       prioridade,
       responsavel_id: responsavelId,
       sla_horas: slaHoras,
-      tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+      tags,
       previsao_entrega: null,
       ticket_pai_id: ticketPaiId,
       seguidores,
@@ -518,8 +544,47 @@ export default function TicketNovo() {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-xs">Tags (separadas por vírgula)</Label>
-                    <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tag1, tag2" className="text-xs" />
+                    <Label className="text-xs">Tags</Label>
+                    <div className="flex flex-wrap gap-1.5 p-2 border rounded-md bg-background min-h-[38px] items-center">
+                      {tags.map((tag) => (
+                        <Badge key={tag} className="bg-blue-500 text-white hover:bg-blue-600 text-xs cursor-pointer gap-1"
+                          onClick={() => setTags(tags.filter((t) => t !== tag))}>
+                          {tag} <span className="ml-0.5">×</span>
+                        </Badge>
+                      ))}
+                      <div className="relative flex-1 min-w-[120px]">
+                        <input
+                          value={tagInput}
+                          onChange={(e) => setTagInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === " " || e.key === "Enter") {
+                              e.preventDefault();
+                              const val = tagInput.trim();
+                              if (val) {
+                                const formatted = val.startsWith("#") ? val.toUpperCase() : `#${val.toUpperCase()}`;
+                                if (!tags.includes(formatted)) setTags([...tags, formatted]);
+                                setTagInput("");
+                              }
+                            }
+                            if (e.key === "Backspace" && !tagInput && tags.length > 0) {
+                              setTags(tags.slice(0, -1));
+                            }
+                          }}
+                          placeholder={tags.length === 0 ? "#NFE, #NFCE..." : ""}
+                          className="w-full bg-transparent outline-none text-xs h-6"
+                        />
+                        {tagInput.length >= 1 && (
+                          <TagSuggestions
+                            input={tagInput}
+                            existingTags={tags}
+                            onSelect={(tag) => {
+                              if (!tags.includes(tag)) setTags([...tags, tag]);
+                              setTagInput("");
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
