@@ -79,7 +79,7 @@ export function useTicketComentarios(ticketId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ticket_comentarios")
-        .select("*, profile:user_id(user_id, full_name, avatar_url)")
+        .select("*, profile:profiles!ticket_comentarios_user_id_fkey(user_id, full_name, avatar_url)")
         .eq("ticket_id", ticketId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
