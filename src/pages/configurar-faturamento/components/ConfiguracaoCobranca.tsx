@@ -215,44 +215,66 @@ export function ConfiguracaoCobranca({ form, setForm, espelho }: Props) {
             ) : (
               <div className="space-y-2">
                 {form.modulos.map((mod, i) => (
-                  <div key={mod.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-end">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Nome</Label>
-                      <Input
-                        value={mod.nome}
-                        onChange={(e) => updateModulo(i, "nome", e.target.value)}
-                        placeholder="Nome do módulo"
-                        className="h-8 text-xs"
-                      />
+                  <div key={mod.id} className="space-y-1.5 p-2 bg-muted/30 rounded-lg border border-border">
+                    <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Nome</Label>
+                        <Input
+                          value={mod.nome}
+                          onChange={(e) => updateModulo(i, "nome", e.target.value)}
+                          placeholder="Nome do módulo"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => removeModulo(i)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Valor/mês</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={mod.valor_mensal || ""}
-                        onChange={(e) => updateModulo(i, "valor_mensal", Number(e.target.value))}
-                        className="h-8 text-xs w-24"
-                      />
+                    <div className="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 items-end">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Valor unit.</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={mod.valor_unitario || ""}
+                          onChange={(e) => updateModulo(i, "valor_unitario", Number(e.target.value))}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Qtd</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={mod.quantidade || 1}
+                          onChange={(e) => updateModulo(i, "quantidade", Number(e.target.value))}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Valor/mês</Label>
+                        <Input
+                          value={fmtCurrency(mod.valor_mensal)}
+                          disabled
+                          className="h-8 text-xs bg-muted font-medium"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Início</Label>
+                        <Input
+                          type="date"
+                          value={mod.data_inicio}
+                          onChange={(e) => updateModulo(i, "data_inicio", e.target.value)}
+                          className="h-8 text-xs"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Início</Label>
-                      <Input
-                        type="date"
-                        value={mod.data_inicio}
-                        onChange={(e) => updateModulo(i, "data_inicio", e.target.value)}
-                        className="h-8 text-xs w-32"
-                      />
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => removeModulo(i)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
                   </div>
                 ))}
               </div>
