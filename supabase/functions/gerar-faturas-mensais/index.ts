@@ -193,20 +193,36 @@ async function processContrato(
           asaasConfig.baseUrl, asaasConfig.apiKey, supabase, contrato, cliente
         );
 
+        const billingType = contrato.forma_pagamento === "PIX" ? "PIX" : "BOLETO";
         const payment = await asaasFetch(asaasConfig.baseUrl, asaasConfig.apiKey, "/payments", "POST", {
           customer: customerId,
-          billingType: contrato.forma_pagamento === "PIX" ? "PIX" : "BOLETO",
+          billingType,
           value: valorTotal,
           dueDate,
           description: `Fatura ${fatura.numero_fatura} — ${clienteNome}`,
           externalReference: fatura.id,
         });
 
-        // 6. Save Asaas data back to invoice
+        // 6. Fetch payment details (barcode or pix)
         const asaasUpdate: Record<string, unknown> = {
           asaas_payment_id: payment.id,
           asaas_url: payment.invoiceUrl || payment.bankSlipUrl || null,
+          asaas_bank_slip_url: payment.bankSlipUrl || null,
         };
+
+        try {
+          if (billingType === "BOLETO") {
+            const boletoData = await asaasFetch(asaasConfig.baseUrl, asaasConfig.apiKey, `/payments/${payment.id}/identificationField`, "GET");
+            if (boletoData?.identificationField) asaasUpdate.asaas_barcode = boletoData.identificationField;
+          } else if (billingType === "PIX") {
+            const pixData = await asaasFetch(asaasConfig.baseUrl, asaasConfig.apiKey, `/payments/${payment.id}/pixQrCode`, "GET");
+            if (pixData?.payload) asaasUpdate.asaas_pix_qrcode = pixData.payload;
+            if (pixData?.encodedImage) asaasUpdate.asaas_pix_image = pixData.encodedImage;
+          }
+        } catch (detailErr) {
+          console.warn(`Failed to fetch payment details for ${payment.id}:`, detailErr);
+        }
+
         await supabase.from("faturas").update(asaasUpdate).eq("id", fatura.id);
       } catch (asaasErr: unknown) {
         const msg = asaasErr instanceof Error ? asaasErr.message : "Erro Asaas";

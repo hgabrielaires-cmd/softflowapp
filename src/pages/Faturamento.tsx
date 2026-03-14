@@ -463,6 +463,11 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
+                      {(f.asaas_barcode || f.asaas_pix_qrcode || f.asaas_url) && (
+                        <DropdownMenuItem onClick={() => setDetalheFatura(f)} className="cursor-pointer">
+                          <Receipt className="h-4 w-4 mr-2" /> Detalhes Cobrança
+                        </DropdownMenuItem>
+                      )}
                       {f.status === "Pendente" && (
                         <DropdownMenuItem onClick={() => q.openRegistrarPagamento(f.id, f.forma_pagamento)} className="cursor-pointer">
                           <CheckCircle className="h-4 w-4 mr-2" /> Registrar Pagamento
