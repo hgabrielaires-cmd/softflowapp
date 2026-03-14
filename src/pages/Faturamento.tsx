@@ -50,6 +50,7 @@ import {
 import { FaturaEditorDialog } from "@/pages/faturamento/components/FaturaEditorDialog";
 import { RegistrarPagamentoDialog } from "@/pages/faturamento/components/RegistrarPagamentoDialog";
 import { NotaFiscalEditorDialog } from "@/pages/faturamento/components/NotaFiscalEditorDialog";
+import { AguardandoFaturamentoTab } from "@/pages/faturamento/components/AguardandoFaturamentoTab";
 
 // ─── Component ───────────────────────────────────────────────────────────────
 

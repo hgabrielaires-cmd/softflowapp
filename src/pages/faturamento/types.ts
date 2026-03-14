@@ -81,3 +81,24 @@ export interface PagamentoFormState {
   data_pagamento: string;
   forma_pagamento: string;
 }
+
+export interface ContratoAguardando {
+  id: string;
+  numero_exibicao: string;
+  tipo: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  cliente_id: string;
+  plano_id: string | null;
+  pedido_id: string | null;
+  contrato_origem_id: string | null;
+  cliente_nome: string;
+  plano_nome: string;
+  valor_mensalidade: number;
+  valor_implantacao: number;
+  parcelas_implantacao: number;
+  data_assinatura: string;
+  dias_aguardando: number;
+  badge_tipo: "Não Faturado" | "Upgrade Pendente" | "OA Pendente" | "Módulo Pendente" | "Downgrade Pendente";
+}
