@@ -1032,7 +1032,7 @@ export default function Agenda() {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Agenda Operacional</h1>
-            <p className="text-sm text-muted-foreground">Agendamentos do Painel de Atendimento</p>
+            <p className="text-sm text-muted-foreground">Agendamentos do Painel de Atendimento e Tickets</p>
           </div>
           <Tabs value={activeView} onValueChange={(v) => setActiveView(v as any)}>
             <TabsList>
