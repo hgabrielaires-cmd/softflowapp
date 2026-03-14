@@ -21,7 +21,7 @@ import { TICKET_PRIORIDADES, TICKET_MESAS, TICKET_PRIORIDADE_COLORS, TICKET_PRIO
 import { TICKET_STATUS_COLORS } from "./tickets/constants";
 import type { TicketFormData, TicketPrioridade, TicketMesa, TicketStatus } from "./tickets/types";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Clock, Trash2, Search, Eye } from "lucide-react";
 import { toast } from "sonner";
