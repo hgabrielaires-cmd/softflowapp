@@ -180,7 +180,7 @@ export default function TesteAsaas() {
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 7);
     const dueDateStr = dueDate.toISOString().split("T")[0];
-    addLog("request", `POST /payments — customer: ${customerId}, billingType: PIX, value: 1.00, dueDate: ${dueDateStr}`);
+    addLog("request", `POST /payments — customer: ${customerId}, billingType: PIX, value: 5.00, dueDate: ${dueDateStr}`);
 
     try {
       const { data, error } = await supabase.functions.invoke("asaas", {
