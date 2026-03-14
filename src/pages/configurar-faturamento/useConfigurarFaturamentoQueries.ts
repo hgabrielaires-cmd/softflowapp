@@ -17,7 +17,7 @@ export function useConfigurarFaturamentoQueries(contratoId: string | undefined) 
       .from("contratos")
       .select(`
         id, numero_exibicao, tipo, status, updated_at, contrato_origem_id,
-        clientes(id, nome_fantasia, razao_social, cnpj_cpf, email, telefone),
+        clientes(id, nome_fantasia, razao_social, cnpj_cpf, email, telefone, filial_id),
         planos(id, nome, valor_mensalidade_padrao, valor_implantacao_padrao),
         pedidos(
           id, tipo_pedido,
