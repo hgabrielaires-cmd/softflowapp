@@ -21,9 +21,10 @@ interface Props {
   form: ConfigFaturamentoForm;
   setForm: React.Dispatch<React.SetStateAction<ConfigFaturamentoForm>>;
   espelho: ContratoEspelho;
+  canEditValues?: boolean;
 }
 
-export function ConfiguracaoCobranca({ form, setForm, espelho }: Props) {
+export function ConfiguracaoCobranca({ form, setForm, espelho, canEditValues = false }: Props) {
   const isOA = espelho.tipo === "OA";
 
   function updateField<K extends keyof ConfigFaturamentoForm>(key: K, value: ConfigFaturamentoForm[K]) {
