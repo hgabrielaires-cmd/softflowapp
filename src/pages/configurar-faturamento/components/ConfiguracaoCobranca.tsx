@@ -100,12 +100,10 @@ export function ConfiguracaoCobranca({ form, setForm, espelho }: Props) {
               <div className="space-y-1">
                 <Label className="text-xs">Valor mensalidade base</Label>
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.valor_mensalidade || ""}
-                  onChange={(e) => updateField("valor_mensalidade", Number(e.target.value))}
+                  value={formatCurrencyInput(form.valor_mensalidade)}
+                  onChange={(e) => handleCurrencyChange("valor_mensalidade", e.target.value)}
                   className="h-9"
+                  placeholder="R$ 0,00"
                 />
               </div>
               <div className="space-y-1">
