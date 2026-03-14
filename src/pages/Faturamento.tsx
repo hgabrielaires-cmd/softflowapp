@@ -71,21 +71,26 @@ export default function Faturamento() {
 
 function FaturamentoContent() {
   const [tab, setTab] = useState("aguardando");
+  const { profile } = useAuth();
   const { filiaisDoUsuario, filialPadraoId, isGlobal, loading: filiaisLoading } = useUserFiliais();
 
-  // Filtro de filial: se tem favorita usa ela, senão "all" (todas)
-  const [filialFilter, setFilialFilter] = useState<string>("all");
+  // Filtro de filial: favorita se definida, senão "all" (todas do usuário)
+  const [filialFilter, setFilialFilter] = useState<string | null>(null);
 
+  // Inicializa apenas uma vez quando filiais carregam
   useEffect(() => {
-    if (!filiaisLoading) {
-      if (filialPadraoId && filiaisDoUsuario.some(f => f.id === filialPadraoId)) {
-        setFilialFilter(filialPadraoId);
+    if (!filiaisLoading && filialFilter === null) {
+      // Só usa favorita se está explicitamente definida no perfil
+      const favoritaId = profile?.filial_favorita_id;
+      if (favoritaId && filiaisDoUsuario.some(f => f.id === favoritaId)) {
+        setFilialFilter(favoritaId);
       } else {
         setFilialFilter("all");
       }
     }
-  }, [filiaisLoading, filialPadraoId, filiaisDoUsuario]);
+  }, [filiaisLoading]);
 
+  const effectiveFilter = filialFilter || "all";
   const showFilialFilter = filiaisDoUsuario.length > 1;
 
   return (
@@ -103,7 +108,7 @@ function FaturamentoContent() {
 
         {/* Filtro de filial */}
         {showFilialFilter && (
-          <Select value={filialFilter} onValueChange={setFilialFilter}>
+          <Select value={effectiveFilter} onValueChange={setFilialFilter}>
             <SelectTrigger className="h-9 w-56">
               <Building2 className="h-3.5 w-3.5 mr-1.5" />
               <SelectValue placeholder="Filial" />
@@ -132,13 +137,13 @@ function FaturamentoContent() {
         </TabsList>
 
         <TabsContent value="aguardando">
-          <AguardandoFaturamentoTab filialFilter={filialFilter} />
+          <AguardandoFaturamentoTab filialFilter={effectiveFilter} />
         </TabsContent>
         <TabsContent value="faturas">
-          <FaturasTab filialFilter={filialFilter} />
+          <FaturasTab filialFilter={effectiveFilter} />
         </TabsContent>
         <TabsContent value="notas">
-          <NotasFiscaisTab filialFilter={filialFilter} />
+          <NotasFiscaisTab filialFilter={effectiveFilter} />
         </TabsContent>
       </Tabs>
     </div>
