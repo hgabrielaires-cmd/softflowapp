@@ -364,6 +364,57 @@ export type Database = {
         }
         Relationships: []
       }
+      contrato_financeiro_historico: {
+        Row: {
+          contrato_financeiro_id: string
+          contrato_origem_id: string | null
+          created_at: string
+          dados_anteriores: Json | null
+          dados_novos: Json | null
+          descricao: string
+          id: string
+          tipo: string
+          user_id: string | null
+        }
+        Insert: {
+          contrato_financeiro_id: string
+          contrato_origem_id?: string | null
+          created_at?: string
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          descricao: string
+          id?: string
+          tipo: string
+          user_id?: string | null
+        }
+        Update: {
+          contrato_financeiro_id?: string
+          contrato_origem_id?: string | null
+          created_at?: string
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          descricao?: string
+          id?: string
+          tipo?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contrato_financeiro_historico_contrato_financeiro_id_fkey"
+            columns: ["contrato_financeiro_id"]
+            isOneToOne: false
+            referencedRelation: "contratos_financeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contrato_financeiro_historico_contrato_origem_id_fkey"
+            columns: ["contrato_origem_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contrato_financeiro_modulos: {
         Row: {
           ativo: boolean
@@ -3220,6 +3271,60 @@ export type Database = {
             columns: ["tecnico_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parcelas_implantacao: {
+        Row: {
+          contrato_financeiro_id: string
+          contrato_origem_id: string | null
+          created_at: string
+          descricao: string
+          id: string
+          numero_parcelas: number
+          parcelas_pagas: number
+          status: string
+          valor_por_parcela: number
+          valor_total: number
+        }
+        Insert: {
+          contrato_financeiro_id: string
+          contrato_origem_id?: string | null
+          created_at?: string
+          descricao: string
+          id?: string
+          numero_parcelas?: number
+          parcelas_pagas?: number
+          status?: string
+          valor_por_parcela?: number
+          valor_total?: number
+        }
+        Update: {
+          contrato_financeiro_id?: string
+          contrato_origem_id?: string | null
+          created_at?: string
+          descricao?: string
+          id?: string
+          numero_parcelas?: number
+          parcelas_pagas?: number
+          status?: string
+          valor_por_parcela?: number
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcelas_implantacao_contrato_financeiro_id_fkey"
+            columns: ["contrato_financeiro_id"]
+            isOneToOne: false
+            referencedRelation: "contratos_financeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_implantacao_contrato_origem_id_fkey"
+            columns: ["contrato_origem_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
             referencedColumns: ["id"]
           },
         ]
