@@ -519,8 +519,47 @@ export default function TicketNovo() {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-xs">Tags (separadas por vírgula)</Label>
-                    <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tag1, tag2" className="text-xs" />
+                    <Label className="text-xs">Tags</Label>
+                    <div className="flex flex-wrap gap-1.5 p-2 border rounded-md bg-background min-h-[38px] items-center">
+                      {tags.map((tag) => (
+                        <Badge key={tag} className="bg-blue-500 text-white hover:bg-blue-600 text-xs cursor-pointer gap-1"
+                          onClick={() => setTags(tags.filter((t) => t !== tag))}>
+                          {tag} <span className="ml-0.5">×</span>
+                        </Badge>
+                      ))}
+                      <div className="relative flex-1 min-w-[120px]">
+                        <input
+                          value={tagInput}
+                          onChange={(e) => setTagInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === " " || e.key === "Enter") {
+                              e.preventDefault();
+                              const val = tagInput.trim();
+                              if (val) {
+                                const formatted = val.startsWith("#") ? val.toUpperCase() : `#${val.toUpperCase()}`;
+                                if (!tags.includes(formatted)) setTags([...tags, formatted]);
+                                setTagInput("");
+                              }
+                            }
+                            if (e.key === "Backspace" && !tagInput && tags.length > 0) {
+                              setTags(tags.slice(0, -1));
+                            }
+                          }}
+                          placeholder={tags.length === 0 ? "#NFE, #NFCE..." : ""}
+                          className="w-full bg-transparent outline-none text-xs h-6"
+                        />
+                        {tagInput.length >= 1 && (
+                          <TagSuggestions
+                            input={tagInput}
+                            existingTags={tags}
+                            onSelect={(tag) => {
+                              if (!tags.includes(tag)) setTags([...tags, tag]);
+                              setTagInput("");
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
