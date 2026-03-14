@@ -41,3 +41,8 @@ export const TICKET_PRIORIDADE_SLA: Record<TicketPrioridade, number> = {
 };
 
 export const TICKET_MESAS: TicketMesa[] = ["Suporte", "Implantação", "Financeiro", "Comercial"];
+
+export const TICKET_MODOS = [
+  { value: "interno" as const, label: "Interno" },
+  { value: "externo" as const, label: "Externo" },
+];

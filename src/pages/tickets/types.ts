@@ -120,6 +120,7 @@ export interface TicketFormData {
   cliente_id: string | null;
   contrato_id: string | null;
   mesa: TicketMesa;
+  modo: TicketModo;
   tipo_atendimento_id: string | null;
   prioridade: TicketPrioridade;
   responsavel_id: string | null;

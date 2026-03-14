@@ -15,6 +15,7 @@ export function useCreateTicket(onCreated?: () => void) {
           cliente_id: data.cliente_id || null,
           contrato_id: data.contrato_id || null,
           mesa: data.mesa,
+          modo: data.modo,
           tipo_atendimento_id: data.tipo_atendimento_id || null,
           prioridade: data.prioridade,
           responsavel_id: data.responsavel_id || null,
