@@ -43,9 +43,10 @@ interface Props {
   ticketId: string | null;
   open: boolean;
   onClose: () => void;
+  onSelectTicket?: (ticketId: string) => void;
 }
 
-export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
+export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: Props) {
   const { user, roles } = useAuth();
   const userId = user?.id || "";
   const { canEditar } = useCrudPermissions("tickets", roles);
