@@ -585,5 +585,36 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
         </div>
       </SheetContent>
     </Sheet>
+
+    {/* Pausar Dialog */}
+    <PausarTicketDialog
+      open={showPausarDialog}
+      onOpenChange={setShowPausarDialog}
+      loading={pausarTicket.isPending}
+      onConfirm={(motivo, tipo) => {
+        pausarTicket.mutate({ ticketId: ticket.id, userId, motivo, tipo });
+      }}
+    />
+
+    {/* Resolução Dialog */}
+    <ResolucaoDialog
+      open={showResolucaoDialog}
+      onOpenChange={setShowResolucaoDialog}
+      resolucao={resolucaoText}
+      setResolucao={setResolucaoText}
+      loading={closeTicket.isPending}
+      onConfirm={() => {
+        closeTicket.mutate({
+          ticketId: ticket.id,
+          newStatus: "Resolvido",
+          oldStatus: ticket.status,
+          userId,
+          resolucao: resolucaoText,
+        });
+        setShowResolucaoDialog(false);
+        setResolucaoText("");
+      }}
+    />
+    </>
   );
 }
