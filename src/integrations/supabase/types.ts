@@ -1452,6 +1452,80 @@ export type Database = {
         }
         Relationships: []
       }
+      helpdesk_modelos_ticket: {
+        Row: {
+          ativo: boolean
+          corpo_html: string
+          created_at: string
+          id: string
+          nome: string
+          tipo_atendimento_id: string | null
+          titulo_padrao: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          corpo_html?: string
+          created_at?: string
+          id?: string
+          nome: string
+          tipo_atendimento_id?: string | null
+          titulo_padrao?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          corpo_html?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          tipo_atendimento_id?: string | null
+          titulo_padrao?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "helpdesk_modelos_ticket_tipo_atendimento_id_fkey"
+            columns: ["tipo_atendimento_id"]
+            isOneToOne: false
+            referencedRelation: "helpdesk_tipos_atendimento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      helpdesk_tipos_atendimento: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          mesa_padrao: string
+          nome: string
+          sla_horas: number
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          mesa_padrao?: string
+          nome: string
+          sla_horas?: number
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          mesa_padrao?: string
+          nome?: string
+          sla_horas?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       integracoes_config: {
         Row: {
           ativo: boolean
@@ -3673,6 +3747,261 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_anexos: {
+        Row: {
+          comentario_id: string | null
+          created_at: string
+          id: string
+          nome: string
+          tamanho_bytes: number | null
+          ticket_id: string
+          tipo_mime: string | null
+          uploaded_by: string | null
+          url: string
+        }
+        Insert: {
+          comentario_id?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+          tamanho_bytes?: number | null
+          ticket_id: string
+          tipo_mime?: string | null
+          uploaded_by?: string | null
+          url: string
+        }
+        Update: {
+          comentario_id?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          tamanho_bytes?: number | null
+          ticket_id?: string
+          tipo_mime?: string | null
+          uploaded_by?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_anexos_comentario_id_fkey"
+            columns: ["comentario_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_comentarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_anexos_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_comentarios: {
+        Row: {
+          conteudo: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          ticket_id: string
+          tipo: string
+          user_id: string | null
+          visibilidade: string
+        }
+        Insert: {
+          conteudo?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          ticket_id: string
+          tipo?: string
+          user_id?: string | null
+          visibilidade?: string
+        }
+        Update: {
+          conteudo?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          ticket_id?: string
+          tipo?: string
+          user_id?: string | null
+          visibilidade?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_comentarios_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_seguidores: {
+        Row: {
+          created_at: string
+          id: string
+          ticket_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ticket_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ticket_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_seguidores_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_vinculos: {
+        Row: {
+          created_at: string
+          id: string
+          ticket_id: string
+          ticket_vinculado_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ticket_id: string
+          ticket_vinculado_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ticket_id?: string
+          ticket_vinculado_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_vinculos_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_vinculos_ticket_vinculado_id_fkey"
+            columns: ["ticket_vinculado_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tickets: {
+        Row: {
+          cliente_id: string | null
+          contrato_id: string | null
+          created_at: string
+          criado_por: string | null
+          descricao_html: string
+          id: string
+          mesa: string
+          numero_exibicao: string
+          numero_registro: number
+          previsao_entrega: string | null
+          prioridade: string
+          responsavel_id: string | null
+          sla_deadline: string | null
+          sla_horas: number
+          status: string
+          tags: string[] | null
+          ticket_pai_id: string | null
+          tipo_atendimento_id: string | null
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          cliente_id?: string | null
+          contrato_id?: string | null
+          created_at?: string
+          criado_por?: string | null
+          descricao_html?: string
+          id?: string
+          mesa?: string
+          numero_exibicao?: string
+          numero_registro?: number
+          previsao_entrega?: string | null
+          prioridade?: string
+          responsavel_id?: string | null
+          sla_deadline?: string | null
+          sla_horas?: number
+          status?: string
+          tags?: string[] | null
+          ticket_pai_id?: string | null
+          tipo_atendimento_id?: string | null
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          cliente_id?: string | null
+          contrato_id?: string | null
+          created_at?: string
+          criado_por?: string | null
+          descricao_html?: string
+          id?: string
+          mesa?: string
+          numero_exibicao?: string
+          numero_registro?: number
+          previsao_entrega?: string | null
+          prioridade?: string
+          responsavel_id?: string | null
+          sla_deadline?: string | null
+          sla_horas?: number
+          status?: string
+          tags?: string[] | null
+          ticket_pai_id?: string | null
+          tipo_atendimento_id?: string | null
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_ticket_pai_id_fkey"
+            columns: ["ticket_pai_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_tipo_atendimento_id_fkey"
+            columns: ["tipo_atendimento_id"]
+            isOneToOne: false
+            referencedRelation: "helpdesk_tipos_atendimento"
             referencedColumns: ["id"]
           },
         ]

@@ -118,6 +118,7 @@ const navGroups: NavGroup[] = [
         { icon: <ListOrdered className="h-4 w-4" />, label: "Jornadas de Implantação", to: "/jornadas", permKey: "menu.jornadas" },
         { icon: <Headphones className="h-4 w-4" />, label: "Mesas de Atendimento", to: "/mesas-atendimento", permKey: "menu.mesas_atendimento" },
         { icon: <ListOrdered className="h-4 w-4" />, label: "Etapas", to: "/etapas-painel", permKey: "menu.etapas_painel" },
+        { icon: <Ticket className="h-4 w-4" />, label: "Helpdesk", to: "/helpdesk-parametros", permKey: "menu.helpdesk_parametros" },
       ] },
       { icon: <UserCheck className="h-4 w-4" />, label: "CRM", to: "#crm", children: [
         { icon: <ListOrdered className="h-4 w-4" />, label: "Segmentos", to: "/segmentos", permKey: "menu.segmentos" },

@@ -1,0 +1,386 @@
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { AppLayout } from "@/components/AppLayout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { UserAvatar } from "@/components/UserAvatar";
+import { useAuth } from "@/context/AuthContext";
+import { useCreateTicket } from "./tickets/useTicketsForm";
+import {
+  useProfiles, useHelpdeskTipos, useHelpdeskModelos,
+  useClienteTicketsAbertos, useClienteContratos,
+} from "./tickets/useTicketsQueries";
+import { TICKET_PRIORIDADES, TICKET_MESAS, TICKET_PRIORIDADE_COLORS, TICKET_PRIORIDADE_SLA } from "./tickets/constants";
+import { TICKET_STATUS_COLORS } from "./tickets/constants";
+import type { TicketFormData, TicketPrioridade, TicketMesa, TicketStatus } from "./tickets/types";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
+import { ArrowLeft, Clock, Trash2, Search } from "lucide-react";
+import { toast } from "sonner";
+
+export default function TicketNovo() {
+  const navigate = useNavigate();
+  const { user, profile } = useAuth();
+  const userId = user?.id || "";
+
+  const { data: profiles = [] } = useProfiles();
+  const { data: tipos = [] } = useHelpdeskTipos();
+  const { data: modelos = [] } = useHelpdeskModelos();
+  const createTicket = useCreateTicket();
+
+  // Form state
+  const [titulo, setTitulo] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [clienteId, setClienteId] = useState<string | null>(null);
+  const [clienteSearch, setClienteSearch] = useState("");
+  const [contratoId, setContratoId] = useState<string | null>(null);
+  const [mesa, setMesa] = useState<TicketMesa>((profile as any)?.mesa_favorita_id ? "Suporte" : "Suporte");
+  const [tipoAtendimentoId, setTipoAtendimentoId] = useState<string | null>(null);
+  const [prioridade, setPrioridade] = useState<TicketPrioridade>("Média");
+  const [responsavelId, setResponsavelId] = useState<string | null>(null);
+  const [modeloId, setModeloId] = useState<string | null>(null);
+  const [ticketPaiId, setTicketPaiId] = useState<string | null>(null);
+  const [seguidores, setSeguidores] = useState<string[]>(userId ? [userId] : []);
+  const [selfFollow, setSelfFollow] = useState(true);
+  const [tags, setTags] = useState("");
+
+  // SLA calculation
+  const tipoSelecionado = tipos.find((t) => t.id === tipoAtendimentoId);
+  const slaHoras = tipoSelecionado?.sla_horas ?? TICKET_PRIORIDADE_SLA[prioridade];
+
+  // Client search
+  const { data: clientes = [] } = useQuery({
+    queryKey: ["clientes_search", clienteSearch],
+    enabled: clienteSearch.length >= 2,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("clientes")
+        .select("id, nome_fantasia, cnpj_cpf")
+        .or(`nome_fantasia.ilike.%${clienteSearch}%,cnpj_cpf.ilike.%${clienteSearch}%`)
+        .eq("ativo", true)
+        .limit(10);
+      return data ?? [];
+    },
+  });
+
+  const { data: clienteContratos = [] } = useClienteContratos(clienteId);
+  const { data: clienteTickets = [] } = useClienteTicketsAbertos(clienteId);
+
+  // Modelo apply
+  useEffect(() => {
+    if (!modeloId) return;
+    const modelo = modelos.find((m) => m.id === modeloId);
+    if (modelo) {
+      if (modelo.titulo_padrao) setTitulo(modelo.titulo_padrao);
+      if (modelo.corpo_html) setDescricao(modelo.corpo_html);
+    }
+  }, [modeloId, modelos]);
+
+  // Self follow sync
+  useEffect(() => {
+    if (selfFollow && userId && !seguidores.includes(userId)) {
+      setSeguidores((prev) => [...prev, userId]);
+    } else if (!selfFollow && userId) {
+      setSeguidores((prev) => prev.filter((id) => id !== userId));
+    }
+  }, [selfFollow, userId]);
+
+  const handleSave = async () => {
+    if (!titulo.trim()) {
+      toast.error("Título é obrigatório");
+      return;
+    }
+    const data: TicketFormData = {
+      titulo: titulo.trim(),
+      descricao_html: descricao,
+      cliente_id: clienteId,
+      contrato_id: contratoId,
+      mesa,
+      tipo_atendimento_id: tipoAtendimentoId,
+      prioridade,
+      responsavel_id: responsavelId,
+      sla_horas: slaHoras,
+      tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+      previsao_entrega: null,
+      ticket_pai_id: ticketPaiId,
+      seguidores,
+    };
+    const result = await createTicket.mutateAsync({ data, userId });
+    navigate("/tickets");
+  };
+
+  return (
+    <AppLayout>
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="shrink-0 px-4 py-3 border-b flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/tickets")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-lg font-bold">Novo Ticket</h1>
+        </div>
+
+        {/* Body: two columns */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="flex gap-4 p-4 min-h-full">
+            {/* Left 60% */}
+            <div className="flex-1 basis-[60%] space-y-4">
+              {/* Row 1 */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Título *</Label>
+                  <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Título do ticket" />
+                </div>
+                <div>
+                  <Label className="text-xs">Nº do Ticket</Label>
+                  <Input disabled value="(gerado automaticamente)" className="bg-muted" />
+                </div>
+              </div>
+
+              {/* Row 2 */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="relative">
+                  <Label className="text-xs">Cliente</Label>
+                  <Input
+                    value={clienteId ? clientes.find((c) => c.id === clienteId)?.nome_fantasia || clienteSearch : clienteSearch}
+                    onChange={(e) => { setClienteSearch(e.target.value); setClienteId(null); }}
+                    placeholder="Buscar por nome ou CNPJ"
+                  />
+                  {clienteSearch.length >= 2 && !clienteId && clientes.length > 0 && (
+                    <div className="absolute z-10 top-full left-0 right-0 bg-card border rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
+                      {clientes.map((c) => (
+                        <button key={c.id} className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                          onClick={() => { setClienteId(c.id); setClienteSearch(c.nome_fantasia); }}>
+                          {c.nome_fantasia} <span className="text-muted-foreground text-xs">({c.cnpj_cpf})</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-xs">Contrato vinculado</Label>
+                  <Select value={contratoId || "__none__"} onValueChange={(v) => setContratoId(v === "__none__" ? null : v)}>
+                    <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Nenhum</SelectItem>
+                      {clienteContratos.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id}>{c.numero_exibicao} - {c.planos?.nome || c.tipo}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Client tickets (expandable) */}
+              {clienteId && clienteTickets.length > 0 && (
+                <div className="bg-muted/30 rounded-lg p-3 space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground">Tickets em aberto deste cliente</p>
+                  {clienteTickets.map((t: any) => (
+                    <div key={t.id} className="flex items-center gap-2 text-xs">
+                      <span className="font-mono text-muted-foreground">#{t.numero_exibicao}</span>
+                      <span className="truncate flex-1">{t.titulo}</span>
+                      <Badge className={cn("text-[9px]", TICKET_STATUS_COLORS[t.status as TicketStatus])}>{t.status}</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Row 3 */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Mesa</Label>
+                  <Select value={mesa} onValueChange={(v) => setMesa(v as TicketMesa)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {TICKET_MESAS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Tipo de Atendimento</Label>
+                  <div className="flex items-center gap-2">
+                    <Select value={tipoAtendimentoId || "__none__"} onValueChange={(v) => setTipoAtendimentoId(v === "__none__" ? null : v)}>
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Nenhum</SelectItem>
+                        {tipos.filter((t) => t.ativo).map((t) => (
+                          <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {tipoSelecionado && (
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        <Clock className="h-3 w-3 mr-1" /> SLA: {tipoSelecionado.sla_horas}h
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 4 */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Prioridade</Label>
+                  <Select value={prioridade} onValueChange={(v) => setPrioridade(v as TicketPrioridade)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {TICKET_PRIORIDADES.map((p) => (
+                        <SelectItem key={p} value={p}>
+                          <div className="flex items-center gap-2">
+                            <Badge className={cn("text-[10px] px-1.5 py-0", TICKET_PRIORIDADE_COLORS[p])}>{p}</Badge>
+                            <span className="text-xs text-muted-foreground">SLA: {TICKET_PRIORIDADE_SLA[p]}h</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Responsável</Label>
+                  <Select value={responsavelId || "__none__"} onValueChange={(v) => setResponsavelId(v === "__none__" ? null : v)}>
+                    <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Nenhum</SelectItem>
+                      {profiles.map((p) => (
+                        <SelectItem key={p.user_id} value={p.user_id}>
+                          <div className="flex items-center gap-2">
+                            <UserAvatar avatarUrl={p.avatar_url} fullName={p.full_name} size="xs" />
+                            {p.full_name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 5: Modelo */}
+              <div>
+                <Label className="text-xs">Modelo de Ticket</Label>
+                <Select value={modeloId || "__none__"} onValueChange={(v) => setModeloId(v === "__none__" ? null : v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar modelo" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Nenhum</SelectItem>
+                    {modelos.filter((m: any) => m.ativo).map((m: any) => (
+                      <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Row 6: Descrição */}
+              <div>
+                <Label className="text-xs">Descrição</Label>
+                <Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)}
+                  placeholder="Descreva o ticket..." className="min-h-[200px]" />
+              </div>
+            </div>
+
+            {/* Right 40% */}
+            <div className="basis-[40%] space-y-4">
+              {/* Vinculações */}
+              <Card>
+                <CardHeader className="py-3 px-4">
+                  <CardTitle className="text-sm">Vinculações</CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4 space-y-3">
+                  <div>
+                    <Label className="text-xs">Ticket pai</Label>
+                    <Input placeholder="Buscar ticket..." value={ticketPaiId || ""} onChange={() => {}} disabled className="text-xs" />
+                  </div>
+                  {clienteId && clienteTickets.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Últimos tickets do cliente</p>
+                      {clienteTickets.slice(0, 5).map((t: any) => (
+                        <div key={t.id} className="flex items-center gap-2 text-xs py-1">
+                          <span className="font-mono text-muted-foreground">#{t.numero_exibicao}</span>
+                          <span className="truncate flex-1">{t.titulo}</span>
+                          <Button variant="ghost" size="sm" className="h-5 text-[10px] px-2"
+                            onClick={() => setTicketPaiId(t.id)}>Vincular</Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Seguidores */}
+              <Card>
+                <CardHeader className="py-3 px-4">
+                  <CardTitle className="text-sm">Seguidores</CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox id="self-follow" checked={selfFollow} onCheckedChange={(v) => setSelfFollow(!!v)} />
+                    <Label htmlFor="self-follow" className="text-xs">Me adicionar como seguidor</Label>
+                  </div>
+                  <Select onValueChange={(v) => {
+                    if (!seguidores.includes(v)) setSeguidores([...seguidores, v]);
+                  }}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Adicionar seguidor" /></SelectTrigger>
+                    <SelectContent>
+                      {profiles.filter((p) => !seguidores.includes(p.user_id)).map((p) => (
+                        <SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {seguidores.map((uid) => {
+                    const p = profiles.find((pr) => pr.user_id === uid);
+                    return (
+                      <div key={uid} className="flex items-center gap-2 text-xs">
+                        <UserAvatar avatarUrl={p?.avatar_url} fullName={p?.full_name} size="xs" />
+                        <span className="flex-1">{p?.full_name || uid}</span>
+                        <Button variant="ghost" size="icon" className="h-5 w-5"
+                          onClick={() => setSeguidores(seguidores.filter((s) => s !== uid))}>
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+
+              {/* Info adicional */}
+              <Card>
+                <CardHeader className="py-3 px-4">
+                  <CardTitle className="text-sm">Informações adicionais</CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Data de abertura</Label>
+                      <Input disabled value={new Date().toLocaleDateString("pt-BR")} className="bg-muted text-xs" />
+                    </div>
+                    <div>
+                      <Label className="text-xs">SLA</Label>
+                      <Input disabled value={`${slaHoras}h`} className="bg-muted text-xs" />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Tags (separadas por vírgula)</Label>
+                    <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tag1, tag2" className="text-xs" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="shrink-0 px-4 py-3 border-t flex items-center justify-between">
+          <Button variant="outline" onClick={() => navigate("/tickets")}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={createTicket.isPending} className="bg-primary hover:bg-primary/90">
+            {createTicket.isPending ? "Salvando..." : "Salvar Ticket"}
+          </Button>
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
