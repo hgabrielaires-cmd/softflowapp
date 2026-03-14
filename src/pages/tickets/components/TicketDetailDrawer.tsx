@@ -15,6 +15,8 @@ import { formatDateTime } from "../helpers";
 import { TicketSlaCard } from "./TicketSlaCard";
 import { TicketTimeline } from "./TicketTimeline";
 import { TicketNovaResposta } from "./TicketNovaResposta";
+import { ResolucaoDialog } from "./ResolucaoDialog";
+import { PausarTicketDialog } from "./PausarTicketDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import {
   useTicketDetail, useTicketComentarios, useTicketAnexos,
@@ -26,6 +28,7 @@ import {
   useUpdateTicketStatus, useAddTicketComment, useUpdateTicketResponsavel,
   useAddTicketSeguidor, useRemoveTicketSeguidor, useToggleTicketCurtida,
   useReplyTicketComment, useAddTicketAgendamento, useRemoveTicketAgendamento,
+  useCloseTicketWithResolution, usePausarTicket,
 } from "../useTicketsForm";
 import { useAuth } from "@/context/AuthContext";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
@@ -34,6 +37,7 @@ import {
   Maximize2, X, Building2, FileText, Headphones, Calendar as CalendarIcon,
   User, Plus, Link2, Paperclip, Download, Edit2, MessageSquare,
   ChevronDown, Phone, Mail, Star, CalendarDays, Clock, Trash2,
+  Play, PauseCircle, CheckCircle,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { format, isSameDay } from "date-fns";
