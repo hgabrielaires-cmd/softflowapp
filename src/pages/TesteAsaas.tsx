@@ -381,7 +381,7 @@ export default function TesteAsaas() {
             <TestSection
               title="3. Teste de Boleto"
               icon={<CreditCard className="h-4 w-4" />}
-              description="Gera boleto de R$ 1,00 e busca linha digitável"
+              description="Gera boleto de R$ 5,00 e busca linha digitável"
             >
               <Button
                 className="w-full gap-2"
@@ -390,7 +390,7 @@ export default function TesteAsaas() {
                 disabled={creatingBoleto || !filialId || !customerId}
               >
                 {creatingBoleto ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                Gerar Boleto Teste (R$ 1,00)
+                Gerar Boleto Teste (R$ 5,00)
               </Button>
               {!customerId && <p className="text-xs text-muted-foreground">⬆️ Crie o cliente teste primeiro</p>}
               {boletoResult && !boletoResult.error && (
