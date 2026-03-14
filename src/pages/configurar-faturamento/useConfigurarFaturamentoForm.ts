@@ -266,10 +266,20 @@ export function useConfigurarFaturamentoForm() {
     form: ConfigFaturamentoForm
   ) {
     // Verificar duplicidade
+    // Buscar o contrato_id do contrato financeiro base (não o contrato aditivo/OA)
+    const { data: cfBase } = await supabase
+      .from("contratos_financeiros")
+      .select("contrato_id")
+      .eq("id", contratoFinanceiroId)
+      .single();
+
+    const baseContratoId = cfBase?.contrato_id || espelho.id;
+
+    // Validar duplicidade pelo contrato BASE do financeiro + mês/ano
     const { data: existing } = await supabase
       .from("faturas")
       .select("id")
-      .eq("contrato_id", espelho.id)
+      .eq("contrato_id", baseContratoId)
       .eq("referencia_mes", mesRef)
       .eq("referencia_ano", anoRef)
       .maybeSingle();
