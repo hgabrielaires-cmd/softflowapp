@@ -192,6 +192,7 @@ export default function Tickets() {
           ticketId={selectedTicketId}
           open={!!selectedTicketId}
           onClose={() => setSelectedTicketId(null)}
+          onSelectTicket={(id) => setSelectedTicketId(id)}
         />
       </div>
     </AppLayout>
