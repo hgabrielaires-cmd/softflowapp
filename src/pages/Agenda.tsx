@@ -130,10 +130,10 @@ export default function Agenda() {
   // Helper: build base query filters
   const applyBaseFilters = useCallback((query: any) => {
     if (filtroFilial !== "todas" && filtroFilial !== "_init_") {
-      query = query.eq("filial_id", filtroFilial);
+      query = query.or(`filial_id.eq.${filtroFilial},filial_id.is.null`);
     }
     if (filtroMesa !== "todas" && filtroMesa !== "_init_") {
-      query = query.eq("mesa_id", filtroMesa);
+      query = query.or(`mesa_id.eq.${filtroMesa},mesa_id.is.null`);
     }
     return query;
   }, [filtroFilial, filtroMesa]);
