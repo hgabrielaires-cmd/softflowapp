@@ -365,6 +365,14 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/financeiro/teste-asaas"
+              element={
+                <ProtectedRoute>
+                  <TesteAsaas />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
