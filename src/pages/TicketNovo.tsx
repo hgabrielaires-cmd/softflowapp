@@ -222,7 +222,8 @@ export default function TicketNovo() {
       ticket_pai_id: ticketPaiId,
       seguidores,
     };
-    createTicket.mutate({ data, userId });
+    const agendamentoDatas = agendaDatas.map((d) => format(d, "yyyy-MM-dd"));
+    createTicket.mutate({ data, userId, agendamentoDatas });
   };
 
   return (
