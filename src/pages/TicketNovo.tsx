@@ -216,6 +216,7 @@ export default function TicketNovo() {
       cliente_id: clienteId,
       contrato_id: contratoId,
       mesa,
+      modo,
       tipo_atendimento_id: tipoAtendimentoId,
       prioridade,
       responsavel_id: responsavelId,
