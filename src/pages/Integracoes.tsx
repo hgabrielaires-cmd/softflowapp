@@ -91,8 +91,23 @@ const integrationDefs: IntegrationDef[] = [
       "Armazenamento seguro no storage",
     ],
   },
+  {
+    key: "asaas",
+    icon: <img src={logoAsaas} alt="Asaas" className="h-28 w-28 object-contain" />,
+    hasLogo: true,
+    title: "Asaas",
+    description: "Gateway de pagamentos por filial",
+    accentColor: "bg-blue-500",
+    tokenLabel: "API Key",
+    tokenPlaceholder: "Cole aqui seu token do Asaas",
+    details: [
+      "Geração automática de boletos e Pix",
+      "Token individual por filial (CNPJ)",
+      "Modo sandbox e produção",
+      "Webhooks para atualização de status",
+    ],
+  },
 ];
-
 // ── WhatsApp Config Dialog (Evolution API) ──
 
 interface WhatsAppConfigDialogProps {
