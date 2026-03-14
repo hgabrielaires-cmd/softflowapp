@@ -3,16 +3,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ExternalLink, FileText, Package, Briefcase } from "lucide-react";
+import { ExternalLink, FileText, Package, Briefcase, DollarSign } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import type { ContratoEspelho } from "../types";
+import type { ContratoEspelho, ContratoFinanceiroBase } from "../types";
 import { fmtCurrency, getBadgeTipoLabel, getBadgeTipoColor } from "../helpers";
 
 interface Props {
   espelho: ContratoEspelho;
+  contratoFinanceiroBase?: ContratoFinanceiroBase | null;
 }
 
-export function EspelhoContrato({ espelho }: Props) {
+export function EspelhoContrato({ espelho, contratoFinanceiroBase }: Props) {
   const tipoLabel = getBadgeTipoLabel(espelho.tipo, espelho.pedido?.tipo_pedido);
   const tipoColor = getBadgeTipoColor(tipoLabel);
 
@@ -96,8 +97,50 @@ export function EspelhoContrato({ espelho }: Props) {
             <FieldReadonly label="Contrato" value={`#${espelho.contrato_base.numero_exibicao}`} />
             <FieldReadonly label="Cliente" value={espelho.contrato_base.cliente_nome} />
             <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
-              Este registro será vinculado ao contrato base #{espelho.contrato_base.numero_exibicao}
+              As alterações serão aplicadas ao contrato financeiro base #{espelho.contrato_base.numero_exibicao}
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Situação atual do contrato financeiro base */}
+      {contratoFinanceiroBase && (
+        <Card className="border-dashed border-primary/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-primary" />
+              Composição Atual do Boleto
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-xs">
+            <div className="flex justify-between py-1">
+              <span>Mensalidade ({contratoFinanceiroBase.plano_nome || "Plano"})</span>
+              <span className="font-medium">{fmtCurrency(contratoFinanceiroBase.valor_mensalidade)}</span>
+            </div>
+
+            {contratoFinanceiroBase.parcelas_pendentes.map((p) => (
+              <div key={p.id} className="flex justify-between py-1 text-amber-700 dark:text-amber-400">
+                <span>{p.descricao} ({p.parcelas_pagas}/{p.numero_parcelas})</span>
+                <span className="font-medium">{fmtCurrency(p.valor_por_parcela)}</span>
+              </div>
+            ))}
+
+            {contratoFinanceiroBase.modulos_ativos.map((m) => (
+              <div key={m.id} className="flex justify-between py-1 text-cyan-700 dark:text-cyan-400">
+                <span>{m.nome}</span>
+                <span className="font-medium">{fmtCurrency(m.valor_mensal)}</span>
+              </div>
+            ))}
+
+            <Separator />
+            <div className="flex justify-between font-bold text-sm text-foreground">
+              <span>Total atual</span>
+              <span>{fmtCurrency(
+                contratoFinanceiroBase.valor_mensalidade
+                + contratoFinanceiroBase.parcelas_pendentes.reduce((s, p) => s + p.valor_por_parcela, 0)
+                + contratoFinanceiroBase.modulos_ativos.reduce((s, m) => s + m.valor_mensal, 0)
+              )}</span>
+            </div>
           </CardContent>
         </Card>
       )}

@@ -5,15 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { CreditCard, Building, Package, Wrench } from "lucide-react";
+import { CreditCard, Building, Package, Wrench, ArrowRight, AlertCircle, Info } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import type { ConfigFaturamentoForm, ContratoEspelho, ModuloConfig } from "../types";
+import type { ConfigFaturamentoForm, ContratoEspelho, ContratoFinanceiroBase } from "../types";
 import { PARCELAS_OPTIONS, FORMAS_PAGAMENTO_CONFIG, DIAS_VENCIMENTO } from "../constants";
 import { fmtCurrency, parseCurrencyInput, formatCurrencyInput } from "../helpers";
 
@@ -22,10 +21,15 @@ interface Props {
   setForm: React.Dispatch<React.SetStateAction<ConfigFaturamentoForm>>;
   espelho: ContratoEspelho;
   canEditValues?: boolean;
+  contratoFinanceiroBase?: ContratoFinanceiroBase | null;
 }
 
-export function ConfiguracaoCobranca({ form, setForm, espelho, canEditValues = false }: Props) {
+export function ConfiguracaoCobranca({ form, setForm, espelho, canEditValues = false, contratoFinanceiroBase }: Props) {
   const isOA = espelho.tipo === "OA";
+  const tipoPedido = espelho.pedido?.tipo_pedido || "";
+  const isSubRegistro = !!espelho.contrato_origem_id && !!contratoFinanceiroBase;
+  const isUpgradeOrDowngrade = tipoPedido === "Upgrade" || tipoPedido === "Downgrade";
+  const isModuloAdicional = tipoPedido === "Módulo Adicional" || tipoPedido === "Aditivo";
 
   function updateField<K extends keyof ConfigFaturamentoForm>(key: K, value: ConfigFaturamentoForm[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -37,13 +41,108 @@ export function ConfiguracaoCobranca({ form, setForm, espelho, canEditValues = f
 
   return (
     <div className="space-y-4">
+      {/* Alerta de sub-registro */}
+      {isSubRegistro && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="pt-4 pb-3">
+            <div className="flex gap-2 items-start">
+              <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-primary">
+                  {isUpgradeOrDowngrade && "Este registro será aplicado ao contrato financeiro base existente. A mensalidade será atualizada."}
+                  {isModuloAdicional && "Os módulos serão adicionados ao contrato financeiro base existente, somando à mensalidade."}
+                  {isOA && "A OA será incluída como item avulso no boleto do mês de referência."}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Dia de vencimento e forma de pagamento são herdados do contrato base.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Upgrade/Downgrade: Comparação mensalidade antes → depois */}
+      {isSubRegistro && isUpgradeOrDowngrade && contratoFinanceiroBase && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-primary" />
+              Alteração de Mensalidade
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-3 justify-center py-2">
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground mb-1">Mensalidade atual</p>
+                <p className="text-lg font-bold text-muted-foreground line-through">
+                  {fmtCurrency(contratoFinanceiroBase.valor_mensalidade)}
+                </p>
+                <p className="text-xs text-muted-foreground">{contratoFinanceiroBase.plano_nome || "Plano atual"}</p>
+              </div>
+              <ArrowRight className="h-5 w-5 text-primary" />
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground mb-1">Nova mensalidade</p>
+                <p className="text-lg font-bold text-primary">
+                  {fmtCurrency(form.valor_mensalidade)}
+                </p>
+                <p className="text-xs text-muted-foreground">{espelho.plano?.nome || "Novo plano"}</p>
+              </div>
+            </div>
+
+            {canEditValues && (
+              <div className="space-y-1">
+                <Label className="text-xs">Ajustar valor da nova mensalidade</Label>
+                <Input
+                  value={formatCurrencyInput(form.valor_mensalidade)}
+                  onChange={(e) => handleCurrencyChange("valor_mensalidade", e.target.value)}
+                  className="h-9"
+                  placeholder="R$ 0,00"
+                />
+              </div>
+            )}
+
+            {/* Parcelas pendentes existentes */}
+            {contratoFinanceiroBase.parcelas_pendentes.length > 0 && (
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-2 space-y-1">
+                <p className="text-xs font-medium text-amber-800 dark:text-amber-400 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" /> Parcelas pendentes do contrato anterior
+                </p>
+                {contratoFinanceiroBase.parcelas_pendentes.map((p) => (
+                  <div key={p.id} className="flex justify-between text-xs text-amber-700 dark:text-amber-300">
+                    <span>{p.descricao} ({p.parcelas_pagas}/{p.numero_parcelas})</span>
+                    <span>{fmtCurrency(p.valor_por_parcela)}/mês restante</span>
+                  </div>
+                ))}
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Estas parcelas continuarão sendo somadas ao boleto até quitação.
+                </p>
+              </div>
+            )}
+
+            {/* Módulos ativos existentes */}
+            {contratoFinanceiroBase.modulos_ativos.length > 0 && (
+              <div className="rounded-lg bg-muted/50 p-2 space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Módulos ativos (mantidos)</p>
+                {contratoFinanceiroBase.modulos_ativos.map((m) => (
+                  <div key={m.id} className="flex justify-between text-xs">
+                    <span>{m.nome}</span>
+                    <span>{fmtCurrency(m.valor_mensal)}/mês</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Seção Implantação */}
       {form.valor_implantacao > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Building className="h-4 w-4 text-primary" />
-              Implantação
+              {isSubRegistro ? `Implantação do ${tipoPedido || "Aditivo"}` : "Implantação"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -80,7 +179,7 @@ export function ConfiguracaoCobranca({ form, setForm, espelho, canEditValues = f
                   {fmtCurrency(Math.round((form.valor_implantacao / form.parcelas_implantacao) * 100) / 100)} por parcela
                 </Badge>
                 <span className="text-muted-foreground">
-                  Será somado à mensalidade nos primeiros {form.parcelas_implantacao} meses
+                  Será somado ao boleto nos primeiros {form.parcelas_implantacao} meses
                 </span>
               </div>
             )}
@@ -88,8 +187,8 @@ export function ConfiguracaoCobranca({ form, setForm, espelho, canEditValues = f
         </Card>
       )}
 
-      {/* Seção Mensalidade */}
-      {!isOA && (
+      {/* Seção Mensalidade — Apenas para contrato NOVO */}
+      {!isOA && !isSubRegistro && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -170,13 +269,36 @@ export function ConfiguracaoCobranca({ form, setForm, espelho, canEditValues = f
         </Card>
       )}
 
+      {/* Dados herdados do base (para sub-registros) */}
+      {isSubRegistro && !isOA && !isUpgradeOrDowngrade && contratoFinanceiroBase && (
+        <Card className="border-dashed">
+          <CardContent className="pt-4 space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Dados herdados do contrato base</p>
+            <div className="grid grid-cols-3 gap-3 text-xs">
+              <div>
+                <span className="text-muted-foreground">Dia vencimento</span>
+                <p className="font-medium">{contratoFinanceiroBase.dia_vencimento}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Forma pagamento</span>
+                <p className="font-medium">{contratoFinanceiroBase.forma_pagamento}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Mensalidade base</span>
+                <p className="font-medium">{fmtCurrency(contratoFinanceiroBase.valor_mensalidade)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Seção Módulos Adicionais */}
       {!isOA && form.modulos.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Package className="h-4 w-4 text-primary" />
-              Módulos Adicionais
+              {isModuloAdicional ? "Novos Módulos (serão adicionados ao base)" : "Módulos Adicionais"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -185,36 +307,20 @@ export function ConfiguracaoCobranca({ form, setForm, espelho, canEditValues = f
                 <div key={mod.id} className="space-y-1.5 p-2 bg-muted/30 rounded-lg border border-border">
                   <div className="space-y-1">
                     <Label className="text-xs">Nome</Label>
-                    <Input
-                      value={mod.nome}
-                      disabled
-                      className="h-8 text-xs bg-muted"
-                    />
+                    <Input value={mod.nome} disabled className="h-8 text-xs bg-muted" />
                   </div>
                   <div className="grid grid-cols-3 gap-2 items-end">
                     <div className="space-y-1">
                       <Label className="text-xs">Valor unit.</Label>
-                      <Input
-                        value={fmtCurrency(mod.valor_unitario)}
-                        disabled
-                        className="h-8 text-xs bg-muted"
-                      />
+                      <Input value={fmtCurrency(mod.valor_unitario)} disabled className="h-8 text-xs bg-muted" />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Qtd</Label>
-                      <Input
-                        value={mod.quantidade || 1}
-                        disabled
-                        className="h-8 text-xs bg-muted"
-                      />
+                      <Input value={mod.quantidade || 1} disabled className="h-8 text-xs bg-muted" />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Valor/mês</Label>
-                      <Input
-                        value={fmtCurrency(mod.valor_mensal)}
-                        disabled
-                        className="h-8 text-xs bg-muted font-medium"
-                      />
+                      <Input value={fmtCurrency(mod.valor_mensal)} disabled className="h-8 text-xs bg-muted font-medium" />
                     </div>
                   </div>
                 </div>

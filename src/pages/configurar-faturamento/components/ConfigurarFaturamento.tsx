@@ -5,7 +5,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Loader2, Send, X } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -17,7 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 
 import { useConfigurarFaturamentoQueries } from "../useConfigurarFaturamentoQueries";
 import { useConfigurarFaturamentoForm } from "../useConfigurarFaturamentoForm";
-import { defaultConfigForm, getMesLabel } from "../constants";
+import { defaultConfigForm } from "../constants";
 import { getBadgeTipoLabel, getBadgeTipoColor } from "../helpers";
 import type { ConfigFaturamentoForm } from "../types";
 
@@ -28,7 +27,7 @@ import { PreviewFaturas } from "./PreviewFaturas";
 export default function ConfigurarFaturamento() {
   const { contratoId } = useParams();
   const navigate = useNavigate();
-  const { espelho, loading } = useConfigurarFaturamentoQueries(contratoId);
+  const { espelho, contratoFinanceiroBase, loading } = useConfigurarFaturamentoQueries(contratoId);
   const { saving, handleSave } = useConfigurarFaturamentoForm();
   const { roles, isAdmin } = useAuth();
 
@@ -58,6 +57,10 @@ export default function ConfigurarFaturamento() {
   useEffect(() => {
     if (!espelho) return;
 
+    const tipoPedido = espelho.pedido?.tipo_pedido || "";
+    const isSubRegistro = !!espelho.contrato_origem_id;
+    const isUpgradeOrDowngrade = tipoPedido === "Upgrade" || tipoPedido === "Downgrade";
+
     const valorMens = espelho.pedido?.valor_mensalidade_final
       ?? espelho.plano?.valor_mensalidade_padrao ?? 0;
     const valorImpl = espelho.pedido?.valor_implantacao_final
@@ -79,17 +82,26 @@ export default function ConfigurarFaturamento() {
       };
     });
 
+    // Se é sub-registro e temos o base, herdar dia_vencimento e forma_pagamento
+    const diaVenc = (isSubRegistro && contratoFinanceiroBase)
+      ? contratoFinanceiroBase.dia_vencimento
+      : 10;
+    const formaPagBase = (isSubRegistro && contratoFinanceiroBase)
+      ? contratoFinanceiroBase.forma_pagamento
+      : (formaPag === "Boleto" || formaPag === "Pix" ? formaPag : "Boleto");
+
     setForm((f) => ({
       ...f,
       valor_mensalidade: valorMens,
       valor_implantacao: valorImpl,
       parcelas_implantacao: parcImpl > 0 ? parcImpl : 1,
-      forma_pagamento: formaPag === "Boleto" || formaPag === "Pix" ? formaPag : "Boleto",
+      dia_vencimento: diaVenc,
+      forma_pagamento: formaPagBase,
       modulos,
       email_cobranca: espelho.cliente.email || "",
       whatsapp_cobranca: espelho.cliente.telefone || "",
     }));
-  }, [espelho]);
+  }, [espelho, contratoFinanceiroBase]);
 
   if (loading) {
     return (
@@ -114,6 +126,7 @@ export default function ConfigurarFaturamento() {
 
   const tipoLabel = getBadgeTipoLabel(espelho.tipo, espelho.pedido?.tipo_pedido);
   const tipoColor = getBadgeTipoColor(tipoLabel);
+  const isSubRegistro = !!espelho.contrato_origem_id;
 
   return (
     <AppLayout>
@@ -131,6 +144,11 @@ export default function ConfigurarFaturamento() {
               Contrato {espelho.numero_exibicao} • Assinado em{" "}
               {format(parseISO(espelho.updated_at), "dd/MM/yyyy")}
               <Badge className={`text-xs ${tipoColor}`}>{tipoLabel}</Badge>
+              {isSubRegistro && contratoFinanceiroBase && (
+                <Badge variant="outline" className="text-xs">
+                  Base: #{contratoFinanceiroBase.contrato_id.slice(0, 8)}… | Mens. atual: {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(contratoFinanceiroBase.valor_mensalidade)}
+                </Badge>
+              )}
             </p>
           </div>
         </div>
@@ -140,17 +158,28 @@ export default function ConfigurarFaturamento() {
           <div className="grid grid-cols-1 lg:grid-cols-[30%_40%_30%] gap-4 p-4 min-h-0">
             {/* Coluna Esquerda — Espelho */}
             <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
-              <EspelhoContrato espelho={espelho} />
+              <EspelhoContrato espelho={espelho} contratoFinanceiroBase={contratoFinanceiroBase} />
             </div>
 
             {/* Coluna Central — Configuração */}
             <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
-              <ConfiguracaoCobranca form={form} setForm={setForm} espelho={espelho} canEditValues={canEditValues} />
+              <ConfiguracaoCobranca
+                form={form}
+                setForm={setForm}
+                espelho={espelho}
+                canEditValues={canEditValues}
+                contratoFinanceiroBase={contratoFinanceiroBase}
+              />
             </div>
 
             {/* Coluna Direita — Preview */}
             <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
-              <PreviewFaturas form={form} setForm={setForm} espelho={espelho} />
+              <PreviewFaturas
+                form={form}
+                setForm={setForm}
+                espelho={espelho}
+                contratoFinanceiroBase={contratoFinanceiroBase}
+              />
             </div>
           </div>
         </div>
@@ -166,7 +195,7 @@ export default function ConfigurarFaturamento() {
             disabled={saving}
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            Confirmar e Criar Faturamento
+            {isSubRegistro ? "Confirmar Alteração" : "Confirmar e Criar Faturamento"}
           </Button>
         </div>
       </div>
@@ -175,17 +204,28 @@ export default function ConfigurarFaturamento() {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Configuração de Faturamento</AlertDialogTitle>
+            <AlertDialogTitle>
+              {isSubRegistro ? "Confirmar Alteração no Faturamento" : "Confirmar Configuração de Faturamento"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Será criado o contrato financeiro base e a primeira fatura para{" "}
-              <strong>{espelho.cliente.nome_fantasia}</strong>.
-              Esta ação não pode ser desfeita facilmente.
+              {isSubRegistro ? (
+                <>
+                  O contrato financeiro base de <strong>{espelho.cliente.nome_fantasia}</strong> será atualizado
+                  conforme a configuração definida. O próximo boleto refletirá as alterações.
+                </>
+              ) : (
+                <>
+                  Será criado o contrato financeiro base e a primeira fatura para{" "}
+                  <strong>{espelho.cliente.nome_fantasia}</strong>.
+                  Esta ação não pode ser desfeita facilmente.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Voltar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => { setConfirmOpen(false); handleSave(form, espelho); }}
+              onClick={() => { setConfirmOpen(false); handleSave(form, espelho, contratoFinanceiroBase); }}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Confirmar

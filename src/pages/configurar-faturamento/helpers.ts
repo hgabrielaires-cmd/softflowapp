@@ -1,6 +1,6 @@
 // ─── Pure helpers for Configurar Faturamento ──────────────────────────────
 
-import type { ConfigFaturamentoForm, FaturaPreviewMes, FaturaPreviewItem } from "./types";
+import type { ConfigFaturamentoForm, FaturaPreviewMes, FaturaPreviewItem, ContratoFinanceiroBase, ContratoEspelho } from "./types";
 import { getMesLabel } from "./constants";
 
 export function fmtCurrency(val: number | null | undefined): string {
@@ -21,7 +21,7 @@ export function parseCurrencyInput(raw: string): number {
   return isNaN(num) ? 0 : num;
 }
 
-/** Calcula o preview das próximas faturas (até 6 meses ou estabilizar). */
+/** Calcula o preview das próximas faturas para CONTRATO NOVO. */
 export function calcularPreviewFaturas(form: ConfigFaturamentoForm, planoNome: string): FaturaPreviewMes[] {
   const result: FaturaPreviewMes[] = [];
   const maxMeses = Math.max(form.parcelas_implantacao + 1, 6);
@@ -73,21 +73,150 @@ export function calcularPreviewFaturas(form: ConfigFaturamentoForm, planoNome: s
 
     const total = itens.reduce((sum, item) => sum + item.valor, 0);
 
-    result.push({
-      mes,
-      ano,
-      label: getMesLabel(mes, ano),
-      itens,
-      total,
-    });
+    result.push({ mes, ano, label: getMesLabel(mes, ano), itens, total });
 
-    // Avançar mês
     mes++;
     if (mes > 12) { mes = 1; ano++; }
   }
 
-  // Cortar quando estabilizar (2 meses seguidos com mesmo total)
+  // Cortar quando estabilizar
   for (let i = 3; i < result.length - 1; i++) {
+    if (result[i].total === result[i + 1].total && result[i].total === result[i - 1].total) {
+      return result.slice(0, i + 1);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Calcula preview CONSOLIDADO para sub-registros (Upgrade, Módulo, OA).
+ * Mostra a composição completa do boleto após a alteração, incluindo
+ * itens já existentes no contrato base.
+ */
+export function calcularPreviewConsolidado(
+  form: ConfigFaturamentoForm,
+  base: ContratoFinanceiroBase,
+  espelho: ContratoEspelho,
+): FaturaPreviewMes[] {
+  const result: FaturaPreviewMes[] = [];
+  const tipoPedido = espelho.pedido?.tipo_pedido || "";
+  const isUpgrade = tipoPedido === "Upgrade" || tipoPedido === "Downgrade";
+  const isModulo = tipoPedido === "Módulo Adicional" || tipoPedido === "Aditivo";
+  const isOA = espelho.tipo === "OA";
+
+  // Determinar a nova mensalidade base
+  const novaMensalidade = isUpgrade ? form.valor_mensalidade : base.valor_mensalidade;
+  const planoNome = isUpgrade ? (espelho.plano?.nome || "Novo plano") : (base.plano_nome || "Plano");
+
+  // Parcelas existentes pendentes do base
+  const parcelasBase = base.parcelas_pendentes.map((p) => ({
+    descricao: p.descricao,
+    valor_por_parcela: p.valor_por_parcela,
+    restantes: p.numero_parcelas - p.parcelas_pagas,
+    total_parcelas: p.numero_parcelas,
+    pagas: p.parcelas_pagas,
+  }));
+
+  // Nova parcela de implantação (do aditivo/upgrade)
+  const novaParcela = form.valor_implantacao > 0 ? {
+    descricao: `Implantação ${tipoPedido} ${espelho.plano?.nome || ""}`.trim(),
+    valor_por_parcela: Math.round((form.valor_implantacao / form.parcelas_implantacao) * 100) / 100,
+    restantes: form.parcelas_implantacao,
+    total_parcelas: form.parcelas_implantacao,
+    pagas: 0,
+  } : null;
+
+  // Módulos existentes no base
+  const modulosBase = base.modulos_ativos.map((m) => ({
+    nome: m.nome,
+    valor_mensal: m.valor_mensal,
+  }));
+
+  // Novos módulos do pedido
+  const novosModulos = isModulo ? form.modulos.map((m) => ({
+    nome: m.nome,
+    valor_mensal: m.valor_mensal,
+  })) : [];
+
+  // Calcular max meses para preview
+  const maxParcelasExistentes = parcelasBase.reduce((max, p) => Math.max(max, p.restantes), 0);
+  const maxParcelasNova = novaParcela?.restantes || 0;
+  const maxMeses = Math.max(maxParcelasExistentes + 1, maxParcelasNova + 1, 4);
+
+  const now = new Date();
+  let mes = now.getDate() > 15 ? now.getMonth() + 2 : now.getMonth() + 1;
+  let ano = now.getFullYear();
+  if (mes > 12) { mes -= 12; ano++; }
+
+  for (let i = 0; i < maxMeses; i++) {
+    const itens: FaturaPreviewItem[] = [];
+
+    // 1. Mensalidade base
+    itens.push({
+      descricao: `Mensalidade ${planoNome}`,
+      valor: novaMensalidade,
+      tipo: "mensalidade",
+    });
+
+    // 2. Parcelas existentes pendentes
+    for (const p of parcelasBase) {
+      if (i < p.restantes) {
+        itens.push({
+          descricao: `${p.descricao} ${p.pagas + i + 1}/${p.total_parcelas}`,
+          valor: p.valor_por_parcela,
+          tipo: "implantacao",
+        });
+      }
+    }
+
+    // 3. Nova parcela de implantação
+    if (novaParcela && i < novaParcela.restantes) {
+      itens.push({
+        descricao: `${novaParcela.descricao} ${i + 1}/${novaParcela.total_parcelas}`,
+        valor: novaParcela.valor_por_parcela,
+        tipo: "implantacao",
+      });
+    }
+
+    // 4. Módulos existentes
+    for (const m of modulosBase) {
+      itens.push({
+        descricao: m.nome,
+        valor: m.valor_mensal,
+        tipo: "modulo",
+      });
+    }
+
+    // 5. Novos módulos
+    for (const m of novosModulos) {
+      if (m.valor_mensal > 0) {
+        itens.push({
+          descricao: `${m.nome} (novo)`,
+          valor: m.valor_mensal,
+          tipo: "modulo",
+        });
+      }
+    }
+
+    // 6. OA (apenas no mês de referência)
+    if (isOA && form.oa_valor > 0 && mes === form.oa_mes_referencia && ano === form.oa_ano_referencia) {
+      itens.push({
+        descricao: `OA: ${form.oa_descricao || "Ordem de Atendimento"}`,
+        valor: form.oa_valor,
+        tipo: "oa",
+      });
+    }
+
+    const total = itens.reduce((sum, item) => sum + item.valor, 0);
+    result.push({ mes, ano, label: getMesLabel(mes, ano), itens, total });
+
+    mes++;
+    if (mes > 12) { mes = 1; ano++; }
+  }
+
+  // Cortar quando estabilizar
+  for (let i = 2; i < result.length - 1; i++) {
     if (result[i].total === result[i + 1].total && result[i].total === result[i - 1].total) {
       return result.slice(0, i + 1);
     }
