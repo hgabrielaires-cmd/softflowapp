@@ -202,7 +202,7 @@ function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSign
       <div className={cn("flex items-center gap-3 px-4 py-5 border-b border-sidebar-border flex-shrink-0", collapsed && "justify-center px-2")}>
         <button onClick={() => onNavigate("/dashboard")} className="focus:outline-none mx-auto">
           <img
-            src={collapsed ? iconSoftflow : "/logo-softflow-branca.svg"}
+            src={collapsed ? iconSoftflow : logoSoftflowBranca}
             alt="Softflow"
             className={cn(
               collapsed ? "h-10 w-10" : "h-[7.8rem]",
