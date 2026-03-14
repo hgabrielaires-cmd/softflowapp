@@ -997,7 +997,7 @@ export default function Agenda() {
             </Badge>
             {ag.is_ticket ? (
               <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => navigate(`/tickets?ticket=${ag.ticket_id}`)}>
-                <ExternalLink className="h-3 w-3" /> Abrir Ticket
+                <ExternalLink className="h-3 w-3" /> Exibir Ticket
               </Button>
             ) : (
               <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => navigate(`/fila-agendamento?card=${ag.card_id}&from=agenda`)}>
