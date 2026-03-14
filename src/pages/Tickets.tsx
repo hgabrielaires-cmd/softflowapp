@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import type { Ticket, TicketStatus, TicketSeguidor } from "./tickets/types";
 
 export default function Tickets() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const userId = user?.id || "";
 
@@ -32,6 +33,16 @@ export default function Tickets() {
 
   // Detail drawer
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+
+  // Open ticket from URL query param
+  useEffect(() => {
+    const ticketFromUrl = searchParams.get("ticket");
+    if (ticketFromUrl) {
+      setSelectedTicketId(ticketFromUrl);
+      searchParams.delete("ticket");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Data
   const { data: tickets = [], refetch: refetchTickets, isFetching } = useTickets();

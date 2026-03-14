@@ -2,13 +2,21 @@ import { cn } from "@/lib/utils";
 import { TicketComentario } from "../types";
 import { formatRelativeTime } from "../helpers";
 import { UserAvatar } from "@/components/UserAvatar";
+import { renderMentionText } from "@/components/MentionInput";
 import { Lock, ArrowRightLeft, MessageSquare, Info } from "lucide-react";
+
+interface MentionUser {
+  id: string;
+  user_id: string;
+  full_name: string;
+}
 
 interface Props {
   comentarios: TicketComentario[];
+  users?: MentionUser[];
 }
 
-export function TicketTimeline({ comentarios }: Props) {
+export function TicketTimeline({ comentarios, users = [] }: Props) {
   return (
     <div className="space-y-3">
       <h4 className="text-sm font-semibold">Timeline de Atividades</h4>
@@ -47,7 +55,11 @@ export function TicketTimeline({ comentarios }: Props) {
                 {formatRelativeTime(c.created_at)}
               </span>
             </div>
-            <p className="whitespace-pre-wrap">{c.conteudo}</p>
+            <p className="whitespace-pre-wrap">
+              {isComment && users.length > 0
+                ? renderMentionText(c.conteudo, users)
+                : c.conteudo}
+            </p>
           </div>
         );
       })}

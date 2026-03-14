@@ -379,7 +379,7 @@ interface Notificacao {
   tipo: string;
   created_at: string;
   criado_por: string;
-  metadata?: { card_id?: string; comentario_id?: string } | null;
+  metadata?: { card_id?: string; comentario_id?: string; ticket_id?: string } | null;
 }
 
 const TIPO_ICON: Record<string, ReactNode> = {
@@ -948,7 +948,22 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
                   navigate(`/fila-agendamento?card=${cardId}`);
                 }}
               >
-                <Eye className="h-3.5 w-3.5" /> Visualizar
+                <Eye className="h-3.5 w-3.5" /> Visualizar Projeto
+              </Button>
+            )}
+            {selectedNotif?.metadata?.ticket_id && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  const ticketId = selectedNotif.metadata?.ticket_id;
+                  setSelectedNotif(null);
+                  setOpen(false);
+                  navigate(`/tickets?ticket=${ticketId}`);
+                }}
+              >
+                <Eye className="h-3.5 w-3.5" /> Visualizar Ticket
               </Button>
             )}
             <Button

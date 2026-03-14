@@ -89,8 +89,13 @@ export function useAddTicketComment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({
-      ticketId, userId, conteudo, visibilidade,
-    }: { ticketId: string; userId: string; conteudo: string; visibilidade: "publico" | "interno" }) => {
+      ticketId, userId, conteudo, visibilidade, mentionedUserIds = [], ticketNumero = "",
+    }: {
+      ticketId: string; userId: string; conteudo: string;
+      visibilidade: "publico" | "interno";
+      mentionedUserIds?: string[];
+      ticketNumero?: string;
+    }) => {
       const { error } = await supabase.from("ticket_comentarios").insert({
         ticket_id: ticketId,
         user_id: userId,
@@ -99,6 +104,32 @@ export function useAddTicketComment() {
         conteudo,
       });
       if (error) throw error;
+
+      // Send notifications for mentions
+      if (mentionedUserIds.length > 0) {
+        const { data: autorProfile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("user_id", userId)
+          .maybeSingle();
+        const autorNome = autorProfile?.full_name || "Alguém";
+        const preview = conteudo.slice(0, 120) + (conteudo.length > 120 ? "..." : "");
+
+        const notifs = mentionedUserIds
+          .filter((id) => id !== userId)
+          .map((mentionedId) => ({
+            titulo: `💬 ${autorNome} mencionou você`,
+            mensagem: `Você foi mencionado em um comentário no ticket ${ticketNumero}: "${preview}"`,
+            tipo: "info" as const,
+            criado_por: userId,
+            destinatario_user_id: mentionedId,
+            metadata: { ticket_id: ticketId },
+          }));
+
+        if (notifs.length > 0) {
+          await supabase.from("notificacoes").insert(notifs);
+        }
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ticket_comentarios"] });

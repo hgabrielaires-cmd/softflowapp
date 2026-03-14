@@ -55,6 +55,8 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
   const [descDraft, setDescDraft] = useState("");
   const [expanded, setExpanded] = useState(false);
 
+  const mentionUsers = profiles.map((p) => ({ id: p.user_id, user_id: p.user_id, full_name: p.full_name }));
+
   if (!ticket) return null;
 
   const handleStatusChange = (newStatus: string) => {
@@ -161,13 +163,21 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
 
               <TabsContent value="comunicacao" className="space-y-4 mt-0">
                 {/* Timeline */}
-                <TicketTimeline comentarios={comentarios} />
+                <TicketTimeline comentarios={comentarios} users={mentionUsers} />
 
                 {/* Nova resposta */}
                 <TicketNovaResposta
                   isLoading={addComment.isPending}
-                  onSubmit={(conteudo, visibilidade) =>
-                    addComment.mutate({ ticketId: ticket.id, userId, conteudo, visibilidade })
+                  users={mentionUsers}
+                  onSubmit={(conteudo, visibilidade, mentionedUserIds) =>
+                    addComment.mutate({
+                      ticketId: ticket.id,
+                      userId,
+                      conteudo,
+                      visibilidade,
+                      mentionedUserIds,
+                      ticketNumero: ticket.numero_exibicao,
+                    })
                   }
                 />
               </TabsContent>
