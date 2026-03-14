@@ -4,30 +4,30 @@ import type { DashKpi, TicketAlerta, TicketPorCategoria, TicketAntigo, KanbanRes
 import { KANBAN_STATUS_COLORS } from "./constants";
 import { diasDesde, horasEntre } from "./helpers";
 
-export function useDashKpis() {
+export function useDashKpis(startDate: string, endDate: string) {
   return useQuery<DashKpi>({
-    queryKey: ["dash_tickets_kpis"],
+    queryKey: ["dash_tickets_kpis", startDate, endDate],
     queryFn: async () => {
       const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
 
       const { data: tickets, error } = await supabase
         .from("tickets")
-        .select("id, status, sla_deadline, created_at, updated_at");
+        .select("id, status, sla_deadline, created_at, updated_at")
+        .gte("created_at", startDate)
+        .lte("created_at", endDate);
       if (error) throw error;
 
       const all = tickets ?? [];
       const abertos = all.filter(t => ["Aberto", "Em Andamento", "Aguardando Cliente"].includes(t.status));
       const slaVencido = abertos.filter(t => t.sla_deadline && new Date(t.sla_deadline) < now);
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
       const resolvidosHoje = all.filter(t => t.status === "Resolvido" && t.updated_at >= todayStart);
 
-      // Tempo médio de resolução dos resolvidos nos últimos 30 dias
-      const d30 = new Date(now.getTime() - 30 * 24 * 3600 * 1000).toISOString();
-      const resolvidos30d = all.filter(t => t.status === "Resolvido" && t.updated_at >= d30);
+      const resolvidos = all.filter(t => t.status === "Resolvido");
       let tempoMedio = 0;
-      if (resolvidos30d.length > 0) {
-        const soma = resolvidos30d.reduce((acc, t) => acc + horasEntre(t.created_at, t.updated_at), 0);
-        tempoMedio = Math.round((soma / resolvidos30d.length) * 10) / 10;
+      if (resolvidos.length > 0) {
+        const soma = resolvidos.reduce((acc, t) => acc + horasEntre(t.created_at, t.updated_at), 0);
+        tempoMedio = Math.round((soma / resolvidos.length) * 10) / 10;
       }
 
       return {
@@ -49,7 +49,6 @@ export function useDashAlertas() {
       const em2h = new Date(now.getTime() + 2 * 3600 * 1000);
       const alertas: TicketAlerta[] = [];
 
-      // Tickets SLA vencido ou vencendo em < 2h
       const { data: tickets } = await supabase
         .from("tickets")
         .select("id, numero_exibicao, titulo, sla_deadline, status")
@@ -83,15 +82,15 @@ export function useDashAlertas() {
   });
 }
 
-export function useTicketsPorCategoria() {
+export function useTicketsPorCategoria(startDate: string, endDate: string) {
   return useQuery<TicketPorCategoria[]>({
-    queryKey: ["dash_tickets_por_categoria"],
+    queryKey: ["dash_tickets_por_categoria", startDate, endDate],
     queryFn: async () => {
-      const d30 = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
       const { data, error } = await supabase
         .from("tickets")
         .select("mesa, created_at")
-        .gte("created_at", d30);
+        .gte("created_at", startDate)
+        .lte("created_at", endDate);
       if (error) throw error;
 
       const counts: Record<string, number> = {};
@@ -132,13 +131,15 @@ export function useTicketsMaisAntigos() {
   });
 }
 
-export function useKanbanResumo() {
+export function useKanbanResumo(startDate: string, endDate: string) {
   return useQuery<KanbanResumo[]>({
-    queryKey: ["dash_tickets_kanban_resumo"],
+    queryKey: ["dash_tickets_kanban_resumo", startDate, endDate],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tickets")
-        .select("status");
+        .select("status")
+        .gte("created_at", startDate)
+        .lte("created_at", endDate);
       if (error) throw error;
 
       const counts: Record<string, number> = {};
