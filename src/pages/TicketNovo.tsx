@@ -245,16 +245,93 @@ export default function TicketNovo() {
                 </div>
                 <div>
                   <Label className="text-xs">Contrato vinculado</Label>
-                  <Select value={contratoId || "__none__"} onValueChange={(v) => setContratoId(v === "__none__" ? null : v)}>
-                    <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Nenhum</SelectItem>
-                      {clienteContratos.map((c: any) => (
-                        <SelectItem key={c.id} value={c.id}>{c.numero_exibicao} - {c.planos?.nome || c.tipo}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-1">
+                    <Select value={contratoId || "__none__"} onValueChange={(v) => setContratoId(v === "__none__" ? null : v)}>
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Nenhum</SelectItem>
+                        {clienteContratos.map((c: any) => (
+                          <SelectItem key={c.id} value={c.id}>{c.numero_exibicao} - {c.planos?.nome || c.tipo}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {contratoId && (
+                      <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setEspelhoOpen(true)} title="Ver espelho do contrato">
+                        <Eye className="h-4 w-4 text-primary" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
+
+                {/* Dialog espelho do contrato */}
+                <Dialog open={espelhoOpen} onOpenChange={setEspelhoOpen}>
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2 text-sm">
+                        <Eye className="h-4 w-4 text-primary" />
+                        Espelho do Contrato {espelhoData?.contrato?.numero_exibicao}
+                      </DialogTitle>
+                    </DialogHeader>
+                    {espelhoData ? (
+                      <div className="space-y-4 text-sm">
+                        {/* Plano */}
+                        <div>
+                          <p className="font-semibold text-xs text-muted-foreground uppercase mb-1">Plano Contratado</p>
+                          <Badge variant="secondary">{espelhoData.planoNome}</Badge>
+                        </div>
+
+                        {/* Módulos do contrato base */}
+                        {espelhoData.modulos.length > 0 && (
+                          <div>
+                            <p className="font-semibold text-xs text-muted-foreground uppercase mb-1">Módulos Adicionais</p>
+                            <ul className="space-y-1">
+                              {espelhoData.modulos.map((m, i) => (
+                                <li key={i} className="flex items-center gap-2 text-xs bg-muted/40 rounded px-2 py-1">
+                                  <span className="flex-1">{m.nome}</span>
+                                  <Badge variant="outline" className="text-[10px]">Qtd: {m.quantidade}</Badge>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Aditivos */}
+                        {espelhoData.aditivos.length > 0 && (
+                          <div>
+                            <p className="font-semibold text-xs text-muted-foreground uppercase mb-1">Aditivos Ativos</p>
+                            <div className="space-y-2">
+                              {espelhoData.aditivos.map((ad: any) => (
+                                <div key={ad.id} className="border rounded-lg p-2">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-mono text-xs text-muted-foreground">{ad.numero_exibicao}</span>
+                                    <Badge variant="outline" className="text-[10px]">{ad.tipo}</Badge>
+                                    {ad.planos?.nome && <Badge variant="secondary" className="text-[10px]">{ad.planos.nome}</Badge>}
+                                  </div>
+                                  {ad.modulos.length > 0 && (
+                                    <ul className="ml-2 space-y-0.5">
+                                      {ad.modulos.map((m: any, j: number) => (
+                                        <li key={j} className="text-xs text-muted-foreground flex items-center gap-2">
+                                          <span>• {m.nome}</span>
+                                          <Badge variant="outline" className="text-[9px]">Qtd: {m.quantidade}</Badge>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {espelhoData.modulos.length === 0 && espelhoData.aditivos.length === 0 && (
+                          <p className="text-xs text-muted-foreground">Nenhum módulo adicional ou aditivo encontrado.</p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Carregando...</p>
+                    )}
+                  </DialogContent>
+                </Dialog>
               </div>
 
               {/* Client tickets (expandable) */}
