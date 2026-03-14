@@ -78,6 +78,13 @@ export default function Filiais() {
   const [congelarEtapaId, setCongelarEtapaId] = useState<string | null>(null);
   const [margemVendaIdeal, setMargemVendaIdeal] = useState(0);
 
+  // Régua de cobrança config
+  const [reguaAtiva, setReguaAtiva] = useState(true);
+  const [diasLembrete1, setDiasLembrete1] = useState(5);
+  const [diasLembreteVencimento, setDiasLembreteVencimento] = useState(true);
+  const [diasAtrasoAlerta, setDiasAtrasoAlerta] = useState(3);
+  const [diasAtrasoSuspensao, setDiasAtrasoSuspensao] = useState(5);
+
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
   async function loadFiliais() {
@@ -111,6 +118,11 @@ export default function Filiais() {
     setCongelarAcao("manter");
     setCongelarEtapaId(null);
     setMargemVendaIdeal(0);
+    setReguaAtiva(true);
+    setDiasLembrete1(5);
+    setDiasLembreteVencimento(true);
+    setDiasAtrasoAlerta(3);
+    setDiasAtrasoSuspensao(5);
   }
 
   function openCreate() {
@@ -127,6 +139,15 @@ export default function Filiais() {
       setCongelarAcao((data as any).congelar_acao ?? "manter");
       setCongelarEtapaId((data as any).congelar_etapa_id ?? null);
       setMargemVendaIdeal((data as any).margem_venda_ideal ?? 0);
+    }
+    // Load cobranca config
+    const { data: cobranca } = await supabase.from("cobranca_config").select("*").eq("filial_id", filialId).maybeSingle();
+    if (cobranca) {
+      setReguaAtiva(cobranca.regua_ativa ?? true);
+      setDiasLembrete1(cobranca.dias_lembrete_1 ?? 5);
+      setDiasLembreteVencimento(cobranca.dias_lembrete_vencimento ?? true);
+      setDiasAtrasoAlerta(cobranca.dias_atraso_alerta ?? 3);
+      setDiasAtrasoSuspensao(cobranca.dias_atraso_suspensao ?? 5);
     }
   }
 
@@ -260,12 +281,27 @@ export default function Filiais() {
       congelar_etapa_id: congelarAcao === "mover" ? congelarEtapaId : null,
       margem_venda_ideal: margemVendaIdeal,
     };
-    // Check if exists
     const { data: existing } = await supabase.from("filial_parametros").select("id").eq("filial_id", filialId).maybeSingle();
     if (existing) {
       await supabase.from("filial_parametros").update(paramData).eq("filial_id", filialId);
     } else {
       await supabase.from("filial_parametros").insert(paramData);
+    }
+
+    // Save cobranca config
+    const cobrancaData = {
+      filial_id: filialId,
+      regua_ativa: reguaAtiva,
+      dias_lembrete_1: diasLembrete1,
+      dias_lembrete_vencimento: diasLembreteVencimento,
+      dias_atraso_alerta: diasAtrasoAlerta,
+      dias_atraso_suspensao: diasAtrasoSuspensao,
+    };
+    const { data: existingCob } = await supabase.from("cobranca_config").select("id").eq("filial_id", filialId).maybeSingle();
+    if (existingCob) {
+      await supabase.from("cobranca_config").update(cobrancaData).eq("filial_id", filialId);
+    } else {
+      await supabase.from("cobranca_config").insert(cobrancaData);
     }
   }
 
@@ -681,6 +717,68 @@ export default function Filiais() {
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Régua de Cobrança */}
+                <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground">Régua de Cobrança</h3>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={reguaAtiva} onCheckedChange={setReguaAtiva} />
+                      <span className={`text-xs font-medium ${reguaAtiva ? "text-primary" : "text-muted-foreground"}`}>
+                        {reguaAtiva ? "Ativa" : "Inativa"}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Notificações automáticas de cobrança via WhatsApp. Configure os prazos de envio dos lembretes.
+                  </p>
+                  {reguaAtiva && (
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div className="space-y-1.5">
+                        <Label>Dias antes p/ 1º lembrete</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={diasLembrete1}
+                          onChange={(e) => setDiasLembrete1(Number(e.target.value))}
+                        />
+                        <p className="text-xs text-muted-foreground">Enviar lembrete X dias antes do vencimento.</p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Lembrete no vencimento</Label>
+                        <div className="flex items-center gap-2 pt-1">
+                          <Switch checked={diasLembreteVencimento} onCheckedChange={setDiasLembreteVencimento} />
+                          <span className="text-xs text-muted-foreground">
+                            {diasLembreteVencimento ? "Enviar no dia do vencimento" : "Desativado"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Dias após p/ alerta de inadimplência</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={diasAtrasoAlerta}
+                          onChange={(e) => setDiasAtrasoAlerta(Number(e.target.value))}
+                        />
+                        <p className="text-xs text-muted-foreground">1º alerta de atraso após vencimento.</p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Dias após p/ suspensão automática</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={60}
+                          value={diasAtrasoSuspensao}
+                          onChange={(e) => setDiasAtrasoSuspensao(Number(e.target.value))}
+                        />
+                        <p className="text-xs text-muted-foreground">Alerta final + marca como inadimplente no dia seguinte.</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
             </Tabs>
