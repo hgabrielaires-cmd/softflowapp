@@ -995,9 +995,15 @@ export default function Agenda() {
               <Building2 className="h-3 w-3 mr-1" />
               {ag.filial_nome}
             </Badge>
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => navigate(`/fila-agendamento?card=${ag.card_id}&from=agenda`)}>
-              <ExternalLink className="h-3 w-3" /> Abrir Card
-            </Button>
+            {ag.is_ticket ? (
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => navigate(`/tickets?ticket=${ag.ticket_id}`)}>
+                <ExternalLink className="h-3 w-3" /> Abrir Ticket
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => navigate(`/fila-agendamento?card=${ag.card_id}&from=agenda`)}>
+                <ExternalLink className="h-3 w-3" /> Abrir Card
+              </Button>
+            )}
             {/* Progresso do projeto */}
             {ag.progresso && ag.progresso.total > 0 && (() => {
               const pct = Math.round((ag.progresso.concluidas / ag.progresso.total) * 100);
