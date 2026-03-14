@@ -81,6 +81,11 @@ function FaturamentoContent() {
   // Filtro de filial: favorita se definida, senão "all" (todas do usuário)
   const [filialFilter, setFilialFilter] = useState<string | null>(null);
 
+  // Gerar faturas manual
+  const [gerandoFaturas, setGerandoFaturas] = useState(false);
+  const [geracaoResult, setGeracaoResult] = useState<any>(null);
+  const [showGeracaoDialog, setShowGeracaoDialog] = useState(false);
+
   // Inicializa apenas uma vez quando filiais e profile carregam
   useEffect(() => {
     if (!filiaisLoading && profile && filialFilter === null) {
@@ -96,6 +101,36 @@ function FaturamentoContent() {
   const effectiveFilter = filialFilter || "all";
   const showFilialFilter = filiaisDoUsuario.length > 1;
 
+  async function handleGerarFaturasMes() {
+    setGerandoFaturas(true);
+    try {
+      const now = new Date();
+      const mes = now.getMonth() + 1;
+      const ano = now.getFullYear();
+
+      const { data, error } = await supabase.functions.invoke("gerar-faturas-mensais", {
+        body: { mes, ano },
+      });
+
+      if (error) throw error;
+
+      setGeracaoResult(data);
+      setShowGeracaoDialog(true);
+
+      if (data?.geradas > 0) {
+        toast.success(`${data.geradas} fatura(s) gerada(s) com sucesso!`);
+      } else if (data?.erros > 0) {
+        toast.error(`${data.erros} erro(s) na geração de faturas`);
+      } else {
+        toast.info("Nenhuma fatura nova a gerar neste mês");
+      }
+    } catch (err: any) {
+      toast.error("Erro ao gerar faturas: " + (err?.message || "Erro desconhecido"));
+    } finally {
+      setGerandoFaturas(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -109,21 +144,38 @@ function FaturamentoContent() {
           </p>
         </div>
 
-        {/* Filtro de filial */}
-        {showFilialFilter && (
-          <Select value={effectiveFilter} onValueChange={setFilialFilter}>
-            <SelectTrigger className="h-9 w-56">
-              <Building2 className="h-3.5 w-3.5 mr-1.5" />
-              <SelectValue placeholder="Filial" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as Filiais</SelectItem>
-              {filiaisDoUsuario.map(f => (
-                <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Botão gerar faturas do mês */}
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={handleGerarFaturasMes}
+            disabled={gerandoFaturas}
+          >
+            {gerandoFaturas ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Zap className="h-4 w-4" />
+            )}
+            Gerar Faturas do Mês
+          </Button>
+
+          {/* Filtro de filial */}
+          {showFilialFilter && (
+            <Select value={effectiveFilter} onValueChange={setFilialFilter}>
+              <SelectTrigger className="h-9 w-56">
+                <Building2 className="h-3.5 w-3.5 mr-1.5" />
+                <SelectValue placeholder="Filial" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Filiais</SelectItem>
+                {filiaisDoUsuario.map(f => (
+                  <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
@@ -149,6 +201,76 @@ function FaturamentoContent() {
           <NotasFiscaisTab filialFilter={effectiveFilter} />
         </TabsContent>
       </Tabs>
+
+      {/* Dialog resultado geração */}
+      <Dialog open={showGeracaoDialog} onOpenChange={setShowGeracaoDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-primary" />
+              Resultado da Geração de Faturas
+            </DialogTitle>
+            <DialogDescription>
+              Período: {geracaoResult?.mes ? `${String(geracaoResult.mes).padStart(2, "0")}/${geracaoResult.ano}` : "—"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {geracaoResult && (
+            <div className="space-y-4">
+              {/* Summary cards */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3 text-center">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 mx-auto mb-1" />
+                  <div className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{geracaoResult.geradas}</div>
+                  <div className="text-xs text-emerald-600 dark:text-emerald-500">Geradas</div>
+                </div>
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-center">
+                  <SkipForward className="h-5 w-5 text-amber-600 mx-auto mb-1" />
+                  <div className="text-lg font-bold text-amber-700 dark:text-amber-400">{geracaoResult.puladas}</div>
+                  <div className="text-xs text-amber-600 dark:text-amber-500">Já existiam</div>
+                </div>
+                <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-center">
+                  <AlertOctagon className="h-5 w-5 text-red-600 mx-auto mb-1" />
+                  <div className="text-lg font-bold text-red-700 dark:text-red-400">{geracaoResult.erros}</div>
+                  <div className="text-xs text-red-600 dark:text-red-500">Erros</div>
+                </div>
+              </div>
+
+              {/* Details */}
+              {geracaoResult.resultados?.length > 0 && (
+                <div className="max-h-60 overflow-y-auto border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="text-xs">Cliente</TableHead>
+                        <TableHead className="text-xs text-right">Valor</TableHead>
+                        <TableHead className="text-xs text-center">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {geracaoResult.resultados.map((r: any, i: number) => (
+                        <TableRow key={i}>
+                          <TableCell className="text-sm truncate max-w-[200px]">{r.cliente_nome}</TableCell>
+                          <TableCell className="text-sm text-right font-mono">
+                            {r.valor > 0 ? fmtCurrency(r.valor) : "—"}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {r.status === "sucesso" && <Badge className="bg-emerald-100 text-emerald-700 text-xs">OK</Badge>}
+                            {r.status === "pulado" && <Badge variant="outline" className="text-xs">Pulado</Badge>}
+                            {r.status === "erro" && (
+                              <Badge variant="destructive" className="text-xs" title={r.erro}>Erro</Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
