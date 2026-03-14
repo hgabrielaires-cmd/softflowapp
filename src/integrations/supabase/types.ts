@@ -3829,6 +3829,7 @@ export type Database = {
           created_at: string
           id: string
           metadata: Json | null
+          parent_id: string | null
           ticket_id: string
           tipo: string
           user_id: string | null
@@ -3839,6 +3840,7 @@ export type Database = {
           created_at?: string
           id?: string
           metadata?: Json | null
+          parent_id?: string | null
           ticket_id: string
           tipo?: string
           user_id?: string | null
@@ -3849,12 +3851,20 @@ export type Database = {
           created_at?: string
           id?: string
           metadata?: Json | null
+          parent_id?: string | null
           ticket_id?: string
           tipo?: string
           user_id?: string | null
           visibilidade?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ticket_comentarios_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_comentarios"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ticket_comentarios_ticket_id_fkey"
             columns: ["ticket_id"]
@@ -3868,6 +3878,35 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      ticket_curtidas: {
+        Row: {
+          comentario_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comentario_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comentario_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_curtidas_comentario_id_fkey"
+            columns: ["comentario_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_comentarios"
+            referencedColumns: ["id"]
           },
         ]
       }
