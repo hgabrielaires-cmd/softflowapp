@@ -537,6 +537,9 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Detalhes Cobrança Dialog */}
+      <FaturaCobrancaDialog fatura={detalheFatura} onClose={() => setDetalheFatura(null)} />
     </div>
   );
 }
