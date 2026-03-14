@@ -55,6 +55,8 @@ import { FaturaEditorDialog } from "@/pages/faturamento/components/FaturaEditorD
 import { RegistrarPagamentoDialog } from "@/pages/faturamento/components/RegistrarPagamentoDialog";
 import { NotaFiscalEditorDialog } from "@/pages/faturamento/components/NotaFiscalEditorDialog";
 import { AguardandoFaturamentoTab } from "@/pages/faturamento/components/AguardandoFaturamentoTab";
+import { GerarFaturasButton } from "@/pages/faturamento/components/GerarFaturasDialog";
+import { CronLogsSection } from "@/pages/faturamento/components/CronLogsSection";
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
