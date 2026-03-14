@@ -555,7 +555,48 @@ export default function Agenda() {
         (etapasData || []).forEach((e: any) => { etapasMap[e.id] = { nome: e.nome, cor: e.cor }; });
       }
 
+      // Fetch ticket data for ticket-origin agendamentos
+      const calTicketIds = [...new Set((rows || []).filter((r: any) => r.origem === "ticket" && r.ticket_id).map((r: any) => r.ticket_id))];
+      let calTicketsMap: Record<string, any> = {};
+      if (calTicketIds.length > 0) {
+        const { data: ticketsData } = await supabase
+          .from("tickets")
+          .select("id, numero_exibicao, titulo, status, cliente_id, clientes:cliente_id(nome_fantasia)")
+          .in("id", calTicketIds);
+        (ticketsData || []).forEach((t: any) => { calTicketsMap[t.id] = t; });
+      }
+
       return (rows || []).map((ag: any) => {
+        if (ag.origem === "ticket" && ag.ticket_id) {
+          const ticket = calTicketsMap[ag.ticket_id];
+          return {
+            ...ag,
+            ag_status: ag.status || 'agendado',
+            ag_iniciado_em: ag.iniciado_em || null,
+            ag_finalizado_em: ag.finalizado_em || null,
+            cliente_nome: ticket?.clientes?.nome_fantasia || "—",
+            contrato_numero: ticket?.numero_exibicao || "—",
+            filial_id: "",
+            filial_nome: "—",
+            atividade_nome: "—",
+            mesa_nome: "—",
+            mesa_cor: null,
+            etapa_atual_nome: "Tickets",
+            etapa_atual_cor: "#6366f1",
+            tecnicos: [],
+            apontados: [],
+            tipo_atendimento: null,
+            status_projeto: "ativo",
+            pausado: false,
+            card_iniciado_em: null,
+            sla_horas: 0,
+            progresso: null,
+            progresso_etapa: null,
+            atividade_status: null,
+            is_ticket: true,
+            cor_evento: ag.cor_evento || "#6366f1",
+          };
+        }
         const card = cardsMap[ag.card_id];
         const cardEtapaId = card?.etapa_id;
         return {
@@ -582,6 +623,7 @@ export default function Agenda() {
           progresso: progressMap[ag.card_id] || null,
           progresso_etapa: cardEtapaId ? (progressEtapaMap[`${ag.card_id}__${cardEtapaId}`] || null) : null,
           atividade_status: ag.atividade_id ? (calActStatusMap[`${ag.card_id}__${ag.atividade_id}`] || 'pendente') : null,
+          is_ticket: false,
         };
       });
     },
