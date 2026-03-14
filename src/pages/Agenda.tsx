@@ -902,9 +902,9 @@ export default function Agenda() {
             )}
             {ag.etapa_atual_nome && ag.etapa_atual_nome !== "—" && (
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="text-xs font-medium" style={{ color: ag.etapa_atual_cor || undefined }}>
-                  Etapa Atual: {ag.etapa_atual_nome}
-                </span>
+                <Badge variant="secondary" className="text-xs" style={{ backgroundColor: ag.is_ticket ? "#6366f120" : undefined, color: ag.etapa_atual_cor || undefined }}>
+                  {ag.is_ticket ? "📋 " : ""}Origem: {ag.etapa_atual_nome}
+                </Badge>
                 {ag.progresso_etapa && ag.progresso_etapa.total > 0 && (
                   <Badge variant="outline" className="text-[11px] border-primary/30 text-primary font-medium">
                     {ag.progresso_etapa.concluidas} de {ag.progresso_etapa.total}
