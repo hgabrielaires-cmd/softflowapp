@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Ticket, TicketComentario, TicketAnexo, TicketVinculo, TicketSeguidor, TicketCurtida } from "./types";
+import type { Ticket, TicketComentario, TicketAnexo, TicketVinculo, TicketSeguidor, TicketCurtida, TicketAgendamento } from "./types";
 
 export function useTickets() {
   return useQuery({
