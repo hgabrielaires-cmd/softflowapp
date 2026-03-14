@@ -135,13 +135,13 @@ function FaturamentoContent() {
         </TabsList>
 
         <TabsContent value="aguardando">
-          <AguardandoFaturamentoTab filialFilter={filialFilter} />
+          <AguardandoFaturamentoTab filialFilter={effectiveFilter} />
         </TabsContent>
         <TabsContent value="faturas">
-          <FaturasTab filialFilter={filialFilter} />
+          <FaturasTab filialFilter={effectiveFilter} />
         </TabsContent>
         <TabsContent value="notas">
-          <NotasFiscaisTab filialFilter={filialFilter} />
+          <NotasFiscaisTab filialFilter={effectiveFilter} />
         </TabsContent>
       </Tabs>
     </div>
