@@ -39,6 +39,9 @@ import Automacoes from "./pages/Automacoes";
 import Faturamento from "./pages/Faturamento";
 import CrmParametros from "./pages/crm-parametros/CrmParametros";
 import CrmPipeline from "./pages/CrmPipeline";
+import Tickets from "./pages/Tickets";
+import TicketNovo from "./pages/TicketNovo";
+import HelpdeskParametros from "./pages/HelpdeskParametros";
 
 const queryClient = new QueryClient();
 
