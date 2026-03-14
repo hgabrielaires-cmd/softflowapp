@@ -33,7 +33,7 @@ export default function Tickets() {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
   // Data
-  const { data: tickets = [] } = useTickets();
+  const { data: tickets = [], refetch: refetchTickets, isFetching } = useTickets();
   const { data: profiles = [] } = useProfiles();
   const ticketIds = useMemo(() => tickets.map((t) => t.id), [tickets]);
   const { data: seguidoresRaw = [] } = useTicketSeguidores(ticketIds);
