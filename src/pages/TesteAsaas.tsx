@@ -199,6 +199,7 @@ export default function TesteAsaas() {
       if (data?.error) throw new Error(data.error);
 
       setPixPaymentId(data.payment?.id || null);
+      setUltimoPaymentId(data.payment?.id || null);
       setPixResult(data);
       addLog("response", `✅ PIX criado — Payment ID: ${data.payment?.id}`);
       if (data.details?.asaas_pix_qrcode) {
