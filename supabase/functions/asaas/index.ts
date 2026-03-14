@@ -103,6 +103,25 @@ async function createPayment(baseUrl: string, apiKey: string, payload: {
   });
 }
 
+async function fetchPaymentDetails(baseUrl: string, apiKey: string, paymentId: string, billingType: string) {
+  const details: Record<string, string | null> = {};
+
+  try {
+    if (billingType === "BOLETO") {
+      const boletoData = await asaasFetch(baseUrl, apiKey, `/payments/${paymentId}/identificationField`, "GET");
+      details.asaas_barcode = boletoData?.identificationField || null;
+    } else if (billingType === "PIX") {
+      const pixData = await asaasFetch(baseUrl, apiKey, `/payments/${paymentId}/pixQrCode`, "GET");
+      details.asaas_pix_qrcode = pixData?.payload || null;
+      details.asaas_pix_image = pixData?.encodedImage || null;
+    }
+  } catch (err) {
+    console.warn(`Failed to fetch payment details for ${paymentId}:`, err);
+  }
+
+  return details;
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
