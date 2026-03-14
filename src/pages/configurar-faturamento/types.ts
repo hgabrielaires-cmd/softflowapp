@@ -14,6 +14,7 @@ export interface ContratoEspelho {
     cnpj_cpf: string;
     email: string | null;
     telefone: string | null;
+    filial_id: string | null;
   };
   plano: {
     id: string;
