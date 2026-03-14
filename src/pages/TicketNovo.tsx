@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useAuth } from "@/context/AuthContext";
 import { useCreateTicket } from "./tickets/useTicketsForm";
@@ -22,7 +23,7 @@ import type { TicketFormData, TicketPrioridade, TicketMesa, TicketStatus } from 
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Clock, Trash2, Search } from "lucide-react";
+import { ArrowLeft, Clock, Trash2, Search, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 export default function TicketNovo() {
