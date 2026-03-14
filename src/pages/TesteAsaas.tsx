@@ -244,15 +244,19 @@ export default function TesteAsaas() {
       for (let tentativa = 1; tentativa <= 10; tentativa++) {
         await new Promise((r) => setTimeout(r, 3000));
 
-        const { data: eventsTry } = await supabase
-          .from("asaas_webhook_events")
-          .select("*")
-          .like("event_id", `%${paymentId}`)
-          .order("processed_at", { ascending: false })
-          .limit(10);
+        const { data: webhookData, error: webhookError } = await supabase.functions.invoke("asaas", {
+          body: {
+            action: "test_check_webhook",
+            filialId,
+            paymentId,
+          },
+        });
 
-        recentEvents = eventsTry || [];
-        webhookFound = recentEvents.length > 0;
+        if (webhookError) throw webhookError;
+        if (webhookData?.error) throw new Error(webhookData.error);
+
+        recentEvents = webhookData?.events || [];
+        webhookFound = webhookData?.webhookReceived === true;
 
         if (webhookFound) {
           addLog("info", `✅ Webhook encontrado na tentativa ${tentativa}/10`);
