@@ -7,6 +7,20 @@ export function fmtCurrency(val: number | null | undefined): string {
   return (val ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+/** Formats a number as currency string for input display (e.g. "1.234,56") */
+export function formatCurrencyInput(val: number | null | undefined): string {
+  if (!val && val !== 0) return "";
+  if (val === 0) return "";
+  return val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** Parses a Brazilian currency input string back to number */
+export function parseCurrencyInput(raw: string): number {
+  const cleaned = raw.replace(/[^\d,]/g, "").replace(",", ".");
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+}
+
 /** Calcula o preview das próximas faturas (até 6 meses ou estabilizar). */
 export function calcularPreviewFaturas(form: ConfigFaturamentoForm, planoNome: string): FaturaPreviewMes[] {
   const result: FaturaPreviewMes[] = [];

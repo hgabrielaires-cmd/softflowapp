@@ -10,12 +10,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { CreditCard, Building, Package, Wrench, Plus, Trash2 } from "lucide-react";
+import { CreditCard, Building, Package, Wrench } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { ConfigFaturamentoForm, ContratoEspelho, ModuloConfig } from "../types";
 import { PARCELAS_OPTIONS, FORMAS_PAGAMENTO_CONFIG, DIAS_VENCIMENTO } from "../constants";
-import { fmtCurrency } from "../helpers";
+import { fmtCurrency, parseCurrencyInput, formatCurrencyInput } from "../helpers";
 
 interface Props {
   form: ConfigFaturamentoForm;
@@ -30,32 +30,8 @@ export function ConfiguracaoCobranca({ form, setForm, espelho }: Props) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  function addModulo() {
-    setForm((f) => ({
-      ...f,
-      modulos: [
-        ...f.modulos,
-        { id: crypto.randomUUID(), nome: "", valor_unitario: 0, quantidade: 1, valor_mensal: 0, data_inicio: format(new Date(), "yyyy-MM-dd") },
-      ],
-    }));
-  }
-
-  function updateModulo(idx: number, field: keyof ModuloConfig, value: string | number) {
-    setForm((f) => ({
-      ...f,
-      modulos: f.modulos.map((m, i) => {
-        if (i !== idx) return m;
-        const updated = { ...m, [field]: value };
-        if (field === "valor_unitario" || field === "quantidade") {
-          updated.valor_mensal = (updated.valor_unitario || 0) * (updated.quantidade || 1);
-        }
-        return updated;
-      }),
-    }));
-  }
-
-  function removeModulo(idx: number) {
-    setForm((f) => ({ ...f, modulos: f.modulos.filter((_, i) => i !== idx) }));
+  function handleCurrencyChange(field: keyof ConfigFaturamentoForm, raw: string) {
+    updateField(field, parseCurrencyInput(raw) as any);
   }
 
   return (
@@ -74,12 +50,10 @@ export function ConfiguracaoCobranca({ form, setForm, espelho }: Props) {
               <div className="space-y-1">
                 <Label className="text-xs">Valor total da implantação</Label>
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.valor_implantacao || ""}
-                  onChange={(e) => updateField("valor_implantacao", Number(e.target.value))}
+                  value={formatCurrencyInput(form.valor_implantacao)}
+                  onChange={(e) => handleCurrencyChange("valor_implantacao", e.target.value)}
                   className="h-9"
+                  placeholder="R$ 0,00"
                 />
               </div>
               <div className="space-y-1">
@@ -126,12 +100,10 @@ export function ConfiguracaoCobranca({ form, setForm, espelho }: Props) {
               <div className="space-y-1">
                 <Label className="text-xs">Valor mensalidade base</Label>
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.valor_mensalidade || ""}
-                  onChange={(e) => updateField("valor_mensalidade", Number(e.target.value))}
+                  value={formatCurrencyInput(form.valor_mensalidade)}
+                  onChange={(e) => handleCurrencyChange("valor_mensalidade", e.target.value)}
                   className="h-9"
+                  placeholder="R$ 0,00"
                 />
               </div>
               <div className="space-y-1">
@@ -196,89 +168,56 @@ export function ConfiguracaoCobranca({ form, setForm, espelho }: Props) {
       )}
 
       {/* Seção Módulos Adicionais */}
-      {!isOA && (
+      {!isOA && form.modulos.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Package className="h-4 w-4 text-primary" />
-                Módulos Adicionais
-              </CardTitle>
-              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addModulo}>
-                <Plus className="h-3 w-3" /> Adicionar
-              </Button>
-            </div>
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Package className="h-4 w-4 text-primary" />
+              Módulos Adicionais
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            {form.modulos.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-3">Nenhum módulo adicional</p>
-            ) : (
-              <div className="space-y-2">
-                {form.modulos.map((mod, i) => (
-                  <div key={mod.id} className="space-y-1.5 p-2 bg-muted/30 rounded-lg border border-border">
-                    <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Nome</Label>
-                        <Input
-                          value={mod.nome}
-                          onChange={(e) => updateModulo(i, "nome", e.target.value)}
-                          placeholder="Nome do módulo"
-                          className="h-8 text-xs"
-                        />
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => removeModulo(i)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+            <div className="space-y-2">
+              {form.modulos.map((mod) => (
+                <div key={mod.id} className="space-y-1.5 p-2 bg-muted/30 rounded-lg border border-border">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Nome</Label>
+                    <Input
+                      value={mod.nome}
+                      disabled
+                      className="h-8 text-xs bg-muted"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 items-end">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Valor unit.</Label>
+                      <Input
+                        value={fmtCurrency(mod.valor_unitario)}
+                        disabled
+                        className="h-8 text-xs bg-muted"
+                      />
                     </div>
-                    <div className="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 items-end">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Valor unit.</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={mod.valor_unitario || ""}
-                          onChange={(e) => updateModulo(i, "valor_unitario", Number(e.target.value))}
-                          className="h-8 text-xs"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Qtd</Label>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={mod.quantidade || 1}
-                          onChange={(e) => updateModulo(i, "quantidade", Number(e.target.value))}
-                          className="h-8 text-xs"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Valor/mês</Label>
-                        <Input
-                          value={fmtCurrency(mod.valor_mensal)}
-                          disabled
-                          className="h-8 text-xs bg-muted font-medium"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Início</Label>
-                        <Input
-                          type="date"
-                          value={mod.data_inicio}
-                          onChange={(e) => updateModulo(i, "data_inicio", e.target.value)}
-                          className="h-8 text-xs"
-                        />
-                      </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Qtd</Label>
+                      <Input
+                        value={mod.quantidade || 1}
+                        disabled
+                        className="h-8 text-xs bg-muted"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Valor/mês</Label>
+                      <Input
+                        value={fmtCurrency(mod.valor_mensal)}
+                        disabled
+                        className="h-8 text-xs bg-muted font-medium"
+                      />
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">Para adicionar ou remover módulos, crie um novo pedido.</p>
           </CardContent>
         </Card>
       )}
