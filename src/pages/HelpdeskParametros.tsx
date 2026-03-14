@@ -10,10 +10,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useHelpdeskTipos, useHelpdeskModelos } from "./tickets/useTicketsQueries";
 import { useSaveHelpdeskTipo, useSaveHelpdeskModelo } from "./tickets/useTicketsForm";
 import { TICKET_MESAS } from "./tickets/constants";
-import { Settings, Plus, Save } from "lucide-react";
+import { Settings, Plus, Save, Braces } from "lucide-react";
+
+const VARIAVEIS_MODELO = [
+  { var: "{cliente.nome_fantasia}", desc: "Nome fantasia do cliente" },
+  { var: "{cliente.razao_social}", desc: "Razão social do cliente" },
+  { var: "{cliente.cnpj_cpf}", desc: "CNPJ/CPF do cliente" },
+  { var: "{contato.nome}", desc: "Nome do contato principal" },
+  { var: "{contato.email}", desc: "E-mail do contato" },
+  { var: "{contato.telefone}", desc: "Telefone do contato" },
+  { var: "{contrato.numero}", desc: "Número do contrato" },
+  { var: "{usuario.nome}", desc: "Nome do usuário logado" },
+  { var: "{data}", desc: "Data atual" },
+  { var: "{ticket.numero}", desc: "Número do ticket" },
+];
 
 export default function HelpdeskParametros() {
   const [activeTab, setActiveTab] = useState("tipos");
