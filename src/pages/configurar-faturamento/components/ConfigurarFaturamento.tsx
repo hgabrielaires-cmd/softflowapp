@@ -145,7 +145,7 @@ export default function ConfigurarFaturamento() {
 
             {/* Coluna Central — Configuração */}
             <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
-              <ConfiguracaoCobranca form={form} setForm={setForm} espelho={espelho} />
+              <ConfiguracaoCobranca form={form} setForm={setForm} espelho={espelho} canEditValues={canEditValues} />
             </div>
 
             {/* Coluna Direita — Preview */}
