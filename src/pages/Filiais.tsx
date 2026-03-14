@@ -140,6 +140,15 @@ export default function Filiais() {
       setCongelarEtapaId((data as any).congelar_etapa_id ?? null);
       setMargemVendaIdeal((data as any).margem_venda_ideal ?? 0);
     }
+    // Load cobranca config
+    const { data: cobranca } = await supabase.from("cobranca_config").select("*").eq("filial_id", filialId).maybeSingle();
+    if (cobranca) {
+      setReguaAtiva(cobranca.regua_ativa ?? true);
+      setDiasLembrete1(cobranca.dias_lembrete_1 ?? 5);
+      setDiasLembreteVencimento(cobranca.dias_lembrete_vencimento ?? true);
+      setDiasAtrasoAlerta(cobranca.dias_atraso_alerta ?? 3);
+      setDiasAtrasoSuspensao(cobranca.dias_atraso_suspensao ?? 5);
+    }
   }
 
   function openEdit(filial: Filial) {
