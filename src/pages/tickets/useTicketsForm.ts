@@ -55,7 +55,8 @@ export function useCreateTicket(onCreated?: () => void) {
           criado_por: userId,
           titulo: data.titulo || "Ticket",
         }));
-        await supabase.from("painel_agendamentos").insert(agRows);
+        const { error: agError } = await supabase.from("painel_agendamentos").insert(agRows);
+        if (agError) console.error("Erro ao salvar agendamentos:", agError);
       }
 
       return ticket as { id: string; numero_exibicao: string };
