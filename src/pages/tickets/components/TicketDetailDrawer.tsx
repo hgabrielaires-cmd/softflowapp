@@ -114,6 +114,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   };
 
   return (
+    <>
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent
         side="right"
