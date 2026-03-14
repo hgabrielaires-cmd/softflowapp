@@ -65,7 +65,7 @@ export default function TesteAsaas() {
     setCustomerId(null);
     setBoletoPaymentId(null);
     setPixPaymentId(null);
-  }
+    setUltimoPaymentId(null);
 
   // ── SEÇÃO 1: Teste de Conexão ──────────────────────────────────────────
   async function testConnection() {
