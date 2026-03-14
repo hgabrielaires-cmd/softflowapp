@@ -1533,7 +1533,11 @@ export type Database = {
       }
       faturas: {
         Row: {
+          asaas_bank_slip_url: string | null
+          asaas_barcode: string | null
           asaas_payment_id: string | null
+          asaas_pix_image: string | null
+          asaas_pix_qrcode: string | null
           asaas_url: string | null
           cliente_id: string
           contrato_id: string | null
@@ -1558,7 +1562,11 @@ export type Database = {
           valor_final: number
         }
         Insert: {
+          asaas_bank_slip_url?: string | null
+          asaas_barcode?: string | null
           asaas_payment_id?: string | null
+          asaas_pix_image?: string | null
+          asaas_pix_qrcode?: string | null
           asaas_url?: string | null
           cliente_id: string
           contrato_id?: string | null
@@ -1583,7 +1591,11 @@ export type Database = {
           valor_final?: number
         }
         Update: {
+          asaas_bank_slip_url?: string | null
+          asaas_barcode?: string | null
           asaas_payment_id?: string | null
+          asaas_pix_image?: string | null
+          asaas_pix_qrcode?: string | null
           asaas_url?: string | null
           cliente_id?: string
           contrato_id?: string | null
