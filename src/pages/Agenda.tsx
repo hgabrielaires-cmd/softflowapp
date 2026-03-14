@@ -963,7 +963,7 @@ export default function Agenda() {
               <p className="text-xs text-muted-foreground mt-1 italic">"{ag.observacao}"</p>
             )}
             {/* Outras datas agendadas para o mesmo card/contrato */}
-            {outrasDatasMap[ag.card_id]?.length > 0 && (
+            {ag.card_id && outrasDatasMap[ag.card_id]?.length > 0 && (
               <div className="mt-2 pt-2 border-t border-border/50">
                 <p className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wide">
                   <CalendarDays className="h-3 w-3 inline mr-1" />
