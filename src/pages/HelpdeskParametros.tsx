@@ -14,7 +14,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useHelpdeskTipos, useHelpdeskModelos } from "./tickets/useTicketsQueries";
 import { useSaveHelpdeskTipo, useSaveHelpdeskModelo } from "./tickets/useTicketsForm";
 import { TICKET_MESAS } from "./tickets/constants";
-import { Settings, Plus, Save, Braces } from "lucide-react";
+import { Settings, Plus, Save, Braces, Tag, Trash2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const VARIAVEIS_MODELO = [
   { var: "{cliente.nome_fantasia}", desc: "Nome fantasia do cliente" },
@@ -29,6 +32,66 @@ const VARIAVEIS_MODELO = [
   { var: "{ticket.numero}", desc: "Número do ticket" },
 ];
 
+function useHelpdeskTags() {
+  return useQuery({
+    queryKey: ["helpdesk_tags"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("helpdesk_tags")
+        .select("*")
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+function useCreateTag() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (nome: string) => {
+      const { error } = await supabase.from("helpdesk_tags").insert({ nome });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["helpdesk_tags"] });
+      toast.success("Tag criada!");
+    },
+    onError: (err: any) => {
+      if (err?.message?.includes("duplicate")) {
+        toast.error("Essa tag já existe.");
+      } else {
+        toast.error("Erro ao criar tag.");
+      }
+    },
+  });
+}
+
+function useToggleTag() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ativo }: { id: string; ativo: boolean }) => {
+      const { error } = await supabase.from("helpdesk_tags").update({ ativo }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["helpdesk_tags"] }),
+  });
+}
+
+function useDeleteTag() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("helpdesk_tags").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["helpdesk_tags"] });
+      toast.success("Tag removida!");
+    },
+  });
+}
+
 export default function HelpdeskParametros() {
   const [activeTab, setActiveTab] = useState("tipos");
 
@@ -36,6 +99,13 @@ export default function HelpdeskParametros() {
   const { data: modelos = [] } = useHelpdeskModelos();
   const saveTipo = useSaveHelpdeskTipo();
   const saveModelo = useSaveHelpdeskModelo();
+
+  // Tags
+  const { data: tags = [] } = useHelpdeskTags();
+  const createTag = useCreateTag();
+  const toggleTag = useToggleTag();
+  const deleteTag = useDeleteTag();
+  const [newTagName, setNewTagName] = useState("");
 
   // Dialog state
   const [tipoDialogOpen, setTipoDialogOpen] = useState(false);
@@ -119,6 +189,13 @@ export default function HelpdeskParametros() {
     }, { onSuccess: () => setModeloDialogOpen(false) });
   };
 
+  const handleAddTag = () => {
+    const val = newTagName.trim().toUpperCase();
+    if (!val) return;
+    const formatted = val.startsWith("#") ? val : `#${val}`;
+    createTag.mutate(formatted, { onSuccess: () => setNewTagName("") });
+  };
+
   return (
     <AppLayout>
       <div className="flex flex-col h-full p-4 space-y-4">
@@ -130,6 +207,9 @@ export default function HelpdeskParametros() {
           <TabsList>
             <TabsTrigger value="tipos">Tipos de Atendimento</TabsTrigger>
             <TabsTrigger value="modelos">Modelos de Ticket</TabsTrigger>
+            <TabsTrigger value="tags" className="gap-1.5">
+              <Tag className="h-3.5 w-3.5" /> Tags
+            </TabsTrigger>
           </TabsList>
 
           {/* TIPOS */}
@@ -204,6 +284,68 @@ export default function HelpdeskParametros() {
                 )}
               </TableBody>
             </Table>
+          </TabsContent>
+
+          {/* TAGS */}
+          <TabsContent value="tags" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Tags de Tickets</h2>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Input
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                placeholder="Nome da tag (ex: NFE)"
+                className="w-64 h-9"
+                onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
+              />
+              <Button size="sm" onClick={handleAddTag} disabled={!newTagName.trim() || createTag.isPending}>
+                <Plus className="h-4 w-4 mr-1" /> Adicionar
+              </Button>
+            </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tag</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-24">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tags.map((tag: any) => (
+                  <TableRow key={tag.id}>
+                    <TableCell>
+                      <Badge className="bg-primary/10 text-primary border-primary/20 font-mono text-xs">
+                        {tag.nome}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={tag.ativo}
+                        onCheckedChange={(v) => toggleTag.mutate({ id: tag.id, ativo: v })}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" className="h-7 w-7"
+                        onClick={() => deleteTag.mutate(tag.id)}>
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {tags.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground">Nenhuma tag cadastrada</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+
+            <p className="text-xs text-muted-foreground">
+              As tags cadastradas aqui aparecem como sugestão ao abrir um novo ticket. O prefixo # é adicionado automaticamente.
+            </p>
           </TabsContent>
         </Tabs>
       </div>
