@@ -73,7 +73,7 @@ export default function TicketNovo() {
   const [clienteSearch, setClienteSearch] = useState("");
   const [contratoId, setContratoId] = useState<string | null>(null);
   const [mesa, setMesa] = useState<TicketMesa>("Suporte");
-  const [modo, setModo] = useState<TicketModo>("externo");
+  const [modo, setModo] = useState<TicketModo | "">("");
   const [tipoAtendimentoId, setTipoAtendimentoId] = useState<string | null>(null);
   const [prioridade, setPrioridade] = useState<TicketPrioridade>("Média");
   const [responsavelId, setResponsavelId] = useState<string | null>(null);
