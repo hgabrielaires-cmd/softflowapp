@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.gerar-faturas-mensais]
 verify_jwt = false
+
+[functions.regua-cobranca]
+verify_jwt = false
