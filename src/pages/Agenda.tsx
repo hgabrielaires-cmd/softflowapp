@@ -939,6 +939,17 @@ export default function Agenda() {
                       {ag.ticket_modo === "interno" ? "Interno" : "Externo"}
                     </Badge>
                   )}
+                  {ag.ticket_status && (
+                    <Badge variant="outline" className={cn("ml-1.5 text-[9px] px-1.5 py-0 font-semibold",
+                      ag.ticket_status === "Aberto" ? "border-gray-300 text-gray-600 bg-gray-50" :
+                      ag.ticket_status === "Em Andamento" ? "border-blue-300 text-blue-700 bg-blue-50" :
+                      ag.ticket_status === "Aguardando Cliente" ? "border-amber-300 text-amber-700 bg-amber-50" :
+                      ag.ticket_status === "Resolvido" ? "border-emerald-300 text-emerald-700 bg-emerald-50" :
+                      "border-gray-300 text-gray-600 bg-gray-50"
+                    )}>
+                      {ag.ticket_status}
+                    </Badge>
+                  )}
                   {ag.titulo && ` · ${ag.titulo}`}
                 </>
               ) : (
