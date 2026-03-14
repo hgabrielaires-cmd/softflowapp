@@ -325,6 +325,14 @@ const App = () => {
               }
             />
             <Route
+              path="/faturamento/configurar/:contratoId"
+              element={
+                <ProtectedRoute>
+                  <ConfigurarFaturamento />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/crm-parametros"
               element={
                 <ProtectedRoute>
