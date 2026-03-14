@@ -103,6 +103,16 @@ export interface TicketVinculo {
   ticket_vinculado?: Pick<Ticket, "id" | "numero_exibicao" | "titulo" | "status"> | null;
 }
 
+export interface TicketAgendamento {
+  id: string;
+  ticket_id: string;
+  data: string;
+  hora_inicio: string | null;
+  hora_fim: string | null;
+  titulo: string | null;
+  created_at: string;
+}
+
 export interface TicketFormData {
   titulo: string;
   descricao_html: string;

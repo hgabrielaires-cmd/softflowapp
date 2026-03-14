@@ -6,6 +6,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
 import { Ticket, TicketStatus } from "../types";
 import { TICKET_STATUS_COLORS, TICKET_PRIORIDADE_COLORS, TICKET_STATUSES } from "../constants";
 import { formatDateTime } from "../helpers";
@@ -16,21 +19,24 @@ import { UserAvatar } from "@/components/UserAvatar";
 import {
   useTicketDetail, useTicketComentarios, useTicketAnexos,
   useTicketVinculos, useTicketSeguidoresByTicket, useProfiles,
-  useTicketCurtidas, useClienteContatos,
+  useTicketCurtidas, useClienteContatos, useTicketAgendamentos,
 } from "../useTicketsQueries";
 import {
   useUpdateTicketStatus, useAddTicketComment, useUpdateTicketResponsavel,
   useAddTicketSeguidor, useRemoveTicketSeguidor, useToggleTicketCurtida,
-  useReplyTicketComment,
+  useReplyTicketComment, useAddTicketAgendamento, useRemoveTicketAgendamento,
 } from "../useTicketsForm";
 import { useAuth } from "@/context/AuthContext";
+import { useCrudPermissions } from "@/hooks/useCrudPermissions";
 import { cn } from "@/lib/utils";
 import {
-  Maximize2, X, Building2, FileText, Headphones, Calendar,
+  Maximize2, X, Building2, FileText, Headphones, Calendar as CalendarIcon,
   User, Plus, Link2, Paperclip, Download, Edit2, MessageSquare,
-  ChevronDown, Phone, Mail, Star,
+  ChevronDown, Phone, Mail, Star, CalendarDays, Clock, Trash2,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { format, isSameDay } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface Props {
   ticketId: string | null;
@@ -39,8 +45,9 @@ interface Props {
 }
 
 export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
-  const { user } = useAuth();
+  const { user, roles } = useAuth();
   const userId = user?.id || "";
+  const { canEditar } = useCrudPermissions("tickets", roles);
 
   const { data: ticket } = useTicketDetail(ticketId);
   const { data: comentarios = [] } = useTicketComentarios(ticketId);
@@ -50,6 +57,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
   const { data: seguidores = [] } = useTicketSeguidoresByTicket(ticketId);
   const { data: profiles = [] } = useProfiles();
   const { data: contatos = [] } = useClienteContatos(ticket?.cliente_id ?? null);
+  const { data: agendamentos = [] } = useTicketAgendamentos(ticketId);
 
   const updateStatus = useUpdateTicketStatus();
   const addComment = useAddTicketComment();
@@ -58,10 +66,15 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
   const removeSeguidor = useRemoveTicketSeguidor();
   const toggleCurtida = useToggleTicketCurtida();
   const replyComment = useReplyTicketComment();
+  const addAgendamento = useAddTicketAgendamento();
+  const removeAgendamento = useRemoveTicketAgendamento();
 
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState("");
   const [expanded, setExpanded] = useState(false);
+  const [agendaPopoverOpen, setAgendaPopoverOpen] = useState(false);
+  const [novaAgendaData, setNovaAgendaData] = useState<Date | undefined>(undefined);
+  const [novaAgendaHora, setNovaAgendaHora] = useState("");
 
   const mentionUsers = profiles.map((p) => ({ id: p.user_id, user_id: p.user_id, full_name: p.full_name }));
 
@@ -242,12 +255,12 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
                     </Select>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-3 w-3 text-muted-foreground" />
+                    <CalendarIcon className="h-3 w-3 text-muted-foreground" />
                     <span className="text-muted-foreground">Aberto em:</span>
                     <span>{formatDateTime(ticket.created_at)}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-3 w-3 text-muted-foreground" />
+                    <CalendarIcon className="h-3 w-3 text-muted-foreground" />
                     <span className="text-muted-foreground">Atualizado:</span>
                     <span>{formatDateTime(ticket.updated_at)}</span>
                   </div>
@@ -293,6 +306,100 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
                   </div>
                 </Collapsible>
               )}
+
+
+              {/* Agenda */}
+              <div className="bg-card rounded-xl border p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold flex items-center gap-1.5">
+                    <CalendarDays className="h-3.5 w-3.5" /> Agenda ({agendamentos.length})
+                  </h4>
+                  {canEditar && (
+                    <Popover open={agendaPopoverOpen} onOpenChange={setAgendaPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="end">
+                        <div className="p-3 space-y-3">
+                          <Calendar
+                            mode="single"
+                            selected={novaAgendaData}
+                            onSelect={setNovaAgendaData}
+                            locale={ptBR}
+                            disabled={{ before: new Date() }}
+                            className="p-3 pointer-events-auto"
+                          />
+                          <div className="flex items-center gap-2 px-1">
+                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                            <Input
+                              type="time"
+                              value={novaAgendaHora}
+                              onChange={(e) => setNovaAgendaHora(e.target.value)}
+                              className="h-7 text-xs flex-1"
+                              placeholder="HH:mm"
+                            />
+                          </div>
+                          <div className="flex justify-end">
+                            <Button
+                              size="sm"
+                              disabled={!novaAgendaData || addAgendamento.isPending}
+                              onClick={() => {
+                                if (!novaAgendaData) return;
+                                addAgendamento.mutate({
+                                  ticketId: ticket.id,
+                                  data: format(novaAgendaData, "yyyy-MM-dd"),
+                                  horaInicio: novaAgendaHora || null,
+                                  titulo: ticket.titulo,
+                                  userId,
+                                });
+                                setNovaAgendaData(undefined);
+                                setNovaAgendaHora("");
+                                setAgendaPopoverOpen(false);
+                              }}
+                            >
+                              Adicionar
+                            </Button>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+                {agendamentos.length > 0 ? (
+                  <div className="space-y-1">
+                    {agendamentos.map((ag) => (
+                      <div key={ag.id} className="flex items-center justify-between text-xs bg-muted/50 rounded px-2 py-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <CalendarDays className="h-3 w-3 text-primary" />
+                          <span className="font-medium">
+                            {format(new Date(ag.data + "T12:00:00"), "dd/MM/yyyy (EEEE)", { locale: ptBR })}
+                          </span>
+                          {ag.hora_inicio && (
+                            <Badge variant="outline" className="text-[10px] font-mono">
+                              <Clock className="h-2.5 w-2.5 mr-0.5" />
+                              {ag.hora_inicio.slice(0, 5)}
+                            </Badge>
+                          )}
+                        </div>
+                        {canEditar && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5"
+                            onClick={() => removeAgendamento.mutate({ agendamentoId: ag.id })}
+                          >
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhum agendamento.</p>
+                )}
+              </div>
 
               {/* Seguidores */}
               <div className="bg-card rounded-xl border p-4 space-y-3">

@@ -269,6 +269,46 @@ export function useAddTicketVinculo() {
   });
 }
 
+export function useAddTicketAgendamento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ticketId, data, horaInicio, titulo, userId }: {
+      ticketId: string; data: string; horaInicio: string | null; titulo: string; userId: string;
+    }) => {
+      const { error } = await supabase.from("painel_agendamentos").insert({
+        ticket_id: ticketId,
+        data,
+        hora_inicio: horaInicio || null,
+        origem: "ticket",
+        checklist_index: 0,
+        criado_por: userId,
+        titulo,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ticket_agendamentos"] });
+      toast.success("Agendamento adicionado!");
+    },
+    onError: (err: Error) => toast.error("Erro: " + err.message),
+  });
+}
+
+export function useRemoveTicketAgendamento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ agendamentoId }: { agendamentoId: string }) => {
+      const { error } = await supabase.from("painel_agendamentos").delete().eq("id", agendamentoId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ticket_agendamentos"] });
+      toast.success("Agendamento removido!");
+    },
+    onError: (err: Error) => toast.error("Erro: " + err.message),
+  });
+}
+
 export function useUpdateTicketDescription() {
   const qc = useQueryClient();
   return useMutation({

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Ticket, TicketComentario, TicketAnexo, TicketVinculo, TicketSeguidor, TicketCurtida } from "./types";
+import type { Ticket, TicketComentario, TicketAnexo, TicketVinculo, TicketSeguidor, TicketCurtida, TicketAgendamento } from "./types";
 
 export function useTickets() {
   return useQuery({
@@ -149,6 +149,23 @@ export function useTicketVinculos(ticketId: string | null) {
         .eq("ticket_id", ticketId!);
       if (error) throw error;
       return (data ?? []) as unknown as TicketVinculo[];
+    },
+  });
+}
+
+export function useTicketAgendamentos(ticketId: string | null) {
+  return useQuery({
+    queryKey: ["ticket_agendamentos", ticketId],
+    enabled: !!ticketId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("painel_agendamentos")
+        .select("id, ticket_id, data, hora_inicio, hora_fim, titulo, created_at")
+        .eq("ticket_id", ticketId!)
+        .eq("origem", "ticket")
+        .order("data", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as TicketAgendamento[];
     },
   });
 }
