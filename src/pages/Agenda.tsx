@@ -587,10 +587,19 @@ export default function Agenda() {
         let calRespMap: Record<string, any> = {};
         if (calRespIds.length > 0) {
           const { data: respData } = await supabase.from("profiles").select("user_id, full_name, avatar_url").in("user_id", calRespIds);
-          (respData || []).forEach((p: any) => { calRespMap[p.user_id] = p; });
+          (respData || []).forEach((p: any) => { calRespMap[p.user_id] = { ...p, id: p.user_id }; });
         }
+        const { data: calSegData } = await supabase.from("ticket_seguidores").select("ticket_id, user_id, profile:user_id(user_id, full_name, avatar_url)").in("ticket_id", calTicketIds);
+        const calSegMap: Record<string, any[]> = {};
+        (calSegData || []).forEach((s: any) => {
+          if (!calSegMap[s.ticket_id]) calSegMap[s.ticket_id] = [];
+          if (s.profile) calSegMap[s.ticket_id].push({ ...s.profile, id: s.profile.user_id });
+        });
         (ticketsData || []).forEach((t: any) => {
-          calTicketsMap[t.id] = { ...t, responsavel_profile: t.responsavel_id ? calRespMap[t.responsavel_id] || null : null };
+          const resp = t.responsavel_id ? calRespMap[t.responsavel_id] || null : null;
+          const segs = calSegMap[t.id] || [];
+          const allApontados = resp ? [resp, ...segs.filter((s: any) => s.user_id !== resp.user_id)] : segs;
+          calTicketsMap[t.id] = { ...t, apontados: allApontados };
         });
       }
 
