@@ -379,7 +379,7 @@ interface Notificacao {
   tipo: string;
   created_at: string;
   criado_por: string;
-  metadata?: { card_id?: string; comentario_id?: string } | null;
+  metadata?: { card_id?: string; comentario_id?: string; ticket_id?: string } | null;
 }
 
 const TIPO_ICON: Record<string, ReactNode> = {
