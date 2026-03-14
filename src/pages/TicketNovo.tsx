@@ -74,11 +74,14 @@ export default function TicketNovo() {
   const { data: clienteContratos = [] } = useClienteContratos(clienteId);
   const { data: clienteTickets = [] } = useClienteTicketsAbertos(clienteId);
 
-  // Auto-select first active contract when client changes
+  // Auto-select active contract considering upgrades
   useEffect(() => {
     if (clienteContratos.length > 0) {
-      const base = clienteContratos.find((c: any) => c.tipo === "Base") || clienteContratos[0];
-      setContratoId((base as any).id);
+      // Prioridade: último Upgrade ativo > Base ativo > primeiro ativo
+      const upgrade = clienteContratos.find((c: any) => c.tipo === "Aditivo");
+      const base = clienteContratos.find((c: any) => c.tipo === "Base");
+      const selected = upgrade || base || clienteContratos[0];
+      setContratoId((selected as any).id);
     } else {
       setContratoId(null);
     }
@@ -246,15 +249,19 @@ export default function TicketNovo() {
                 <div>
                   <Label className="text-xs">Contrato vinculado</Label>
                   <div className="flex items-center gap-1">
-                    <Select value={contratoId || "__none__"} onValueChange={(v) => setContratoId(v === "__none__" ? null : v)}>
-                      <SelectTrigger className="flex-1"><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Nenhum</SelectItem>
-                        {clienteContratos.map((c: any) => (
-                          <SelectItem key={c.id} value={c.id}>{c.numero_exibicao} - {c.planos?.nome || c.tipo}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      disabled
+                      value={
+                        contratoId
+                          ? (() => {
+                              const c = clienteContratos.find((ct: any) => ct.id === contratoId) as any;
+                              return c ? `${c.numero_exibicao} - ${c.planos?.nome || c.tipo}` : "";
+                            })()
+                          : clienteId ? "Nenhum contrato ativo" : ""
+                      }
+                      placeholder="Selecione um cliente"
+                      className="bg-muted text-xs flex-1"
+                    />
                     {contratoId && (
                       <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setEspelhoOpen(true)} title="Ver espelho do contrato">
                         <Eye className="h-4 w-4 text-primary" />
