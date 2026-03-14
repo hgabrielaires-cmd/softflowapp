@@ -267,6 +267,7 @@ export type Database = {
           numero: string | null
           razao_social: string | null
           responsavel_nome: string | null
+          status_financeiro: string
           telefone: string | null
           uf: string | null
           updated_at: string
@@ -292,6 +293,7 @@ export type Database = {
           numero?: string | null
           razao_social?: string | null
           responsavel_nome?: string | null
+          status_financeiro?: string
           telefone?: string | null
           uf?: string | null
           updated_at?: string
@@ -317,6 +319,7 @@ export type Database = {
           numero?: string | null
           razao_social?: string | null
           responsavel_nome?: string | null
+          status_financeiro?: string
           telefone?: string | null
           uf?: string | null
           updated_at?: string
