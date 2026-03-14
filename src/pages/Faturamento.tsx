@@ -106,7 +106,7 @@ function FaturamentoContent() {
 
         {/* Filtro de filial */}
         {showFilialFilter && (
-          <Select value={filialFilter} onValueChange={setFilialFilter}>
+          <Select value={effectiveFilter} onValueChange={setFilialFilter}>
             <SelectTrigger className="h-9 w-56">
               <Building2 className="h-3.5 w-3.5 mr-1.5" />
               <SelectValue placeholder="Filial" />
