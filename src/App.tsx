@@ -37,7 +37,7 @@ import Segmentos from "./pages/Segmentos";
 import Setores from "./pages/Setores";
 import Automacoes from "./pages/Automacoes";
 import Faturamento from "./pages/Faturamento";
-import ConfigurarFaturamento from "./pages/faturamento/components/ConfigurarFaturamento";
+import ConfigurarFaturamento from "./pages/configurar-faturamento/components/ConfigurarFaturamento";
 import CrmParametros from "./pages/crm-parametros/CrmParametros";
 import CrmPipeline from "./pages/CrmPipeline";
 import Tickets from "./pages/Tickets";
