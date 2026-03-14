@@ -60,6 +60,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   const { data: profiles = [] } = useProfiles();
   const { data: contatos = [] } = useClienteContatos(ticket?.cliente_id ?? null);
   const { data: agendamentos = [] } = useTicketAgendamentos(ticketId);
+  const { data: historico = [] } = useClienteTicketsHistorico(ticket?.cliente_id ?? null, ticketId);
 
   const updateStatus = useUpdateTicketStatus();
   const addComment = useAddTicketComment();
