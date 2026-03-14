@@ -25,7 +25,10 @@ import type { TicketFormData, TicketPrioridade, TicketMesa, TicketStatus } from 
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Clock, Trash2, Search, Eye } from "lucide-react";
+import { ArrowLeft, Clock, Trash2, Search, Eye, CalendarDays } from "lucide-react";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
 function TagSuggestions({ input, existingTags, onSelect }: { input: string; existingTags: string[]; onSelect: (tag: string) => void }) {
