@@ -191,7 +191,14 @@ function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSign
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(initialOpen);
 
-  
+  useEffect(() => {
+    [logoSoftflowBranca, iconSoftflow].forEach((src) => {
+      const img = new Image();
+      img.src = src;
+      img.decoding = "sync";
+      void img.decode().catch(() => undefined);
+    });
+  }, []);
 
   function toggleGroup(label: string) {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
@@ -200,18 +207,38 @@ function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSign
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className={cn("flex items-center gap-3 px-4 py-5 border-b border-sidebar-border flex-shrink-0", collapsed && "justify-center px-2")}>
-        <button onClick={() => onNavigate("/dashboard")} className="focus:outline-none mx-auto">
+        <button
+          onClick={() => onNavigate("/dashboard")}
+          className={cn(
+            "focus:outline-none mx-auto relative flex items-center justify-center",
+            collapsed ? "h-10 w-10" : "h-[7.8rem] w-full"
+          )}
+          aria-label="Ir para dashboard"
+        >
           <img
-            src={collapsed ? iconSoftflow : logoSoftflowBranca}
-            alt="Softflow"
+            src={logoSoftflowBranca}
+            alt=""
+            aria-hidden="true"
             className={cn(
-              collapsed ? "h-10 w-10" : "h-[7.8rem]",
-              "object-contain"
+              "h-[7.8rem] object-contain absolute inset-0 m-auto",
+              collapsed ? "opacity-0" : "opacity-100"
             )}
             loading="eager"
             fetchPriority="high"
-            decoding="async"
-            style={collapsed ? { filter: 'brightness(0) invert(1)' } : undefined}
+            decoding="sync"
+          />
+          <img
+            src={iconSoftflow}
+            alt=""
+            aria-hidden="true"
+            className={cn(
+              "h-10 w-10 object-contain absolute inset-0 m-auto",
+              collapsed ? "opacity-100" : "opacity-0"
+            )}
+            loading="eager"
+            fetchPriority="high"
+            decoding="sync"
+            style={{ filter: 'brightness(0) invert(1)' }}
           />
         </button>
       </div>
