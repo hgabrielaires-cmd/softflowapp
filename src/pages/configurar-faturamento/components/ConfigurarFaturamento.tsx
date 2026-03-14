@@ -154,6 +154,18 @@ export default function ConfigurarFaturamento() {
           </div>
         </div>
 
+        {/* Alerta: sub-registro sem contrato financeiro base */}
+        {missingBase && (
+          <div className="px-4 pt-4">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Este cliente ainda não possui contrato financeiro base ativo. Configure o faturamento do contrato inicial antes de processar aditivos.
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
         {/* 3-column layout */}
         <div className="flex-1 overflow-y-auto">
           <div className="grid grid-cols-1 lg:grid-cols-[30%_40%_30%] gap-4 p-4 min-h-0">
@@ -193,7 +205,7 @@ export default function ConfigurarFaturamento() {
           <Button
             className="gap-1.5 bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90"
             onClick={() => setConfirmOpen(true)}
-            disabled={saving}
+            disabled={saving || missingBase}
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {isSubRegistro ? "Confirmar Alteração" : "Confirmar e Criar Faturamento"}
