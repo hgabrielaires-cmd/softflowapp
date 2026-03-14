@@ -62,8 +62,7 @@ export function useTicketDetail(ticketId: string | null) {
         .from("tickets")
         .select(`
           *,
-          clientes:cliente_id(id, nome_fantasia),
-          responsavel:responsavel_id(user_id, full_name, avatar_url)
+          clientes:cliente_id(id, nome_fantasia)
         `)
         .eq("id", ticketId!)
         .single();
