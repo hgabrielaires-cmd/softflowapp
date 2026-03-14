@@ -222,8 +222,11 @@ export default function TicketNovo() {
       ticket_pai_id: ticketPaiId,
       seguidores,
     };
-    const agendamentoDatas = agendaDatas.map((d) => format(d, "yyyy-MM-dd"));
-    createTicket.mutate({ data, userId, agendamentoDatas });
+    const agendamentos = agendaDatas.map((item) => ({
+      data: format(item.date, "yyyy-MM-dd"),
+      hora_inicio: item.hora || null,
+    }));
+    createTicket.mutate({ data, userId, agendamentos });
   };
 
   return (
