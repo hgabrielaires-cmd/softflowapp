@@ -55,6 +55,8 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
   const [descDraft, setDescDraft] = useState("");
   const [expanded, setExpanded] = useState(false);
 
+  const mentionUsers = profiles.map((p) => ({ id: p.user_id, user_id: p.user_id, full_name: p.full_name }));
+
   if (!ticket) return null;
 
   const handleStatusChange = (newStatus: string) => {
