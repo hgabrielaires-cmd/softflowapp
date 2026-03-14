@@ -89,6 +89,8 @@ export interface ConfigFaturamentoForm {
 export interface ModuloConfig {
   id: string;
   nome: string;
+  valor_unitario: number;
+  quantidade: number;
   valor_mensal: number;
   data_inicio: string;
 }
