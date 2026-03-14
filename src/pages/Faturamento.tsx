@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useMenuPermissions } from "@/hooks/useMenuPermissions";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
