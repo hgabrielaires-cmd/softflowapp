@@ -29,7 +29,6 @@ import { ArrowLeft, Clock, Trash2, Search, Eye, CalendarDays } from "lucide-reac
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { toast } from "sonner";
 
 function TagSuggestions({ input, existingTags, onSelect }: { input: string; existingTags: string[]; onSelect: (tag: string) => void }) {
   const { data: registeredTags = [] } = useQuery({
