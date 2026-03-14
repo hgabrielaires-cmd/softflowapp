@@ -82,7 +82,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent
         side="right"
-        className="w-full sm:w-[55vw] sm:max-w-none p-0 flex flex-col"
+        className={cn("p-0 flex flex-col sm:max-w-none transition-all", expanded ? "w-full sm:w-[90vw]" : "w-full sm:w-[55vw]")}
       >
         {/* Header */}
         <SheetHeader className="px-4 py-3 border-b shrink-0">
