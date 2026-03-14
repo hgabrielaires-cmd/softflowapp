@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
-import { Ticket as TicketIcon, Plus, FilterX } from "lucide-react";
+import { Ticket as TicketIcon, Plus, FilterX, RefreshCw } from "lucide-react";
 import { TicketKanbanColumn } from "./tickets/components/TicketKanbanColumn";
 import { TicketDetailDrawer } from "./tickets/components/TicketDetailDrawer";
 import {
