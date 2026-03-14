@@ -45,8 +45,9 @@ interface Props {
 }
 
 export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
-  const { user } = useAuth();
+  const { user, roles } = useAuth();
   const userId = user?.id || "";
+  const { canEditar } = useCrudPermissions("tickets", roles);
 
   const { data: ticket } = useTicketDetail(ticketId);
   const { data: comentarios = [] } = useTicketComentarios(ticketId);
@@ -56,6 +57,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
   const { data: seguidores = [] } = useTicketSeguidoresByTicket(ticketId);
   const { data: profiles = [] } = useProfiles();
   const { data: contatos = [] } = useClienteContatos(ticket?.cliente_id ?? null);
+  const { data: agendamentos = [] } = useTicketAgendamentos(ticketId);
 
   const updateStatus = useUpdateTicketStatus();
   const addComment = useAddTicketComment();
@@ -64,10 +66,15 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
   const removeSeguidor = useRemoveTicketSeguidor();
   const toggleCurtida = useToggleTicketCurtida();
   const replyComment = useReplyTicketComment();
+  const addAgendamento = useAddTicketAgendamento();
+  const removeAgendamento = useRemoveTicketAgendamento();
 
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState("");
   const [expanded, setExpanded] = useState(false);
+  const [agendaPopoverOpen, setAgendaPopoverOpen] = useState(false);
+  const [novaAgendaData, setNovaAgendaData] = useState<Date | undefined>(undefined);
+  const [novaAgendaHora, setNovaAgendaHora] = useState("");
 
   const mentionUsers = profiles.map((p) => ({ id: p.user_id, user_id: p.user_id, full_name: p.full_name }));
 
