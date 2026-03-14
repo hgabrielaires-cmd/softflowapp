@@ -300,25 +300,22 @@ export function useConfigurarFaturamentoForm() {
 
     let valorTotal = cf.valor_mensalidade;
 
-    // Buscar parcelas pendentes
+    // ── FASE 1: Buscar dados (somente leitura) ──────────────────────
     const { data: parcelas } = await supabase
       .from("parcelas_implantacao")
       .select("*")
       .eq("contrato_financeiro_id", contratoFinanceiroId)
       .eq("status", "pendente");
 
+    // Calcular valor das parcelas SEM atualizar ainda
+    const parcelasUpdate: { id: string; novasPagas: number; novoStatus: string }[] = [];
     for (const p of (parcelas || [])) {
       valorTotal += p.valor_por_parcela;
-      // Atualizar parcela
       const novasPagas = (p.parcelas_pagas || 0) + 1;
       const novoStatus = novasPagas >= p.numero_parcelas ? "quitada" : "pendente";
-      await supabase.from("parcelas_implantacao").update({
-        parcelas_pagas: novasPagas,
-        status: novoStatus,
-      }).eq("id", p.id);
+      parcelasUpdate.push({ id: p.id, novasPagas, novoStatus });
     }
 
-    // Buscar módulos ativos
     const { data: modulos } = await supabase
       .from("contrato_financeiro_modulos")
       .select("*")
@@ -329,7 +326,6 @@ export function useConfigurarFaturamentoForm() {
       valorTotal += m.valor_mensal;
     }
 
-    // Buscar OAs do mês
     const { data: oas } = await supabase
       .from("contrato_financeiro_oas")
       .select("*")
@@ -338,11 +334,13 @@ export function useConfigurarFaturamentoForm() {
       .eq("ano_referencia", anoRef)
       .eq("faturada", false);
 
+    const oaIds: string[] = [];
     for (const oa of (oas || [])) {
       valorTotal += oa.valor;
-      await supabase.from("contrato_financeiro_oas").update({ faturada: true }).eq("id", oa.id);
+      oaIds.push(oa.id);
     }
 
+    // ── FASE 2: Criar fatura ────────────────────────────────────────
     const formaPagFatura = cf.forma_pagamento === "Ambos" ? "Boleto" : cf.forma_pagamento;
     const dataVencimento = `${anoRef}-${String(mesRef).padStart(2, "0")}-${String(cf.dia_vencimento).padStart(2, "0")}`;
 
@@ -364,8 +362,9 @@ export function useConfigurarFaturamentoForm() {
 
     if (faturaErr || !faturaData) throw new Error("Erro ao criar fatura: " + (faturaErr?.message || ""));
 
-    // Integração Asaas
+    // ── FASE 3: Integração Asaas ────────────────────────────────────
     const filialId = cf.filial_id;
+    let asaasOk = true;
     if (filialId) {
       try {
         const billingType = formaPagFatura === "Pix" ? "PIX" : "BOLETO";
@@ -388,8 +387,27 @@ export function useConfigurarFaturamentoForm() {
         });
       } catch (asaasError) {
         console.error("Asaas call failed:", asaasError);
-        toast.warning("Faturamento criado localmente. Cobrança não foi gerada — verifique a integração.");
+        asaasOk = false;
       }
+    }
+
+    if (!asaasOk && filialId) {
+      // ── ROLLBACK: deletar fatura criada, NÃO incrementar parcelas ──
+      await supabase.from("faturas").delete().eq("id", faturaData.id);
+      toast.error("Falha ao gerar cobrança no Asaas. Fatura não foi criada. Tente novamente.");
+      throw new Error("Asaas integration failed — rollback applied");
+    }
+
+    // ── FASE 4: Commit — só atualiza parcelas/OAs após sucesso ──────
+    for (const pu of parcelasUpdate) {
+      await supabase.from("parcelas_implantacao").update({
+        parcelas_pagas: pu.novasPagas,
+        status: pu.novoStatus,
+      }).eq("id", pu.id);
+    }
+
+    for (const oaId of oaIds) {
+      await supabase.from("contrato_financeiro_oas").update({ faturada: true }).eq("id", oaId);
     }
   }
 
