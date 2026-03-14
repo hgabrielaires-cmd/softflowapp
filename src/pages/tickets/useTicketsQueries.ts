@@ -153,6 +153,23 @@ export function useTicketVinculos(ticketId: string | null) {
   });
 }
 
+export function useTicketAgendamentos(ticketId: string | null) {
+  return useQuery({
+    queryKey: ["ticket_agendamentos", ticketId],
+    enabled: !!ticketId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("painel_agendamentos")
+        .select("id, ticket_id, data, hora_inicio, hora_fim, titulo, created_at")
+        .eq("ticket_id", ticketId!)
+        .eq("origem", "ticket")
+        .order("data", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as TicketAgendamento[];
+    },
+  });
+}
+
 export function useTicketSeguidoresByTicket(ticketId: string | null) {
   return useQuery({
     queryKey: ["ticket_seguidores_detail", ticketId],
