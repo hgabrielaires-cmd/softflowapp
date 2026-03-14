@@ -210,6 +210,10 @@ export default function TicketNovo() {
   }, [selfFollow, userId]);
 
   const handleSave = () => {
+    if (!modo) {
+      toast.error("Selecione o Modo do ticket (Interno ou Externo).");
+      return;
+    }
     const data: TicketFormData = {
       titulo: titulo.trim() || "Ticket",
       descricao_html: descricao,
