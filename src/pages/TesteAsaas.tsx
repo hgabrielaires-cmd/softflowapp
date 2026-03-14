@@ -137,7 +137,7 @@ export default function TesteAsaas() {
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 7);
     const dueDateStr = dueDate.toISOString().split("T")[0];
-    addLog("request", `POST /payments — customer: ${customerId}, billingType: BOLETO, value: 1.00, dueDate: ${dueDateStr}`);
+    addLog("request", `POST /payments — customer: ${customerId}, billingType: BOLETO, value: 5.00, dueDate: ${dueDateStr}`);
 
     try {
       const { data, error } = await supabase.functions.invoke("asaas", {
@@ -146,7 +146,7 @@ export default function TesteAsaas() {
           filialId,
           customer: customerId,
           billingType: "BOLETO",
-          value: 1.00,
+          value: 5.00,
           dueDate: dueDateStr,
           description: "Teste Boleto Softflow",
         },
@@ -180,7 +180,7 @@ export default function TesteAsaas() {
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 7);
     const dueDateStr = dueDate.toISOString().split("T")[0];
-    addLog("request", `POST /payments — customer: ${customerId}, billingType: PIX, value: 1.00, dueDate: ${dueDateStr}`);
+    addLog("request", `POST /payments — customer: ${customerId}, billingType: PIX, value: 5.00, dueDate: ${dueDateStr}`);
 
     try {
       const { data, error } = await supabase.functions.invoke("asaas", {
@@ -189,7 +189,7 @@ export default function TesteAsaas() {
           filialId,
           customer: customerId,
           billingType: "PIX",
-          value: 1.00,
+          value: 5.00,
           dueDate: dueDateStr,
           description: "Teste PIX Softflow",
         },
