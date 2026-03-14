@@ -20,6 +20,7 @@ import {
   useTicketDetail, useTicketComentarios, useTicketAnexos,
   useTicketVinculos, useTicketSeguidoresByTicket, useProfiles,
   useTicketCurtidas, useClienteContatos, useTicketAgendamentos,
+  useClienteTicketsHistorico,
 } from "../useTicketsQueries";
 import {
   useUpdateTicketStatus, useAddTicketComment, useUpdateTicketResponsavel,
