@@ -34,7 +34,7 @@ export default function TesteAsaas() {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [boletoPaymentId, setBoletoPaymentId] = useState<string | null>(null);
   const [pixPaymentId, setPixPaymentId] = useState<string | null>(null);
-
+  const [ultimoPaymentId, setUltimoPaymentId] = useState<string | null>(null);
   // Loading states
   const [testingConn, setTestingConn] = useState(false);
   const [creatingCustomer, setCreatingCustomer] = useState(false);
