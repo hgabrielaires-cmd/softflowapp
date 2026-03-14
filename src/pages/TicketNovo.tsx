@@ -34,7 +34,7 @@ export default function TicketNovo() {
   const { data: profiles = [] } = useProfiles();
   const { data: tipos = [] } = useHelpdeskTipos();
   const { data: modelos = [] } = useHelpdeskModelos();
-  const createTicket = useCreateTicket();
+  const createTicket = useCreateTicket(() => navigate("/tickets"));
 
   // Form state
   const [titulo, setTitulo] = useState("");
@@ -174,7 +174,7 @@ export default function TicketNovo() {
     }
   }, [selfFollow, userId]);
 
-  const handleSave = async () => {
+  const handleSave = () => {
     const data: TicketFormData = {
       titulo: titulo.trim() || "Ticket",
       descricao_html: descricao,
@@ -190,9 +190,7 @@ export default function TicketNovo() {
       ticket_pai_id: ticketPaiId,
       seguidores,
     };
-    await createTicket.mutateAsync({ data, userId });
-    // Small delay to ensure query invalidation propagates before navigation
-    setTimeout(() => navigate("/tickets"), 300);
+    createTicket.mutate({ data, userId });
   };
 
   return (
