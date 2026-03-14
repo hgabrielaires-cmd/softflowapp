@@ -128,7 +128,7 @@ export default function ConfigurarFaturamento() {
   const tipoLabel = getBadgeTipoLabel(espelho.tipo, espelho.pedido?.tipo_pedido);
   const tipoColor = getBadgeTipoColor(tipoLabel);
   const isSubRegistro = !!espelho.contrato_origem_id;
-
+  const missingBase = isSubRegistro && !contratoFinanceiroBase;
   return (
     <AppLayout>
       <div className="flex flex-col h-[calc(100vh-64px)]">
