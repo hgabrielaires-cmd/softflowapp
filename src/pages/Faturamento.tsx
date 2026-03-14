@@ -77,18 +77,17 @@ function FaturamentoContent() {
   // Filtro de filial: favorita se definida, senão "all" (todas do usuário)
   const [filialFilter, setFilialFilter] = useState<string | null>(null);
 
-  // Inicializa apenas uma vez quando filiais carregam
+  // Inicializa apenas uma vez quando filiais e profile carregam
   useEffect(() => {
-    if (!filiaisLoading && filialFilter === null) {
-      // Só usa favorita se está explicitamente definida no perfil
-      const favoritaId = profile?.filial_favorita_id;
+    if (!filiaisLoading && profile && filialFilter === null) {
+      const favoritaId = profile.filial_favorita_id;
       if (favoritaId && filiaisDoUsuario.some(f => f.id === favoritaId)) {
         setFilialFilter(favoritaId);
       } else {
         setFilialFilter("all");
       }
     }
-  }, [filiaisLoading]);
+  }, [filiaisLoading, profile?.filial_favorita_id]);
 
   const effectiveFilter = filialFilter || "all";
   const showFilialFilter = filiaisDoUsuario.length > 1;
