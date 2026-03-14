@@ -13,6 +13,9 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
@@ -28,7 +31,8 @@ import {
 import {
   Receipt, Plus, Loader2, MoreHorizontal, Pencil, Trash2,
   CheckCircle, XCircle, Filter, FileText, Search,
-  DollarSign, AlertTriangle, Clock, Building2,
+  DollarSign, AlertTriangle, Clock, Building2, Zap,
+  CheckCircle2, AlertOctagon, SkipForward,
 } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
