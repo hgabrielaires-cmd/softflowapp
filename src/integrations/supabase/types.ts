@@ -1524,6 +1524,42 @@ export type Database = {
           },
         ]
       }
+      faturamento_cron_logs: {
+        Row: {
+          ano: number
+          detalhes: Json | null
+          executado_em: string
+          id: string
+          mes: number
+          total_contratos: number
+          total_erros: number
+          total_faturados: number
+          total_ja_faturados: number
+        }
+        Insert: {
+          ano: number
+          detalhes?: Json | null
+          executado_em?: string
+          id?: string
+          mes: number
+          total_contratos?: number
+          total_erros?: number
+          total_faturados?: number
+          total_ja_faturados?: number
+        }
+        Update: {
+          ano?: number
+          detalhes?: Json | null
+          executado_em?: string
+          id?: string
+          mes?: number
+          total_contratos?: number
+          total_erros?: number
+          total_faturados?: number
+          total_ja_faturados?: number
+        }
+        Relationships: []
+      }
       faturamento_logs: {
         Row: {
           ano: number
@@ -1584,6 +1620,7 @@ export type Database = {
           asaas_pix_qrcode: string | null
           asaas_url: string | null
           cliente_id: string
+          contrato_financeiro_id: string | null
           contrato_id: string | null
           created_at: string
           data_emissao: string
@@ -1613,6 +1650,7 @@ export type Database = {
           asaas_pix_qrcode?: string | null
           asaas_url?: string | null
           cliente_id: string
+          contrato_financeiro_id?: string | null
           contrato_id?: string | null
           created_at?: string
           data_emissao?: string
@@ -1642,6 +1680,7 @@ export type Database = {
           asaas_pix_qrcode?: string | null
           asaas_url?: string | null
           cliente_id?: string
+          contrato_financeiro_id?: string | null
           contrato_id?: string | null
           created_at?: string
           data_emissao?: string
@@ -1669,6 +1708,13 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faturas_contrato_financeiro_id_fkey"
+            columns: ["contrato_financeiro_id"]
+            isOneToOne: false
+            referencedRelation: "contratos_financeiros"
             referencedColumns: ["id"]
           },
           {
