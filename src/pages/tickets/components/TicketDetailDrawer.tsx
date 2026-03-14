@@ -254,6 +254,46 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
                 </div>
               </div>
 
+              {/* Contatos do Cliente */}
+              {ticket.cliente_id && (
+                <Collapsible>
+                  <div className="bg-card rounded-xl border">
+                    <CollapsibleTrigger className="w-full flex items-center justify-between p-4">
+                      <h4 className="text-sm font-semibold flex items-center gap-1.5">
+                        <Phone className="h-3 w-3" /> Contatos ({contatos.length})
+                      </h4>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="px-4 pb-4 space-y-2">
+                        {contatos.length === 0 && <p className="text-xs text-muted-foreground">Nenhum contato cadastrado.</p>}
+                        {contatos.map((ct: any) => (
+                          <div key={ct.id} className="flex items-start gap-2 text-xs border-t pt-2 first:border-0 first:pt-0">
+                            <div className="flex-1 space-y-0.5">
+                              <div className="flex items-center gap-1.5 font-medium">
+                                {ct.nome}
+                                {ct.decisor && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
+                              </div>
+                              {ct.cargo && <p className="text-muted-foreground">{ct.cargo}</p>}
+                              {ct.telefone && (
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <Phone className="h-2.5 w-2.5" /> {ct.telefone}
+                                </div>
+                              )}
+                              {ct.email && (
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <Mail className="h-2.5 w-2.5" /> {ct.email}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </div>
+                </Collapsible>
+              )}
+
               {/* Seguidores */}
               <div className="bg-card rounded-xl border p-4 space-y-3">
                 <div className="flex items-center justify-between">
