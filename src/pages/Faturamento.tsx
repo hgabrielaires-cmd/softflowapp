@@ -70,7 +70,7 @@ export default function Faturamento() {
 }
 
 function FaturamentoContent() {
-  const [tab, setTab] = useState("faturas");
+  const [tab, setTab] = useState("aguardando");
 
   return (
     <div className="space-y-6">
@@ -86,6 +86,9 @@ function FaturamentoContent() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
+          <TabsTrigger value="aguardando" className="gap-1.5">
+            <Clock className="h-4 w-4" /> Aguardando Faturamento
+          </TabsTrigger>
           <TabsTrigger value="faturas" className="gap-1.5">
             <DollarSign className="h-4 w-4" /> Faturas
           </TabsTrigger>
@@ -94,6 +97,9 @@ function FaturamentoContent() {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="aguardando">
+          <AguardandoFaturamentoTab />
+        </TabsContent>
         <TabsContent value="faturas">
           <FaturasTab />
         </TabsContent>
