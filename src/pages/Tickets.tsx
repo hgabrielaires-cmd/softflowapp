@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
+import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
-import { Ticket as TicketIcon, Plus, FilterX } from "lucide-react";
+import { Ticket as TicketIcon, Plus, FilterX, RefreshCw } from "lucide-react";
 import { TicketKanbanColumn } from "./tickets/components/TicketKanbanColumn";
 import { TicketDetailDrawer } from "./tickets/components/TicketDetailDrawer";
 import {
@@ -33,7 +34,7 @@ export default function Tickets() {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
   // Data
-  const { data: tickets = [] } = useTickets();
+  const { data: tickets = [], refetch: refetchTickets, isFetching } = useTickets();
   const { data: profiles = [] } = useProfiles();
   const ticketIds = useMemo(() => tickets.map((t) => t.id), [tickets]);
   const { data: seguidoresRaw = [] } = useTicketSeguidores(ticketIds);
@@ -104,9 +105,14 @@ export default function Tickets() {
               <TicketIcon className="h-5 w-5" />
               Tickets
             </h1>
-            <Button onClick={() => navigate("/tickets/novo")} className="bg-primary hover:bg-primary/90">
-              <Plus className="h-4 w-4 mr-1" /> Novo Ticket
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={() => refetchTickets()} disabled={isFetching} className="h-9 w-9">
+                <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
+              </Button>
+              <Button onClick={() => navigate("/tickets/novo")} className="bg-primary hover:bg-primary/90">
+                <Plus className="h-4 w-4 mr-1" /> Novo Ticket
+              </Button>
+            </div>
           </div>
 
           {/* Filters */}
