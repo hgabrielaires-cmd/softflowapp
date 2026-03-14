@@ -34,7 +34,7 @@ export default function TesteAsaas() {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [boletoPaymentId, setBoletoPaymentId] = useState<string | null>(null);
   const [pixPaymentId, setPixPaymentId] = useState<string | null>(null);
-
+  const [ultimoPaymentId, setUltimoPaymentId] = useState<string | null>(null);
   // Loading states
   const [testingConn, setTestingConn] = useState(false);
   const [creatingCustomer, setCreatingCustomer] = useState(false);
@@ -65,6 +65,7 @@ export default function TesteAsaas() {
     setCustomerId(null);
     setBoletoPaymentId(null);
     setPixPaymentId(null);
+    setUltimoPaymentId(null);
   }
 
   // ── SEÇÃO 1: Teste de Conexão ──────────────────────────────────────────
@@ -155,6 +156,7 @@ export default function TesteAsaas() {
       if (data?.error) throw new Error(data.error);
 
       setBoletoPaymentId(data.payment?.id || null);
+      setUltimoPaymentId(data.payment?.id || null);
       setBoletoResult(data);
       addLog("response", `✅ Boleto criado — Payment ID: ${data.payment?.id}`);
       if (data.details?.asaas_barcode) {
@@ -198,6 +200,7 @@ export default function TesteAsaas() {
       if (data?.error) throw new Error(data.error);
 
       setPixPaymentId(data.payment?.id || null);
+      setUltimoPaymentId(data.payment?.id || null);
       setPixResult(data);
       addLog("response", `✅ PIX criado — Payment ID: ${data.payment?.id}`);
       if (data.details?.asaas_pix_qrcode) {
@@ -215,7 +218,7 @@ export default function TesteAsaas() {
 
   // ── SEÇÃO 5: Simular Pagamento ─────────────────────────────────────────
   async function simulatePayment() {
-    const paymentId = boletoPaymentId || pixPaymentId;
+    const paymentId = ultimoPaymentId || pixPaymentId || boletoPaymentId;
     if (!filialId) { toast.error("Selecione uma filial"); return; }
     if (!paymentId) { toast.error("Gere um boleto ou PIX primeiro"); return; }
     setSimulatingPayment(true);
@@ -234,31 +237,46 @@ export default function TesteAsaas() {
       if (data?.error) throw new Error(data.error);
 
       addLog("response", `✅ Pagamento simulado — status: ${data.payment?.status}`);
+      addLog("info", `🔎 Aguardando webhook do payment ${paymentId} (até 30s)...`);
 
-      // Wait a few seconds for webhook
-      addLog("info", "⏳ Aguardando 5 segundos para o webhook ser processado...");
-      await new Promise((r) => setTimeout(r, 5000));
+      let recentEvents: any[] = [];
+      let webhookFound = false;
 
-      // Check webhook events table by event_id pattern (contains payment id)
-      const { data: recentEvents } = await supabase
-        .from("asaas_webhook_events")
-        .select("*")
-        .like("event_id", `%${paymentId}`)
-        .order("processed_at", { ascending: false })
-        .limit(10);
+      for (let tentativa = 1; tentativa <= 10; tentativa++) {
+        await new Promise((r) => setTimeout(r, 3000));
 
-      const webhookFound = (recentEvents?.length ?? 0) > 0;
+        const { data: webhookData, error: webhookError } = await supabase.functions.invoke("asaas", {
+          body: {
+            action: "test_check_webhook",
+            filialId,
+            paymentId,
+          },
+        });
+
+        if (webhookError) throw webhookError;
+        if (webhookData?.error) throw new Error(webhookData.error);
+
+        recentEvents = webhookData?.events || [];
+        webhookFound = webhookData?.webhookReceived === true;
+
+        if (webhookFound) {
+          addLog("info", `✅ Webhook encontrado na tentativa ${tentativa}/10`);
+          break;
+        }
+
+        addLog("info", `⏳ Tentativa ${tentativa}/10: webhook ainda não chegou`);
+      }
 
       setWebhookResult({
         paymentStatus: data.payment?.status,
-        webhookReceived: webhookFound || false,
-        recentEvents: recentEvents?.slice(0, 3) || [],
+        webhookReceived: webhookFound,
+        recentEvents: recentEvents.slice(0, 3),
       });
 
       if (webhookFound) {
         addLog("response", "✅ Webhook recebido e processado!");
       } else {
-        addLog("info", "⚠️ Webhook não encontrado ainda. Pode levar mais alguns segundos no sandbox.");
+        addLog("info", "⚠️ Webhook não encontrado após 30s. Verifique se o webhook do Asaas aponta para /functions/v1/asaas-webhook.");
       }
 
       addLog("info", JSON.stringify(data, null, 2));
@@ -364,7 +382,7 @@ export default function TesteAsaas() {
             <TestSection
               title="3. Teste de Boleto"
               icon={<CreditCard className="h-4 w-4" />}
-              description="Gera boleto de R$ 1,00 e busca linha digitável"
+              description="Gera boleto de R$ 5,00 e busca linha digitável"
             >
               <Button
                 className="w-full gap-2"
@@ -373,7 +391,7 @@ export default function TesteAsaas() {
                 disabled={creatingBoleto || !filialId || !customerId}
               >
                 {creatingBoleto ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                Gerar Boleto Teste (R$ 1,00)
+                Gerar Boleto Teste (R$ 5,00)
               </Button>
               {!customerId && <p className="text-xs text-muted-foreground">⬆️ Crie o cliente teste primeiro</p>}
               {boletoResult && !boletoResult.error && (
@@ -407,7 +425,7 @@ export default function TesteAsaas() {
             <TestSection
               title="4. Teste de PIX"
               icon={<QrCode className="h-4 w-4" />}
-              description="Gera cobrança PIX de R$ 1,00 e busca QR Code"
+              description="Gera cobrança PIX de R$ 5,00 e busca QR Code"
             >
               <Button
                 className="w-full gap-2"
@@ -416,7 +434,7 @@ export default function TesteAsaas() {
                 disabled={creatingPix || !filialId || !customerId}
               >
                 {creatingPix ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
-                Gerar PIX Teste (R$ 1,00)
+                Gerar PIX Teste (R$ 5,00)
               </Button>
               {!customerId && <p className="text-xs text-muted-foreground">⬆️ Crie o cliente teste primeiro</p>}
               {pixResult && !pixResult.error && (
@@ -455,12 +473,12 @@ export default function TesteAsaas() {
                 className="w-full gap-2"
                 variant="outline"
                 onClick={simulatePayment}
-                disabled={simulatingPayment || !filialId || (!boletoPaymentId && !pixPaymentId)}
+                disabled={simulatingPayment || !filialId || !ultimoPaymentId}
               >
                 {simulatingPayment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Webhook className="h-4 w-4" />}
-                Simular Pagamento ({boletoPaymentId ? "Boleto" : pixPaymentId ? "PIX" : "—"})
+                Simular Pagamento ({ultimoPaymentId ? "Último Gerado" : "—"})
               </Button>
-              {!boletoPaymentId && !pixPaymentId && (
+              {!ultimoPaymentId && (
                 <p className="text-xs text-muted-foreground">⬆️ Gere um boleto ou PIX primeiro</p>
               )}
               {webhookResult && !webhookResult.error && (
