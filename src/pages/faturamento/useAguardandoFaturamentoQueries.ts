@@ -23,7 +23,13 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
       .select("contrato_id");
     const idsFaturados = new Set((jaFaturados || []).map((r: any) => r.contrato_id));
 
-    // 2. Get signed contracts
+    // 1b. Get all contratos that have ZapSign status "Assinado"
+    const { data: zapsignData } = await supabase
+      .from("contratos_zapsign")
+      .select("contrato_id, status");
+    const zapsignMap = new Map((zapsignData || []).map((r: any) => [r.contrato_id, r.status]));
+
+    // 2. Get signed/active contracts
     let query = supabase
       .from("contratos")
       .select(`
@@ -50,8 +56,15 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
       return;
     }
 
-    // Filter out already billed contracts client-side
-    let pendentes = (data || []).filter((c: any) => !idsFaturados.has(c.id));
+    // Filter: not already billed AND actually signed (ZapSign = Assinado, or no ZapSign record but contract status = Assinado)
+    let pendentes = (data || []).filter((c: any) => {
+      if (idsFaturados.has(c.id)) return false;
+      const zStatus = zapsignMap.get(c.id);
+      // Include if: ZapSign says "Assinado", OR no ZapSign record and contract itself is "Assinado"
+      if (zStatus === "Assinado") return true;
+      if (!zStatus && c.status === "Assinado") return true;
+      return false;
+    });
 
     // Filter by filial if selected
     if (filialFilter !== "all") {
