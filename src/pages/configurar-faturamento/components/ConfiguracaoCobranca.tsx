@@ -50,12 +50,10 @@ export function ConfiguracaoCobranca({ form, setForm, espelho }: Props) {
               <div className="space-y-1">
                 <Label className="text-xs">Valor total da implantação</Label>
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.valor_implantacao || ""}
-                  onChange={(e) => updateField("valor_implantacao", Number(e.target.value))}
+                  value={formatCurrencyInput(form.valor_implantacao)}
+                  onChange={(e) => handleCurrencyChange("valor_implantacao", e.target.value)}
                   className="h-9"
+                  placeholder="R$ 0,00"
                 />
               </div>
               <div className="space-y-1">
