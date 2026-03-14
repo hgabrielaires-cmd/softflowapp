@@ -334,6 +334,50 @@ export type Database = {
           },
         ]
       }
+      cobranca_config: {
+        Row: {
+          created_at: string | null
+          dias_atraso_alerta: number
+          dias_atraso_suspensao: number
+          dias_lembrete_1: number
+          dias_lembrete_vencimento: boolean
+          filial_id: string
+          id: string
+          regua_ativa: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          dias_atraso_alerta?: number
+          dias_atraso_suspensao?: number
+          dias_lembrete_1?: number
+          dias_lembrete_vencimento?: boolean
+          filial_id: string
+          id?: string
+          regua_ativa?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          dias_atraso_alerta?: number
+          dias_atraso_suspensao?: number
+          dias_lembrete_1?: number
+          dias_lembrete_vencimento?: boolean
+          filial_id?: string
+          id?: string
+          regua_ativa?: boolean
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cobranca_config_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: true
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_clauses: {
         Row: {
           ativo: boolean
@@ -2424,6 +2468,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      notificacoes_cobranca_log: {
+        Row: {
+          canal: string
+          cliente_id: string
+          enviado_em: string
+          fatura_id: string
+          id: string
+          status_envio: string
+          tipo_gatilho: string
+        }
+        Insert: {
+          canal?: string
+          cliente_id: string
+          enviado_em?: string
+          fatura_id: string
+          id?: string
+          status_envio?: string
+          tipo_gatilho: string
+        }
+        Update: {
+          canal?: string
+          cliente_id?: string
+          enviado_em?: string
+          fatura_id?: string
+          id?: string
+          status_envio?: string
+          tipo_gatilho?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notificacoes_cobranca_log_fatura_id_fkey"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "faturas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notificacoes_lidas: {
         Row: {
