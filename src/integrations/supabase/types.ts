@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      asaas_webhook_events: {
+        Row: {
+          event_id: string
+          event_type: string
+          id: string
+          payload: Json | null
+          processed_at: string | null
+        }
+        Insert: {
+          event_id: string
+          event_type: string
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+        }
+        Update: {
+          event_id?: string
+          event_type?: string
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -530,6 +554,8 @@ export type Database = {
       }
       contratos_financeiros: {
         Row: {
+          asaas_customer_id: string | null
+          asaas_subscription_id: string | null
           cliente_id: string
           contrato_base_id: string | null
           contrato_id: string
@@ -553,6 +579,8 @@ export type Database = {
           whatsapp_cobranca: string | null
         }
         Insert: {
+          asaas_customer_id?: string | null
+          asaas_subscription_id?: string | null
           cliente_id: string
           contrato_base_id?: string | null
           contrato_id: string
@@ -576,6 +604,8 @@ export type Database = {
           whatsapp_cobranca?: string | null
         }
         Update: {
+          asaas_customer_id?: string | null
+          asaas_subscription_id?: string | null
           cliente_id?: string
           contrato_base_id?: string | null
           contrato_id?: string
@@ -1360,6 +1390,8 @@ export type Database = {
       }
       faturas: {
         Row: {
+          asaas_payment_id: string | null
+          asaas_url: string | null
           cliente_id: string
           contrato_id: string | null
           created_at: string
@@ -1383,6 +1415,8 @@ export type Database = {
           valor_final: number
         }
         Insert: {
+          asaas_payment_id?: string | null
+          asaas_url?: string | null
           cliente_id: string
           contrato_id?: string | null
           created_at?: string
@@ -1406,6 +1440,8 @@ export type Database = {
           valor_final?: number
         }
         Update: {
+          asaas_payment_id?: string | null
+          asaas_url?: string | null
           cliente_id?: string
           contrato_id?: string | null
           created_at?: string
