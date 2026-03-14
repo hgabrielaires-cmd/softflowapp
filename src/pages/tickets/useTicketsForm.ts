@@ -6,7 +6,7 @@ import type { TicketFormData, TicketStatus } from "./types";
 export function useCreateTicket(onCreated?: () => void) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ data, userId }: { data: TicketFormData; userId: string }) => {
+    mutationFn: async ({ data, userId, agendamentoDatas = [] }: { data: TicketFormData; userId: string; agendamentoDatas?: string[] }) => {
       const { data: ticket, error } = await supabase
         .from("tickets")
         .insert({
