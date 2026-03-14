@@ -162,7 +162,7 @@ export default function Agenda() {
       const to = from + ITEMS_PER_PAGE - 1;
 
       let q = supabase.from("painel_agendamentos")
-        .select("id, card_id, atividade_id, checklist_index, data, hora_inicio, hora_fim, observacao, mesa_id, filial_id, etapa_id, titulo, cor_evento, criado_por, created_at, status, iniciado_em, finalizado_em");
+        .select("id, card_id, ticket_id, origem, atividade_id, checklist_index, data, hora_inicio, hora_fim, observacao, mesa_id, filial_id, etapa_id, titulo, cor_evento, criado_por, created_at, status, iniciado_em, finalizado_em");
       q = applyBaseFilters(q);
       q = q.gte("data", listPeriodoDe).lte("data", listPeriodoAte);
       q = q.order("data", { ascending: false }).order("hora_inicio", { ascending: true });
@@ -172,7 +172,7 @@ export default function Agenda() {
       if (error) throw error;
 
       // Step 3: enrich with card data
-      const cardIds = [...new Set((rows || []).map((r: any) => r.card_id))];
+      const cardIds = [...new Set((rows || []).map((r: any) => r.card_id).filter(Boolean))];
       let cards: any[] = [];
       if (cardIds.length > 0) {
         const { data: cardsData } = await supabase
@@ -305,8 +305,49 @@ export default function Agenda() {
         }
       });
 
+      // Fetch ticket data for ticket-origin agendamentos
+      const ticketIds = [...new Set((rows || []).filter((r: any) => r.origem === "ticket" && r.ticket_id).map((r: any) => r.ticket_id))];
+      let ticketsMap: Record<string, any> = {};
+      if (ticketIds.length > 0) {
+        const { data: ticketsData } = await supabase
+          .from("tickets")
+          .select("id, numero_exibicao, titulo, status, cliente_id, clientes:cliente_id(nome_fantasia, cnpj_cpf)")
+          .in("id", ticketIds);
+        (ticketsData || []).forEach((t: any) => { ticketsMap[t.id] = t; });
+      }
+
       // Enrich
       const enriched = (rows || []).map((ag: any) => {
+        if (ag.origem === "ticket" && ag.ticket_id) {
+          const ticket = ticketsMap[ag.ticket_id];
+          return {
+            ...ag,
+            ag_status: ag.status || 'agendado',
+            ag_iniciado_em: ag.iniciado_em || null,
+            ag_finalizado_em: ag.finalizado_em || null,
+            cliente_nome: ticket?.clientes?.nome_fantasia || "—",
+            cliente_cnpj: ticket?.clientes?.cnpj_cpf || "",
+            contrato_numero: ticket?.numero_exibicao || "—",
+            filial_nome: "—",
+            atividade_nome: "—",
+            mesa_nome: "—",
+            mesa_cor: null,
+            etapa_atual_nome: "Tickets",
+            etapa_atual_cor: "#6366f1",
+            responsavel_nome: "—",
+            tecnicos: [],
+            apontados: [],
+            status_projeto: "ativo",
+            pausado: false,
+            card_iniciado_em: null,
+            sla_horas: 0,
+            tipo_atendimento: null,
+            progresso: null,
+            progresso_etapa: null,
+            atividade_status: null,
+            is_ticket: true,
+          };
+        }
         const card = cardsMap[ag.card_id];
         const cardEtapaId = card?.etapa_id;
         return {
@@ -330,10 +371,11 @@ export default function Agenda() {
           pausado: card?.pausado || false,
           card_iniciado_em: card?.iniciado_em || null,
           sla_horas: card?.sla_horas || 0,
-           tipo_atendimento: card?.tipo_atendimento_local || null,
-           progresso: progressMap[ag.card_id] || null,
+          tipo_atendimento: card?.tipo_atendimento_local || null,
+          progresso: progressMap[ag.card_id] || null,
           progresso_etapa: cardEtapaId ? (progressEtapaMap[`${ag.card_id}__${cardEtapaId}`] || null) : null,
           atividade_status: ag.atividade_id ? (activityStatusMap[`${ag.card_id}__${ag.atividade_id}`] || 'pendente') : null,
+          is_ticket: false,
         };
       });
 
@@ -374,7 +416,7 @@ export default function Agenda() {
     enabled: activeView === "calendario" && filtersInitialized && mesas.length > 0,
     queryFn: async () => {
       let q = supabase.from("painel_agendamentos")
-        .select("id, card_id, atividade_id, checklist_index, data, hora_inicio, hora_fim, observacao, mesa_id, filial_id, etapa_id, titulo, cor_evento, status, iniciado_em, finalizado_em");
+        .select("id, card_id, ticket_id, origem, atividade_id, checklist_index, data, hora_inicio, hora_fim, observacao, mesa_id, filial_id, etapa_id, titulo, cor_evento, status, iniciado_em, finalizado_em");
       q = applyBaseFilters(q);
       q = q.gte("data", calRange.start).lte("data", calRange.end);
       q = q.order("data").order("hora_inicio", { ascending: true });
@@ -383,7 +425,7 @@ export default function Agenda() {
       if (error) throw error;
 
       // Enrich with card data
-      const cardIds = [...new Set((rows || []).map((r: any) => r.card_id))];
+      const cardIds = [...new Set((rows || []).map((r: any) => r.card_id).filter(Boolean))];
       let cardsMap: Record<string, any> = {};
       if (cardIds.length > 0) {
         const { data: cardsData } = await supabase
@@ -513,7 +555,48 @@ export default function Agenda() {
         (etapasData || []).forEach((e: any) => { etapasMap[e.id] = { nome: e.nome, cor: e.cor }; });
       }
 
+      // Fetch ticket data for ticket-origin agendamentos
+      const calTicketIds = [...new Set((rows || []).filter((r: any) => r.origem === "ticket" && r.ticket_id).map((r: any) => r.ticket_id))];
+      let calTicketsMap: Record<string, any> = {};
+      if (calTicketIds.length > 0) {
+        const { data: ticketsData } = await supabase
+          .from("tickets")
+          .select("id, numero_exibicao, titulo, status, cliente_id, clientes:cliente_id(nome_fantasia)")
+          .in("id", calTicketIds);
+        (ticketsData || []).forEach((t: any) => { calTicketsMap[t.id] = t; });
+      }
+
       return (rows || []).map((ag: any) => {
+        if (ag.origem === "ticket" && ag.ticket_id) {
+          const ticket = calTicketsMap[ag.ticket_id];
+          return {
+            ...ag,
+            ag_status: ag.status || 'agendado',
+            ag_iniciado_em: ag.iniciado_em || null,
+            ag_finalizado_em: ag.finalizado_em || null,
+            cliente_nome: ticket?.clientes?.nome_fantasia || "—",
+            contrato_numero: ticket?.numero_exibicao || "—",
+            filial_id: "",
+            filial_nome: "—",
+            atividade_nome: "—",
+            mesa_nome: "—",
+            mesa_cor: null,
+            etapa_atual_nome: "Tickets",
+            etapa_atual_cor: "#6366f1",
+            tecnicos: [],
+            apontados: [],
+            tipo_atendimento: null,
+            status_projeto: "ativo",
+            pausado: false,
+            card_iniciado_em: null,
+            sla_horas: 0,
+            progresso: null,
+            progresso_etapa: null,
+            atividade_status: null,
+            is_ticket: true,
+            cor_evento: ag.cor_evento || "#6366f1",
+          };
+        }
         const card = cardsMap[ag.card_id];
         const cardEtapaId = card?.etapa_id;
         return {
@@ -540,6 +623,7 @@ export default function Agenda() {
           progresso: progressMap[ag.card_id] || null,
           progresso_etapa: cardEtapaId ? (progressEtapaMap[`${ag.card_id}__${cardEtapaId}`] || null) : null,
           atividade_status: ag.atividade_id ? (calActStatusMap[`${ag.card_id}__${ag.atividade_id}`] || 'pendente') : null,
+          is_ticket: false,
         };
       });
     },
@@ -583,7 +667,7 @@ export default function Agenda() {
   }, [calAgendamentos, selectedDate]);
 
   // Fetch OTHER scheduled dates for cards visible on the selected day
-  const cardIdsDoDia = useMemo(() => [...new Set(agendamentosDoDia.map((ag: any) => ag.card_id))], [agendamentosDoDia]);
+  const cardIdsDoDia = useMemo(() => [...new Set(agendamentosDoDia.map((ag: any) => ag.card_id).filter(Boolean))], [agendamentosDoDia]);
 
   const { data: outrasDatasMap = {} } = useQuery({
     queryKey: ["agenda-outras-datas", cardIdsDoDia, format(selectedDate, "yyyy-MM-dd")],
@@ -807,16 +891,20 @@ export default function Agenda() {
               {ag.cliente_nome}
             </p>
             <p className="text-xs text-muted-foreground">
-              Contrato: {ag.contrato_numero} · <span className="font-medium" style={{ color: ag.mesa_cor || undefined }}>{ag.atividade_nome}</span>
+              {ag.is_ticket ? (
+                <><span className="font-medium" style={{ color: "#6366f1" }}>Ticket: {ag.contrato_numero}</span></>
+              ) : (
+                <>Contrato: {ag.contrato_numero} · <span className="font-medium" style={{ color: ag.mesa_cor || undefined }}>{ag.atividade_nome}</span></>
+              )}
             </p>
             {ag.titulo && (
               <p className="text-xs text-muted-foreground truncate">{ag.titulo}</p>
             )}
             {ag.etapa_atual_nome && ag.etapa_atual_nome !== "—" && (
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="text-xs font-medium" style={{ color: ag.etapa_atual_cor || undefined }}>
-                  Etapa Atual: {ag.etapa_atual_nome}
-                </span>
+                <Badge variant="secondary" className="text-xs" style={{ backgroundColor: ag.is_ticket ? "#6366f120" : undefined, color: ag.etapa_atual_cor || undefined }}>
+                  {ag.is_ticket ? "📋 " : ""}Origem: {ag.etapa_atual_nome}
+                </Badge>
                 {ag.progresso_etapa && ag.progresso_etapa.total > 0 && (
                   <Badge variant="outline" className="text-[11px] border-primary/30 text-primary font-medium">
                     {ag.progresso_etapa.concluidas} de {ag.progresso_etapa.total}
@@ -875,7 +963,7 @@ export default function Agenda() {
               <p className="text-xs text-muted-foreground mt-1 italic">"{ag.observacao}"</p>
             )}
             {/* Outras datas agendadas para o mesmo card/contrato */}
-            {outrasDatasMap[ag.card_id]?.length > 0 && (
+            {ag.card_id && outrasDatasMap[ag.card_id]?.length > 0 && (
               <div className="mt-2 pt-2 border-t border-border/50">
                 <p className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wide">
                   <CalendarDays className="h-3 w-3 inline mr-1" />
@@ -907,9 +995,15 @@ export default function Agenda() {
               <Building2 className="h-3 w-3 mr-1" />
               {ag.filial_nome}
             </Badge>
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => navigate(`/fila-agendamento?card=${ag.card_id}&from=agenda`)}>
-              <ExternalLink className="h-3 w-3" /> Abrir Card
-            </Button>
+            {ag.is_ticket ? (
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => navigate(`/tickets?ticket=${ag.ticket_id}`)}>
+                <ExternalLink className="h-3 w-3" /> Abrir Ticket
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => navigate(`/fila-agendamento?card=${ag.card_id}&from=agenda`)}>
+                <ExternalLink className="h-3 w-3" /> Abrir Card
+              </Button>
+            )}
             {/* Progresso do projeto */}
             {ag.progresso && ag.progresso.total > 0 && (() => {
               const pct = Math.round((ag.progresso.concluidas / ag.progresso.total) * 100);
@@ -938,7 +1032,7 @@ export default function Agenda() {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Agenda Operacional</h1>
-            <p className="text-sm text-muted-foreground">Agendamentos do Painel de Atendimento</p>
+            <p className="text-sm text-muted-foreground">Agendamentos do Painel de Atendimento e Tickets</p>
           </div>
           <Tabs value={activeView} onValueChange={(v) => setActiveView(v as any)}>
             <TabsList>

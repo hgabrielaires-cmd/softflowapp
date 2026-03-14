@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -23,8 +25,10 @@ import type { TicketFormData, TicketPrioridade, TicketMesa, TicketStatus } from 
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Clock, Trash2, Search, Eye } from "lucide-react";
+import { ArrowLeft, Clock, Trash2, Search, Eye, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 function TagSuggestions({ input, existingTags, onSelect }: { input: string; existingTags: string[]; onSelect: (tag: string) => void }) {
   const { data: registeredTags = [] } = useQuery({
@@ -77,6 +81,8 @@ export default function TicketNovo() {
   const [selfFollow, setSelfFollow] = useState(true);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [agendaDatas, setAgendaDatas] = useState<Date[]>([]);
+  const [agendaOpen, setAgendaOpen] = useState(false);
 
   // SLA calculation
   const tipoSelecionado = tipos.find((t) => t.id === tipoAtendimentoId);
@@ -216,7 +222,8 @@ export default function TicketNovo() {
       ticket_pai_id: ticketPaiId,
       seguidores,
     };
-    createTicket.mutate({ data, userId });
+    const agendamentoDatas = agendaDatas.map((d) => format(d, "yyyy-MM-dd"));
+    createTicket.mutate({ data, userId, agendamentoDatas });
   };
 
   return (
@@ -586,6 +593,67 @@ export default function TicketNovo() {
                       </div>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Agenda */}
+              <Card>
+                <CardHeader className="py-3 px-4">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4" />
+                    Agenda
+                    {agendaDatas.length > 0 && (
+                      <Badge variant="secondary" className="text-[10px]">{agendaDatas.length} dia(s)</Badge>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4 space-y-3">
+                  <Popover open={agendaOpen} onOpenChange={setAgendaOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-1.5">
+                        <CalendarDays className="h-3.5 w-3.5" />
+                        {agendaDatas.length > 0 ? `${agendaDatas.length} dia(s) selecionado(s)` : "Agendar compromissos"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <div className="p-3 space-y-3">
+                        <Calendar
+                          mode="multiple"
+                          selected={agendaDatas}
+                          onSelect={(dates) => setAgendaDatas(dates || [])}
+                          locale={ptBR}
+                          disabled={{ before: new Date() }}
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                        <div className="flex justify-end">
+                          <Button size="sm" onClick={() => setAgendaOpen(false)}>Confirmar</Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
+                  {agendaDatas.length > 0 && (
+                    <div className="space-y-1">
+                      {agendaDatas
+                        .sort((a, b) => a.getTime() - b.getTime())
+                        .map((d, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs bg-muted/50 rounded px-2 py-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <CalendarDays className="h-3 w-3 text-primary" />
+                              <span className="font-medium">{format(d, "dd/MM/yyyy (EEEE)", { locale: ptBR })}</span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5"
+                              onClick={() => setAgendaDatas(agendaDatas.filter((_, j) => j !== i))}
+                            >
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </Button>
+                          </div>
+                        ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>

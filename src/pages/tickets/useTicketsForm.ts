@@ -6,7 +6,7 @@ import type { TicketFormData, TicketStatus } from "./types";
 export function useCreateTicket(onCreated?: () => void) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ data, userId }: { data: TicketFormData; userId: string }) => {
+    mutationFn: async ({ data, userId, agendamentoDatas = [] }: { data: TicketFormData; userId: string; agendamentoDatas?: string[] }) => {
       const { data: ticket, error } = await supabase
         .from("tickets")
         .insert({
@@ -43,6 +43,19 @@ export function useCreateTicket(onCreated?: () => void) {
         visibilidade: "publico",
         conteudo: "Ticket criado",
       });
+
+      // Save agendamentos if any dates were selected
+      if (agendamentoDatas.length > 0) {
+        const agRows = agendamentoDatas.map((dt) => ({
+          ticket_id: ticket.id,
+          data: dt,
+          origem: "ticket",
+          checklist_index: 0,
+          criado_por: userId,
+          titulo: data.titulo || "Ticket",
+        }));
+        await supabase.from("painel_agendamentos").insert(agRows);
+      }
 
       return ticket as { id: string; numero_exibicao: string };
     },
