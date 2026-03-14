@@ -129,35 +129,41 @@ export function useConfigurarFaturamentoForm() {
       }
 
       // PASSO C — Integração Asaas: criar cliente + cobrança
-      try {
-        const billingType = formaPagFatura === "Pix" ? "PIX" : "BOLETO";
+      // Determinar filial_id do contrato (pedido > cliente)
+      const filialId = espelho.pedido?.filial_id || espelho.cliente?.filial_id || null;
 
-        const { data: asaasResult, error: asaasErr } = await supabase.functions.invoke("asaas", {
-          body: {
-            action: "create_customer_and_payment",
-            customerName: espelho.cliente.razao_social || espelho.cliente.nome_fantasia,
-            cpfCnpj: espelho.cliente.cnpj_cpf,
-            email: form.email_cobranca || espelho.cliente.email,
-            phone: form.whatsapp_cobranca || espelho.cliente.telefone,
-            clienteId: espelho.cliente.id,
-            contratoFinanceiroId: cf.id,
-            faturaId: faturaData.id,
-            billingType,
-            value: valorTotal,
-            dueDate: dataVencimento,
-            description: `Softflow — ${espelho.numero_exibicao} — Ref. ${String(form.mes_inicio).padStart(2, "0")}/${form.ano_inicio}`,
-          },
-        });
+      if (filialId) {
+        try {
+          const billingType = formaPagFatura === "Pix" ? "PIX" : "BOLETO";
 
-        if (asaasErr) {
-          console.error("Asaas integration error:", asaasErr);
-          toast.warning("Faturamento criado, mas a cobrança no Asaas falhou. Tente reprocessar manualmente.");
-        } else {
-          console.log("Asaas integration success:", asaasResult);
+          const { data: asaasResult, error: asaasErr } = await supabase.functions.invoke("asaas", {
+            body: {
+              action: "create_customer_and_payment",
+              filialId,
+              customerName: espelho.cliente.razao_social || espelho.cliente.nome_fantasia,
+              cpfCnpj: espelho.cliente.cnpj_cpf,
+              email: form.email_cobranca || espelho.cliente.email,
+              phone: form.whatsapp_cobranca || espelho.cliente.telefone,
+              clienteId: espelho.cliente.id,
+              contratoFinanceiroId: cf.id,
+              faturaId: faturaData.id,
+              billingType,
+              value: valorTotal,
+              dueDate: dataVencimento,
+              description: `Softflow — ${espelho.numero_exibicao} — Ref. ${String(form.mes_inicio).padStart(2, "0")}/${form.ano_inicio}`,
+            },
+          });
+
+          if (asaasErr) {
+            console.error("Asaas integration error:", asaasErr);
+            toast.warning("Faturamento criado, mas a cobrança no Asaas falhou. Verifique a configuração em Integrações.");
+          } else {
+            console.log("Asaas integration success:", asaasResult);
+          }
+        } catch (asaasError) {
+          console.error("Asaas call failed:", asaasError);
+          toast.warning("Faturamento criado localmente. Cobrança Asaas não foi gerada — verifique a integração.");
         }
-      } catch (asaasError) {
-        console.error("Asaas call failed:", asaasError);
-        toast.warning("Faturamento criado localmente. Cobrança Asaas não foi gerada — verifique a integração.");
       }
 
       toast.success("Faturamento configurado com sucesso! Primeira fatura gerada.");
