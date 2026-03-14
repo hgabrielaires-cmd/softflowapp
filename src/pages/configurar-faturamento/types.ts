@@ -108,3 +108,52 @@ export interface FaturaPreviewMes {
   itens: FaturaPreviewItem[];
   total: number;
 }
+
+// ─── Contrato Financeiro Base (dados do registro existente) ───────────────
+
+export interface ContratoFinanceiroBase {
+  id: string;
+  contrato_id: string;
+  cliente_id: string;
+  plano_id: string | null;
+  valor_mensalidade: number;
+  dia_vencimento: number;
+  forma_pagamento: string;
+  data_inicio: string;
+  status: string;
+  filial_id: string | null;
+  plano_nome?: string;
+  // Parcelas pendentes do base
+  parcelas_pendentes: ParcelaImplantacao[];
+  // Módulos ativos do base
+  modulos_ativos: ModuloFinanceiroAtivo[];
+  // OAs pendentes
+  oas_pendentes: OAFinanceiraPendente[];
+}
+
+export interface ParcelaImplantacao {
+  id: string;
+  descricao: string;
+  valor_total: number;
+  numero_parcelas: number;
+  valor_por_parcela: number;
+  parcelas_pagas: number;
+  status: string;
+}
+
+export interface ModuloFinanceiroAtivo {
+  id: string;
+  nome: string;
+  valor_mensal: number;
+  data_inicio: string;
+  ativo: boolean;
+}
+
+export interface OAFinanceiraPendente {
+  id: string;
+  descricao: string;
+  valor: number;
+  mes_referencia: number;
+  ano_referencia: number;
+  faturada: boolean;
+}
