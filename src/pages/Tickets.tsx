@@ -100,8 +100,8 @@ export default function Tickets() {
     const ticket = tickets.find((t) => t.id === ticketId);
     if (!ticket || ticket.status === newStatus) return;
 
-    // If dragging to Resolvido or Fechado, show resolution popup
-    if (newStatus === "Resolvido" || newStatus === "Fechado") {
+    // If dragging to Resolvido, show resolution popup
+    if (newStatus === "Resolvido") {
       setDragPending({ ticketId, newStatus, oldStatus: ticket.status });
       setDragResolucao("");
       return;
