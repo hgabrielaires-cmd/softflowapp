@@ -69,6 +69,7 @@ export function useConfigurarFaturamentoQueries(contratoId: string | undefined) 
         cnpj_cpf: c.clientes?.cnpj_cpf || "",
         email: c.clientes?.email || null,
         telefone: c.clientes?.telefone || null,
+        filial_id: c.clientes?.filial_id || null,
       },
       plano: c.planos ? {
         id: c.planos.id,
