@@ -24,7 +24,7 @@ export function useConfigurarFaturamentoQueries(contratoId: string | undefined) 
           valor_mensalidade, valor_mensalidade_final,
           valor_implantacao, valor_implantacao_final,
           pagamento_implantacao_parcelas, pagamento_implantacao_forma,
-          pagamento_mensalidade_forma,
+          pagamento_mensalidade_forma, filial_id,
           modulos_adicionais, servicos_pedido
         ),
         contratos_zapsign(sign_url, status)
