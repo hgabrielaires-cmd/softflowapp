@@ -201,6 +201,47 @@ export function useRemoveTicketSeguidor() {
   });
 }
 
+export function useToggleTicketCurtida() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ comentarioId, userId, liked }: { comentarioId: string; userId: string; liked: boolean }) => {
+      if (liked) {
+        await supabase.from("ticket_curtidas").delete().eq("comentario_id", comentarioId).eq("user_id", userId);
+      } else {
+        await supabase.from("ticket_curtidas").insert({ comentario_id: comentarioId, user_id: userId });
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ticket_curtidas"] });
+    },
+  });
+}
+
+export function useReplyTicketComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      ticketId, userId, conteudo, visibilidade, parentId,
+    }: {
+      ticketId: string; userId: string; conteudo: string;
+      visibilidade: "publico" | "interno"; parentId: string;
+    }) => {
+      const { error } = await supabase.from("ticket_comentarios").insert({
+        ticket_id: ticketId,
+        user_id: userId,
+        tipo: "comentario",
+        visibilidade,
+        conteudo,
+        parent_id: parentId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ticket_comentarios"] });
+    },
+  });
+}
+
 export function useAddTicketVinculo() {
   const qc = useQueryClient();
   return useMutation({

@@ -63,8 +63,16 @@ export interface TicketComentario {
   visibilidade: "publico" | "interno";
   conteudo: string;
   metadata: Record<string, unknown>;
+  parent_id: string | null;
   created_at: string;
   profile?: Pick<Profile, "user_id" | "full_name" | "avatar_url"> | null;
+}
+
+export interface TicketCurtida {
+  id: string;
+  comentario_id: string;
+  user_id: string;
+  created_at: string;
 }
 
 export interface TicketSeguidor {

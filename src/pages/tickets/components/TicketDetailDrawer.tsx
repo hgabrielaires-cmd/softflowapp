@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Ticket, TicketStatus } from "../types";
 import { TICKET_STATUS_COLORS, TICKET_PRIORIDADE_COLORS, TICKET_STATUSES } from "../constants";
 import { formatDateTime } from "../helpers";
@@ -15,16 +16,19 @@ import { UserAvatar } from "@/components/UserAvatar";
 import {
   useTicketDetail, useTicketComentarios, useTicketAnexos,
   useTicketVinculos, useTicketSeguidoresByTicket, useProfiles,
+  useTicketCurtidas, useClienteContatos,
 } from "../useTicketsQueries";
 import {
   useUpdateTicketStatus, useAddTicketComment, useUpdateTicketResponsavel,
-  useAddTicketSeguidor, useRemoveTicketSeguidor,
+  useAddTicketSeguidor, useRemoveTicketSeguidor, useToggleTicketCurtida,
+  useReplyTicketComment,
 } from "../useTicketsForm";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 import {
   Maximize2, X, Building2, FileText, Headphones, Calendar,
   User, Plus, Link2, Paperclip, Download, Edit2, MessageSquare,
+  ChevronDown, Phone, Mail, Star,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -40,16 +44,20 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
 
   const { data: ticket } = useTicketDetail(ticketId);
   const { data: comentarios = [] } = useTicketComentarios(ticketId);
+  const { data: curtidas = [] } = useTicketCurtidas(ticketId);
   const { data: anexos = [] } = useTicketAnexos(ticketId);
   const { data: vinculos = [] } = useTicketVinculos(ticketId);
   const { data: seguidores = [] } = useTicketSeguidoresByTicket(ticketId);
   const { data: profiles = [] } = useProfiles();
+  const { data: contatos = [] } = useClienteContatos(ticket?.cliente_id ?? null);
 
   const updateStatus = useUpdateTicketStatus();
   const addComment = useAddTicketComment();
   const updateResponsavel = useUpdateTicketResponsavel();
   const addSeguidor = useAddTicketSeguidor();
   const removeSeguidor = useRemoveTicketSeguidor();
+  const toggleCurtida = useToggleTicketCurtida();
+  const replyComment = useReplyTicketComment();
 
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState("");
@@ -163,7 +171,14 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
 
               <TabsContent value="comunicacao" className="space-y-4 mt-0">
                 {/* Timeline */}
-                <TicketTimeline comentarios={comentarios} users={mentionUsers} />
+                <TicketTimeline
+                  comentarios={comentarios}
+                  curtidas={curtidas}
+                  users={mentionUsers}
+                  currentUserId={userId}
+                  onToggleLike={(comentarioId, liked) => toggleCurtida.mutate({ comentarioId, userId, liked })}
+                  onReply={(parentId, conteudo, visibilidade) => replyComment.mutate({ ticketId: ticket.id, userId, conteudo, visibilidade, parentId })}
+                />
 
                 {/* Nova resposta */}
                 <TicketNovaResposta
@@ -238,6 +253,46 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
                   </div>
                 </div>
               </div>
+
+              {/* Contatos do Cliente */}
+              {ticket.cliente_id && (
+                <Collapsible>
+                  <div className="bg-card rounded-xl border">
+                    <CollapsibleTrigger className="w-full flex items-center justify-between p-4">
+                      <h4 className="text-sm font-semibold flex items-center gap-1.5">
+                        <Phone className="h-3 w-3" /> Contatos ({contatos.length})
+                      </h4>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="px-4 pb-4 space-y-2">
+                        {contatos.length === 0 && <p className="text-xs text-muted-foreground">Nenhum contato cadastrado.</p>}
+                        {contatos.map((ct: any) => (
+                          <div key={ct.id} className="flex items-start gap-2 text-xs border-t pt-2 first:border-0 first:pt-0">
+                            <div className="flex-1 space-y-0.5">
+                              <div className="flex items-center gap-1.5 font-medium">
+                                {ct.nome}
+                                {ct.decisor && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
+                              </div>
+                              {ct.cargo && <p className="text-muted-foreground">{ct.cargo}</p>}
+                              {ct.telefone && (
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <Phone className="h-2.5 w-2.5" /> {ct.telefone}
+                                </div>
+                              )}
+                              {ct.email && (
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <Mail className="h-2.5 w-2.5" /> {ct.email}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </div>
+                </Collapsible>
+              )}
 
               {/* Seguidores */}
               <div className="bg-card rounded-xl border p-4 space-y-3">

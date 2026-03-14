@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Ticket, TicketComentario, TicketAnexo, TicketVinculo, TicketSeguidor } from "./types";
+import type { Ticket, TicketComentario, TicketAnexo, TicketVinculo, TicketSeguidor, TicketCurtida } from "./types";
 
 export function useTickets() {
   return useQuery({
@@ -81,9 +81,43 @@ export function useTicketComentarios(ticketId: string | null) {
         .from("ticket_comentarios")
         .select("*, profile:profiles!ticket_comentarios_user_id_fkey(user_id, full_name, avatar_url)")
         .eq("ticket_id", ticketId!)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as TicketComentario[];
+    },
+  });
+}
+
+export function useTicketCurtidas(ticketId: string | null) {
+  return useQuery({
+    queryKey: ["ticket_curtidas", ticketId],
+    enabled: !!ticketId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ticket_curtidas")
+        .select("*")
+        .in("comentario_id",
+          (await supabase.from("ticket_comentarios").select("id").eq("ticket_id", ticketId!)).data?.map((c: any) => c.id) || []
+        );
+      if (error) throw error;
+      return (data ?? []) as unknown as TicketCurtida[];
+    },
+  });
+}
+
+export function useClienteContatos(clienteId: string | null) {
+  return useQuery({
+    queryKey: ["cliente_contatos_ticket", clienteId],
+    enabled: !!clienteId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cliente_contatos")
+        .select("*")
+        .eq("cliente_id", clienteId!)
+        .eq("ativo", true)
+        .order("decisor", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
     },
   });
 }
