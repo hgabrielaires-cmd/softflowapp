@@ -10,12 +10,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { CreditCard, Building, Package, Wrench, Plus, Trash2 } from "lucide-react";
+import { CreditCard, Building, Package, Wrench } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { ConfigFaturamentoForm, ContratoEspelho, ModuloConfig } from "../types";
 import { PARCELAS_OPTIONS, FORMAS_PAGAMENTO_CONFIG, DIAS_VENCIMENTO } from "../constants";
-import { fmtCurrency } from "../helpers";
+import { fmtCurrency, parseCurrencyInput, formatCurrencyInput } from "../helpers";
 
 interface Props {
   form: ConfigFaturamentoForm;
