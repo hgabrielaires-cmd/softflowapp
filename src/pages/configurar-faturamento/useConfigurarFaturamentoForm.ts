@@ -266,10 +266,11 @@ export function useConfigurarFaturamentoForm() {
     form: ConfigFaturamentoForm
   ) {
     // Verificar duplicidade
+    // Validar duplicidade pelo contrato financeiro base (não pelo contrato assinado)
     const { data: existing } = await supabase
       .from("faturas")
       .select("id")
-      .eq("contrato_id", espelho.id)
+      .eq("contrato_id", (await supabase.from("contratos_financeiros").select("contrato_id").eq("id", contratoFinanceiroId).single()).data?.contrato_id || "")
       .eq("referencia_mes", mesRef)
       .eq("referencia_ano", anoRef)
       .maybeSingle();
