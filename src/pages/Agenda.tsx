@@ -571,9 +571,17 @@ export default function Agenda() {
       if (calTicketIds.length > 0) {
         const { data: ticketsData } = await supabase
           .from("tickets")
-          .select("id, numero_exibicao, titulo, status, modo, cliente_id, responsavel_id, clientes:cliente_id(nome_fantasia), responsavel:responsavel_id(user_id, full_name, avatar_url)")
+          .select("id, numero_exibicao, titulo, status, modo, cliente_id, responsavel_id, clientes:cliente_id(nome_fantasia)")
           .in("id", calTicketIds);
-        (ticketsData || []).forEach((t: any) => { calTicketsMap[t.id] = t; });
+        const calRespIds = [...new Set((ticketsData || []).map((t: any) => t.responsavel_id).filter(Boolean))];
+        let calRespMap: Record<string, any> = {};
+        if (calRespIds.length > 0) {
+          const { data: respData } = await supabase.from("profiles").select("user_id, full_name, avatar_url").in("user_id", calRespIds);
+          (respData || []).forEach((p: any) => { calRespMap[p.user_id] = p; });
+        }
+        (ticketsData || []).forEach((t: any) => {
+          calTicketsMap[t.id] = { ...t, responsavel_profile: t.responsavel_id ? calRespMap[t.responsavel_id] || null : null };
+        });
       }
 
       return (rows || []).map((ag: any) => {
