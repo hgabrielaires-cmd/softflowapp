@@ -175,12 +175,8 @@ export default function TicketNovo() {
   }, [selfFollow, userId]);
 
   const handleSave = async () => {
-    if (!titulo.trim()) {
-      toast.error("Título é obrigatório");
-      return;
-    }
     const data: TicketFormData = {
-      titulo: titulo.trim(),
+      titulo: titulo.trim() || "Ticket",
       descricao_html: descricao,
       cliente_id: clienteId,
       contrato_id: contratoId,
