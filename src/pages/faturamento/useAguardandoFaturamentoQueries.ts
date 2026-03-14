@@ -30,8 +30,8 @@ export function useAguardandoFaturamentoQueries() {
         id, numero_exibicao, tipo, status, created_at, updated_at,
         cliente_id, plano_id, pedido_id, contrato_origem_id,
         clientes(nome_fantasia, cnpj_cpf, email, telefone),
-        planos(nome, valor_mensalidade, valor_implantacao),
-        pedidos(tipo_pedido, vendedor_id, valor_mensalidade, valor_implantacao, parcelas_implantacao)
+        planos(nome, valor_mensalidade_padrao, valor_implantacao_padrao),
+        pedidos(tipo_pedido, vendedor_id, valor_mensalidade_final, valor_implantacao_final, pagamento_implantacao_parcelas)
       `, { count: "exact" })
       .eq("status", "Assinado");
 
