@@ -151,7 +151,23 @@ const App = () => {
               path="/tickets"
               element={
                 <ProtectedRoute>
-                  <ComingSoon module="Helpdesk" title="Tickets" description="Em desenvolvimento. Gestão de tickets de suporte." />
+                  <Tickets />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tickets/novo"
+              element={
+                <ProtectedRoute>
+                  <TicketNovo />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/helpdesk-parametros"
+              element={
+                <ProtectedRoute>
+                  <HelpdeskParametros />
                 </ProtectedRoute>
               }
             />
