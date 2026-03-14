@@ -26,6 +26,7 @@ export interface HelpdeskModeloTicket {
 export type TicketStatus = "Aberto" | "Em Andamento" | "Aguardando Cliente" | "Resolvido" | "Fechado";
 export type TicketPrioridade = "Baixa" | "Média" | "Alta" | "Crítica";
 export type TicketMesa = "Suporte" | "Implantação" | "Financeiro" | "Comercial";
+export type TicketModo = "interno" | "externo";
 
 export interface Ticket {
   id: string;
