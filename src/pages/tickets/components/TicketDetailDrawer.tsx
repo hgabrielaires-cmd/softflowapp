@@ -106,7 +106,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
             </Badge>
             <div className="ml-auto flex items-center gap-1">
               <Button variant="ghost" size="icon" className="h-7 w-7"
-                onClick={() => { navigate(`/tickets/${ticket.id}`); onClose(); }}>
+                onClick={() => { navigate(`/tickets?id=${ticket.id}`); }}>
                 <Maximize2 className="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
