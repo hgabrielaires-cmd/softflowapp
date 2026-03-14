@@ -615,6 +615,7 @@ export default function Agenda() {
             cliente_nome: ticket?.clientes?.nome_fantasia || "—",
             contrato_numero: ticket?.numero_exibicao || "—",
             ticket_modo: ticket?.modo || null,
+            ticket_status: ticket?.status || null,
             filial_id: "",
             filial_nome: "—",
             atividade_nome: "—",
