@@ -159,7 +159,19 @@ function FaturamentoContent() {
               <Zap className="h-4 w-4" />
             )}
             Gerar Faturas do Mês
-          </Button>
+           </Button>
+
+          {/* Botão Teste Asaas (admin only) */}
+          {isAdmin && (
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => navigate("/financeiro/teste-asaas")}
+            >
+              <Zap className="h-4 w-4" />
+              Teste Asaas
+            </Button>
+          )}
 
           {/* Filtro de filial */}
           {showFilialFilter && (
