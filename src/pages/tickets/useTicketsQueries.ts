@@ -1,0 +1,215 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import type { Ticket, TicketComentario, TicketAnexo, TicketVinculo, TicketSeguidor } from "./types";
+
+export function useTickets() {
+  return useQuery({
+    queryKey: ["tickets"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tickets")
+        .select(`
+          *,
+          clientes:cliente_id(id, nome_fantasia),
+          responsavel:responsavel_id(user_id, full_name, avatar_url)
+        `)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as Ticket[];
+    },
+  });
+}
+
+export function useTicketSeguidores(ticketIds: string[]) {
+  return useQuery({
+    queryKey: ["ticket_seguidores", ticketIds],
+    enabled: ticketIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ticket_seguidores")
+        .select("*, profile:user_id(user_id, full_name, avatar_url)")
+        .in("ticket_id", ticketIds);
+      if (error) throw error;
+      return (data ?? []) as unknown as TicketSeguidor[];
+    },
+  });
+}
+
+export function useTicketAnexosCount(ticketIds: string[]) {
+  return useQuery({
+    queryKey: ["ticket_anexos_count", ticketIds],
+    enabled: ticketIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ticket_anexos")
+        .select("ticket_id")
+        .in("ticket_id", ticketIds);
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      (data ?? []).forEach((a: { ticket_id: string }) => {
+        counts[a.ticket_id] = (counts[a.ticket_id] || 0) + 1;
+      });
+      return counts;
+    },
+  });
+}
+
+export function useTicketDetail(ticketId: string | null) {
+  return useQuery({
+    queryKey: ["ticket_detail", ticketId],
+    enabled: !!ticketId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tickets")
+        .select(`
+          *,
+          clientes:cliente_id(id, nome_fantasia),
+          responsavel:responsavel_id(user_id, full_name, avatar_url)
+        `)
+        .eq("id", ticketId!)
+        .single();
+      if (error) throw error;
+      return data as unknown as Ticket;
+    },
+  });
+}
+
+export function useTicketComentarios(ticketId: string | null) {
+  return useQuery({
+    queryKey: ["ticket_comentarios", ticketId],
+    enabled: !!ticketId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ticket_comentarios")
+        .select("*, profile:user_id(user_id, full_name, avatar_url)")
+        .eq("ticket_id", ticketId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as TicketComentario[];
+    },
+  });
+}
+
+export function useTicketAnexos(ticketId: string | null) {
+  return useQuery({
+    queryKey: ["ticket_anexos", ticketId],
+    enabled: !!ticketId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ticket_anexos")
+        .select("*")
+        .eq("ticket_id", ticketId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as TicketAnexo[];
+    },
+  });
+}
+
+export function useTicketVinculos(ticketId: string | null) {
+  return useQuery({
+    queryKey: ["ticket_vinculos", ticketId],
+    enabled: !!ticketId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ticket_vinculos")
+        .select("*, ticket_vinculado:ticket_vinculado_id(id, numero_exibicao, titulo, status)")
+        .eq("ticket_id", ticketId!);
+      if (error) throw error;
+      return (data ?? []) as unknown as TicketVinculo[];
+    },
+  });
+}
+
+export function useTicketSeguidoresByTicket(ticketId: string | null) {
+  return useQuery({
+    queryKey: ["ticket_seguidores_detail", ticketId],
+    enabled: !!ticketId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ticket_seguidores")
+        .select("*, profile:user_id(user_id, full_name, avatar_url)")
+        .eq("ticket_id", ticketId!);
+      if (error) throw error;
+      return (data ?? []) as unknown as TicketSeguidor[];
+    },
+  });
+}
+
+export function useHelpdeskTipos() {
+  return useQuery({
+    queryKey: ["helpdesk_tipos_atendimento"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("helpdesk_tipos_atendimento")
+        .select("*")
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useHelpdeskModelos() {
+  return useQuery({
+    queryKey: ["helpdesk_modelos_ticket"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("helpdesk_modelos_ticket")
+        .select("*, tipo_atendimento:tipo_atendimento_id(id, nome)")
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useProfiles() {
+  return useQuery({
+    queryKey: ["profiles_active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, avatar_url, email, mesa_favorita_id")
+        .eq("active", true)
+        .order("full_name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useClienteContratos(clienteId: string | null) {
+  return useQuery({
+    queryKey: ["cliente_contratos", clienteId],
+    enabled: !!clienteId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contratos")
+        .select("id, numero_exibicao, tipo, status, plano_id, planos:plano_id(nome)")
+        .eq("cliente_id", clienteId!)
+        .eq("status", "Ativo")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useClienteTicketsAbertos(clienteId: string | null) {
+  return useQuery({
+    queryKey: ["cliente_tickets_abertos", clienteId],
+    enabled: !!clienteId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tickets")
+        .select("id, numero_exibicao, titulo, status, prioridade, created_at")
+        .eq("cliente_id", clienteId!)
+        .in("status", ["Aberto", "Em Andamento", "Aguardando Cliente"])
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
