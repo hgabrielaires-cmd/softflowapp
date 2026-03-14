@@ -50,7 +50,8 @@ export default function TicketNovo() {
   const [ticketPaiId, setTicketPaiId] = useState<string | null>(null);
   const [seguidores, setSeguidores] = useState<string[]>(userId ? [userId] : []);
   const [selfFollow, setSelfFollow] = useState(true);
-  const [tags, setTags] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
 
   // SLA calculation
   const tipoSelecionado = tipos.find((t) => t.id === tipoAtendimentoId);
