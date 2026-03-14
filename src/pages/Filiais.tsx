@@ -281,12 +281,27 @@ export default function Filiais() {
       congelar_etapa_id: congelarAcao === "mover" ? congelarEtapaId : null,
       margem_venda_ideal: margemVendaIdeal,
     };
-    // Check if exists
     const { data: existing } = await supabase.from("filial_parametros").select("id").eq("filial_id", filialId).maybeSingle();
     if (existing) {
       await supabase.from("filial_parametros").update(paramData).eq("filial_id", filialId);
     } else {
       await supabase.from("filial_parametros").insert(paramData);
+    }
+
+    // Save cobranca config
+    const cobrancaData = {
+      filial_id: filialId,
+      regua_ativa: reguaAtiva,
+      dias_lembrete_1: diasLembrete1,
+      dias_lembrete_vencimento: diasLembreteVencimento,
+      dias_atraso_alerta: diasAtrasoAlerta,
+      dias_atraso_suspensao: diasAtrasoSuspensao,
+    };
+    const { data: existingCob } = await supabase.from("cobranca_config").select("id").eq("filial_id", filialId).maybeSingle();
+    if (existingCob) {
+      await supabase.from("cobranca_config").update(cobrancaData).eq("filial_id", filialId);
+    } else {
+      await supabase.from("cobranca_config").insert(cobrancaData);
     }
   }
 
