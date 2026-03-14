@@ -20,9 +20,13 @@ const BADGE_COLORS: Record<string, string> = {
   "Downgrade Pendente": "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800",
 };
 
-export function AguardandoFaturamentoTab() {
+interface AguardandoFaturamentoTabProps {
+  filialFilter?: string;
+}
+
+export function AguardandoFaturamentoTab({ filialFilter = "all" }: AguardandoFaturamentoTabProps) {
   const navigate = useNavigate();
-  const q = useAguardandoFaturamentoQueries();
+  const q = useAguardandoFaturamentoQueries(filialFilter);
 
   return (
     <div className="space-y-4">

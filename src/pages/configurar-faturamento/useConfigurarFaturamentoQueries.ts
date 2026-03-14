@@ -17,14 +17,14 @@ export function useConfigurarFaturamentoQueries(contratoId: string | undefined) 
       .from("contratos")
       .select(`
         id, numero_exibicao, tipo, status, updated_at, contrato_origem_id,
-        clientes(id, nome_fantasia, razao_social, cnpj_cpf, email, telefone),
+        clientes(id, nome_fantasia, razao_social, cnpj_cpf, email, telefone, filial_id),
         planos(id, nome, valor_mensalidade_padrao, valor_implantacao_padrao),
         pedidos(
           id, tipo_pedido,
           valor_mensalidade, valor_mensalidade_final,
           valor_implantacao, valor_implantacao_final,
           pagamento_implantacao_parcelas, pagamento_implantacao_forma,
-          pagamento_mensalidade_forma,
+          pagamento_mensalidade_forma, filial_id,
           modulos_adicionais, servicos_pedido
         ),
         contratos_zapsign(sign_url, status)
@@ -69,6 +69,7 @@ export function useConfigurarFaturamentoQueries(contratoId: string | undefined) 
         cnpj_cpf: c.clientes?.cnpj_cpf || "",
         email: c.clientes?.email || null,
         telefone: c.clientes?.telefone || null,
+        filial_id: c.clientes?.filial_id || null,
       },
       plano: c.planos ? {
         id: c.planos.id,
@@ -86,6 +87,7 @@ export function useConfigurarFaturamentoQueries(contratoId: string | undefined) 
         pagamento_implantacao_parcelas: c.pedidos.pagamento_implantacao_parcelas,
         pagamento_implantacao_forma: c.pedidos.pagamento_implantacao_forma,
         pagamento_mensalidade_forma: c.pedidos.pagamento_mensalidade_forma,
+        filial_id: c.pedidos.filial_id || null,
         modulos_adicionais: Array.isArray(c.pedidos.modulos_adicionais)
           ? c.pedidos.modulos_adicionais as ModuloAdicionalPedido[]
           : null,

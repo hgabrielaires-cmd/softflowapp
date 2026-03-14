@@ -1,6 +1,6 @@
-// ─── Edge Function: Asaas Integration ─────────────────────────────────────
+// ─── Edge Function: Asaas Integration (Multi-filial) ──────────────────────
+// Reads Asaas API key per branch from asaas_config table
 // Handles: create customer, create charge (boleto/pix)
-// Follows Softflow security rules: JWT auth, CORS, error handling
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -10,14 +10,37 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Sandbox URL — trocar para https://api.asaas.com/v3 em produção
-const ASAAS_BASE = "https://sandbox.asaas.com/api/v3";
+function getSupabaseAdmin() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+}
 
-async function asaasFetch(path: string, method: string, body?: unknown) {
-  const apiKey = Deno.env.get("ASAAS_API_KEY");
-  if (!apiKey) throw new Error("ASAAS_API_KEY não configurada");
+async function getAsaasConfig(supabaseAdmin: any, filialId: string) {
+  const { data, error } = await supabaseAdmin
+    .from("asaas_config")
+    .select("token, ambiente, ativo")
+    .eq("filial_id", filialId)
+    .eq("ativo", true)
+    .maybeSingle();
 
-  const res = await fetch(`${ASAAS_BASE}${path}`, {
+  if (error || !data) {
+    throw new Error(`Configuração Asaas não encontrada para esta filial. Configure em Integrações.`);
+  }
+  if (!data.token) {
+    throw new Error("Token Asaas não configurado para esta filial.");
+  }
+
+  const baseUrl = data.ambiente === "production"
+    ? "https://api.asaas.com/v3"
+    : "https://sandbox.asaas.com/api/v3";
+
+  return { apiKey: data.token, baseUrl };
+}
+
+async function asaasFetch(baseUrl: string, apiKey: string, path: string, method: string, body?: unknown) {
+  const res = await fetch(`${baseUrl}${path}`, {
     method,
     headers: {
       "Content-Type": "application/json",
@@ -36,32 +59,23 @@ async function asaasFetch(path: string, method: string, body?: unknown) {
   return data;
 }
 
-function getSupabaseAdmin() {
-  return createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
-}
-
 // ── Handlers ──────────────────────────────────────────────────────────────
 
-async function createCustomer(payload: {
+async function createCustomer(baseUrl: string, apiKey: string, payload: {
   name: string;
   cpfCnpj: string;
   email?: string;
   phone?: string;
   externalReference?: string;
 }) {
-  // Verificar se já existe pelo CPF/CNPJ
-  const existing = await asaasFetch(
-    `/customers?cpfCnpj=${encodeURIComponent(payload.cpfCnpj)}`,
-    "GET"
+  const existing = await asaasFetch(baseUrl, apiKey,
+    `/customers?cpfCnpj=${encodeURIComponent(payload.cpfCnpj)}`, "GET"
   );
   if (existing?.data?.length > 0) {
     return existing.data[0];
   }
 
-  return await asaasFetch("/customers", "POST", {
+  return await asaasFetch(baseUrl, apiKey, "/customers", "POST", {
     name: payload.name,
     cpfCnpj: payload.cpfCnpj.replace(/\D/g, ""),
     email: payload.email || undefined,
@@ -71,7 +85,7 @@ async function createCustomer(payload: {
   });
 }
 
-async function createPayment(payload: {
+async function createPayment(baseUrl: string, apiKey: string, payload: {
   customer: string;
   billingType: string;
   value: number;
@@ -79,9 +93,9 @@ async function createPayment(payload: {
   description?: string;
   externalReference?: string;
 }) {
-  return await asaasFetch("/payments", "POST", {
+  return await asaasFetch(baseUrl, apiKey, "/payments", "POST", {
     customer: payload.customer,
-    billingType: payload.billingType, // BOLETO, PIX, UNDEFINED
+    billingType: payload.billingType,
     value: payload.value,
     dueDate: payload.dueDate,
     description: payload.description || "Fatura Softflow",
@@ -97,7 +111,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Validar JWT
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
@@ -123,24 +136,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { action, ...params } = await req.json();
+    const { action, filialId, ...params } = await req.json();
+
+    if (!filialId) {
+      return new Response(JSON.stringify({ error: "filialId é obrigatório" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Get Asaas config for this branch
+    const { apiKey, baseUrl } = await getAsaasConfig(supabaseAdmin, filialId);
 
     let result: unknown;
 
     switch (action) {
       case "create_customer": {
-        result = await createCustomer(params);
+        result = await createCustomer(baseUrl, apiKey, params);
         break;
       }
 
       case "create_payment": {
-        result = await createPayment(params);
+        result = await createPayment(baseUrl, apiKey, params);
         break;
       }
 
       case "create_customer_and_payment": {
-        // Fluxo completo: cria cliente + cobrança + atualiza banco
-        const customer = await createCustomer({
+        const customer = await createCustomer(baseUrl, apiKey, {
           name: params.customerName,
           cpfCnpj: params.cpfCnpj,
           email: params.email,
@@ -148,7 +170,6 @@ Deno.serve(async (req) => {
           externalReference: params.clienteId,
         });
 
-        // Atualizar asaas_customer_id no contrato financeiro
         if (params.contratoFinanceiroId) {
           await supabaseAdmin
             .from("contratos_financeiros")
@@ -156,7 +177,7 @@ Deno.serve(async (req) => {
             .eq("id", params.contratoFinanceiroId);
         }
 
-        const payment = await createPayment({
+        const payment = await createPayment(baseUrl, apiKey, {
           customer: customer.id,
           billingType: params.billingType || "BOLETO",
           value: params.value,
@@ -165,7 +186,6 @@ Deno.serve(async (req) => {
           externalReference: params.faturaId,
         });
 
-        // Atualizar fatura com IDs do Asaas
         if (params.faturaId) {
           await supabaseAdmin
             .from("faturas")

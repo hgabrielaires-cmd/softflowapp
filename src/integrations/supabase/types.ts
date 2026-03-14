@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      asaas_config: {
+        Row: {
+          ambiente: string
+          ativo: boolean
+          created_at: string | null
+          filial_id: string
+          id: string
+          token: string
+          updated_at: string | null
+        }
+        Insert: {
+          ambiente?: string
+          ativo?: boolean
+          created_at?: string | null
+          filial_id: string
+          id?: string
+          token: string
+          updated_at?: string | null
+        }
+        Update: {
+          ambiente?: string
+          ativo?: boolean
+          created_at?: string | null
+          filial_id?: string
+          id?: string
+          token?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asaas_config_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: true
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asaas_webhook_events: {
         Row: {
           event_id: string

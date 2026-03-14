@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -28,7 +28,7 @@ import {
 import {
   Receipt, Plus, Loader2, MoreHorizontal, Pencil, Trash2,
   CheckCircle, XCircle, Filter, FileText, Search,
-  DollarSign, AlertTriangle, Clock,
+  DollarSign, AlertTriangle, Clock, Building2,
 } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
@@ -71,17 +71,51 @@ export default function Faturamento() {
 
 function FaturamentoContent() {
   const [tab, setTab] = useState("aguardando");
+  const { filiaisDoUsuario, filialPadraoId, isGlobal, loading: filiaisLoading } = useUserFiliais();
+
+  // Filtro de filial: se tem favorita usa ela, senão "all" (todas)
+  const [filialFilter, setFilialFilter] = useState<string>("all");
+
+  useEffect(() => {
+    if (!filiaisLoading) {
+      if (filialPadraoId && filiaisDoUsuario.some(f => f.id === filialPadraoId)) {
+        setFilialFilter(filialPadraoId);
+      } else {
+        setFilialFilter("all");
+      }
+    }
+  }, [filiaisLoading, filialPadraoId, filiaisDoUsuario]);
+
+  const showFilialFilter = filiaisDoUsuario.length > 1;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Receipt className="h-6 w-6 text-primary" />
-          Faturamento
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Gerencie faturas, cobranças e notas fiscais
-        </p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Receipt className="h-6 w-6 text-primary" />
+            Faturamento
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Gerencie faturas, cobranças e notas fiscais
+          </p>
+        </div>
+
+        {/* Filtro de filial */}
+        {showFilialFilter && (
+          <Select value={filialFilter} onValueChange={setFilialFilter}>
+            <SelectTrigger className="h-9 w-56">
+              <Building2 className="h-3.5 w-3.5 mr-1.5" />
+              <SelectValue placeholder="Filial" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as Filiais</SelectItem>
+              {filiaisDoUsuario.map(f => (
+                <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
@@ -98,13 +132,13 @@ function FaturamentoContent() {
         </TabsList>
 
         <TabsContent value="aguardando">
-          <AguardandoFaturamentoTab />
+          <AguardandoFaturamentoTab filialFilter={filialFilter} />
         </TabsContent>
         <TabsContent value="faturas">
-          <FaturasTab />
+          <FaturasTab filialFilter={filialFilter} />
         </TabsContent>
         <TabsContent value="notas">
-          <NotasFiscaisTab />
+          <NotasFiscaisTab filialFilter={filialFilter} />
         </TabsContent>
       </Tabs>
     </div>
@@ -115,9 +149,9 @@ function FaturamentoContent() {
 // FATURAS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function FaturasTab() {
+function FaturasTab({ filialFilter }: { filialFilter: string }) {
   const { filialPadraoId } = useUserFiliais();
-  const q = useFaturasQueries();
+  const q = useFaturasQueries(filialFilter);
 
   const [openEditor, setOpenEditor] = useState(false);
   const [editingFatura, setEditingFatura] = useState<Fatura | null>(null);
@@ -405,9 +439,9 @@ function FaturasResumo({ faturas }: { faturas: Fatura[] }) {
 // NOTAS FISCAIS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function NotasFiscaisTab() {
+function NotasFiscaisTab({ filialFilter }: { filialFilter: string }) {
   const { filialPadraoId } = useUserFiliais();
-  const q = useNotasFiscaisQueries();
+  const q = useNotasFiscaisQueries(filialFilter);
 
   const [openEditor, setOpenEditor] = useState(false);
   const [editingNota, setEditingNota] = useState<NotaFiscal | null>(null);
