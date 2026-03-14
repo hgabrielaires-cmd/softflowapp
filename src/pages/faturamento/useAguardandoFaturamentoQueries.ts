@@ -33,7 +33,7 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
         planos(nome, valor_mensalidade_padrao, valor_implantacao_padrao),
         pedidos(tipo_pedido, vendedor_id, valor_mensalidade_final, valor_implantacao_final, pagamento_implantacao_parcelas, filial_id)
       `, { count: "exact" })
-      .eq("status", "Assinado");
+      .in("status", ["Assinado", "Ativo"]);
 
     if (search.trim()) {
       query = query.or(`numero_exibicao.ilike.%${search.trim()}%,clientes.nome_fantasia.ilike.%${search.trim()}%`);
