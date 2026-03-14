@@ -1,0 +1,115 @@
+// ─── Coluna Esquerda: Espelho do Contrato (readonly) ──────────────────────
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ExternalLink, FileText, Package, Briefcase } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import type { ContratoEspelho } from "../types";
+import { fmtCurrency, getBadgeTipoLabel, getBadgeTipoColor } from "../helpers";
+
+interface Props {
+  espelho: ContratoEspelho;
+}
+
+export function EspelhoContrato({ espelho }: Props) {
+  const tipoLabel = getBadgeTipoLabel(espelho.tipo, espelho.pedido?.tipo_pedido);
+  const tipoColor = getBadgeTipoColor(tipoLabel);
+
+  const valorMensalidade = espelho.pedido?.valor_mensalidade_final ?? espelho.plano?.valor_mensalidade_padrao ?? 0;
+  const valorImplantacao = espelho.pedido?.valor_implantacao_final ?? espelho.plano?.valor_implantacao_padrao ?? 0;
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary" />
+            Espelho do Contrato
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <FieldReadonly label="Plano" value={espelho.plano?.nome || "—"} />
+          <div className="grid grid-cols-2 gap-3">
+            <FieldReadonly label="Mensalidade" value={fmtCurrency(valorMensalidade)} highlight />
+            <FieldReadonly label="Implantação" value={fmtCurrency(valorImplantacao)} />
+          </div>
+
+          {espelho.pedido?.pagamento_implantacao_parcelas && (
+            <FieldReadonly
+              label="Parcelas previstas"
+              value={`${espelho.pedido.pagamento_implantacao_parcelas}x de ${fmtCurrency(valorImplantacao / espelho.pedido.pagamento_implantacao_parcelas)}`}
+            />
+          )}
+
+          <FieldReadonly
+            label="Data de assinatura"
+            value={format(parseISO(espelho.updated_at), "dd/MM/yyyy 'às' HH:mm")}
+          />
+
+          {/* Módulos do pedido */}
+          {espelho.pedido?.modulos_adicionais && espelho.pedido.modulos_adicionais.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Package className="h-3 w-3" /> Produtos/Serviços contratados
+                </span>
+                {espelho.pedido.modulos_adicionais.map((m, i) => (
+                  <div key={i} className="flex justify-between text-xs py-1 px-2 bg-muted/50 rounded">
+                    <span>{m.nome}</span>
+                    <span className="font-medium">{fmtCurrency(m.valor_mensalidade)}/mês</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* ZapSign link */}
+          {espelho.zapsign?.sign_url && (
+            <>
+              <Separator />
+              <a
+                href={espelho.zapsign.sign_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+              >
+                <ExternalLink className="h-3 w-3" />
+                Visualizar documento ZapSign
+              </a>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Sub-registro: contrato base vinculado */}
+      {espelho.contrato_base && (
+        <Card className="border-dashed">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Briefcase className="h-4 w-4 text-muted-foreground" />
+              Contrato Base Vinculado
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <FieldReadonly label="Contrato" value={`#${espelho.contrato_base.numero_exibicao}`} />
+            <FieldReadonly label="Cliente" value={espelho.contrato_base.cliente_nome} />
+            <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
+              Este registro será vinculado ao contrato base #{espelho.contrato_base.numero_exibicao}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function FieldReadonly({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div>
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <p className={`font-medium ${highlight ? "text-primary" : ""}`}>{value}</p>
+    </div>
+  );
+}
