@@ -224,6 +224,23 @@ async function processContrato(
         }
 
         await supabase.from("faturas").update(asaasUpdate).eq("id", fatura.id);
+
+        // Send WhatsApp notification
+        try {
+          await sendWhatsAppForFatura(supabase, {
+            faturaId: fatura.id,
+            clienteId: contrato.cliente_id,
+            nomeFantasia: clienteNome,
+            valor: valorTotal,
+            dataVencimento: dueDate,
+            billingType,
+            asaasUrl: asaasUpdate.asaas_url as string | null,
+            asaasBarcode: (asaasUpdate.asaas_barcode as string) || null,
+            asaasPix: (asaasUpdate.asaas_pix_qrcode as string) || null,
+          });
+        } catch (whatsErr) {
+          console.warn("WhatsApp notification failed (non-blocking):", whatsErr);
+        }
       } catch (asaasErr: unknown) {
         const msg = asaasErr instanceof Error ? asaasErr.message : "Erro Asaas";
         console.warn(`Asaas error for contrato ${contrato.id}: ${msg}`);
