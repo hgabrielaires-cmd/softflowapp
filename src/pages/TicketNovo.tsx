@@ -73,7 +73,7 @@ export default function TicketNovo() {
   const [clienteSearch, setClienteSearch] = useState("");
   const [contratoId, setContratoId] = useState<string | null>(null);
   const [mesa, setMesa] = useState<TicketMesa>("Suporte");
-  const [modo, setModo] = useState<TicketModo>("externo");
+  const [modo, setModo] = useState<TicketModo | "">("");
   const [tipoAtendimentoId, setTipoAtendimentoId] = useState<string | null>(null);
   const [prioridade, setPrioridade] = useState<TicketPrioridade>("Média");
   const [responsavelId, setResponsavelId] = useState<string | null>(null);
@@ -210,6 +210,10 @@ export default function TicketNovo() {
   }, [selfFollow, userId]);
 
   const handleSave = () => {
+    if (!modo) {
+      toast.error("Selecione o Modo do ticket (Interno ou Externo).");
+      return;
+    }
     const data: TicketFormData = {
       titulo: titulo.trim() || "Ticket",
       descricao_html: descricao,
@@ -257,8 +261,8 @@ export default function TicketNovo() {
                 </div>
                 <div>
                   <Label className="text-xs">Modo <span className="text-destructive">*</span></Label>
-                  <Select value={modo} onValueChange={(v) => setModo(v as TicketModo)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select value={modo || undefined} onValueChange={(v) => setModo(v as TicketModo)}>
+                    <SelectTrigger><SelectValue placeholder="Selecionar modo" /></SelectTrigger>
                     <SelectContent>
                       {TICKET_MODOS.map((m) => (
                         <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
