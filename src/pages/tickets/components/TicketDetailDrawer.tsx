@@ -151,6 +151,50 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
           </div>
         </SheetHeader>
 
+        {/* Action Buttons */}
+        {canEditar && (
+          <div className="px-4 py-2 border-b shrink-0 flex items-center gap-2 flex-wrap">
+            {ticket.status === "Aberto" && (
+              <Button
+                size="sm"
+                className="h-7 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={() => updateStatus.mutate({ ticketId: ticket.id, newStatus: "Em Andamento", oldStatus: ticket.status, userId })}
+              >
+                <Play className="h-3 w-3" /> Iniciar Atendimento
+              </Button>
+            )}
+            {(ticket.status === "Aberto" || ticket.status === "Em Andamento") && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-50"
+                onClick={() => setShowPausarDialog(true)}
+              >
+                <PauseCircle className="h-3 w-3" /> Pausar
+              </Button>
+            )}
+            {ticket.status !== "Resolvido" && ticket.status !== "Fechado" && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                onClick={() => { setResolucaoText(""); setShowResolucaoDialog(true); }}
+              >
+                <CheckCircle className="h-3 w-3" /> Fechar Ticket
+              </Button>
+            )}
+            {ticket.status === "Aguardando Cliente" && (
+              <Button
+                size="sm"
+                className="h-7 text-xs gap-1 bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => updateStatus.mutate({ ticketId: ticket.id, newStatus: "Em Andamento", oldStatus: ticket.status, userId })}
+              >
+                <Play className="h-3 w-3" /> Retomar Atendimento
+              </Button>
+            )}
+          </div>
+        )}
+
         {/* Body: two columns */}
         <div className="flex flex-1 overflow-hidden">
           {/* Left column 65% */}
