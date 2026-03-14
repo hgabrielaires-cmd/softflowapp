@@ -279,9 +279,40 @@ export default function HelpdeskParametros() {
               <Textarea value={modeloCorpo} onChange={(e) => setModeloCorpo(e.target.value)} className="min-h-[120px]"
                 placeholder="Use {cliente}, {contrato}, {data} como variáveis" />
             </div>
-            <div className="flex items-center gap-3">
-              <Label className="text-xs">Ativo</Label>
-              <Switch checked={modeloAtivo} onCheckedChange={setModeloAtivo} />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Label className="text-xs">Ativo</Label>
+                <Switch checked={modeloAtivo} onCheckedChange={setModeloAtivo} />
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" type="button">
+                    <Braces className="h-4 w-4 mr-1" /> Variáveis
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <div className="p-3 border-b">
+                    <p className="text-xs font-semibold text-foreground">Variáveis disponíveis</p>
+                    <p className="text-[11px] text-muted-foreground">Clique para copiar e cole no corpo do modelo</p>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto divide-y">
+                    {VARIAVEIS_MODELO.map((v) => (
+                      <button
+                        key={v.var}
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-muted/50 transition-colors"
+                        onClick={() => {
+                          navigator.clipboard.writeText(v.var);
+                          setModeloCorpo((prev) => prev + v.var);
+                        }}
+                      >
+                        <span className="text-xs font-mono text-primary">{v.var}</span>
+                        <span className="block text-[11px] text-muted-foreground">{v.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
             <Button className="w-full" onClick={handleSaveModelo} disabled={!modeloNome.trim() || saveModelo.isPending}>
               <Save className="h-4 w-4 mr-1" /> Salvar
