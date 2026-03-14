@@ -423,6 +423,8 @@ Deno.serve(async (req) => {
         };
         break;
       }
+
+      default:
         return new Response(
           JSON.stringify({ error: `Ação desconhecida: ${action}` }),
           {

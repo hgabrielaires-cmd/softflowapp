@@ -472,12 +472,12 @@ export default function TesteAsaas() {
                 className="w-full gap-2"
                 variant="outline"
                 onClick={simulatePayment}
-                disabled={simulatingPayment || !filialId || (!boletoPaymentId && !pixPaymentId)}
+                disabled={simulatingPayment || !filialId || !ultimoPaymentId}
               >
                 {simulatingPayment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Webhook className="h-4 w-4" />}
-                Simular Pagamento ({boletoPaymentId ? "Boleto" : pixPaymentId ? "PIX" : "—"})
+                Simular Pagamento ({ultimoPaymentId ? "Último Gerado" : "—"})
               </Button>
-              {!boletoPaymentId && !pixPaymentId && (
+              {!ultimoPaymentId && (
                 <p className="text-xs text-muted-foreground">⬆️ Gere um boleto ou PIX primeiro</p>
               )}
               {webhookResult && !webhookResult.error && (
