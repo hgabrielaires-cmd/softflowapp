@@ -163,13 +163,21 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
 
               <TabsContent value="comunicacao" className="space-y-4 mt-0">
                 {/* Timeline */}
-                <TicketTimeline comentarios={comentarios} />
+                <TicketTimeline comentarios={comentarios} users={mentionUsers} />
 
                 {/* Nova resposta */}
                 <TicketNovaResposta
                   isLoading={addComment.isPending}
-                  onSubmit={(conteudo, visibilidade) =>
-                    addComment.mutate({ ticketId: ticket.id, userId, conteudo, visibilidade })
+                  users={mentionUsers}
+                  onSubmit={(conteudo, visibilidade, mentionedUserIds) =>
+                    addComment.mutate({
+                      ticketId: ticket.id,
+                      userId,
+                      conteudo,
+                      visibilidade,
+                      mentionedUserIds,
+                      ticketNumero: ticket.numero_exibicao,
+                    })
                   }
                 />
               </TabsContent>
