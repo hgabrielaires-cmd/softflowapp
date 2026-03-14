@@ -26,6 +26,31 @@ import { cn } from "@/lib/utils";
 import { ArrowLeft, Clock, Trash2, Search, Eye } from "lucide-react";
 import { toast } from "sonner";
 
+function TagSuggestions({ input, existingTags, onSelect }: { input: string; existingTags: string[]; onSelect: (tag: string) => void }) {
+  const { data: registeredTags = [] } = useQuery({
+    queryKey: ["helpdesk_tags"],
+    queryFn: async () => {
+      const { data } = await supabase.from("helpdesk_tags").select("nome").eq("ativo", true).order("nome");
+      return (data ?? []).map((t: any) => t.nome as string);
+    },
+  });
+
+  const query = input.startsWith("#") ? input.toUpperCase() : `#${input.toUpperCase()}`;
+  const filtered = registeredTags.filter((t) => t.includes(query) && !existingTags.includes(t));
+
+  if (filtered.length === 0) return null;
+
+  return (
+    <div className="absolute z-20 top-full left-0 right-0 bg-card border rounded-lg shadow-lg mt-1 max-h-32 overflow-y-auto">
+      {filtered.map((tag) => (
+        <button key={tag} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted" onClick={() => onSelect(tag)}>
+          <Badge className="bg-blue-500 text-white text-[10px]">{tag}</Badge>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function TicketNovo() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
