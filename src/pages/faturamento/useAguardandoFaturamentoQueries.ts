@@ -30,8 +30,8 @@ export function useAguardandoFaturamentoQueries() {
         id, numero_exibicao, tipo, status, created_at, updated_at,
         cliente_id, plano_id, pedido_id, contrato_origem_id,
         clientes(nome_fantasia, cnpj_cpf, email, telefone),
-        planos(nome, valor_mensalidade, valor_implantacao),
-        pedidos(tipo_pedido, vendedor_id, valor_mensalidade, valor_implantacao, parcelas_implantacao)
+        planos(nome, valor_mensalidade_padrao, valor_implantacao_padrao),
+        pedidos(tipo_pedido, vendedor_id, valor_mensalidade_final, valor_implantacao_final, pagamento_implantacao_parcelas)
       `, { count: "exact" })
       .eq("status", "Assinado");
 
@@ -79,9 +79,9 @@ export function useAguardandoFaturamentoQueries() {
         contrato_origem_id: c.contrato_origem_id,
         cliente_nome: c.clientes?.nome_fantasia || "—",
         plano_nome: c.planos?.nome || "—",
-        valor_mensalidade: c.pedidos?.valor_mensalidade ?? c.planos?.valor_mensalidade ?? 0,
-        valor_implantacao: c.pedidos?.valor_implantacao ?? c.planos?.valor_implantacao ?? 0,
-        parcelas_implantacao: c.pedidos?.parcelas_implantacao ?? 1,
+        valor_mensalidade: c.pedidos?.valor_mensalidade_final ?? c.planos?.valor_mensalidade_padrao ?? 0,
+        valor_implantacao: c.pedidos?.valor_implantacao_final ?? c.planos?.valor_implantacao_padrao ?? 0,
+        parcelas_implantacao: c.pedidos?.pagamento_implantacao_parcelas ?? 1,
         data_assinatura: c.updated_at,
         dias_aguardando: diasAguardando,
         badge_tipo: badgeTipo,
