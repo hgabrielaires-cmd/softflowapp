@@ -10,8 +10,7 @@ export function useTickets() {
         .from("tickets")
         .select(`
           *,
-          clientes:cliente_id(id, nome_fantasia),
-          responsavel:responsavel_id(user_id, full_name, avatar_url)
+          clientes:cliente_id(id, nome_fantasia)
         `)
         .order("created_at", { ascending: false });
       if (error) throw error;
