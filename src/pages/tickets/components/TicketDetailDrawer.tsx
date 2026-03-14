@@ -120,42 +120,58 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
         <div className="flex flex-1 overflow-hidden">
           {/* Left column 65% */}
           <ScrollArea className="flex-1 basis-[65%] p-4">
-            <div className="space-y-4">
-              {/* Description */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <h4 className="text-sm font-semibold">Descrição</h4>
-                  <Button variant="ghost" size="icon" className="h-5 w-5"
-                    onClick={() => { setEditingDesc(!editingDesc); setDescDraft(ticket.descricao_html); }}>
-                    <Edit2 className="h-3 w-3" />
-                  </Button>
-                </div>
-                {editingDesc ? (
-                  <div className="space-y-2">
-                    <Textarea value={descDraft} onChange={(e) => setDescDraft(e.target.value)} className="min-h-[120px]" />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => setEditingDesc(false)}>Salvar</Button>
-                      <Button variant="outline" size="sm" onClick={() => setEditingDesc(false)}>Cancelar</Button>
+            <Tabs defaultValue="descricao" className="w-full">
+              <TabsList className="w-full mb-3">
+                <TabsTrigger value="descricao" className="flex-1 gap-1.5">
+                  <FileText className="h-3.5 w-3.5" /> Descrição
+                </TabsTrigger>
+                <TabsTrigger value="comunicacao" className="flex-1 gap-1.5">
+                  <MessageSquare className="h-3.5 w-3.5" /> Comunicação
+                  {comentarios.length > 0 && (
+                    <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[10px]">{comentarios.length}</Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="descricao" className="space-y-4 mt-0">
+                {/* Description */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h4 className="text-sm font-semibold">Descrição</h4>
+                    <Button variant="ghost" size="icon" className="h-5 w-5"
+                      onClick={() => { setEditingDesc(!editingDesc); setDescDraft(ticket.descricao_html); }}>
+                      <Edit2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  {editingDesc ? (
+                    <div className="space-y-2">
+                      <Textarea value={descDraft} onChange={(e) => setDescDraft(e.target.value)} className="min-h-[120px]" />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => setEditingDesc(false)}>Salvar</Button>
+                        <Button variant="outline" size="sm" onClick={() => setEditingDesc(false)}>Cancelar</Button>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="text-sm whitespace-pre-wrap bg-muted/30 rounded-lg p-3 min-h-[60px]">
-                    {ticket.descricao_html || "Sem descrição."}
-                  </div>
-                )}
-              </div>
+                  ) : (
+                    <div className="text-sm whitespace-pre-wrap bg-muted/30 rounded-lg p-3 min-h-[60px]">
+                      {ticket.descricao_html || "Sem descrição."}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
 
-              {/* Timeline */}
-              <TicketTimeline comentarios={comentarios} />
+              <TabsContent value="comunicacao" className="space-y-4 mt-0">
+                {/* Timeline */}
+                <TicketTimeline comentarios={comentarios} />
 
-              {/* Nova resposta */}
-              <TicketNovaResposta
-                isLoading={addComment.isPending}
-                onSubmit={(conteudo, visibilidade) =>
-                  addComment.mutate({ ticketId: ticket.id, userId, conteudo, visibilidade })
-                }
-              />
-            </div>
+                {/* Nova resposta */}
+                <TicketNovaResposta
+                  isLoading={addComment.isPending}
+                  onSubmit={(conteudo, visibilidade) =>
+                    addComment.mutate({ ticketId: ticket.id, userId, conteudo, visibilidade })
+                  }
+                />
+              </TabsContent>
+            </Tabs>
           </ScrollArea>
 
           {/* Right column 35% */}
