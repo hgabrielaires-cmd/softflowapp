@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useMenuPermissions } from "@/hooks/useMenuPermissions";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -75,7 +75,8 @@ export default function Faturamento() {
 
 function FaturamentoContent() {
   const [tab, setTab] = useState("aguardando");
-  const { profile } = useAuth();
+  const { profile, isAdmin } = useAuth();
+  const navigate = useNavigate();
   const { filiaisDoUsuario, filialPadraoId, isGlobal, loading: filiaisLoading } = useUserFiliais();
 
   // Filtro de filial: favorita se definida, senão "all" (todas do usuário)
@@ -158,7 +159,19 @@ function FaturamentoContent() {
               <Zap className="h-4 w-4" />
             )}
             Gerar Faturas do Mês
-          </Button>
+           </Button>
+
+          {/* Botão Teste Asaas (admin only) */}
+          {isAdmin && (
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => navigate("/financeiro/teste-asaas")}
+            >
+              <Zap className="h-4 w-4" />
+              Teste Asaas
+            </Button>
+          )}
 
           {/* Filtro de filial */}
           {showFilialFilter && (
