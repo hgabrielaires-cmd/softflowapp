@@ -328,6 +328,7 @@ export default function Agenda() {
             cliente_nome: ticket?.clientes?.nome_fantasia || "—",
             cliente_cnpj: ticket?.clientes?.cnpj_cpf || "",
             contrato_numero: ticket?.numero_exibicao || "—",
+            ticket_modo: ticket?.modo || null,
             filial_nome: "—",
             atividade_nome: "—",
             mesa_nome: "—",
