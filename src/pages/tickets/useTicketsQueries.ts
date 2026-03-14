@@ -26,7 +26,7 @@ export function useTicketSeguidores(ticketIds: string[]) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ticket_seguidores")
-        .select("*, profile:user_id(user_id, full_name, avatar_url)")
+        .select("*, profile:profiles!ticket_seguidores_user_id_fkey(user_id, full_name, avatar_url)")
         .in("ticket_id", ticketIds);
       if (error) throw error;
       return (data ?? []) as unknown as TicketSeguidor[];
