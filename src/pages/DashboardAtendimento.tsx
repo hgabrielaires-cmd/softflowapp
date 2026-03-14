@@ -1,8 +1,14 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
+import { format, startOfMonth, endOfMonth } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { KpiCards } from "./dashboard-atendimento/components/KpiCards";
 import { AlertasPanel } from "./dashboard-atendimento/components/AlertasPanel";
 import { GraficoCategoria } from "./dashboard-atendimento/components/GraficoCategoria";
@@ -22,11 +28,20 @@ export default function DashboardAtendimento() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data: kpis, isLoading: loadKpi } = useDashKpis();
+  const now = new Date();
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
+    from: startOfMonth(now),
+    to: endOfMonth(now),
+  });
+
+  const startDate = dateRange.from.toISOString();
+  const endDate = dateRange.to.toISOString();
+
+  const { data: kpis, isLoading: loadKpi } = useDashKpis(startDate, endDate);
   const { data: alertas, isLoading: loadAlertas } = useDashAlertas();
-  const { data: categorias, isLoading: loadCat } = useTicketsPorCategoria();
+  const { data: categorias, isLoading: loadCat } = useTicketsPorCategoria(startDate, endDate);
   const { data: antigos, isLoading: loadAntigos } = useTicketsMaisAntigos();
-  const { data: kanban, isLoading: loadKanban } = useKanbanResumo();
+  const { data: kanban, isLoading: loadKanban } = useKanbanResumo(startDate, endDate);
   const { data: agenda, isLoading: loadAgenda } = useAgendaHoje();
 
   const handleVerTicket = (id: string) => {
@@ -42,19 +57,52 @@ export default function DashboardAtendimento() {
     queryClient.invalidateQueries({ queryKey: ["dash_tickets_agenda_hoje"] });
   };
 
+  const rangeLabel =
+    dateRange.from && dateRange.to
+      ? `${format(dateRange.from, "dd/MM/yyyy")} — ${format(dateRange.to, "dd/MM/yyyy")}`
+      : "Selecione o período";
+
   return (
     <AppLayout>
       <div className="space-y-6 p-4 md:p-6 max-w-[1400px] mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold text-foreground">Dashboard Tickets</h1>
             <p className="text-sm text-muted-foreground">Visão operacional de tickets e compromissos</p>
           </div>
-          <Button variant="outline" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4 mr-1.5" />
-            Atualizar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="min-w-[220px] justify-start text-left font-normal">
+                  <CalendarIcon className="h-4 w-4 mr-1.5" />
+                  <span className="text-xs">{rangeLabel}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="range"
+                  selected={{ from: dateRange.from, to: dateRange.to }}
+                  onSelect={(range) => {
+                    if (range?.from) {
+                      setDateRange({
+                        from: range.from,
+                        to: range.to ?? range.from,
+                      });
+                    }
+                  }}
+                  numberOfMonths={2}
+                  locale={ptBR}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            <Button variant="outline" size="sm" onClick={handleRefresh}>
+              <RefreshCw className="h-4 w-4 mr-1.5" />
+              Atualizar
+            </Button>
+          </div>
         </div>
 
         {/* KPIs */}
