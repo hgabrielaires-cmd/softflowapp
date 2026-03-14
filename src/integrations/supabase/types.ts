@@ -4004,6 +4004,7 @@ export type Database = {
           descricao_html: string
           id: string
           mesa: string
+          modo: string
           numero_exibicao: string
           numero_registro: number
           previsao_entrega: string | null
@@ -4026,6 +4027,7 @@ export type Database = {
           descricao_html?: string
           id?: string
           mesa?: string
+          modo?: string
           numero_exibicao?: string
           numero_registro?: number
           previsao_entrega?: string | null
@@ -4048,6 +4050,7 @@ export type Database = {
           descricao_html?: string
           id?: string
           mesa?: string
+          modo?: string
           numero_exibicao?: string
           numero_registro?: number
           previsao_entrega?: string | null
