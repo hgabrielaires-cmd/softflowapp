@@ -75,7 +75,8 @@ export default function Faturamento() {
 
 function FaturamentoContent() {
   const [tab, setTab] = useState("aguardando");
-  const { profile } = useAuth();
+  const { profile, isAdmin } = useAuth();
+  const navigate = useNavigate();
   const { filiaisDoUsuario, filialPadraoId, isGlobal, loading: filiaisLoading } = useUserFiliais();
 
   // Filtro de filial: favorita se definida, senão "all" (todas do usuário)
