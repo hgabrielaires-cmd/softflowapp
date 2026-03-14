@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Ticket, TicketStatus } from "../types";
 import { TICKET_STATUS_COLORS, TICKET_PRIORIDADE_COLORS, TICKET_STATUSES } from "../constants";
 import { formatDateTime } from "../helpers";
@@ -23,7 +24,7 @@ import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 import {
   Maximize2, X, Building2, FileText, Headphones, Calendar,
-  User, Plus, Trash2, Link2, Paperclip, Download, Edit2,
+  User, Plus, Link2, Paperclip, Download, Edit2, MessageSquare,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
