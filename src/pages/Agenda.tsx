@@ -622,7 +622,7 @@ export default function Agenda() {
             etapa_atual_nome: "Tickets",
             etapa_atual_cor: "#6366f1",
             tecnicos: [],
-            apontados: ticket?.responsavel_profile ? [ticket.responsavel_profile] : [],
+            apontados: ticket?.apontados || [],
             tipo_atendimento: null,
             status_projeto: "ativo",
             pausado: false,
