@@ -5,7 +5,6 @@ export const TICKET_STATUSES: TicketStatus[] = [
   "Em Andamento",
   "Aguardando Cliente",
   "Resolvido",
-  "Fechado",
 ];
 
 export const TICKET_STATUS_COLORS: Record<TicketStatus, string> = {
