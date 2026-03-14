@@ -43,7 +43,14 @@ export function ConfiguracaoCobranca({ form, setForm, espelho }: Props) {
   function updateModulo(idx: number, field: keyof ModuloConfig, value: string | number) {
     setForm((f) => ({
       ...f,
-      modulos: f.modulos.map((m, i) => (i === idx ? { ...m, [field]: value } : m)),
+      modulos: f.modulos.map((m, i) => {
+        if (i !== idx) return m;
+        const updated = { ...m, [field]: value };
+        if (field === "valor_unitario" || field === "quantidade") {
+          updated.valor_mensal = (updated.valor_unitario || 0) * (updated.quantidade || 1);
+        }
+        return updated;
+      }),
     }));
   }
 
