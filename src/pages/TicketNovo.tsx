@@ -74,6 +74,84 @@ export default function TicketNovo() {
   const { data: clienteContratos = [] } = useClienteContratos(clienteId);
   const { data: clienteTickets = [] } = useClienteTicketsAbertos(clienteId);
 
+  // Auto-select first active contract when client changes
+  useEffect(() => {
+    if (clienteContratos.length > 0) {
+      const base = clienteContratos.find((c: any) => c.tipo === "Base") || clienteContratos[0];
+      setContratoId((base as any).id);
+    } else {
+      setContratoId(null);
+    }
+  }, [clienteContratos]);
+
+  // Espelho do contrato (dialog)
+  const [espelhoOpen, setEspelhoOpen] = useState(false);
+  const { data: espelhoData } = useQuery({
+    queryKey: ["espelho_contrato", contratoId],
+    enabled: !!contratoId && espelhoOpen,
+    queryFn: async () => {
+      // Buscar pedido do contrato para pegar plano e módulos
+      const { data: contrato } = await supabase
+        .from("contratos")
+        .select("id, numero_exibicao, tipo, plano_id, pedido_id, planos:plano_id(nome)")
+        .eq("id", contratoId!)
+        .single();
+      if (!contrato) return null;
+
+      // Módulos do pedido
+      let modulos: { nome: string; quantidade: number }[] = [];
+      if (contrato.pedido_id) {
+        const { data: pedido } = await supabase
+          .from("pedidos")
+          .select("modulos_adicionais")
+          .eq("id", contrato.pedido_id)
+          .single();
+        if (pedido?.modulos_adicionais && Array.isArray(pedido.modulos_adicionais)) {
+          modulos = (pedido.modulos_adicionais as any[]).map((m: any) => ({
+            nome: m.nome || "Módulo",
+            quantidade: m.quantidade || 1,
+          }));
+        }
+      }
+
+      // Aditivos ativos vinculados
+      const { data: aditivos } = await supabase
+        .from("contratos")
+        .select("id, numero_exibicao, tipo, planos:plano_id(nome), pedido_id")
+        .eq("contrato_origem_id", contratoId!)
+        .eq("status", "Ativo")
+        .order("created_at", { ascending: false });
+
+      // Módulos dos aditivos
+      const aditivosComModulos = await Promise.all(
+        (aditivos || []).map(async (ad: any) => {
+          let mods: { nome: string; quantidade: number }[] = [];
+          if (ad.pedido_id) {
+            const { data: pedAd } = await supabase
+              .from("pedidos")
+              .select("modulos_adicionais")
+              .eq("id", ad.pedido_id)
+              .single();
+            if (pedAd?.modulos_adicionais && Array.isArray(pedAd.modulos_adicionais)) {
+              mods = (pedAd.modulos_adicionais as any[]).map((m: any) => ({
+                nome: m.nome || "Módulo",
+                quantidade: m.quantidade || 1,
+              }));
+            }
+          }
+          return { ...ad, modulos: mods };
+        })
+      );
+
+      return {
+        contrato,
+        planoNome: (contrato.planos as any)?.nome || "—",
+        modulos,
+        aditivos: aditivosComModulos,
+      };
+    },
+  });
+
   // Modelo apply
   useEffect(() => {
     if (!modeloId) return;
