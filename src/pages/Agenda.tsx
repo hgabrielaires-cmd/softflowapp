@@ -305,8 +305,49 @@ export default function Agenda() {
         }
       });
 
+      // Fetch ticket data for ticket-origin agendamentos
+      const ticketIds = [...new Set((rows || []).filter((r: any) => r.origem === "ticket" && r.ticket_id).map((r: any) => r.ticket_id))];
+      let ticketsMap: Record<string, any> = {};
+      if (ticketIds.length > 0) {
+        const { data: ticketsData } = await supabase
+          .from("tickets")
+          .select("id, numero_exibicao, titulo, status, cliente_id, clientes:cliente_id(nome_fantasia, cnpj_cpf)")
+          .in("id", ticketIds);
+        (ticketsData || []).forEach((t: any) => { ticketsMap[t.id] = t; });
+      }
+
       // Enrich
       const enriched = (rows || []).map((ag: any) => {
+        if (ag.origem === "ticket" && ag.ticket_id) {
+          const ticket = ticketsMap[ag.ticket_id];
+          return {
+            ...ag,
+            ag_status: ag.status || 'agendado',
+            ag_iniciado_em: ag.iniciado_em || null,
+            ag_finalizado_em: ag.finalizado_em || null,
+            cliente_nome: ticket?.clientes?.nome_fantasia || "—",
+            cliente_cnpj: ticket?.clientes?.cnpj_cpf || "",
+            contrato_numero: ticket?.numero_exibicao || "—",
+            filial_nome: "—",
+            atividade_nome: "—",
+            mesa_nome: "—",
+            mesa_cor: null,
+            etapa_atual_nome: "Tickets",
+            etapa_atual_cor: "#6366f1",
+            responsavel_nome: "—",
+            tecnicos: [],
+            apontados: [],
+            status_projeto: "ativo",
+            pausado: false,
+            card_iniciado_em: null,
+            sla_horas: 0,
+            tipo_atendimento: null,
+            progresso: null,
+            progresso_etapa: null,
+            atividade_status: null,
+            is_ticket: true,
+          };
+        }
         const card = cardsMap[ag.card_id];
         const cardEtapaId = card?.etapa_id;
         return {
@@ -330,10 +371,11 @@ export default function Agenda() {
           pausado: card?.pausado || false,
           card_iniciado_em: card?.iniciado_em || null,
           sla_horas: card?.sla_horas || 0,
-           tipo_atendimento: card?.tipo_atendimento_local || null,
-           progresso: progressMap[ag.card_id] || null,
+          tipo_atendimento: card?.tipo_atendimento_local || null,
+          progresso: progressMap[ag.card_id] || null,
           progresso_etapa: cardEtapaId ? (progressEtapaMap[`${ag.card_id}__${cardEtapaId}`] || null) : null,
           atividade_status: ag.atividade_id ? (activityStatusMap[`${ag.card_id}__${ag.atividade_id}`] || 'pendente') : null,
+          is_ticket: false,
         };
       });
 
