@@ -44,12 +44,18 @@ export default function ConfigurarFaturamento() {
     const formaPag = espelho.pedido?.pagamento_mensalidade_forma || "Boleto";
 
     // Módulos do pedido
-    const modulos = (espelho.pedido?.modulos_adicionais || []).map((m: any) => ({
-      id: crypto.randomUUID(),
-      nome: m.nome,
-      valor_mensal: m.valor_mensalidade ?? m.valor_mensalidade_modulo ?? 0,
-      data_inicio: format(new Date(), "yyyy-MM-dd"),
-    }));
+    const modulos = (espelho.pedido?.modulos_adicionais || []).map((m: any) => {
+      const valorUnit = m.valor_mensalidade ?? m.valor_mensalidade_modulo ?? 0;
+      const qtd = m.quantidade ?? 1;
+      return {
+        id: crypto.randomUUID(),
+        nome: m.nome,
+        valor_unitario: valorUnit,
+        quantidade: qtd,
+        valor_mensal: valorUnit * qtd,
+        data_inicio: format(new Date(), "yyyy-MM-dd"),
+      };
+    });
 
     setForm((f) => ({
       ...f,

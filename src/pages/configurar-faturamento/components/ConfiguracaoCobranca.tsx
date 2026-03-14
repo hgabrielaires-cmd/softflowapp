@@ -35,7 +35,7 @@ export function ConfiguracaoCobranca({ form, setForm, espelho }: Props) {
       ...f,
       modulos: [
         ...f.modulos,
-        { id: crypto.randomUUID(), nome: "", valor_mensal: 0, data_inicio: format(new Date(), "yyyy-MM-dd") },
+        { id: crypto.randomUUID(), nome: "", valor_unitario: 0, quantidade: 1, valor_mensal: 0, data_inicio: format(new Date(), "yyyy-MM-dd") },
       ],
     }));
   }
