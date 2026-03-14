@@ -6,32 +6,72 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Eye, User, Mail, Phone } from "lucide-react";
-import type { ConfigFaturamentoForm, ContratoEspelho, FaturaPreviewMes } from "../types";
-import { calcularPreviewFaturas, fmtCurrency } from "../helpers";
+import { Eye, User, Mail, Phone, ArrowRight } from "lucide-react";
+import type { ConfigFaturamentoForm, ContratoEspelho, ContratoFinanceiroBase, FaturaPreviewMes } from "../types";
+import { calcularPreviewFaturas, calcularPreviewConsolidado, fmtCurrency } from "../helpers";
 
 interface Props {
   form: ConfigFaturamentoForm;
   setForm: React.Dispatch<React.SetStateAction<ConfigFaturamentoForm>>;
   espelho: ContratoEspelho;
+  contratoFinanceiroBase?: ContratoFinanceiroBase | null;
 }
 
-export function PreviewFaturas({ form, setForm, espelho }: Props) {
+export function PreviewFaturas({ form, setForm, espelho, contratoFinanceiroBase }: Props) {
   const planoNome = espelho.plano?.nome || "Plano";
+  const isSubRegistro = !!espelho.contrato_origem_id && !!contratoFinanceiroBase;
+  const tipoPedido = espelho.pedido?.tipo_pedido || "";
+  const isUpgradeOrDowngrade = tipoPedido === "Upgrade" || tipoPedido === "Downgrade";
 
-  const preview = useMemo(
-    () => calcularPreviewFaturas(form, planoNome),
-    [form, planoNome]
-  );
+  const preview = useMemo(() => {
+    if (isSubRegistro && contratoFinanceiroBase) {
+      return calcularPreviewConsolidado(form, contratoFinanceiroBase, espelho);
+    }
+    return calcularPreviewFaturas(form, planoNome);
+  }, [form, planoNome, isSubRegistro, contratoFinanceiroBase, espelho]);
+
+  // Calcular valor do boleto atual (antes da alteração) para comparação
+  const valorBoletoAtual = useMemo(() => {
+    if (!contratoFinanceiroBase) return 0;
+    return contratoFinanceiroBase.valor_mensalidade
+      + contratoFinanceiroBase.parcelas_pendentes.reduce((s, p) => s + p.valor_por_parcela, 0)
+      + contratoFinanceiroBase.modulos_ativos.reduce((s, m) => s + m.valor_mensal, 0);
+  }, [contratoFinanceiroBase]);
 
   return (
     <div className="space-y-4">
+      {/* Comparação Antes × Depois para sub-registros */}
+      {isSubRegistro && contratoFinanceiroBase && (
+        <Card className="border-primary/20">
+          <CardContent className="pt-4 space-y-2">
+            <div className="flex items-center gap-2 justify-center">
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">Boleto atual</p>
+                <p className="text-base font-bold text-muted-foreground">{fmtCurrency(valorBoletoAtual)}</p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-primary" />
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">Após {tipoPedido.toLowerCase()}</p>
+                <p className="text-base font-bold text-primary">{fmtCurrency(preview[0]?.total || 0)}</p>
+              </div>
+            </div>
+            {preview[0] && preview[0].total !== valorBoletoAtual && (
+              <p className="text-xs text-center text-muted-foreground">
+                Diferença: <span className={preview[0].total > valorBoletoAtual ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}>
+                  {preview[0].total > valorBoletoAtual ? "+" : ""}{fmtCurrency(preview[0].total - valorBoletoAtual)}/mês
+                </span>
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Preview dinâmico */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Eye className="h-4 w-4 text-primary" />
-            Como ficarão as cobranças:
+            {isSubRegistro ? "Próximos boletos (consolidado):" : "Como ficarão as cobranças:"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -39,7 +79,7 @@ export function PreviewFaturas({ form, setForm, espelho }: Props) {
             <MesPreviewCard key={`${mes.mes}-${mes.ano}`} mes={mes} index={i} />
           ))}
 
-          {preview.length > 0 && (
+          {preview.length > 1 && (
             <p className="text-xs text-muted-foreground text-center pt-1">
               {preview[preview.length - 1].total === preview[preview.length - 2]?.total
                 ? `Valor fixo recorrente: ${fmtCurrency(preview[preview.length - 1].total)}/mês`
@@ -126,7 +166,7 @@ function MesPreviewCard({ mes, index }: { mes: FaturaPreviewMes; index: number }
       ))}
       <Separator className="my-1" />
       <div className="flex justify-between text-sm font-bold text-primary">
-        <span>TOTAL</span>
+        <span>TOTAL (1 boleto)</span>
         <span>{fmtCurrency(mes.total)}</span>
       </div>
     </div>
