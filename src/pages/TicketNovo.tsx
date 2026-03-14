@@ -249,11 +249,22 @@ export default function TicketNovo() {
           <div className="flex gap-4 p-4 min-h-full">
             {/* Left 60% */}
             <div className="flex-1 basis-[60%] space-y-4">
-              {/* Row 1 */}
+              {/* Row 1: Nº + Modo */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Nº do Ticket</Label>
                   <Input disabled value="(gerado automaticamente)" className="bg-muted" />
+                </div>
+                <div>
+                  <Label className="text-xs">Modo <span className="text-destructive">*</span></Label>
+                  <Select value={modo} onValueChange={(v) => setModo(v as TicketModo)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {TICKET_MODOS.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
