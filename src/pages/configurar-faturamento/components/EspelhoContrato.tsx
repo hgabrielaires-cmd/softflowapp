@@ -55,10 +55,10 @@ export function EspelhoContrato({ espelho }: Props) {
                 <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                   <Package className="h-3 w-3" /> Produtos/Serviços contratados
                 </span>
-                {espelho.pedido.modulos_adicionais.map((m, i) => (
+                {espelho.pedido.modulos_adicionais.map((m: any, i) => (
                   <div key={i} className="flex justify-between text-xs py-1 px-2 bg-muted/50 rounded">
                     <span>{m.nome}</span>
-                    <span className="font-medium">{fmtCurrency(m.valor_mensalidade)}/mês</span>
+                    <span className="font-medium">{fmtCurrency(m.valor_mensalidade ?? m.valor_mensalidade_modulo)}/mês</span>
                   </div>
                 ))}
               </div>

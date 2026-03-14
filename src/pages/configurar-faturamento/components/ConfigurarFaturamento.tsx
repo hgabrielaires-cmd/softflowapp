@@ -44,10 +44,10 @@ export default function ConfigurarFaturamento() {
     const formaPag = espelho.pedido?.pagamento_mensalidade_forma || "Boleto";
 
     // Módulos do pedido
-    const modulos = (espelho.pedido?.modulos_adicionais || []).map((m) => ({
+    const modulos = (espelho.pedido?.modulos_adicionais || []).map((m: any) => ({
       id: crypto.randomUUID(),
       nome: m.nome,
-      valor_mensal: m.valor_mensalidade,
+      valor_mensal: m.valor_mensalidade ?? m.valor_mensalidade_modulo ?? 0,
       data_inicio: format(new Date(), "yyyy-MM-dd"),
     }));
 
