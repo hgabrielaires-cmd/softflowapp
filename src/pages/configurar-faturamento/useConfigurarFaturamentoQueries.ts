@@ -87,6 +87,7 @@ export function useConfigurarFaturamentoQueries(contratoId: string | undefined) 
         pagamento_implantacao_parcelas: c.pedidos.pagamento_implantacao_parcelas,
         pagamento_implantacao_forma: c.pedidos.pagamento_implantacao_forma,
         pagamento_mensalidade_forma: c.pedidos.pagamento_mensalidade_forma,
+        filial_id: c.pedidos.filial_id || null,
         modulos_adicionais: Array.isArray(c.pedidos.modulos_adicionais)
           ? c.pedidos.modulos_adicionais as ModuloAdicionalPedido[]
           : null,
