@@ -424,7 +424,7 @@ export default function TesteAsaas() {
             <TestSection
               title="4. Teste de PIX"
               icon={<QrCode className="h-4 w-4" />}
-              description="Gera cobrança PIX de R$ 1,00 e busca QR Code"
+              description="Gera cobrança PIX de R$ 5,00 e busca QR Code"
             >
               <Button
                 className="w-full gap-2"
@@ -433,7 +433,7 @@ export default function TesteAsaas() {
                 disabled={creatingPix || !filialId || !customerId}
               >
                 {creatingPix ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
-                Gerar PIX Teste (R$ 1,00)
+                Gerar PIX Teste (R$ 5,00)
               </Button>
               {!customerId && <p className="text-xs text-muted-foreground">⬆️ Crie o cliente teste primeiro</p>}
               {pixResult && !pixResult.error && (
