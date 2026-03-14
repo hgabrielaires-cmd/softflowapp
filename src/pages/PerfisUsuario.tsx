@@ -244,6 +244,7 @@ const ACTION_PERMS: { key: string; label: string; description: string; icon: Rea
   { key: "acao.visualiza_seguidores_projeto", label: "Visualizar Seguidores", description: "Permite visualizar os seguidores de um projeto no painel de atendimento", icon: <Users className="h-4 w-4" /> },
   { key: "acao.regerar_contrato", label: "Regerar Contrato", description: "Permite regerar contratos já enviados para ZapSign", icon: <FileText className="h-4 w-4" /> },
   { key: "acao.ver_historico_clientes", label: "Ver Histórico Contratual", description: "Permite visualizar o histórico contratual no cadastro do cliente", icon: <FileText className="h-4 w-4" /> },
+  { key: "acao.editar_valores_faturamento", label: "Editar Valores no Faturamento", description: "Permite alterar valores de implantação e mensalidade na configuração de faturamento", icon: <DollarSign className="h-4 w-4" /> },
 ];
 
 const ROLES: AppRole[] = ["admin", "gestor", "financeiro", "vendedor", "operacional", "tecnico"];

@@ -21,9 +21,10 @@ interface Props {
   form: ConfigFaturamentoForm;
   setForm: React.Dispatch<React.SetStateAction<ConfigFaturamentoForm>>;
   espelho: ContratoEspelho;
+  canEditValues?: boolean;
 }
 
-export function ConfiguracaoCobranca({ form, setForm, espelho }: Props) {
+export function ConfiguracaoCobranca({ form, setForm, espelho, canEditValues = false }: Props) {
   const isOA = espelho.tipo === "OA";
 
   function updateField<K extends keyof ConfigFaturamentoForm>(key: K, value: ConfigFaturamentoForm[K]) {
@@ -52,8 +53,9 @@ export function ConfiguracaoCobranca({ form, setForm, espelho }: Props) {
                 <Input
                   value={formatCurrencyInput(form.valor_implantacao)}
                   onChange={(e) => handleCurrencyChange("valor_implantacao", e.target.value)}
-                  className="h-9"
+                  className={`h-9 ${!canEditValues ? "bg-muted" : ""}`}
                   placeholder="R$ 0,00"
+                  disabled={!canEditValues}
                 />
               </div>
               <div className="space-y-1">
@@ -102,8 +104,9 @@ export function ConfiguracaoCobranca({ form, setForm, espelho }: Props) {
                 <Input
                   value={formatCurrencyInput(form.valor_mensalidade)}
                   onChange={(e) => handleCurrencyChange("valor_mensalidade", e.target.value)}
-                  className="h-9"
+                  className={`h-9 ${!canEditValues ? "bg-muted" : ""}`}
                   placeholder="R$ 0,00"
+                  disabled={!canEditValues}
                 />
               </div>
               <div className="space-y-1">

@@ -12,6 +12,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { format, parseISO } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 
 import { useConfigurarFaturamentoQueries } from "../useConfigurarFaturamentoQueries";
 import { useConfigurarFaturamentoForm } from "../useConfigurarFaturamentoForm";
@@ -28,9 +30,29 @@ export default function ConfigurarFaturamento() {
   const navigate = useNavigate();
   const { espelho, loading } = useConfigurarFaturamentoQueries(contratoId);
   const { saving, handleSave } = useConfigurarFaturamentoForm();
+  const { roles, isAdmin } = useAuth();
 
   const [form, setForm] = useState<ConfigFaturamentoForm>(defaultConfigForm());
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [canEditValues, setCanEditValues] = useState(false);
+
+  // Check permission to edit billing values
+  useEffect(() => {
+    if (isAdmin) { setCanEditValues(true); return; }
+    if (!roles || roles.length === 0) { setCanEditValues(false); return; }
+
+    async function checkPerm() {
+      const { data } = await supabase
+        .from("role_permissions")
+        .select("permissao")
+        .in("role", roles)
+        .eq("permissao", "acao.editar_valores_faturamento")
+        .eq("ativo", true)
+        .limit(1);
+      setCanEditValues((data || []).length > 0);
+    }
+    checkPerm();
+  }, [roles, isAdmin]);
 
   // Pré-preencher form com dados do contrato
   useEffect(() => {
@@ -123,7 +145,7 @@ export default function ConfigurarFaturamento() {
 
             {/* Coluna Central — Configuração */}
             <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
-              <ConfiguracaoCobranca form={form} setForm={setForm} espelho={espelho} />
+              <ConfiguracaoCobranca form={form} setForm={setForm} espelho={espelho} canEditValues={canEditValues} />
             </div>
 
             {/* Coluna Direita — Preview */}
