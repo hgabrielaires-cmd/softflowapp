@@ -99,16 +99,16 @@ export default function TesteAsaas() {
     if (!filialId) { toast.error("Selecione uma filial"); return; }
     setCreatingCustomer(true);
     setCustomerResult(null);
-    addLog("request", `POST /customers — name: "Cliente Teste Softflow", cpfCnpj: "00000000000"`);
+    addLog("request", `POST /customers — name: "Heitor Aires", cpfCnpj: "24971563792"`);
 
     try {
       const { data, error } = await supabase.functions.invoke("asaas", {
         body: {
           action: "create_customer",
           filialId,
-          name: "Cliente Teste Softflow",
-          cpfCnpj: "00000000000",
-          email: "teste@softflow.com.br",
+          name: "Heitor Aires",
+          cpfCnpj: "24971563792",
+          phone: "4799376637",
         },
       });
       if (error) throw error;
