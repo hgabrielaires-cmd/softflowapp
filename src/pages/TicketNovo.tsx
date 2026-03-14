@@ -186,7 +186,7 @@ export default function TicketNovo() {
       prioridade,
       responsavel_id: responsavelId,
       sla_horas: slaHoras,
-      tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+      tags,
       previsao_entrega: null,
       ticket_pai_id: ticketPaiId,
       seguidores,
