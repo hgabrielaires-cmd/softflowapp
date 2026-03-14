@@ -190,9 +190,7 @@ export default function TicketNovo() {
       ticket_pai_id: ticketPaiId,
       seguidores,
     };
-    await createTicket.mutateAsync({ data, userId });
-    // Small delay to ensure query invalidation propagates before navigation
-    setTimeout(() => navigate("/tickets"), 300);
+    createTicket.mutate({ data, userId });
   };
 
   return (

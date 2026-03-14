@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { TicketFormData, TicketStatus } from "./types";
 
-export function useCreateTicket() {
+export function useCreateTicket(onCreated?: () => void) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ data, userId }: { data: TicketFormData; userId: string }) => {
@@ -46,9 +46,10 @@ export function useCreateTicket() {
 
       return ticket as { id: string; numero_exibicao: string };
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["tickets"] });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["tickets"] });
       toast.success("Ticket criado com sucesso!");
+      onCreated?.();
     },
     onError: (err: Error) => toast.error("Erro ao criar ticket: " + err.message),
   });
