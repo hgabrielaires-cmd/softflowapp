@@ -32,7 +32,6 @@ import {
   Receipt, Plus, Loader2, MoreHorizontal, Pencil, Trash2,
   CheckCircle, XCircle, Filter, FileText, Search,
   DollarSign, AlertTriangle, Clock, Building2, Zap,
-  CheckCircle2, AlertOctagon, SkipForward,
 } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
