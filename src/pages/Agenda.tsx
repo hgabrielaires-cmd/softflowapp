@@ -311,7 +311,7 @@ export default function Agenda() {
       if (ticketIds.length > 0) {
         const { data: ticketsData } = await supabase
           .from("tickets")
-          .select("id, numero_exibicao, titulo, status, cliente_id, responsavel_id, clientes:cliente_id(nome_fantasia, cnpj_cpf), responsavel:responsavel_id(user_id, full_name, avatar_url)")
+          .select("id, numero_exibicao, titulo, status, modo, cliente_id, responsavel_id, clientes:cliente_id(nome_fantasia, cnpj_cpf), responsavel:responsavel_id(user_id, full_name, avatar_url)")
           .in("id", ticketIds);
         (ticketsData || []).forEach((t: any) => { ticketsMap[t.id] = t; });
       }
