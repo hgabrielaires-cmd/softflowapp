@@ -155,6 +155,7 @@ export default function TesteAsaas() {
       if (data?.error) throw new Error(data.error);
 
       setBoletoPaymentId(data.payment?.id || null);
+      setUltimoPaymentId(data.payment?.id || null);
       setBoletoResult(data);
       addLog("response", `✅ Boleto criado — Payment ID: ${data.payment?.id}`);
       if (data.details?.asaas_barcode) {
