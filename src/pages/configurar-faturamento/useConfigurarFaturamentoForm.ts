@@ -4,7 +4,6 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
 import type { ContratoEspelho, ConfigFaturamentoForm } from "./types";
 import { validateConfigForm } from "./helpers";
 
@@ -36,7 +35,7 @@ export function useConfigurarFaturamentoForm() {
           contrato_id: espelho.id,
           contrato_base_id: contratoBaseFinanceiroId,
           cliente_id: espelho.cliente.id,
-          filial_id: null, // será preenchido futuramente
+          filial_id: null,
           plano_id: espelho.plano?.id || null,
           pedido_id: espelho.pedido?.id || null,
           tipo: espelho.pedido?.tipo_pedido
@@ -94,22 +93,21 @@ export function useConfigurarFaturamentoForm() {
 
       let valorTotal = form.valor_mensalidade;
 
-      // Somar parcela de implantação se houver
       if (form.valor_implantacao > 0) {
         valorTotal += Math.round((form.valor_implantacao / form.parcelas_implantacao) * 100) / 100;
       }
 
-      // Somar módulos
       for (const mod of form.modulos) {
         valorTotal += mod.valor_mensal;
       }
 
-      // Somar OA se for no mês de início
       if (form.oa_valor > 0 && form.oa_mes_referencia === form.mes_inicio && form.oa_ano_referencia === form.ano_inicio) {
         valorTotal += form.oa_valor;
       }
 
-      await supabase.from("faturas").insert({
+      const formaPagFatura = form.forma_pagamento === "Ambos" ? "Boleto" : form.forma_pagamento;
+
+      const { data: faturaData, error: faturaErr } = await supabase.from("faturas").insert({
         cliente_id: espelho.cliente.id,
         contrato_id: espelho.id,
         valor: valorTotal,
@@ -117,16 +115,50 @@ export function useConfigurarFaturamentoForm() {
         valor_final: valorTotal,
         data_vencimento: dataVencimento,
         tipo: "Mensalidade",
-        forma_pagamento: form.forma_pagamento === "Ambos" ? "Boleto" : form.forma_pagamento,
+        forma_pagamento: formaPagFatura,
         referencia_mes: form.mes_inicio,
         referencia_ano: form.ano_inicio,
         status: "Pendente",
         observacoes: `Fatura gerada automaticamente — Configuração de faturamento`,
-      });
+      }).select("id").single();
 
-      // PASSO D — Atualizar contrato para status "Faturado"
-      // (O contrato permanece "Assinado" no fluxo ZapSign, 
-      //  mas agora tem contrato financeiro e some da fila)
+      if (faturaErr || !faturaData) {
+        toast.error("Erro ao criar fatura: " + (faturaErr?.message || ""));
+        setSaving(false);
+        return;
+      }
+
+      // PASSO C — Integração Asaas: criar cliente + cobrança
+      try {
+        const billingType = formaPagFatura === "Pix" ? "PIX" : "BOLETO";
+
+        const { data: asaasResult, error: asaasErr } = await supabase.functions.invoke("asaas", {
+          body: {
+            action: "create_customer_and_payment",
+            customerName: espelho.cliente.razao_social || espelho.cliente.nome_fantasia,
+            cpfCnpj: espelho.cliente.cnpj_cpf,
+            email: form.email_cobranca || espelho.cliente.email,
+            phone: form.whatsapp_cobranca || espelho.cliente.telefone,
+            clienteId: espelho.cliente.id,
+            contratoFinanceiroId: cf.id,
+            faturaId: faturaData.id,
+            billingType,
+            value: valorTotal,
+            dueDate: dataVencimento,
+            description: `Softflow — ${espelho.numero_exibicao} — Ref. ${String(form.mes_inicio).padStart(2, "0")}/${form.ano_inicio}`,
+          },
+        });
+
+        if (asaasErr) {
+          console.error("Asaas integration error:", asaasErr);
+          toast.warning("Faturamento criado, mas a cobrança no Asaas falhou. Tente reprocessar manualmente.");
+        } else {
+          console.log("Asaas integration success:", asaasResult);
+        }
+      } catch (asaasError) {
+        console.error("Asaas call failed:", asaasError);
+        toast.warning("Faturamento criado localmente. Cobrança Asaas não foi gerada — verifique a integração.");
+      }
 
       toast.success("Faturamento configurado com sucesso! Primeira fatura gerada.");
       navigate("/faturamento");
