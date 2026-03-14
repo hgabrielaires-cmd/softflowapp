@@ -34,7 +34,7 @@ export default function TicketNovo() {
   const { data: profiles = [] } = useProfiles();
   const { data: tipos = [] } = useHelpdeskTipos();
   const { data: modelos = [] } = useHelpdeskModelos();
-  const createTicket = useCreateTicket();
+  const createTicket = useCreateTicket(() => navigate("/tickets"));
 
   // Form state
   const [titulo, setTitulo] = useState("");
