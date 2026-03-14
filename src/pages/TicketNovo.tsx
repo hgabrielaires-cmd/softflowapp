@@ -81,7 +81,7 @@ export default function TicketNovo() {
   const [selfFollow, setSelfFollow] = useState(true);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
-  const [agendaDatas, setAgendaDatas] = useState<Date[]>([]);
+  const [agendaDatas, setAgendaDatas] = useState<{ date: Date; hora: string }[]>([]);
   const [agendaOpen, setAgendaOpen] = useState(false);
 
   // SLA calculation
