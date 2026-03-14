@@ -118,6 +118,11 @@ export default function Filiais() {
     setCongelarAcao("manter");
     setCongelarEtapaId(null);
     setMargemVendaIdeal(0);
+    setReguaAtiva(true);
+    setDiasLembrete1(5);
+    setDiasLembreteVencimento(true);
+    setDiasAtrasoAlerta(3);
+    setDiasAtrasoSuspensao(5);
   }
 
   function openCreate() {
