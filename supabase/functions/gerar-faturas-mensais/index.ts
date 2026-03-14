@@ -82,6 +82,94 @@ async function ensureAsaasCustomer(
   return created.id;
 }
 
+// ── WhatsApp notification for generated invoices ──────────────────────────
+
+async function sendWhatsAppForFatura(
+  supabase: any,
+  params: {
+    faturaId: string;
+    clienteId: string;
+    nomeFantasia: string;
+    valor: number;
+    dataVencimento: string;
+    billingType: string;
+    asaasUrl: string | null;
+    asaasBarcode: string | null;
+    asaasPix: string | null;
+  }
+) {
+  const { data: whatsConfig } = await supabase
+    .from("integracoes_config")
+    .select("server_url, token, ativo")
+    .eq("nome", "whatsapp")
+    .maybeSingle();
+
+  if (!whatsConfig?.ativo || !whatsConfig?.server_url || !whatsConfig?.token) return;
+
+  // Get decisor contact
+  const { data: decisor } = await supabase
+    .from("cliente_contatos")
+    .select("telefone, nome")
+    .eq("cliente_id", params.clienteId)
+    .eq("decisor", true)
+    .eq("ativo", true)
+    .maybeSingle();
+
+  const { data: cliente } = await supabase
+    .from("clientes")
+    .select("telefone")
+    .eq("id", params.clienteId)
+    .maybeSingle();
+
+  const phone = decisor?.telefone || cliente?.telefone;
+  if (!phone) return;
+
+  const nomeContato = decisor?.nome || params.nomeFantasia;
+  const valorFmt = params.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const dataFmt = new Date(params.dataVencimento + "T12:00:00").toLocaleDateString("pt-BR");
+
+  let text = "";
+  if (params.billingType === "PIX") {
+    text = `Olá ${nomeContato}! 👋\n\nSua fatura está disponível:\n\nEmpresa: ${params.nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*\n\n💠 PIX Copia e Cola:\n${params.asaasPix || "—"}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
+  } else {
+    text = `Olá ${nomeContato}! 👋\n\nA fatura está disponível:\n\nEmpresa: ${params.nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*\n\n🔗 Acesse o boleto: ${params.asaasUrl || "—"}\n\nLinha digitável:\n${params.asaasBarcode || "—"}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
+  }
+
+  let formattedNumber = phone.replace(/\D/g, "");
+  if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
+  if (!formattedNumber.startsWith("55")) formattedNumber = "55" + formattedNumber;
+
+  const baseUrl = whatsConfig.server_url.replace(/\/+$/, "");
+  const headers = { "Content-Type": "application/json", apikey: whatsConfig.token };
+  const instanceName = "Softflow_WhatsApp";
+
+  let res = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ number: formattedNumber, text }),
+  });
+
+  if (!res.ok && formattedNumber.length === 13 && formattedNumber.startsWith("55")) {
+    const withoutNinth = formattedNumber.slice(0, 4) + formattedNumber.slice(5);
+    const res2 = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ number: withoutNinth, text }),
+    });
+    if (res2.ok) res = res2;
+  }
+
+  await supabase.from("notificacoes_cobranca_log").insert({
+    fatura_id: params.faturaId,
+    cliente_id: params.clienteId,
+    tipo_gatilho: "fatura_gerada",
+    canal: "whatsapp",
+    status_envio: res.ok ? "enviado" : "erro",
+  });
+
+  console.log(`WhatsApp fatura ${params.faturaId}: ${res.ok ? "OK" : "FAILED"}`);
+}
+
 interface ProcessResult {
   contrato_financeiro_id: string;
   cliente_nome: string;
