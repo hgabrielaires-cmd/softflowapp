@@ -73,19 +73,22 @@ function FaturamentoContent() {
   const [tab, setTab] = useState("aguardando");
   const { filiaisDoUsuario, filialPadraoId, isGlobal, loading: filiaisLoading } = useUserFiliais();
 
-  // Filtro de filial: se tem favorita usa ela, senão "all" (todas)
-  const [filialFilter, setFilialFilter] = useState<string>("all");
+  // Filtro de filial: favorita se definida, senão "all" (todas do usuário)
+  const [filialFilter, setFilialFilter] = useState<string | null>(null);
 
+  // Inicializa apenas uma vez quando filiais carregam
   useEffect(() => {
-    if (!filiaisLoading) {
+    if (!filiaisLoading && filialFilter === null) {
+      // Se tem filial favorita explicitamente marcada no perfil, usa ela
       if (filialPadraoId && filiaisDoUsuario.some(f => f.id === filialPadraoId)) {
         setFilialFilter(filialPadraoId);
       } else {
         setFilialFilter("all");
       }
     }
-  }, [filiaisLoading, filialPadraoId, filiaisDoUsuario]);
+  }, [filiaisLoading]);
 
+  const effectiveFilter = filialFilter || "all";
   const showFilialFilter = filiaisDoUsuario.length > 1;
 
   return (
