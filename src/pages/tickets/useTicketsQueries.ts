@@ -262,3 +262,24 @@ export function useClienteTicketsAbertos(clienteId: string | null) {
     },
   });
 }
+
+export function useClienteTicketsHistorico(clienteId: string | null, currentTicketId: string | null) {
+  return useQuery({
+    queryKey: ["cliente_tickets_historico", clienteId, currentTicketId],
+    enabled: !!clienteId,
+    queryFn: async () => {
+      let q = supabase
+        .from("tickets")
+        .select("id, numero_exibicao, titulo, status, prioridade, mesa, tags, tipo_atendimento_id, created_at, helpdesk_tipos_atendimento:tipo_atendimento_id(nome)")
+        .eq("cliente_id", clienteId!)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (currentTicketId) {
+        q = q.neq("id", currentTicketId);
+      }
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}

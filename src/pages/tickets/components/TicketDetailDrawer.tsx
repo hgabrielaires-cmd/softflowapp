@@ -20,6 +20,7 @@ import {
   useTicketDetail, useTicketComentarios, useTicketAnexos,
   useTicketVinculos, useTicketSeguidoresByTicket, useProfiles,
   useTicketCurtidas, useClienteContatos, useTicketAgendamentos,
+  useClienteTicketsHistorico,
 } from "../useTicketsQueries";
 import {
   useUpdateTicketStatus, useAddTicketComment, useUpdateTicketResponsavel,
@@ -42,9 +43,10 @@ interface Props {
   ticketId: string | null;
   open: boolean;
   onClose: () => void;
+  onSelectTicket?: (ticketId: string) => void;
 }
 
-export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
+export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: Props) {
   const { user, roles } = useAuth();
   const userId = user?.id || "";
   const { canEditar } = useCrudPermissions("tickets", roles);
@@ -58,6 +60,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
   const { data: profiles = [] } = useProfiles();
   const { data: contatos = [] } = useClienteContatos(ticket?.cliente_id ?? null);
   const { data: agendamentos = [] } = useTicketAgendamentos(ticketId);
+  const { data: historico = [] } = useClienteTicketsHistorico(ticket?.cliente_id ?? null, ticketId);
 
   const updateStatus = useUpdateTicketStatus();
   const addComment = useAddTicketComment();
@@ -154,6 +157,14 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
                     <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[10px]">{comentarios.length}</Badge>
                   )}
                 </TabsTrigger>
+                {ticket.cliente_id && (
+                  <TabsTrigger value="historico" className="flex-1 gap-1.5">
+                    <Clock className="h-3.5 w-3.5" /> Histórico
+                    {historico.length > 0 && (
+                      <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[10px]">{historico.length}</Badge>
+                    )}
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               <TabsContent value="descricao" className="space-y-4 mt-0">
@@ -209,6 +220,49 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
                   }
                 />
               </TabsContent>
+
+              {ticket.cliente_id && (
+                <TabsContent value="historico" className="space-y-2 mt-0">
+                  {historico.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">Nenhum ticket anterior para este cliente.</p>
+                  ) : (
+                    historico.map((h: any) => (
+                      <div
+                        key={h.id}
+                        className="border rounded-lg p-3 hover:bg-accent/50 transition-colors cursor-pointer"
+                        onClick={() => onSelectTicket?.(h.id)}
+                      >
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="font-mono text-xs text-muted-foreground">#{h.numero_exibicao}</span>
+                          <Badge variant="outline" className={cn("text-[10px]", TICKET_STATUS_COLORS[h.status as TicketStatus])}>
+                            {h.status}
+                          </Badge>
+                          <Badge className={cn("text-[10px]", TICKET_PRIORIDADE_COLORS[h.prioridade])}>
+                            {h.prioridade}
+                          </Badge>
+                        </div>
+                        <p className="text-sm font-medium truncate">{h.titulo}</p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <Badge variant="secondary" className="text-[10px]">
+                            <Headphones className="h-2.5 w-2.5 mr-0.5" /> {h.mesa}
+                          </Badge>
+                          {h.helpdesk_tipos_atendimento?.nome && (
+                            <Badge variant="outline" className="text-[10px]">
+                              {(h.helpdesk_tipos_atendimento as any).nome}
+                            </Badge>
+                          )}
+                          {(h.tags as string[] || []).map((tag: string) => (
+                            <Badge key={tag} className="bg-blue-500/10 text-blue-600 border-blue-200 text-[9px]">{tag}</Badge>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {format(new Date(h.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </TabsContent>
+              )}
             </Tabs>
           </ScrollArea>
 
