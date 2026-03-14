@@ -81,14 +81,6 @@ function FaturamentoContent() {
   const navigate = useNavigate();
   const { filiaisDoUsuario, filialPadraoId, isGlobal, loading: filiaisLoading } = useUserFiliais();
 
-  // Filtro de filial: favorita se definida, senão "all" (todas do usuário)
-  const [filialFilter, setFilialFilter] = useState<string | null>(null);
-
-  // Gerar faturas manual
-  const [gerandoFaturas, setGerandoFaturas] = useState(false);
-  const [geracaoResult, setGeracaoResult] = useState<any>(null);
-  const [showGeracaoDialog, setShowGeracaoDialog] = useState(false);
-
   // Inicializa apenas uma vez quando filiais e profile carregam
   useEffect(() => {
     if (!filiaisLoading && profile && filialFilter === null) {
