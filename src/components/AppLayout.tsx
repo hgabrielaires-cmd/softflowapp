@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect, useMemo } from "react";
 import { APP_VERSION, APP_BUILD_DATE } from "@/lib/app-version";
 import { useMenuPermissions } from "@/hooks/useMenuPermissions";
 import iconSoftflow from "@/assets/icon-softflow.png";
-// Logo branca carregada direto do public/ para carregamento instantâneo
+import logoSoftflowBranca from "@/assets/logo-softflow-branca.svg";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -191,13 +191,7 @@ function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSign
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(initialOpen);
 
-  useEffect(() => {
-    const img = new Image();
-    img.src = "/logo-softflow-branca.svg";
-    img.decoding = "async";
-    img.setAttribute("fetchpriority", "high");
-    void img.decode().catch(() => undefined);
-  }, []);
+  
 
   function toggleGroup(label: string) {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
@@ -208,7 +202,7 @@ function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSign
       <div className={cn("flex items-center gap-3 px-4 py-5 border-b border-sidebar-border flex-shrink-0", collapsed && "justify-center px-2")}>
         <button onClick={() => onNavigate("/dashboard")} className="focus:outline-none mx-auto">
           <img
-            src={collapsed ? iconSoftflow : "/logo-softflow-branca.svg"}
+            src={collapsed ? iconSoftflow : logoSoftflowBranca}
             alt="Softflow"
             className={cn(
               collapsed ? "h-10 w-10" : "h-[7.8rem]",
