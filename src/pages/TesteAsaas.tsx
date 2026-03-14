@@ -217,7 +217,7 @@ export default function TesteAsaas() {
 
   // ── SEÇÃO 5: Simular Pagamento ─────────────────────────────────────────
   async function simulatePayment() {
-    const paymentId = boletoPaymentId || pixPaymentId;
+    const paymentId = ultimoPaymentId || pixPaymentId || boletoPaymentId;
     if (!filialId) { toast.error("Selecione uma filial"); return; }
     if (!paymentId) { toast.error("Gere um boleto ou PIX primeiro"); return; }
     setSimulatingPayment(true);
@@ -236,31 +236,42 @@ export default function TesteAsaas() {
       if (data?.error) throw new Error(data.error);
 
       addLog("response", `✅ Pagamento simulado — status: ${data.payment?.status}`);
+      addLog("info", `🔎 Aguardando webhook do payment ${paymentId} (até 30s)...`);
 
-      // Wait a few seconds for webhook
-      addLog("info", "⏳ Aguardando 5 segundos para o webhook ser processado...");
-      await new Promise((r) => setTimeout(r, 5000));
+      let recentEvents: any[] = [];
+      let webhookFound = false;
 
-      // Check webhook events table by event_id pattern (contains payment id)
-      const { data: recentEvents } = await supabase
-        .from("asaas_webhook_events")
-        .select("*")
-        .like("event_id", `%${paymentId}`)
-        .order("processed_at", { ascending: false })
-        .limit(10);
+      for (let tentativa = 1; tentativa <= 10; tentativa++) {
+        await new Promise((r) => setTimeout(r, 3000));
 
-      const webhookFound = (recentEvents?.length ?? 0) > 0;
+        const { data: eventsTry } = await supabase
+          .from("asaas_webhook_events")
+          .select("*")
+          .like("event_id", `%${paymentId}`)
+          .order("processed_at", { ascending: false })
+          .limit(10);
+
+        recentEvents = eventsTry || [];
+        webhookFound = recentEvents.length > 0;
+
+        if (webhookFound) {
+          addLog("info", `✅ Webhook encontrado na tentativa ${tentativa}/10`);
+          break;
+        }
+
+        addLog("info", `⏳ Tentativa ${tentativa}/10: webhook ainda não chegou`);
+      }
 
       setWebhookResult({
         paymentStatus: data.payment?.status,
-        webhookReceived: webhookFound || false,
-        recentEvents: recentEvents?.slice(0, 3) || [],
+        webhookReceived: webhookFound,
+        recentEvents: recentEvents.slice(0, 3),
       });
 
       if (webhookFound) {
         addLog("response", "✅ Webhook recebido e processado!");
       } else {
-        addLog("info", "⚠️ Webhook não encontrado ainda. Pode levar mais alguns segundos no sandbox.");
+        addLog("info", "⚠️ Webhook não encontrado após 30s. Verifique se o webhook do Asaas aponta para /functions/v1/asaas-webhook.");
       }
 
       addLog("info", JSON.stringify(data, null, 2));
