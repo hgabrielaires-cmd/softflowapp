@@ -361,6 +361,46 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // ── Test actions ──────────────────────────────────────────────────
+      case "test_connection": {
+        const data = await asaasFetch(baseUrl, apiKey, "/customers?limit=1", "GET");
+        result = { ok: true, ambiente, totalCount: data?.totalCount ?? 0 };
+        break;
+      }
+
+      case "test_create_payment": {
+        const payment = await createPayment(baseUrl, apiKey, {
+          customer: params.customer,
+          billingType: params.billingType,
+          value: params.value,
+          dueDate: params.dueDate,
+          description: params.description || "Teste Softflow",
+        });
+        const details = await fetchPaymentDetails(baseUrl, apiKey, payment.id, params.billingType);
+        result = { payment, details };
+        break;
+      }
+
+      case "test_receive_in_cash": {
+        const res = await fetch(`${baseUrl}/payments/${params.paymentId}/receiveInCash`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            access_token: apiKey,
+          },
+          body: JSON.stringify({
+            paymentDate: new Date().toISOString().split("T")[0],
+            value: 1.00,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(`Asaas [${res.status}]: ${data?.errors?.[0]?.description || JSON.stringify(data)}`);
+        }
+        result = { payment: data };
+        break;
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: `Ação desconhecida: ${action}` }),
