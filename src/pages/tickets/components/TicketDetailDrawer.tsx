@@ -75,6 +75,8 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   const replyComment = useReplyTicketComment();
   const addAgendamento = useAddTicketAgendamento();
   const removeAgendamento = useRemoveTicketAgendamento();
+  const closeTicket = useCloseTicketWithResolution();
+  const pausarTicket = usePausarTicket();
 
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState("");
@@ -82,6 +84,9 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   const [agendaPopoverOpen, setAgendaPopoverOpen] = useState(false);
   const [novaAgendaData, setNovaAgendaData] = useState<Date | undefined>(undefined);
   const [novaAgendaHora, setNovaAgendaHora] = useState("");
+  const [showPausarDialog, setShowPausarDialog] = useState(false);
+  const [showResolucaoDialog, setShowResolucaoDialog] = useState(false);
+  const [resolucaoText, setResolucaoText] = useState("");
 
   const mentionUsers = profiles.map((p) => ({ id: p.user_id, user_id: p.user_id, full_name: p.full_name }));
 
