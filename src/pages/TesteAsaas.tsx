@@ -146,7 +146,7 @@ export default function TesteAsaas() {
           filialId,
           customer: customerId,
           billingType: "BOLETO",
-          value: 1.00,
+          value: 5.00,
           dueDate: dueDateStr,
           description: "Teste Boleto Softflow",
         },
