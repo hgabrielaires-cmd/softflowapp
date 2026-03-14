@@ -213,9 +213,9 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
               </div>
 
               {/* Seguidores */}
-              <div className="bg-card rounded-xl border p-4 space-y-2">
+              <div className="bg-card rounded-xl border p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold">Seguidores</h4>
+                  <h4 className="text-sm font-semibold">Seguidores ({seguidores.length})</h4>
                   <Select onValueChange={(v) => addSeguidor.mutate({ ticketId: ticket.id, userId: v })}>
                     <SelectTrigger className="h-6 w-6 border-0 p-0">
                       <Plus className="h-3 w-3" />
@@ -224,21 +224,33 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
                       {profiles
                         .filter((p) => !seguidores.some((s) => s.user_id === p.user_id))
                         .map((p) => (
-                          <SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>
+                          <SelectItem key={p.user_id} value={p.user_id}>
+                            <div className="flex items-center gap-2">
+                              <UserAvatar avatarUrl={p.avatar_url} fullName={p.full_name} size="xs" />
+                              {p.full_name}
+                            </div>
+                          </SelectItem>
                         ))}
                     </SelectContent>
                   </Select>
                 </div>
-                {seguidores.map((s) => (
-                  <div key={s.id} className="flex items-center gap-2 text-xs">
-                    <UserAvatar avatarUrl={s.profile?.avatar_url} fullName={s.profile?.full_name} size="xs" />
-                    <span className="flex-1">{s.profile?.full_name}</span>
-                    <Button variant="ghost" size="icon" className="h-5 w-5"
-                      onClick={() => removeSeguidor.mutate({ ticketId: ticket.id, userId: s.user_id })}>
-                      <Trash2 className="h-3 w-3 text-destructive" />
-                    </Button>
+                {seguidores.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {seguidores.map((s) => (
+                      <div key={s.id} className="group relative flex items-center gap-1.5 bg-muted/50 rounded-full pl-1 pr-2 py-1">
+                        <UserAvatar avatarUrl={s.profile?.avatar_url} fullName={s.profile?.full_name} size="xs" />
+                        <span className="text-[11px] font-medium">{s.profile?.full_name}</span>
+                        <button
+                          className="ml-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeSeguidor.mutate({ ticketId: ticket.id, userId: s.user_id })}
+                        >
+                          <X className="h-3 w-3 text-destructive" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+                {seguidores.length === 0 && <p className="text-xs text-muted-foreground">Nenhum seguidor.</p>}
               </div>
 
               {/* Vinculos */}
