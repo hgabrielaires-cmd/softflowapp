@@ -718,6 +718,68 @@ export default function Filiais() {
                     )}
                   </div>
                 </div>
+
+                {/* Régua de Cobrança */}
+                <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground">Régua de Cobrança</h3>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={reguaAtiva} onCheckedChange={setReguaAtiva} />
+                      <span className={`text-xs font-medium ${reguaAtiva ? "text-primary" : "text-muted-foreground"}`}>
+                        {reguaAtiva ? "Ativa" : "Inativa"}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Notificações automáticas de cobrança via WhatsApp. Configure os prazos de envio dos lembretes.
+                  </p>
+                  {reguaAtiva && (
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div className="space-y-1.5">
+                        <Label>Dias antes p/ 1º lembrete</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={diasLembrete1}
+                          onChange={(e) => setDiasLembrete1(Number(e.target.value))}
+                        />
+                        <p className="text-xs text-muted-foreground">Enviar lembrete X dias antes do vencimento.</p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Lembrete no vencimento</Label>
+                        <div className="flex items-center gap-2 pt-1">
+                          <Switch checked={diasLembreteVencimento} onCheckedChange={setDiasLembreteVencimento} />
+                          <span className="text-xs text-muted-foreground">
+                            {diasLembreteVencimento ? "Enviar no dia do vencimento" : "Desativado"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Dias após p/ alerta de inadimplência</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={diasAtrasoAlerta}
+                          onChange={(e) => setDiasAtrasoAlerta(Number(e.target.value))}
+                        />
+                        <p className="text-xs text-muted-foreground">1º alerta de atraso após vencimento.</p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Dias após p/ suspensão automática</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={60}
+                          value={diasAtrasoSuspensao}
+                          onChange={(e) => setDiasAtrasoSuspensao(Number(e.target.value))}
+                        />
+                        <p className="text-xs text-muted-foreground">Alerta final + marca como inadimplente no dia seguinte.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </TabsContent>
             </Tabs>
 
