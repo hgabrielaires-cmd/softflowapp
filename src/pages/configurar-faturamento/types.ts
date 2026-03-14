@@ -32,6 +32,7 @@ export interface ContratoEspelho {
     pagamento_implantacao_parcelas: number | null;
     pagamento_implantacao_forma: string | null;
     pagamento_mensalidade_forma: string | null;
+    filial_id: string | null;
     modulos_adicionais: ModuloAdicionalPedido[] | null;
     servicos_pedido: ServicoPedido[] | null;
   } | null;
