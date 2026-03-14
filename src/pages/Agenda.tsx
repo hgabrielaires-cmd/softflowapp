@@ -892,7 +892,7 @@ export default function Agenda() {
             </p>
             <p className="text-xs text-muted-foreground">
               {ag.is_ticket ? (
-                <><span className="font-medium" style={{ color: "#6366f1" }}>Ticket: {ag.contrato_numero}</span></>
+                <><span className="font-medium" style={{ color: "#6366f1" }}>📋 Ticket: {ag.contrato_numero}</span> {ag.titulo && `· ${ag.titulo}`}</>
               ) : (
                 <>Contrato: {ag.contrato_numero} · <span className="font-medium" style={{ color: ag.mesa_cor || undefined }}>{ag.atividade_nome}</span></>
               )}
