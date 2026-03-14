@@ -261,8 +261,8 @@ export default function TicketNovo() {
                 </div>
                 <div>
                   <Label className="text-xs">Modo <span className="text-destructive">*</span></Label>
-                  <Select value={modo} onValueChange={(v) => setModo(v as TicketModo)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select value={modo || undefined} onValueChange={(v) => setModo(v as TicketModo)}>
+                    <SelectTrigger><SelectValue placeholder="Selecionar modo" /></SelectTrigger>
                     <SelectContent>
                       {TICKET_MODOS.map((m) => (
                         <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
