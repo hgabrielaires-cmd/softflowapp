@@ -577,6 +577,7 @@ export default function Agenda() {
             ag_finalizado_em: ag.finalizado_em || null,
             cliente_nome: ticket?.clientes?.nome_fantasia || "—",
             contrato_numero: ticket?.numero_exibicao || "—",
+            ticket_modo: ticket?.modo || null,
             filial_id: "",
             filial_nome: "—",
             atividade_nome: "—",
