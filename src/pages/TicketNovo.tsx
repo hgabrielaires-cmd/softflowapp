@@ -36,7 +36,7 @@ function TagSuggestions({ input, existingTags, onSelect }: { input: string; exis
   });
 
   const query = input.startsWith("#") ? input.toUpperCase() : `#${input.toUpperCase()}`;
-  const filtered = registeredTags.filter((t) => t.includes(query) && !existingTags.includes(t));
+  const filtered = registeredTags.filter((t) => typeof t === "string" && t.includes(query) && !existingTags.includes(t));
 
   if (filtered.length === 0) return null;
 
