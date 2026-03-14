@@ -84,9 +84,8 @@ export default function Tickets() {
 
   // Group by status
   const columns = useMemo(() => {
-    const map: Record<TicketStatus, Ticket[]> = {
-      "Aberto": [], "Em Andamento": [], "Aguardando Cliente": [], "Resolvido": [], "Fechado": [],
-    };
+    const map: Partial<Record<TicketStatus, Ticket[]>> = {};
+    TICKET_STATUSES.forEach(s => { map[s] = []; });
     filtered.forEach((t) => {
       if (map[t.status as TicketStatus]) map[t.status as TicketStatus].push(t);
     });
