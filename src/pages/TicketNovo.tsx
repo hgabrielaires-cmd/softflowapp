@@ -81,6 +81,8 @@ export default function TicketNovo() {
   const [selfFollow, setSelfFollow] = useState(true);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [agendaDatas, setAgendaDatas] = useState<Date[]>([]);
+  const [agendaOpen, setAgendaOpen] = useState(false);
 
   // SLA calculation
   const tipoSelecionado = tipos.find((t) => t.id === tipoAtendimentoId);
