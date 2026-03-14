@@ -373,3 +373,70 @@ export function useSaveHelpdeskModelo() {
     onError: (err: Error) => toast.error(err.message),
   });
 }
+
+export function useCloseTicketWithResolution() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      ticketId, newStatus, oldStatus, userId, resolucao,
+    }: { ticketId: string; newStatus: string; oldStatus: string; userId: string; resolucao: string }) => {
+      const { error } = await supabase
+        .from("tickets")
+        .update({ status: newStatus })
+        .eq("id", ticketId);
+      if (error) throw error;
+
+      await supabase.from("ticket_comentarios").insert({
+        ticket_id: ticketId,
+        user_id: userId,
+        tipo: "status_change",
+        visibilidade: "publico",
+        conteudo: `Status alterado de "${oldStatus}" para "${newStatus}". Resolução: ${resolucao}`,
+        metadata: { old_status: oldStatus, new_status: newStatus, resolucao },
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+      qc.invalidateQueries({ queryKey: ["ticket_detail"] });
+      qc.invalidateQueries({ queryKey: ["ticket_comentarios"] });
+      toast.success("Ticket atualizado com sucesso!");
+    },
+    onError: (err: Error) => toast.error("Erro: " + err.message),
+  });
+}
+
+export function usePausarTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      ticketId, userId, motivo, tipo,
+    }: { ticketId: string; userId: string; motivo: string; tipo: "aguardando_cliente" | "outro" }) => {
+      const newStatus = tipo === "aguardando_cliente" ? "Aguardando Cliente" : "Em Andamento";
+      const { error } = await supabase
+        .from("tickets")
+        .update({ status: newStatus })
+        .eq("id", ticketId);
+      if (error) throw error;
+
+      const conteudo = tipo === "aguardando_cliente"
+        ? `Ticket pausado — Aguardando Cliente. Motivo: ${motivo}`
+        : `Ticket pausado. Motivo: ${motivo}`;
+
+      await supabase.from("ticket_comentarios").insert({
+        ticket_id: ticketId,
+        user_id: userId,
+        tipo: "status_change",
+        visibilidade: "publico",
+        conteudo,
+        metadata: { action: "pausar", tipo_pausa: tipo, motivo },
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tickets"] });
+      qc.invalidateQueries({ queryKey: ["ticket_detail"] });
+      qc.invalidateQueries({ queryKey: ["ticket_comentarios"] });
+      toast.success("Ticket pausado!");
+    },
+    onError: (err: Error) => toast.error("Erro: " + err.message),
+  });
+}
