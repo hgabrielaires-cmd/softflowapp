@@ -78,6 +78,13 @@ export default function Filiais() {
   const [congelarEtapaId, setCongelarEtapaId] = useState<string | null>(null);
   const [margemVendaIdeal, setMargemVendaIdeal] = useState(0);
 
+  // Régua de cobrança config
+  const [reguaAtiva, setReguaAtiva] = useState(true);
+  const [diasLembrete1, setDiasLembrete1] = useState(5);
+  const [diasLembreteVencimento, setDiasLembreteVencimento] = useState(true);
+  const [diasAtrasoAlerta, setDiasAtrasoAlerta] = useState(3);
+  const [diasAtrasoSuspensao, setDiasAtrasoSuspensao] = useState(5);
+
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
   async function loadFiliais() {
