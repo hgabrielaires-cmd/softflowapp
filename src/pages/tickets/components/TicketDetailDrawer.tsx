@@ -255,12 +255,12 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
                     </Select>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-3 w-3 text-muted-foreground" />
+                    <CalendarIcon className="h-3 w-3 text-muted-foreground" />
                     <span className="text-muted-foreground">Aberto em:</span>
                     <span>{formatDateTime(ticket.created_at)}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-3 w-3 text-muted-foreground" />
+                    <CalendarIcon className="h-3 w-3 text-muted-foreground" />
                     <span className="text-muted-foreground">Atualizado:</span>
                     <span>{formatDateTime(ticket.updated_at)}</span>
                   </div>
