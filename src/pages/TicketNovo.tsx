@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Clock, Trash2, Search, Eye, CalendarDays } from "lucide-react";
+import { isSameDay } from "date-fns";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -81,7 +82,7 @@ export default function TicketNovo() {
   const [selfFollow, setSelfFollow] = useState(true);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
-  const [agendaDatas, setAgendaDatas] = useState<Date[]>([]);
+  const [agendaDatas, setAgendaDatas] = useState<{ date: Date; hora: string }[]>([]);
   const [agendaOpen, setAgendaOpen] = useState(false);
 
   // SLA calculation
@@ -222,8 +223,11 @@ export default function TicketNovo() {
       ticket_pai_id: ticketPaiId,
       seguidores,
     };
-    const agendamentoDatas = agendaDatas.map((d) => format(d, "yyyy-MM-dd"));
-    createTicket.mutate({ data, userId, agendamentoDatas });
+    const agendamentos = agendaDatas.map((item) => ({
+      data: format(item.date, "yyyy-MM-dd"),
+      hora_inicio: item.hora || null,
+    }));
+    createTicket.mutate({ data, userId, agendamentos });
   };
 
   return (
@@ -619,8 +623,14 @@ export default function TicketNovo() {
                       <div className="p-3 space-y-3">
                         <Calendar
                           mode="multiple"
-                          selected={agendaDatas}
-                          onSelect={(dates) => setAgendaDatas(dates || [])}
+                          selected={agendaDatas.map((item) => item.date)}
+                          onSelect={(dates) => {
+                            const newDates = (dates || []).map((d) => {
+                              const existing = agendaDatas.find((item) => isSameDay(item.date, d));
+                              return existing || { date: d, hora: "" };
+                            });
+                            setAgendaDatas(newDates);
+                          }}
                           locale={ptBR}
                           disabled={{ before: new Date() }}
                           className={cn("p-3 pointer-events-auto")}
@@ -634,22 +644,37 @@ export default function TicketNovo() {
 
                   {agendaDatas.length > 0 && (
                     <div className="space-y-1">
-                      {agendaDatas
-                        .sort((a, b) => a.getTime() - b.getTime())
-                        .map((d, i) => (
-                          <div key={i} className="flex items-center justify-between text-xs bg-muted/50 rounded px-2 py-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <CalendarDays className="h-3 w-3 text-primary" />
-                              <span className="font-medium">{format(d, "dd/MM/yyyy (EEEE)", { locale: ptBR })}</span>
+                      {[...agendaDatas]
+                        .sort((a, b) => a.date.getTime() - b.date.getTime())
+                        .map((item, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs bg-muted/50 rounded px-2 py-1.5 gap-2">
+                            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                              <CalendarDays className="h-3 w-3 text-primary shrink-0" />
+                              <span className="font-medium truncate">{format(item.date, "dd/MM/yyyy (EEEE)", { locale: ptBR })}</span>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-5 w-5"
-                              onClick={() => setAgendaDatas(agendaDatas.filter((_, j) => j !== i))}
-                            >
-                              <Trash2 className="h-3 w-3 text-destructive" />
-                            </Button>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <Clock className="h-3 w-3 text-muted-foreground" />
+                              <Input
+                                type="time"
+                                value={item.hora}
+                                onChange={(e) => {
+                                  const updated = agendaDatas.map((d) =>
+                                    isSameDay(d.date, item.date) ? { ...d, hora: e.target.value } : d
+                                  );
+                                  setAgendaDatas(updated);
+                                }}
+                                className="h-6 w-[90px] text-xs px-1.5 py-0"
+                                placeholder="HH:mm"
+                              />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5"
+                                onClick={() => setAgendaDatas(agendaDatas.filter((d) => !isSameDay(d.date, item.date)))}
+                              >
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                              </Button>
+                            </div>
                           </div>
                         ))}
                     </div>

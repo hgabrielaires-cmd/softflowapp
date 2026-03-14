@@ -311,7 +311,7 @@ export default function Agenda() {
       if (ticketIds.length > 0) {
         const { data: ticketsData } = await supabase
           .from("tickets")
-          .select("id, numero_exibicao, titulo, status, cliente_id, clientes:cliente_id(nome_fantasia, cnpj_cpf)")
+          .select("id, numero_exibicao, titulo, status, cliente_id, responsavel_id, clientes:cliente_id(nome_fantasia, cnpj_cpf), responsavel:responsavel_id(user_id, full_name, avatar_url)")
           .in("id", ticketIds);
         (ticketsData || []).forEach((t: any) => { ticketsMap[t.id] = t; });
       }
@@ -336,7 +336,7 @@ export default function Agenda() {
             etapa_atual_cor: "#6366f1",
             responsavel_nome: "—",
             tecnicos: [],
-            apontados: [],
+            apontados: ticket?.responsavel ? [ticket.responsavel] : [],
             status_projeto: "ativo",
             pausado: false,
             card_iniciado_em: null,
@@ -561,7 +561,7 @@ export default function Agenda() {
       if (calTicketIds.length > 0) {
         const { data: ticketsData } = await supabase
           .from("tickets")
-          .select("id, numero_exibicao, titulo, status, cliente_id, clientes:cliente_id(nome_fantasia)")
+          .select("id, numero_exibicao, titulo, status, cliente_id, responsavel_id, clientes:cliente_id(nome_fantasia), responsavel:responsavel_id(user_id, full_name, avatar_url)")
           .in("id", calTicketIds);
         (ticketsData || []).forEach((t: any) => { calTicketsMap[t.id] = t; });
       }
@@ -584,7 +584,7 @@ export default function Agenda() {
             etapa_atual_nome: "Tickets",
             etapa_atual_cor: "#6366f1",
             tecnicos: [],
-            apontados: [],
+            apontados: ticket?.responsavel ? [ticket.responsavel] : [],
             tipo_atendimento: null,
             status_projeto: "ativo",
             pausado: false,
@@ -892,7 +892,7 @@ export default function Agenda() {
             </p>
             <p className="text-xs text-muted-foreground">
               {ag.is_ticket ? (
-                <><span className="font-medium" style={{ color: "#6366f1" }}>Ticket: {ag.contrato_numero}</span></>
+                <><span className="font-medium" style={{ color: "#6366f1" }}>📋 Ticket: {ag.contrato_numero}</span> {ag.titulo && `· ${ag.titulo}`}</>
               ) : (
                 <>Contrato: {ag.contrato_numero} · <span className="font-medium" style={{ color: ag.mesa_cor || undefined }}>{ag.atividade_nome}</span></>
               )}
@@ -997,7 +997,7 @@ export default function Agenda() {
             </Badge>
             {ag.is_ticket ? (
               <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => navigate(`/tickets?ticket=${ag.ticket_id}`)}>
-                <ExternalLink className="h-3 w-3" /> Abrir Ticket
+                <ExternalLink className="h-3 w-3" /> Exibir Ticket
               </Button>
             ) : (
               <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => navigate(`/fila-agendamento?card=${ag.card_id}&from=agenda`)}>
