@@ -667,7 +667,7 @@ export default function Agenda() {
   }, [calAgendamentos, selectedDate]);
 
   // Fetch OTHER scheduled dates for cards visible on the selected day
-  const cardIdsDoDia = useMemo(() => [...new Set(agendamentosDoDia.map((ag: any) => ag.card_id))], [agendamentosDoDia]);
+  const cardIdsDoDia = useMemo(() => [...new Set(agendamentosDoDia.map((ag: any) => ag.card_id).filter(Boolean))], [agendamentosDoDia]);
 
   const { data: outrasDatasMap = {} } = useQuery({
     queryKey: ["agenda-outras-datas", cardIdsDoDia, format(selectedDate, "yyyy-MM-dd")],
