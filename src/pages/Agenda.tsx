@@ -311,9 +311,18 @@ export default function Agenda() {
       if (ticketIds.length > 0) {
         const { data: ticketsData } = await supabase
           .from("tickets")
-          .select("id, numero_exibicao, titulo, status, modo, cliente_id, responsavel_id, clientes:cliente_id(nome_fantasia, cnpj_cpf), responsavel:responsavel_id(user_id, full_name, avatar_url)")
+          .select("id, numero_exibicao, titulo, status, modo, cliente_id, responsavel_id, clientes:cliente_id(nome_fantasia, cnpj_cpf)")
           .in("id", ticketIds);
-        (ticketsData || []).forEach((t: any) => { ticketsMap[t.id] = t; });
+        // Fetch responsible profiles separately
+        const respIds = [...new Set((ticketsData || []).map((t: any) => t.responsavel_id).filter(Boolean))];
+        let respMap: Record<string, any> = {};
+        if (respIds.length > 0) {
+          const { data: respData } = await supabase.from("profiles").select("user_id, full_name, avatar_url").in("user_id", respIds);
+          (respData || []).forEach((p: any) => { respMap[p.user_id] = p; });
+        }
+        (ticketsData || []).forEach((t: any) => {
+          ticketsMap[t.id] = { ...t, responsavel_profile: t.responsavel_id ? respMap[t.responsavel_id] || null : null };
+        });
       }
 
       // Enrich
@@ -337,7 +346,7 @@ export default function Agenda() {
             etapa_atual_cor: "#6366f1",
             responsavel_nome: "—",
             tecnicos: [],
-            apontados: ticket?.responsavel ? [ticket.responsavel] : [],
+            apontados: ticket?.responsavel_profile ? [ticket.responsavel_profile] : [],
             status_projeto: "ativo",
             pausado: false,
             card_iniciado_em: null,
@@ -562,9 +571,17 @@ export default function Agenda() {
       if (calTicketIds.length > 0) {
         const { data: ticketsData } = await supabase
           .from("tickets")
-          .select("id, numero_exibicao, titulo, status, modo, cliente_id, responsavel_id, clientes:cliente_id(nome_fantasia), responsavel:responsavel_id(user_id, full_name, avatar_url)")
+          .select("id, numero_exibicao, titulo, status, modo, cliente_id, responsavel_id, clientes:cliente_id(nome_fantasia)")
           .in("id", calTicketIds);
-        (ticketsData || []).forEach((t: any) => { calTicketsMap[t.id] = t; });
+        const calRespIds = [...new Set((ticketsData || []).map((t: any) => t.responsavel_id).filter(Boolean))];
+        let calRespMap: Record<string, any> = {};
+        if (calRespIds.length > 0) {
+          const { data: respData } = await supabase.from("profiles").select("user_id, full_name, avatar_url").in("user_id", calRespIds);
+          (respData || []).forEach((p: any) => { calRespMap[p.user_id] = p; });
+        }
+        (ticketsData || []).forEach((t: any) => {
+          calTicketsMap[t.id] = { ...t, responsavel_profile: t.responsavel_id ? calRespMap[t.responsavel_id] || null : null };
+        });
       }
 
       return (rows || []).map((ag: any) => {
@@ -586,7 +603,7 @@ export default function Agenda() {
             etapa_atual_nome: "Tickets",
             etapa_atual_cor: "#6366f1",
             tecnicos: [],
-            apontados: ticket?.responsavel ? [ticket.responsavel] : [],
+            apontados: ticket?.responsavel_profile ? [ticket.responsavel_profile] : [],
             tipo_atendimento: null,
             status_projeto: "ativo",
             pausado: false,
