@@ -282,7 +282,9 @@ Deno.serve(async (req) => {
     }
 
     // Get Asaas config for this branch
-    const { apiKey, baseUrl } = await getAsaasConfig(supabaseAdmin, filialId);
+    const asaasConf = await getAsaasConfig(supabaseAdmin, filialId);
+    const { apiKey, baseUrl } = asaasConf;
+    const ambiente = baseUrl.includes("sandbox") ? "sandbox" : "production";
 
     let result: unknown;
 
