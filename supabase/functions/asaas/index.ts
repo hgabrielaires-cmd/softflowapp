@@ -1,6 +1,7 @@
 // ─── Edge Function: Asaas Integration (Multi-filial) ──────────────────────
 // Reads Asaas API key per branch from asaas_config table
 // Handles: create customer, create charge (boleto/pix)
+// After payment: sends WhatsApp notification via Evolution API
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -57,6 +58,122 @@ async function asaasFetch(baseUrl: string, apiKey: string, path: string, method:
     );
   }
   return data;
+}
+
+// ── WhatsApp Notification ─────────────────────────────────────────────────
+
+async function sendWhatsAppFaturaNotification(
+  supabaseAdmin: any,
+  params: {
+    faturaId: string;
+    clienteId: string;
+    nomeDecisor: string;
+    nomeFantasia: string;
+    valor: number;
+    dataVencimento: string;
+    billingType: string;
+    asaasUrl: string | null;
+    asaasBarcode: string | null;
+    asaasPix: string | null;
+  }
+) {
+  try {
+    // Get WhatsApp config
+    const { data: whatsConfig } = await supabaseAdmin
+      .from("integracoes_config")
+      .select("server_url, token, ativo")
+      .eq("nome", "whatsapp")
+      .maybeSingle();
+
+    if (!whatsConfig?.ativo || !whatsConfig?.server_url || !whatsConfig?.token) {
+      console.log("WhatsApp integration not active, skipping notification");
+      return;
+    }
+
+    // Get client phone for billing
+    const { data: cliente } = await supabaseAdmin
+      .from("clientes")
+      .select("telefone")
+      .eq("id", params.clienteId)
+      .maybeSingle();
+
+    // Try to get decisor contact phone
+    const { data: decisor } = await supabaseAdmin
+      .from("cliente_contatos")
+      .select("telefone, nome")
+      .eq("cliente_id", params.clienteId)
+      .eq("decisor", true)
+      .eq("ativo", true)
+      .maybeSingle();
+
+    const phone = decisor?.telefone || cliente?.telefone;
+    if (!phone) {
+      console.log("No phone number found for client, skipping WhatsApp");
+      return;
+    }
+
+    const valorFmt = params.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const nomeContato = decisor?.nome || params.nomeDecisor || params.nomeFantasia;
+
+    let text = "";
+    if (params.billingType === "PIX") {
+      text = `Olá ${nomeContato}! 👋\n\nSua fatura está disponível:\n\nEmpresa: ${params.nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${params.dataVencimento}*\n\n💠 PIX Copia e Cola:\n${params.asaasPix || "—"}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
+    } else {
+      text = `Olá ${nomeContato}! 👋\n\nA fatura está disponível:\n\nEmpresa: ${params.nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${params.dataVencimento}*\n\n🔗 Acesse o boleto: ${params.asaasUrl || "—"}\n\nLinha digitável:\n${params.asaasBarcode || "—"}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
+    }
+
+    // Send via Evolution API edge function
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // Call evolution-api directly (same Supabase instance)
+    let formattedNumber = phone.replace(/\D/g, "");
+    if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
+    if (!formattedNumber.startsWith("55")) formattedNumber = "55" + formattedNumber;
+
+    const baseUrl = whatsConfig.server_url.replace(/\/+$/, "");
+    const headers = {
+      "Content-Type": "application/json",
+      apikey: whatsConfig.token,
+    };
+
+    // Resolve instance name from config or default
+    const instanceName = "Softflow_WhatsApp";
+
+    const sendRes = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ number: formattedNumber, text }),
+    });
+
+    const sendResult = await sendRes.json();
+
+    // Retry without 9th digit for BR numbers
+    if (!sendRes.ok && formattedNumber.length === 13 && formattedNumber.startsWith("55")) {
+      const withoutNinth = formattedNumber.slice(0, 4) + formattedNumber.slice(5);
+      const res2 = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ number: withoutNinth, text }),
+      });
+      if (!res2.ok) {
+        console.warn("WhatsApp send failed (both attempts):", JSON.stringify(sendResult));
+      }
+    }
+
+    // Log the notification
+    await supabaseAdmin.from("notificacoes_cobranca_log").insert({
+      fatura_id: params.faturaId,
+      cliente_id: params.clienteId,
+      tipo_gatilho: "fatura_gerada",
+      canal: "whatsapp",
+      status_envio: sendRes.ok ? "enviado" : "erro",
+    });
+
+    console.log(`WhatsApp notification sent for fatura ${params.faturaId}: ${sendRes.ok ? "OK" : "FAILED"}`);
+  } catch (err) {
+    console.warn("WhatsApp notification error (non-blocking):", err instanceof Error ? err.message : err);
+  }
 }
 
 // ── Handlers ──────────────────────────────────────────────────────────────
@@ -218,6 +335,24 @@ Deno.serve(async (req) => {
               ...paymentDetails,
             })
             .eq("id", params.faturaId);
+
+          // Send WhatsApp notification after successful payment creation
+          const dataVenc = params.dueDate
+            ? new Date(params.dueDate + "T12:00:00").toLocaleDateString("pt-BR")
+            : "—";
+
+          await sendWhatsAppFaturaNotification(supabaseAdmin, {
+            faturaId: params.faturaId,
+            clienteId: params.clienteId,
+            nomeDecisor: params.customerName || "",
+            nomeFantasia: params.customerName || "",
+            valor: params.value,
+            dataVencimento: dataVenc,
+            billingType: billingType,
+            asaasUrl: payment.invoiceUrl || payment.bankSlipUrl || null,
+            asaasBarcode: paymentDetails.asaas_barcode || null,
+            asaasPix: paymentDetails.asaas_pix_qrcode || null,
+          });
         }
 
         result = { customer, payment };
