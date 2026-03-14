@@ -2059,7 +2059,7 @@ export type Database = {
       painel_agendamentos: {
         Row: {
           atividade_id: string | null
-          card_id: string
+          card_id: string | null
           checklist_index: number
           cor_evento: string | null
           created_at: string
@@ -2077,12 +2077,14 @@ export type Database = {
           iniciado_por: string | null
           mesa_id: string | null
           observacao: string | null
+          origem: string
           status: string
+          ticket_id: string | null
           titulo: string | null
         }
         Insert: {
           atividade_id?: string | null
-          card_id: string
+          card_id?: string | null
           checklist_index: number
           cor_evento?: string | null
           created_at?: string
@@ -2100,12 +2102,14 @@ export type Database = {
           iniciado_por?: string | null
           mesa_id?: string | null
           observacao?: string | null
+          origem?: string
           status?: string
+          ticket_id?: string | null
           titulo?: string | null
         }
         Update: {
           atividade_id?: string | null
-          card_id?: string
+          card_id?: string | null
           checklist_index?: number
           cor_evento?: string | null
           created_at?: string
@@ -2123,7 +2127,9 @@ export type Database = {
           iniciado_por?: string | null
           mesa_id?: string | null
           observacao?: string | null
+          origem?: string
           status?: string
+          ticket_id?: string | null
           titulo?: string | null
         }
         Relationships: [
@@ -2167,6 +2173,13 @@ export type Database = {
             columns: ["mesa_id"]
             isOneToOne: false
             referencedRelation: "mesas_atendimento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "painel_agendamentos_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
             referencedColumns: ["id"]
           },
         ]
