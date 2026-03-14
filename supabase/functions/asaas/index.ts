@@ -401,7 +401,28 @@ Deno.serve(async (req) => {
         break;
       }
 
-      default:
+      case "test_check_webhook": {
+        if (!params.paymentId) {
+          throw new Error("paymentId é obrigatório");
+        }
+
+        const { data: events, error: eventsError } = await supabaseAdmin
+          .from("asaas_webhook_events")
+          .select("id, event_id, event_type, processed_at")
+          .like("event_id", `%${params.paymentId}`)
+          .order("processed_at", { ascending: false })
+          .limit(10);
+
+        if (eventsError) {
+          throw new Error(eventsError.message);
+        }
+
+        result = {
+          webhookReceived: (events?.length ?? 0) > 0,
+          events: events ?? [],
+        };
+        break;
+      }
         return new Response(
           JSON.stringify({ error: `Ação desconhecida: ${action}` }),
           {
