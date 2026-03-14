@@ -106,6 +106,7 @@ export default function TicketNovo() {
 
   const { data: clienteContratos = [] } = useClienteContratos(clienteId);
   const { data: clienteTickets = [] } = useClienteTicketsAbertos(clienteId);
+  const { data: clienteTicketsFechados = [] } = useClienteTicketsFechados(clienteId);
 
   // Auto-select active contract considering upgrades
   useEffect(() => {
