@@ -172,7 +172,7 @@ export default function Agenda() {
       if (error) throw error;
 
       // Step 3: enrich with card data
-      const cardIds = [...new Set((rows || []).map((r: any) => r.card_id))];
+      const cardIds = [...new Set((rows || []).map((r: any) => r.card_id).filter(Boolean))];
       let cards: any[] = [];
       if (cardIds.length > 0) {
         const { data: cardsData } = await supabase
