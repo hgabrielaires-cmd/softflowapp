@@ -17,7 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCreateTicket } from "./tickets/useTicketsForm";
 import {
   useProfiles, useHelpdeskTipos, useHelpdeskModelos,
-  useClienteTicketsAbertos, useClienteContratos,
+  useClienteTicketsAbertos, useClienteContratos, useClienteTicketsFechados,
 } from "./tickets/useTicketsQueries";
 import { TICKET_PRIORIDADES, TICKET_MESAS, TICKET_PRIORIDADE_COLORS, TICKET_PRIORIDADE_SLA } from "./tickets/constants";
 import { TICKET_STATUS_COLORS } from "./tickets/constants";
