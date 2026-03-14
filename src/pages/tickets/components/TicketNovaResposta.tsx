@@ -1,23 +1,36 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Send, Lock } from "lucide-react";
+import { MentionInput } from "@/components/MentionInput";
 
-interface Props {
-  onSubmit: (conteudo: string, visibilidade: "publico" | "interno") => void;
-  isLoading?: boolean;
+interface MentionUser {
+  id: string;
+  user_id: string;
+  full_name: string;
 }
 
-export function TicketNovaResposta({ onSubmit, isLoading }: Props) {
+interface Props {
+  onSubmit: (conteudo: string, visibilidade: "publico" | "interno", mentionedUserIds: string[]) => void;
+  isLoading?: boolean;
+  users: MentionUser[];
+}
+
+export function TicketNovaResposta({ onSubmit, isLoading, users }: Props) {
   const [text, setText] = useState("");
   const [interno, setInterno] = useState(false);
+  const [mentionedIds, setMentionedIds] = useState<string[]>([]);
+
+  const handleMentionsChange = useCallback((ids: string[]) => {
+    setMentionedIds(ids);
+  }, []);
 
   const handleSubmit = () => {
     if (!text.trim()) return;
-    onSubmit(text.trim(), interno ? "interno" : "publico");
+    onSubmit(text.trim(), interno ? "interno" : "publico", mentionedIds);
     setText("");
+    setMentionedIds([]);
   };
 
   return (
@@ -30,11 +43,13 @@ export function TicketNovaResposta({ onSubmit, isLoading }: Props) {
           <Switch checked={interno} onCheckedChange={setInterno} />
         </div>
       </div>
-      <Textarea
+      <MentionInput
         value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Digite sua resposta..."
+        onChange={setText}
+        users={users}
+        placeholder="Digite sua resposta... Use @nome para mencionar"
         className="min-h-[80px]"
+        onMentionsChange={handleMentionsChange}
       />
       <div className="flex justify-end">
         <Button size="sm" onClick={handleSubmit} disabled={!text.trim() || isLoading}>
