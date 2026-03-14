@@ -9,10 +9,11 @@ import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { Ticket as TicketIcon, Plus, FilterX, RefreshCw } from "lucide-react";
 import { TicketKanbanColumn } from "./tickets/components/TicketKanbanColumn";
 import { TicketDetailDrawer } from "./tickets/components/TicketDetailDrawer";
+import { ResolucaoDialog } from "./tickets/components/ResolucaoDialog";
 import {
   useTickets, useTicketSeguidores, useTicketAnexosCount, useProfiles,
 } from "./tickets/useTicketsQueries";
-import { useUpdateTicketStatus } from "./tickets/useTicketsForm";
+import { useUpdateTicketStatus, useCloseTicketWithResolution } from "./tickets/useTicketsForm";
 import { useAuth } from "@/context/AuthContext";
 import {
   TICKET_STATUSES, TICKET_PRIORIDADES, TICKET_MESAS,
@@ -34,6 +35,10 @@ export default function Tickets() {
   // Detail drawer
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
+  // Resolution popup for drag
+  const [dragResolucao, setDragResolucao] = useState("");
+  const [dragPending, setDragPending] = useState<{ ticketId: string; newStatus: TicketStatus; oldStatus: string } | null>(null);
+
   // Open ticket from URL query param
   useEffect(() => {
     const ticketFromUrl = searchParams.get("ticket");
@@ -51,6 +56,7 @@ export default function Tickets() {
   const { data: seguidoresRaw = [] } = useTicketSeguidores(ticketIds);
   const { data: anexosMap = {} } = useTicketAnexosCount(ticketIds);
   const updateStatus = useUpdateTicketStatus();
+  const closeWithResolution = useCloseTicketWithResolution();
 
   // Group seguidores by ticket
   const seguidoresMap = useMemo(() => {
@@ -94,7 +100,28 @@ export default function Tickets() {
     const ticketId = result.draggableId;
     const ticket = tickets.find((t) => t.id === ticketId);
     if (!ticket || ticket.status === newStatus) return;
+
+    // If dragging to Resolvido or Fechado, show resolution popup
+    if (newStatus === "Resolvido" || newStatus === "Fechado") {
+      setDragPending({ ticketId, newStatus, oldStatus: ticket.status });
+      setDragResolucao("");
+      return;
+    }
+
     updateStatus.mutate({ ticketId, newStatus, oldStatus: ticket.status, userId });
+  };
+
+  const handleDragResolucaoConfirm = () => {
+    if (!dragPending) return;
+    closeWithResolution.mutate({
+      ticketId: dragPending.ticketId,
+      newStatus: dragPending.newStatus,
+      oldStatus: dragPending.oldStatus,
+      userId,
+      resolucao: dragResolucao,
+    });
+    setDragPending(null);
+    setDragResolucao("");
   };
 
   const clearFilters = () => {
@@ -193,6 +220,17 @@ export default function Tickets() {
           open={!!selectedTicketId}
           onClose={() => setSelectedTicketId(null)}
           onSelectTicket={(id) => setSelectedTicketId(id)}
+        />
+
+        {/* Resolution popup for drag to Resolvido/Fechado */}
+        <ResolucaoDialog
+          open={!!dragPending}
+          onOpenChange={(v) => { if (!v) setDragPending(null); }}
+          resolucao={dragResolucao}
+          setResolucao={setDragResolucao}
+          loading={closeWithResolution.isPending}
+          onConfirm={handleDragResolucaoConfirm}
+          titulo={dragPending ? `Mover para ${dragPending.newStatus}` : "Fechar Ticket"}
         />
       </div>
     </AppLayout>

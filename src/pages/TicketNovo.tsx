@@ -17,7 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCreateTicket } from "./tickets/useTicketsForm";
 import {
   useProfiles, useHelpdeskTipos, useHelpdeskModelos,
-  useClienteTicketsAbertos, useClienteContratos,
+  useClienteTicketsAbertos, useClienteContratos, useClienteTicketsFechados,
 } from "./tickets/useTicketsQueries";
 import { TICKET_PRIORIDADES, TICKET_MESAS, TICKET_PRIORIDADE_COLORS, TICKET_PRIORIDADE_SLA } from "./tickets/constants";
 import { TICKET_STATUS_COLORS } from "./tickets/constants";
@@ -106,6 +106,7 @@ export default function TicketNovo() {
 
   const { data: clienteContratos = [] } = useClienteContratos(clienteId);
   const { data: clienteTickets = [] } = useClienteTicketsAbertos(clienteId);
+  const { data: clienteTicketsFechados = [] } = useClienteTicketsFechados(clienteId);
 
   // Auto-select active contract considering upgrades
   useEffect(() => {
@@ -369,7 +370,7 @@ export default function TicketNovo() {
                 </Dialog>
               </div>
 
-              {/* Client tickets (expandable) */}
+              {/* Client tickets in progress */}
               {clienteId && clienteTickets.length > 0 && (
                 <div className="bg-muted/30 rounded-lg p-3 space-y-1">
                   <p className="text-xs font-semibold text-muted-foreground">Tickets em aberto deste cliente</p>
@@ -377,6 +378,27 @@ export default function TicketNovo() {
                     <div key={t.id} className="flex items-center gap-2 text-xs">
                       <span className="font-mono text-muted-foreground">#{t.numero_exibicao}</span>
                       <span className="truncate flex-1">{t.titulo}</span>
+                      <Badge className={cn("text-[9px]", TICKET_STATUS_COLORS[t.status as TicketStatus])}>{t.status}</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Client closed tickets history */}
+              {clienteId && clienteTicketsFechados.length > 0 && (
+                <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3 space-y-1">
+                  <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Histórico — Tickets fechados deste cliente</p>
+                  {clienteTicketsFechados.map((t: any) => (
+                    <div key={t.id} className="flex items-center gap-2 text-xs">
+                      <span className="font-mono text-muted-foreground">#{t.numero_exibicao}</span>
+                      <span className="truncate flex-1">{t.titulo}</span>
+                      <Badge variant="secondary" className="text-[9px]">{t.mesa}</Badge>
+                      {t.helpdesk_tipos_atendimento?.nome && (
+                        <Badge variant="outline" className="text-[9px]">{(t.helpdesk_tipos_atendimento as any).nome}</Badge>
+                      )}
+                      {(t.tags as string[] || []).slice(0, 2).map((tag: string) => (
+                        <Badge key={tag} className="bg-blue-500/10 text-blue-600 border-blue-200 text-[9px]">{tag}</Badge>
+                      ))}
                       <Badge className={cn("text-[9px]", TICKET_STATUS_COLORS[t.status as TicketStatus])}>{t.status}</Badge>
                     </div>
                   ))}

@@ -15,6 +15,8 @@ import { formatDateTime } from "../helpers";
 import { TicketSlaCard } from "./TicketSlaCard";
 import { TicketTimeline } from "./TicketTimeline";
 import { TicketNovaResposta } from "./TicketNovaResposta";
+import { ResolucaoDialog } from "./ResolucaoDialog";
+import { PausarTicketDialog } from "./PausarTicketDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import {
   useTicketDetail, useTicketComentarios, useTicketAnexos,
@@ -26,6 +28,7 @@ import {
   useUpdateTicketStatus, useAddTicketComment, useUpdateTicketResponsavel,
   useAddTicketSeguidor, useRemoveTicketSeguidor, useToggleTicketCurtida,
   useReplyTicketComment, useAddTicketAgendamento, useRemoveTicketAgendamento,
+  useCloseTicketWithResolution, usePausarTicket,
 } from "../useTicketsForm";
 import { useAuth } from "@/context/AuthContext";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
@@ -34,6 +37,7 @@ import {
   Maximize2, X, Building2, FileText, Headphones, Calendar as CalendarIcon,
   User, Plus, Link2, Paperclip, Download, Edit2, MessageSquare,
   ChevronDown, Phone, Mail, Star, CalendarDays, Clock, Trash2,
+  Play, PauseCircle, CheckCircle,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { format, isSameDay } from "date-fns";
@@ -71,6 +75,8 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   const replyComment = useReplyTicketComment();
   const addAgendamento = useAddTicketAgendamento();
   const removeAgendamento = useRemoveTicketAgendamento();
+  const closeTicket = useCloseTicketWithResolution();
+  const pausarTicket = usePausarTicket();
 
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState("");
@@ -78,6 +84,9 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   const [agendaPopoverOpen, setAgendaPopoverOpen] = useState(false);
   const [novaAgendaData, setNovaAgendaData] = useState<Date | undefined>(undefined);
   const [novaAgendaHora, setNovaAgendaHora] = useState("");
+  const [showPausarDialog, setShowPausarDialog] = useState(false);
+  const [showResolucaoDialog, setShowResolucaoDialog] = useState(false);
+  const [resolucaoText, setResolucaoText] = useState("");
 
   const mentionUsers = profiles.map((p) => ({ id: p.user_id, user_id: p.user_id, full_name: p.full_name }));
 
@@ -105,6 +114,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   };
 
   return (
+    <>
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent
         side="right"
@@ -141,6 +151,50 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
             </div>
           </div>
         </SheetHeader>
+
+        {/* Action Buttons */}
+        {canEditar && (
+          <div className="px-4 py-2 border-b shrink-0 flex items-center gap-2 flex-wrap">
+            {ticket.status === "Aberto" && (
+              <Button
+                size="sm"
+                className="h-7 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={() => updateStatus.mutate({ ticketId: ticket.id, newStatus: "Em Andamento", oldStatus: ticket.status, userId })}
+              >
+                <Play className="h-3 w-3" /> Iniciar Atendimento
+              </Button>
+            )}
+            {(ticket.status === "Aberto" || ticket.status === "Em Andamento") && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-50"
+                onClick={() => setShowPausarDialog(true)}
+              >
+                <PauseCircle className="h-3 w-3" /> Pausar
+              </Button>
+            )}
+            {ticket.status !== "Resolvido" && ticket.status !== "Fechado" && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                onClick={() => { setResolucaoText(""); setShowResolucaoDialog(true); }}
+              >
+                <CheckCircle className="h-3 w-3" /> Fechar Ticket
+              </Button>
+            )}
+            {ticket.status === "Aguardando Cliente" && (
+              <Button
+                size="sm"
+                className="h-7 text-xs gap-1 bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => updateStatus.mutate({ ticketId: ticket.id, newStatus: "Em Andamento", oldStatus: ticket.status, userId })}
+              >
+                <Play className="h-3 w-3" /> Retomar Atendimento
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Body: two columns */}
         <div className="flex flex-1 overflow-hidden">
@@ -532,5 +586,36 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
         </div>
       </SheetContent>
     </Sheet>
+
+    {/* Pausar Dialog */}
+    <PausarTicketDialog
+      open={showPausarDialog}
+      onOpenChange={setShowPausarDialog}
+      loading={pausarTicket.isPending}
+      onConfirm={(motivo, tipo) => {
+        pausarTicket.mutate({ ticketId: ticket.id, userId, motivo, tipo });
+      }}
+    />
+
+    {/* Resolução Dialog */}
+    <ResolucaoDialog
+      open={showResolucaoDialog}
+      onOpenChange={setShowResolucaoDialog}
+      resolucao={resolucaoText}
+      setResolucao={setResolucaoText}
+      loading={closeTicket.isPending}
+      onConfirm={() => {
+        closeTicket.mutate({
+          ticketId: ticket.id,
+          newStatus: "Resolvido",
+          oldStatus: ticket.status,
+          userId,
+          resolucao: resolucaoText,
+        });
+        setShowResolucaoDialog(false);
+        setResolucaoText("");
+      }}
+    />
+    </>
   );
 }
