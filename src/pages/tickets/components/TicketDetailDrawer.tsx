@@ -35,7 +35,6 @@ interface Props {
 }
 
 export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const userId = user?.id || "";
 
@@ -54,6 +53,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
 
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState("");
+  const [expanded, setExpanded] = useState(false);
 
   if (!ticket) return null;
 
