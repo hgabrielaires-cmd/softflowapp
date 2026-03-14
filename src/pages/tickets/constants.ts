@@ -1,4 +1,4 @@
-import { TicketStatus, TicketPrioridade, TicketMesa } from "./types";
+import { TicketStatus, TicketPrioridade, TicketMesa, TicketModo } from "./types";
 
 export const TICKET_STATUSES: TicketStatus[] = [
   "Aberto",
