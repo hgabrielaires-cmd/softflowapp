@@ -104,9 +104,14 @@ export default function Tickets() {
               <TicketIcon className="h-5 w-5" />
               Tickets
             </h1>
-            <Button onClick={() => navigate("/tickets/novo")} className="bg-primary hover:bg-primary/90">
-              <Plus className="h-4 w-4 mr-1" /> Novo Ticket
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={() => refetchTickets()} disabled={isFetching} className="h-9 w-9">
+                <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
+              </Button>
+              <Button onClick={() => navigate("/tickets/novo")} className="bg-primary hover:bg-primary/90">
+                <Plus className="h-4 w-4 mr-1" /> Novo Ticket
+              </Button>
+            </div>
           </div>
 
           {/* Filters */}
