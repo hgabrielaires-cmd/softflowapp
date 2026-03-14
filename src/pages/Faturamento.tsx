@@ -288,6 +288,7 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<FaturaFormState>(newFaturaFormDefaults());
+  const [detalheFatura, setDetalheFatura] = useState<Fatura | null>(null);
 
   function openNew() {
     setEditingFatura(null);
@@ -463,6 +464,11 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
+                      {(f.asaas_barcode || f.asaas_pix_qrcode || f.asaas_url) && (
+                        <DropdownMenuItem onClick={() => setDetalheFatura(f)} className="cursor-pointer">
+                          <Receipt className="h-4 w-4 mr-2" /> Detalhes Cobrança
+                        </DropdownMenuItem>
+                      )}
                       {f.status === "Pendente" && (
                         <DropdownMenuItem onClick={() => q.openRegistrarPagamento(f.id, f.forma_pagamento)} className="cursor-pointer">
                           <CheckCircle className="h-4 w-4 mr-2" /> Registrar Pagamento
@@ -531,7 +537,139 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Detalhes Cobrança Dialog */}
+      <FaturaCobrancaDialog fatura={detalheFatura} onClose={() => setDetalheFatura(null)} />
     </div>
+  );
+}
+
+// ─── Detalhes Cobrança Dialog ─────────────────────────────────────────────
+
+function FaturaCobrancaDialog({ fatura, onClose }: { fatura: Fatura | null; onClose: () => void }) {
+  if (!fatura) return null;
+
+  const hasBoleto = !!fatura.asaas_barcode || !!fatura.asaas_bank_slip_url;
+  const hasPix = !!fatura.asaas_pix_qrcode || !!fatura.asaas_pix_image;
+  const hasAsaasUrl = !!fatura.asaas_url;
+
+  function copyToClipboard(text: string, label: string) {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copiado!`);
+  }
+
+  return (
+    <Dialog open={!!fatura} onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Receipt className="h-5 w-5 text-primary" />
+            Cobrança — {fatura.numero_fatura}
+          </DialogTitle>
+          <DialogDescription>
+            {fatura.clientes?.nome_fantasia} • {fmtCurrency(fatura.valor_final)}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Boleto section */}
+          {hasBoleto && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <FileText className="h-4 w-4" /> Boleto
+              </h4>
+              {fatura.asaas_barcode && (
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Linha digitável</label>
+                  <div className="flex gap-2">
+                    <Input
+                      readOnly
+                      value={fatura.asaas_barcode}
+                      className="font-mono text-xs h-9"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 h-9"
+                      onClick={() => copyToClipboard(fatura.asaas_barcode!, "Linha digitável")}
+                    >
+                      Copiar
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {fatura.asaas_bank_slip_url && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2"
+                  onClick={() => window.open(fatura.asaas_bank_slip_url!, "_blank")}
+                >
+                  <FileText className="h-4 w-4" /> Visualizar Boleto
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* PIX section */}
+          {hasPix && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <DollarSign className="h-4 w-4" /> PIX
+              </h4>
+              {fatura.asaas_pix_image && (
+                <div className="flex justify-center bg-white rounded-lg p-4 border">
+                  <img
+                    src={`data:image/png;base64,${fatura.asaas_pix_image}`}
+                    alt="QR Code PIX"
+                    className="w-48 h-48"
+                  />
+                </div>
+              )}
+              {fatura.asaas_pix_qrcode && (
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Copia e Cola</label>
+                  <div className="flex gap-2">
+                    <Input
+                      readOnly
+                      value={fatura.asaas_pix_qrcode}
+                      className="font-mono text-xs h-9"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 h-9"
+                      onClick={() => copyToClipboard(fatura.asaas_pix_qrcode!, "Código PIX")}
+                    >
+                      Copiar
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Link pagamento */}
+          {hasAsaasUrl && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full gap-2"
+              onClick={() => window.open(fatura.asaas_url!, "_blank")}
+            >
+              <DollarSign className="h-4 w-4" /> Abrir Link de Pagamento
+            </Button>
+          )}
+
+          {/* Sem dados */}
+          {!hasBoleto && !hasPix && !hasAsaasUrl && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Nenhuma informação de cobrança disponível para esta fatura.
+            </p>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
