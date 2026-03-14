@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,7 +34,6 @@ interface Props {
 }
 
 export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const userId = user?.id || "";
 
@@ -54,6 +52,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
 
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState("");
+  const [expanded, setExpanded] = useState(false);
 
   if (!ticket) return null;
 
@@ -82,7 +81,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent
         side="right"
-        className="w-full sm:w-[55vw] sm:max-w-none p-0 flex flex-col"
+        className={cn("p-0 flex flex-col sm:max-w-none transition-all", expanded ? "w-full sm:w-[90vw]" : "w-full sm:w-[55vw]")}
       >
         {/* Header */}
         <SheetHeader className="px-4 py-3 border-b shrink-0">
@@ -106,7 +105,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
             </Badge>
             <div className="ml-auto flex items-center gap-1">
               <Button variant="ghost" size="icon" className="h-7 w-7"
-                onClick={() => { navigate(`/tickets/${ticket.id}`); onClose(); }}>
+                onClick={() => setExpanded(!expanded)}>
                 <Maximize2 className="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
