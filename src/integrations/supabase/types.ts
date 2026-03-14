@@ -1480,6 +1480,57 @@ export type Database = {
           },
         ]
       }
+      faturamento_logs: {
+        Row: {
+          ano: number
+          contrato_financeiro_id: string | null
+          created_at: string
+          erro: string | null
+          fatura_id: string | null
+          id: string
+          mes: number
+          status: string
+          valor: number
+        }
+        Insert: {
+          ano: number
+          contrato_financeiro_id?: string | null
+          created_at?: string
+          erro?: string | null
+          fatura_id?: string | null
+          id?: string
+          mes: number
+          status?: string
+          valor?: number
+        }
+        Update: {
+          ano?: number
+          contrato_financeiro_id?: string | null
+          created_at?: string
+          erro?: string | null
+          fatura_id?: string | null
+          id?: string
+          mes?: number
+          status?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faturamento_logs_contrato_financeiro_id_fkey"
+            columns: ["contrato_financeiro_id"]
+            isOneToOne: false
+            referencedRelation: "contratos_financeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faturamento_logs_fatura_id_fkey"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "faturas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       faturas: {
         Row: {
           asaas_payment_id: string | null
