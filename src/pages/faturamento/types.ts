@@ -20,6 +20,12 @@ export interface Fatura {
   tipo: string;
   gerado_automaticamente: boolean;
   observacoes: string | null;
+  asaas_payment_id: string | null;
+  asaas_url: string | null;
+  asaas_barcode: string | null;
+  asaas_bank_slip_url: string | null;
+  asaas_pix_qrcode: string | null;
+  asaas_pix_image: string | null;
   created_at: string;
   updated_at: string;
   clientes?: { nome_fantasia: string } | null;

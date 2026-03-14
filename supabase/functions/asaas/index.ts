@@ -206,11 +206,16 @@ Deno.serve(async (req) => {
         });
 
         if (params.faturaId) {
+          const billingType = params.billingType || "BOLETO";
+          const paymentDetails = await fetchPaymentDetails(baseUrl, apiKey, payment.id, billingType);
+
           await supabaseAdmin
             .from("faturas")
             .update({
               asaas_payment_id: payment.id,
               asaas_url: payment.invoiceUrl || payment.bankSlipUrl || null,
+              asaas_bank_slip_url: payment.bankSlipUrl || null,
+              ...paymentDetails,
             })
             .eq("id", params.faturaId);
         }
