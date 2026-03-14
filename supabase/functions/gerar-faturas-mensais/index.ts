@@ -17,6 +17,8 @@ function getSupabaseAdmin() {
   );
 }
 
+// ── Asaas helpers ─────────────────────────────────────────────────────────
+
 interface AsaasConfig {
   apiKey: string;
   baseUrl: string;
@@ -56,10 +58,8 @@ async function ensureAsaasCustomer(
   baseUrl: string, apiKey: string, supabase: any,
   contrato: any, cliente: any
 ): Promise<string> {
-  // Reuse existing customer ID
   if (contrato.asaas_customer_id) return contrato.asaas_customer_id;
 
-  // Check if customer exists by cpfCnpj
   const cpf = cliente.cnpj_cpf.replace(/\D/g, "");
   const existing = await asaasFetch(baseUrl, apiKey, `/customers?cpfCnpj=${encodeURIComponent(cpf)}`, "GET");
   if (existing?.data?.length > 0) {
@@ -68,7 +68,6 @@ async function ensureAsaasCustomer(
     return customerId;
   }
 
-  // Create new customer
   const created = await asaasFetch(baseUrl, apiKey, "/customers", "POST", {
     name: cliente.razao_social || cliente.nome_fantasia,
     cpfCnpj: cpf,
@@ -82,7 +81,7 @@ async function ensureAsaasCustomer(
   return created.id;
 }
 
-// ── WhatsApp notification for generated invoices ──────────────────────────
+// ── WhatsApp notification ─────────────────────────────────────────────────
 
 async function sendWhatsAppForFatura(
   supabase: any,
@@ -106,7 +105,6 @@ async function sendWhatsAppForFatura(
 
   if (!whatsConfig?.ativo || !whatsConfig?.server_url || !whatsConfig?.token) return;
 
-  // Get decisor contact
   const { data: decisor } = await supabase
     .from("cliente_contatos")
     .select("telefone, nome")
@@ -166,14 +164,14 @@ async function sendWhatsAppForFatura(
     canal: "whatsapp",
     status_envio: res.ok ? "enviado" : "erro",
   });
-
-  console.log(`WhatsApp fatura ${params.faturaId}: ${res.ok ? "OK" : "FAILED"}`);
 }
+
+// ── Process single contract ───────────────────────────────────────────────
 
 interface ProcessResult {
   contrato_financeiro_id: string;
   cliente_nome: string;
-  status: "sucesso" | "erro" | "pulado";
+  status: "sucesso" | "erro" | "ja_faturado";
   valor: number;
   erro?: string;
   fatura_id?: string;
@@ -188,18 +186,18 @@ async function processContrato(
   const clienteNome = contrato.clientes?.nome_fantasia || "Desconhecido";
 
   try {
-    // 1. Check idempotency — skip if invoice already exists for this period
+    // 1. Idempotency: check by contrato_financeiro_id
     const { data: existing } = await supabase
       .from("faturas")
       .select("id")
-      .eq("contrato_id", contrato.contrato_id)
+      .eq("contrato_financeiro_id", contrato.id)
       .eq("referencia_mes", mes)
       .eq("referencia_ano", ano)
       .eq("gerado_automaticamente", true)
       .maybeSingle();
 
     if (existing) {
-      return { contrato_financeiro_id: contrato.id, cliente_nome: clienteNome, status: "pulado", valor: 0 };
+      return { contrato_financeiro_id: contrato.id, cliente_nome: clienteNome, status: "ja_faturado", valor: 0 };
     }
 
     // 2. Calculate consolidated value
@@ -208,7 +206,7 @@ async function processContrato(
     // 2b. Implantação parcels
     let parcelaImplantacao = 0;
     if (contrato.valor_implantacao > 0 && contrato.parcelas_implantacao > 0) {
-      if (contrato.parcelas_pagas < contrato.parcelas_implantacao) {
+      if ((contrato.parcelas_pagas || 0) < contrato.parcelas_implantacao) {
         parcelaImplantacao = contrato.valor_implantacao / contrato.parcelas_implantacao;
         valorTotal += parcelaImplantacao;
       }
@@ -237,19 +235,36 @@ async function processContrato(
     valorTotal += valorOas;
 
     if (valorTotal <= 0) {
-      return { contrato_financeiro_id: contrato.id, cliente_nome: clienteNome, status: "pulado", valor: 0 };
+      return { contrato_financeiro_id: contrato.id, cliente_nome: clienteNome, status: "ja_faturado", valor: 0 };
     }
 
     // 3. Calculate due date
     const diaVenc = contrato.dia_vencimento || 10;
     const dueDate = `${ano}-${String(mes).padStart(2, "0")}-${String(Math.min(diaVenc, 28)).padStart(2, "0")}`;
 
-    // 4. Create invoice in faturas
+    // 4. Determine billing type
+    const formaPagamento = contrato.forma_pagamento === "Ambos"
+      ? "BOLETO"
+      : (contrato.forma_pagamento || "BOLETO");
+
+    // 5. Get plano name for description
+    let planoNome = "Sem plano";
+    if (contrato.plano_id) {
+      const { data: plano } = await supabase
+        .from("planos")
+        .select("nome")
+        .eq("id", contrato.plano_id)
+        .maybeSingle();
+      if (plano?.nome) planoNome = plano.nome;
+    }
+
+    // 6. Create invoice
     const { data: fatura, error: faturaError } = await supabase
       .from("faturas")
       .insert({
         cliente_id: contrato.cliente_id,
         contrato_id: contrato.contrato_id,
+        contrato_financeiro_id: contrato.id,
         filial_id: contrato.filial_id,
         tipo: "Mensalidade",
         valor: valorTotal,
@@ -260,16 +275,16 @@ async function processContrato(
         referencia_mes: mes,
         referencia_ano: ano,
         status: "Pendente",
-        forma_pagamento: contrato.forma_pagamento || "BOLETO",
+        forma_pagamento: formaPagamento,
         gerado_automaticamente: true,
-        observacoes: `Fatura gerada automaticamente — ${String(mes).padStart(2, "0")}/${ano}`,
+        observacoes: `Softplus — ${planoNome} — ${String(mes).padStart(2, "0")}/${ano}`,
       })
       .select("id, numero_fatura")
       .single();
 
     if (faturaError) throw new Error(`Erro ao criar fatura: ${faturaError.message}`);
 
-    // 5. Asaas integration
+    // 7. Asaas integration (non-blocking)
     const asaasConfig = contrato.filial_id
       ? await getAsaasConfig(supabase, contrato.filial_id)
       : null;
@@ -281,17 +296,16 @@ async function processContrato(
           asaasConfig.baseUrl, asaasConfig.apiKey, supabase, contrato, cliente
         );
 
-        const billingType = contrato.forma_pagamento === "PIX" ? "PIX" : "BOLETO";
+        const billingType = formaPagamento === "PIX" ? "PIX" : "BOLETO";
         const payment = await asaasFetch(asaasConfig.baseUrl, asaasConfig.apiKey, "/payments", "POST", {
           customer: customerId,
           billingType,
           value: valorTotal,
           dueDate,
-          description: `Fatura ${fatura.numero_fatura} — ${clienteNome}`,
+          description: `Softplus — ${planoNome} — ${String(mes).padStart(2, "0")}/${ano} — ${clienteNome}`,
           externalReference: fatura.id,
         });
 
-        // 6. Fetch payment details (barcode or pix)
         const asaasUpdate: Record<string, unknown> = {
           asaas_payment_id: payment.id,
           asaas_url: payment.invoiceUrl || payment.bankSlipUrl || null,
@@ -313,7 +327,7 @@ async function processContrato(
 
         await supabase.from("faturas").update(asaasUpdate).eq("id", fatura.id);
 
-        // Send WhatsApp notification
+        // Send WhatsApp notification (non-blocking)
         try {
           await sendWhatsAppForFatura(supabase, {
             faturaId: fatura.id,
@@ -332,15 +346,16 @@ async function processContrato(
       } catch (asaasErr: unknown) {
         const msg = asaasErr instanceof Error ? asaasErr.message : "Erro Asaas";
         console.warn(`Asaas error for contrato ${contrato.id}: ${msg}`);
-        // Invoice was created, Asaas just failed — log but don't fail the whole process
+        // Fatura created, Asaas failed — log but don't revert
       }
     }
 
-    // 7. Post-processing: increment parcelas_pagas
+    // 8. Post-processing: increment parcelas_pagas
     if (parcelaImplantacao > 0) {
+      const novasPagas = (contrato.parcelas_pagas || 0) + 1;
       await supabase
         .from("contratos_financeiros")
-        .update({ parcelas_pagas: (contrato.parcelas_pagas || 0) + 1 })
+        .update({ parcelas_pagas: novasPagas })
         .eq("id", contrato.id);
     }
 
@@ -377,13 +392,12 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Auth: accept either Bearer JWT or CRON_SECRET
+    // Auth: accept Bearer JWT or service role key
     const authHeader = req.headers.get("authorization");
     const supabase = getSupabaseAdmin();
     let authenticated = false;
 
     if (authHeader) {
-      // Check if it's the service role key (cron) or a user JWT
       const token = authHeader.replace("Bearer ", "");
 
       // Try user auth
@@ -423,16 +437,24 @@ Deno.serve(async (req) => {
         asaas_customer_id, contrato_base_id, tipo, status,
         clientes(id, nome_fantasia, razao_social, cnpj_cpf, email, telefone)
       `)
-      .eq("status", "Ativo");
+      .eq("status", "Ativo")
+      .not("filial_id", "is", null);
 
     if (contratosError) {
       throw new Error(`Erro ao buscar contratos: ${contratosError.message}`);
     }
 
     if (!contratos || contratos.length === 0) {
+      // Log empty run
+      await supabase.from("faturamento_cron_logs").insert({
+        mes, ano,
+        total_contratos: 0, total_faturados: 0, total_erros: 0, total_ja_faturados: 0,
+        detalhes: [],
+      });
+
       return new Response(JSON.stringify({
         mes, ano,
-        total: 0, geradas: 0, erros: 0, puladas: 0,
+        total_contratos: 0, total_faturados: 0, total_erros: 0, total_ja_faturados: 0,
         resultados: [],
       }), {
         status: 200,
@@ -440,43 +462,41 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Process each contract
+    // 2. Process each base contract
     const resultados: ProcessResult[] = [];
 
     for (const contrato of contratos) {
-      // Only process base contracts (sub-records are consolidated into the base)
       if (contrato.tipo !== "Base" && contrato.tipo !== "base") {
         continue;
       }
-
       const result = await processContrato(supabase, contrato, mes, ano);
       resultados.push(result);
-
-      // 7. Log each result
-      await supabase.from("faturamento_logs").insert({
-        contrato_financeiro_id: contrato.id,
-        mes,
-        ano,
-        status: result.status,
-        valor: result.valor,
-        fatura_id: result.fatura_id || null,
-        erro: result.erro || null,
-      });
     }
 
-    const geradas = resultados.filter(r => r.status === "sucesso").length;
-    const erros = resultados.filter(r => r.status === "erro").length;
-    const puladas = resultados.filter(r => r.status === "pulado").length;
+    const total_faturados = resultados.filter(r => r.status === "sucesso").length;
+    const total_erros = resultados.filter(r => r.status === "erro").length;
+    const total_ja_faturados = resultados.filter(r => r.status === "ja_faturado").length;
 
-    console.log(`Concluído: ${geradas} geradas, ${erros} erros, ${puladas} puladas`);
+    console.log(`Concluído: ${total_faturados} geradas, ${total_erros} erros, ${total_ja_faturados} já faturados`);
+
+    // 3. Log execution to faturamento_cron_logs
+    await supabase.from("faturamento_cron_logs").insert({
+      mes,
+      ano,
+      total_contratos: resultados.length,
+      total_faturados,
+      total_erros,
+      total_ja_faturados,
+      detalhes: resultados,
+    });
 
     return new Response(JSON.stringify({
       mes,
       ano,
-      total: resultados.length,
-      geradas,
-      erros,
-      puladas,
+      total_contratos: resultados.length,
+      total_faturados,
+      total_erros,
+      total_ja_faturados,
       resultados,
     }), {
       status: 200,
