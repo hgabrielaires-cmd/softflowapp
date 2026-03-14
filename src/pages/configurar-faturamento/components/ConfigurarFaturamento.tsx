@@ -13,15 +13,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { format, parseISO } from "date-fns";
 
-import { useConfigurarFaturamentoQueries } from "./useConfigurarFaturamentoQueries";
-import { useConfigurarFaturamentoForm } from "./useConfigurarFaturamentoForm";
-import { defaultConfigForm, getMesLabel } from "./constants";
-import { getBadgeTipoLabel, getBadgeTipoColor } from "./helpers";
-import type { ConfigFaturamentoForm } from "./types";
+import { useConfigurarFaturamentoQueries } from "../useConfigurarFaturamentoQueries";
+import { useConfigurarFaturamentoForm } from "../useConfigurarFaturamentoForm";
+import { defaultConfigForm, getMesLabel } from "../constants";
+import { getBadgeTipoLabel, getBadgeTipoColor } from "../helpers";
+import type { ConfigFaturamentoForm } from "../types";
 
-import { EspelhoContrato } from "./components/EspelhoContrato";
-import { ConfiguracaoCobranca } from "./components/ConfiguracaoCobranca";
-import { PreviewFaturas } from "./components/PreviewFaturas";
+import { EspelhoContrato } from "./EspelhoContrato";
+import { ConfiguracaoCobranca } from "./ConfiguracaoCobranca";
+import { PreviewFaturas } from "./PreviewFaturas";
 
 export default function ConfigurarFaturamento() {
   const { contratoId } = useParams();
