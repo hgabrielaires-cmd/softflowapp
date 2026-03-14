@@ -239,25 +239,15 @@ export default function TesteAsaas() {
       addLog("info", "⏳ Aguardando 5 segundos para o webhook ser processado...");
       await new Promise((r) => setTimeout(r, 5000));
 
-      // Check webhook events table
-      const { data: events } = await supabase
-        .from("asaas_webhook_events")
-        .select("*")
-        .eq("payload->>payment->id", paymentId)
-        .order("processed_at", { ascending: false })
-        .limit(5);
-
-      // Also check by broader filter
+      // Check webhook events table by event_id pattern (contains payment id)
       const { data: recentEvents } = await supabase
         .from("asaas_webhook_events")
         .select("*")
+        .like("event_id", `%${paymentId}`)
         .order("processed_at", { ascending: false })
         .limit(10);
 
-      const webhookFound = recentEvents?.some((e: any) => {
-        const payload = typeof e.payload === "string" ? JSON.parse(e.payload) : e.payload;
-        return payload?.payment?.id === paymentId;
-      });
+      const webhookFound = (recentEvents?.length ?? 0) > 0;
 
       setWebhookResult({
         paymentStatus: data.payment?.status,
