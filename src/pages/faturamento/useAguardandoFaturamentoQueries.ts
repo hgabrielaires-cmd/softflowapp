@@ -7,7 +7,7 @@ import type { ContratoAguardando } from "./types";
 
 const PAGE_SIZE = 15;
 
-export function useAguardandoFaturamentoQueries() {
+export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
   const [contratos, setContratos] = useState<ContratoAguardando[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -29,9 +29,9 @@ export function useAguardandoFaturamentoQueries() {
       .select(`
         id, numero_exibicao, tipo, status, created_at, updated_at,
         cliente_id, plano_id, pedido_id, contrato_origem_id,
-        clientes(nome_fantasia, cnpj_cpf, email, telefone),
+        clientes(nome_fantasia, cnpj_cpf, email, telefone, filial_id),
         planos(nome, valor_mensalidade_padrao, valor_implantacao_padrao),
-        pedidos(tipo_pedido, vendedor_id, valor_mensalidade_final, valor_implantacao_final, pagamento_implantacao_parcelas)
+        pedidos(tipo_pedido, vendedor_id, valor_mensalidade_final, valor_implantacao_final, pagamento_implantacao_parcelas, filial_id)
       `, { count: "exact" })
       .eq("status", "Assinado");
 
@@ -51,7 +51,15 @@ export function useAguardandoFaturamentoQueries() {
     }
 
     // Filter out already billed contracts client-side
-    const pendentes = (data || []).filter((c: any) => !idsFaturados.has(c.id));
+    let pendentes = (data || []).filter((c: any) => !idsFaturados.has(c.id));
+
+    // Filter by filial if selected
+    if (filialFilter !== "all") {
+      pendentes = pendentes.filter((c: any) => {
+        const filialId = c.pedidos?.filial_id || c.clientes?.filial_id;
+        return filialId === filialFilter;
+      });
+    }
 
     // Map to typed structure
     const mapped: ContratoAguardando[] = pendentes.map((c: any) => {
@@ -95,7 +103,7 @@ export function useAguardandoFaturamentoQueries() {
     setContratos(paginated);
     setTotal(mapped.length);
     setLoading(false);
-  }, [page, search]);
+  }, [page, search, filialFilter]);
 
   useEffect(() => { loadContratos(); }, [loadContratos]);
 

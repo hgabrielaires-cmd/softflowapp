@@ -15,7 +15,7 @@ import { PAGE_SIZE } from "./constants";
 // FATURAS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export function useFaturasQueries() {
+export function useFaturasQueries(filialFilter: string = "all") {
   const [faturas, setFaturas] = useState<Fatura[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -34,6 +34,7 @@ export function useFaturasQueries() {
       .from("faturas")
       .select("*, clientes(nome_fantasia), contratos(numero_exibicao)", { count: "exact" });
 
+    if (filialFilter !== "all") query = query.eq("filial_id", filialFilter);
     if (statusFilter !== "all") query = query.eq("status", statusFilter);
     if (tipoFilter !== "all") query = query.eq("tipo", tipoFilter);
     if (search.trim()) {
@@ -51,7 +52,7 @@ export function useFaturasQueries() {
     setFaturas((data || []) as unknown as Fatura[]);
     setTotal(count || 0);
     setLoading(false);
-  }, [page, search, statusFilter, tipoFilter]);
+  }, [page, search, statusFilter, tipoFilter, filialFilter]);
 
   const loadClientes = useCallback(async () => {
     const { data } = await supabase
@@ -127,7 +128,7 @@ export function useFaturasQueries() {
 // NOTAS FISCAIS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export function useNotasFiscaisQueries() {
+export function useNotasFiscaisQueries(filialFilter: string = "all") {
   const [notas, setNotas] = useState<NotaFiscal[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -142,6 +143,7 @@ export function useNotasFiscaisQueries() {
       .from("notas_fiscais")
       .select("*, clientes(nome_fantasia), faturas(numero_fatura)", { count: "exact" });
 
+    if (filialFilter !== "all") query = query.eq("filial_id", filialFilter);
     if (search.trim()) {
       query = query.or(`numero_nf.ilike.%${search.trim()}%,clientes.nome_fantasia.ilike.%${search.trim()}%`);
     }
@@ -157,7 +159,7 @@ export function useNotasFiscaisQueries() {
     setNotas((data || []) as unknown as NotaFiscal[]);
     setTotal(count || 0);
     setLoading(false);
-  }, [page, search]);
+  }, [page, search, filialFilter]);
 
   const loadClientes = useCallback(async () => {
     const { data } = await supabase.from("clientes").select("id, nome_fantasia").eq("ativo", true).order("nome_fantasia").limit(500);
