@@ -311,9 +311,18 @@ export default function Agenda() {
       if (ticketIds.length > 0) {
         const { data: ticketsData } = await supabase
           .from("tickets")
-          .select("id, numero_exibicao, titulo, status, modo, cliente_id, responsavel_id, clientes:cliente_id(nome_fantasia, cnpj_cpf), responsavel:responsavel_id(user_id, full_name, avatar_url)")
+          .select("id, numero_exibicao, titulo, status, modo, cliente_id, responsavel_id, clientes:cliente_id(nome_fantasia, cnpj_cpf)")
           .in("id", ticketIds);
-        (ticketsData || []).forEach((t: any) => { ticketsMap[t.id] = t; });
+        // Fetch responsible profiles separately
+        const respIds = [...new Set((ticketsData || []).map((t: any) => t.responsavel_id).filter(Boolean))];
+        let respMap: Record<string, any> = {};
+        if (respIds.length > 0) {
+          const { data: respData } = await supabase.from("profiles").select("user_id, full_name, avatar_url").in("user_id", respIds);
+          (respData || []).forEach((p: any) => { respMap[p.user_id] = p; });
+        }
+        (ticketsData || []).forEach((t: any) => {
+          ticketsMap[t.id] = { ...t, responsavel_profile: t.responsavel_id ? respMap[t.responsavel_id] || null : null };
+        });
       }
 
       // Enrich
