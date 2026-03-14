@@ -30,32 +30,8 @@ export function ConfiguracaoCobranca({ form, setForm, espelho }: Props) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  function addModulo() {
-    setForm((f) => ({
-      ...f,
-      modulos: [
-        ...f.modulos,
-        { id: crypto.randomUUID(), nome: "", valor_unitario: 0, quantidade: 1, valor_mensal: 0, data_inicio: format(new Date(), "yyyy-MM-dd") },
-      ],
-    }));
-  }
-
-  function updateModulo(idx: number, field: keyof ModuloConfig, value: string | number) {
-    setForm((f) => ({
-      ...f,
-      modulos: f.modulos.map((m, i) => {
-        if (i !== idx) return m;
-        const updated = { ...m, [field]: value };
-        if (field === "valor_unitario" || field === "quantidade") {
-          updated.valor_mensal = (updated.valor_unitario || 0) * (updated.quantidade || 1);
-        }
-        return updated;
-      }),
-    }));
-  }
-
-  function removeModulo(idx: number) {
-    setForm((f) => ({ ...f, modulos: f.modulos.filter((_, i) => i !== idx) }));
+  function handleCurrencyChange(field: keyof ConfigFaturamentoForm, raw: string) {
+    updateField(field, parseCurrencyInput(raw) as any);
   }
 
   return (
