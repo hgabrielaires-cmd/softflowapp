@@ -104,8 +104,9 @@ export function ConfiguracaoCobranca({ form, setForm, espelho, canEditValues = f
                 <Input
                   value={formatCurrencyInput(form.valor_mensalidade)}
                   onChange={(e) => handleCurrencyChange("valor_mensalidade", e.target.value)}
-                  className="h-9"
+                  className={`h-9 ${!canEditValues ? "bg-muted" : ""}`}
                   placeholder="R$ 0,00"
+                  disabled={!canEditValues}
                 />
               </div>
               <div className="space-y-1">
