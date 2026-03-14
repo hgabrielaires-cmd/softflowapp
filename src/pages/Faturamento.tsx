@@ -79,9 +79,10 @@ function FaturamentoContent() {
   // Inicializa apenas uma vez quando filiais carregam
   useEffect(() => {
     if (!filiaisLoading && filialFilter === null) {
-      // Se tem filial favorita explicitamente marcada no perfil, usa ela
-      if (filialPadraoId && filiaisDoUsuario.some(f => f.id === filialPadraoId)) {
-        setFilialFilter(filialPadraoId);
+      // Só usa favorita se está explicitamente definida no perfil
+      const favoritaId = profile?.filial_favorita_id;
+      if (favoritaId && filiaisDoUsuario.some(f => f.id === favoritaId)) {
+        setFilialFilter(favoritaId);
       } else {
         setFilialFilter("all");
       }
