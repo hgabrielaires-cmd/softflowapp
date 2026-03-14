@@ -26,6 +26,7 @@ export interface HelpdeskModeloTicket {
 export type TicketStatus = "Aberto" | "Em Andamento" | "Aguardando Cliente" | "Resolvido" | "Fechado";
 export type TicketPrioridade = "Baixa" | "Média" | "Alta" | "Crítica";
 export type TicketMesa = "Suporte" | "Implantação" | "Financeiro" | "Comercial";
+export type TicketModo = "interno" | "externo";
 
 export interface Ticket {
   id: string;
@@ -119,6 +120,7 @@ export interface TicketFormData {
   cliente_id: string | null;
   contrato_id: string | null;
   mesa: TicketMesa;
+  modo: TicketModo;
   tipo_atendimento_id: string | null;
   prioridade: TicketPrioridade;
   responsavel_id: string | null;

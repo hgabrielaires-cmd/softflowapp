@@ -19,9 +19,9 @@ import {
   useProfiles, useHelpdeskTipos, useHelpdeskModelos,
   useClienteTicketsAbertos, useClienteContratos, useClienteTicketsFechados,
 } from "./tickets/useTicketsQueries";
-import { TICKET_PRIORIDADES, TICKET_MESAS, TICKET_PRIORIDADE_COLORS, TICKET_PRIORIDADE_SLA } from "./tickets/constants";
+import { TICKET_PRIORIDADES, TICKET_MESAS, TICKET_PRIORIDADE_COLORS, TICKET_PRIORIDADE_SLA, TICKET_MODOS } from "./tickets/constants";
 import { TICKET_STATUS_COLORS } from "./tickets/constants";
-import type { TicketFormData, TicketPrioridade, TicketMesa, TicketStatus } from "./tickets/types";
+import type { TicketFormData, TicketPrioridade, TicketMesa, TicketModo, TicketStatus } from "./tickets/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -72,7 +72,8 @@ export default function TicketNovo() {
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [clienteSearch, setClienteSearch] = useState("");
   const [contratoId, setContratoId] = useState<string | null>(null);
-  const [mesa, setMesa] = useState<TicketMesa>((profile as any)?.mesa_favorita_id ? "Suporte" : "Suporte");
+  const [mesa, setMesa] = useState<TicketMesa>("Suporte");
+  const [modo, setModo] = useState<TicketModo>("externo");
   const [tipoAtendimentoId, setTipoAtendimentoId] = useState<string | null>(null);
   const [prioridade, setPrioridade] = useState<TicketPrioridade>("Média");
   const [responsavelId, setResponsavelId] = useState<string | null>(null);
@@ -215,6 +216,7 @@ export default function TicketNovo() {
       cliente_id: clienteId,
       contrato_id: contratoId,
       mesa,
+      modo,
       tipo_atendimento_id: tipoAtendimentoId,
       prioridade,
       responsavel_id: responsavelId,
@@ -247,11 +249,22 @@ export default function TicketNovo() {
           <div className="flex gap-4 p-4 min-h-full">
             {/* Left 60% */}
             <div className="flex-1 basis-[60%] space-y-4">
-              {/* Row 1 */}
+              {/* Row 1: Nº + Modo */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Nº do Ticket</Label>
                   <Input disabled value="(gerado automaticamente)" className="bg-muted" />
+                </div>
+                <div>
+                  <Label className="text-xs">Modo <span className="text-destructive">*</span></Label>
+                  <Select value={modo} onValueChange={(v) => setModo(v as TicketModo)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {TICKET_MODOS.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
