@@ -311,7 +311,7 @@ export default function Agenda() {
       if (ticketIds.length > 0) {
         const { data: ticketsData } = await supabase
           .from("tickets")
-          .select("id, numero_exibicao, titulo, status, cliente_id, responsavel_id, clientes:cliente_id(nome_fantasia, cnpj_cpf), responsavel:responsavel_id(user_id, full_name, avatar_url)")
+          .select("id, numero_exibicao, titulo, status, modo, cliente_id, responsavel_id, clientes:cliente_id(nome_fantasia, cnpj_cpf), responsavel:responsavel_id(user_id, full_name, avatar_url)")
           .in("id", ticketIds);
         (ticketsData || []).forEach((t: any) => { ticketsMap[t.id] = t; });
       }
@@ -328,6 +328,7 @@ export default function Agenda() {
             cliente_nome: ticket?.clientes?.nome_fantasia || "—",
             cliente_cnpj: ticket?.clientes?.cnpj_cpf || "",
             contrato_numero: ticket?.numero_exibicao || "—",
+            ticket_modo: ticket?.modo || null,
             filial_nome: "—",
             atividade_nome: "—",
             mesa_nome: "—",
@@ -561,7 +562,7 @@ export default function Agenda() {
       if (calTicketIds.length > 0) {
         const { data: ticketsData } = await supabase
           .from("tickets")
-          .select("id, numero_exibicao, titulo, status, cliente_id, responsavel_id, clientes:cliente_id(nome_fantasia), responsavel:responsavel_id(user_id, full_name, avatar_url)")
+          .select("id, numero_exibicao, titulo, status, modo, cliente_id, responsavel_id, clientes:cliente_id(nome_fantasia), responsavel:responsavel_id(user_id, full_name, avatar_url)")
           .in("id", calTicketIds);
         (ticketsData || []).forEach((t: any) => { calTicketsMap[t.id] = t; });
       }
@@ -576,6 +577,7 @@ export default function Agenda() {
             ag_finalizado_em: ag.finalizado_em || null,
             cliente_nome: ticket?.clientes?.nome_fantasia || "—",
             contrato_numero: ticket?.numero_exibicao || "—",
+            ticket_modo: ticket?.modo || null,
             filial_id: "",
             filial_nome: "—",
             atividade_nome: "—",
@@ -892,7 +894,15 @@ export default function Agenda() {
             </p>
             <p className="text-xs text-muted-foreground">
               {ag.is_ticket ? (
-                <><span className="font-medium" style={{ color: "#6366f1" }}>📋 Ticket: {ag.contrato_numero}</span> {ag.titulo && `· ${ag.titulo}`}</>
+                <>
+                  <span className="font-medium" style={{ color: "#6366f1" }}>📋 Ticket: {ag.contrato_numero}</span>
+                  {ag.ticket_modo && (
+                    <Badge variant="outline" className={cn("ml-1.5 text-[9px] px-1.5 py-0", ag.ticket_modo === "interno" ? "border-amber-300 text-amber-700 bg-amber-50" : "border-sky-300 text-sky-700 bg-sky-50")}>
+                      {ag.ticket_modo === "interno" ? "Interno" : "Externo"}
+                    </Badge>
+                  )}
+                  {ag.titulo && ` · ${ag.titulo}`}
+                </>
               ) : (
                 <>Contrato: {ag.contrato_numero} · <span className="font-medium" style={{ color: ag.mesa_cor || undefined }}>{ag.atividade_nome}</span></>
               )}
