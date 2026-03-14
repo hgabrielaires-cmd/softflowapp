@@ -3,8 +3,8 @@
 import type { ConfigFaturamentoForm, FaturaPreviewMes, FaturaPreviewItem } from "./types";
 import { getMesLabel } from "./constants";
 
-export function fmtCurrency(val: number): string {
-  return val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+export function fmtCurrency(val: number | null | undefined): string {
+  return (val ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 /** Calcula o preview das próximas faturas (até 6 meses ou estabilizar). */
