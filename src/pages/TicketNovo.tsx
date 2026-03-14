@@ -174,7 +174,7 @@ export default function TicketNovo() {
     }
   }, [selfFollow, userId]);
 
-  const handleSave = async () => {
+  const handleSave = () => {
     const data: TicketFormData = {
       titulo: titulo.trim() || "Ticket",
       descricao_html: descricao,
