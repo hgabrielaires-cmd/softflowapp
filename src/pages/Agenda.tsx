@@ -336,7 +336,7 @@ export default function Agenda() {
             etapa_atual_cor: "#6366f1",
             responsavel_nome: "—",
             tecnicos: [],
-            apontados: [],
+            apontados: ticket?.responsavel ? [ticket.responsavel] : [],
             status_projeto: "ativo",
             pausado: false,
             card_iniciado_em: null,
