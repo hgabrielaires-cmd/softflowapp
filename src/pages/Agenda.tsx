@@ -891,7 +891,11 @@ export default function Agenda() {
               {ag.cliente_nome}
             </p>
             <p className="text-xs text-muted-foreground">
-              Contrato: {ag.contrato_numero} · <span className="font-medium" style={{ color: ag.mesa_cor || undefined }}>{ag.atividade_nome}</span>
+              {ag.is_ticket ? (
+                <><span className="font-medium" style={{ color: "#6366f1" }}>Ticket: {ag.contrato_numero}</span></>
+              ) : (
+                <>Contrato: {ag.contrato_numero} · <span className="font-medium" style={{ color: ag.mesa_cor || undefined }}>{ag.atividade_nome}</span></>
+              )}
             </p>
             {ag.titulo && (
               <p className="text-xs text-muted-foreground truncate">{ag.titulo}</p>
