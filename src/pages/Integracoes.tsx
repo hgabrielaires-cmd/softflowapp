@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import logoZapsign from "@/assets/logo-zapsign.svg";
 import logoWhatsapp from "@/assets/logo-whatsapp.svg";
 import logoBrowserless from "@/assets/logo-browserless.svg";
-import logoAsaas from "@/assets/logo-asaas.png";
+import logoAsaas from "@/assets/logo-asaas.svg";
 import { AppLayout } from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
