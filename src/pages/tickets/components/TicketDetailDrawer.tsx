@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Ticket, TicketStatus } from "../types";
 import { TICKET_STATUS_COLORS, TICKET_PRIORIDADE_COLORS, TICKET_STATUSES } from "../constants";
 import { formatDateTime } from "../helpers";
@@ -15,16 +16,19 @@ import { UserAvatar } from "@/components/UserAvatar";
 import {
   useTicketDetail, useTicketComentarios, useTicketAnexos,
   useTicketVinculos, useTicketSeguidoresByTicket, useProfiles,
+  useTicketCurtidas, useClienteContatos,
 } from "../useTicketsQueries";
 import {
   useUpdateTicketStatus, useAddTicketComment, useUpdateTicketResponsavel,
-  useAddTicketSeguidor, useRemoveTicketSeguidor,
+  useAddTicketSeguidor, useRemoveTicketSeguidor, useToggleTicketCurtida,
+  useReplyTicketComment,
 } from "../useTicketsForm";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 import {
   Maximize2, X, Building2, FileText, Headphones, Calendar,
   User, Plus, Link2, Paperclip, Download, Edit2, MessageSquare,
+  ChevronDown, Phone, Mail, Star,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -40,16 +44,20 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
 
   const { data: ticket } = useTicketDetail(ticketId);
   const { data: comentarios = [] } = useTicketComentarios(ticketId);
+  const { data: curtidas = [] } = useTicketCurtidas(ticketId);
   const { data: anexos = [] } = useTicketAnexos(ticketId);
   const { data: vinculos = [] } = useTicketVinculos(ticketId);
   const { data: seguidores = [] } = useTicketSeguidoresByTicket(ticketId);
   const { data: profiles = [] } = useProfiles();
+  const { data: contatos = [] } = useClienteContatos(ticket?.cliente_id ?? null);
 
   const updateStatus = useUpdateTicketStatus();
   const addComment = useAddTicketComment();
   const updateResponsavel = useUpdateTicketResponsavel();
   const addSeguidor = useAddTicketSeguidor();
   const removeSeguidor = useRemoveTicketSeguidor();
+  const toggleCurtida = useToggleTicketCurtida();
+  const replyComment = useReplyTicketComment();
 
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState("");
