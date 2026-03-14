@@ -217,10 +217,6 @@ export default function TicketNovo() {
               {/* Row 1 */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs">Título *</Label>
-                  <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Título do ticket" />
-                </div>
-                <div>
                   <Label className="text-xs">Nº do Ticket</Label>
                   <Input disabled value="(gerado automaticamente)" className="bg-muted" />
                 </div>
