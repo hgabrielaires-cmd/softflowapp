@@ -171,7 +171,14 @@ export function TicketDetailDrawer({ ticketId, open, onClose }: Props) {
 
               <TabsContent value="comunicacao" className="space-y-4 mt-0">
                 {/* Timeline */}
-                <TicketTimeline comentarios={comentarios} users={mentionUsers} />
+                <TicketTimeline
+                  comentarios={comentarios}
+                  curtidas={curtidas}
+                  users={mentionUsers}
+                  currentUserId={userId}
+                  onToggleLike={(comentarioId, liked) => toggleCurtida.mutate({ comentarioId, userId, liked })}
+                  onReply={(parentId, conteudo, visibilidade) => replyComment.mutate({ ticketId: ticket.id, userId, conteudo, visibilidade, parentId })}
+                />
 
                 {/* Nova resposta */}
                 <TicketNovaResposta
