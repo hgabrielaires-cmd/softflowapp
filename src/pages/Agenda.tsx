@@ -894,7 +894,15 @@ export default function Agenda() {
             </p>
             <p className="text-xs text-muted-foreground">
               {ag.is_ticket ? (
-                <><span className="font-medium" style={{ color: "#6366f1" }}>📋 Ticket: {ag.contrato_numero}</span> {ag.titulo && `· ${ag.titulo}`}</>
+                <>
+                  <span className="font-medium" style={{ color: "#6366f1" }}>📋 Ticket: {ag.contrato_numero}</span>
+                  {ag.ticket_modo && (
+                    <Badge variant="outline" className={cn("ml-1.5 text-[9px] px-1.5 py-0", ag.ticket_modo === "interno" ? "border-amber-300 text-amber-700 bg-amber-50" : "border-sky-300 text-sky-700 bg-sky-50")}>
+                      {ag.ticket_modo === "interno" ? "Interno" : "Externo"}
+                    </Badge>
+                  )}
+                  {ag.titulo && ` · ${ag.titulo}`}
+                </>
               ) : (
                 <>Contrato: {ag.contrato_numero} · <span className="font-medium" style={{ color: ag.mesa_cor || undefined }}>{ag.atividade_nome}</span></>
               )}
