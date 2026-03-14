@@ -302,6 +302,98 @@ export type Database = {
         }
         Relationships: []
       }
+      contrato_financeiro_modulos: {
+        Row: {
+          ativo: boolean
+          contrato_financeiro_id: string
+          created_at: string
+          data_inicio: string
+          id: string
+          nome: string
+          valor_mensal: number
+        }
+        Insert: {
+          ativo?: boolean
+          contrato_financeiro_id: string
+          created_at?: string
+          data_inicio?: string
+          id?: string
+          nome: string
+          valor_mensal?: number
+        }
+        Update: {
+          ativo?: boolean
+          contrato_financeiro_id?: string
+          created_at?: string
+          data_inicio?: string
+          id?: string
+          nome?: string
+          valor_mensal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contrato_financeiro_modulos_contrato_financeiro_id_fkey"
+            columns: ["contrato_financeiro_id"]
+            isOneToOne: false
+            referencedRelation: "contratos_financeiros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contrato_financeiro_oas: {
+        Row: {
+          ano_referencia: number
+          contrato_financeiro_id: string
+          contrato_oa_id: string | null
+          created_at: string
+          descricao: string
+          faturada: boolean
+          id: string
+          mes_referencia: number
+          observacoes: string | null
+          valor: number
+        }
+        Insert: {
+          ano_referencia: number
+          contrato_financeiro_id: string
+          contrato_oa_id?: string | null
+          created_at?: string
+          descricao: string
+          faturada?: boolean
+          id?: string
+          mes_referencia: number
+          observacoes?: string | null
+          valor?: number
+        }
+        Update: {
+          ano_referencia?: number
+          contrato_financeiro_id?: string
+          contrato_oa_id?: string | null
+          created_at?: string
+          descricao?: string
+          faturada?: boolean
+          id?: string
+          mes_referencia?: number
+          observacoes?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contrato_financeiro_oas_contrato_financeiro_id_fkey"
+            columns: ["contrato_financeiro_id"]
+            isOneToOne: false
+            referencedRelation: "contratos_financeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contrato_financeiro_oas_contrato_oa_id_fkey"
+            columns: ["contrato_oa_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contratos: {
         Row: {
           cliente_id: string
@@ -435,6 +527,121 @@ export type Database = {
           tipo_pedido?: string | null
         }
         Relationships: []
+      }
+      contratos_financeiros: {
+        Row: {
+          cliente_id: string
+          contrato_base_id: string | null
+          contrato_id: string
+          created_at: string
+          data_inicio: string
+          dia_vencimento: number
+          email_cobranca: string | null
+          filial_id: string | null
+          forma_pagamento: string
+          id: string
+          observacoes: string | null
+          parcelas_implantacao: number
+          parcelas_pagas: number
+          pedido_id: string | null
+          plano_id: string | null
+          status: string
+          tipo: string
+          updated_at: string
+          valor_implantacao: number
+          valor_mensalidade: number
+          whatsapp_cobranca: string | null
+        }
+        Insert: {
+          cliente_id: string
+          contrato_base_id?: string | null
+          contrato_id: string
+          created_at?: string
+          data_inicio?: string
+          dia_vencimento?: number
+          email_cobranca?: string | null
+          filial_id?: string | null
+          forma_pagamento?: string
+          id?: string
+          observacoes?: string | null
+          parcelas_implantacao?: number
+          parcelas_pagas?: number
+          pedido_id?: string | null
+          plano_id?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          valor_implantacao?: number
+          valor_mensalidade?: number
+          whatsapp_cobranca?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          contrato_base_id?: string | null
+          contrato_id?: string
+          created_at?: string
+          data_inicio?: string
+          dia_vencimento?: number
+          email_cobranca?: string | null
+          filial_id?: string | null
+          forma_pagamento?: string
+          id?: string
+          observacoes?: string | null
+          parcelas_implantacao?: number
+          parcelas_pagas?: number
+          pedido_id?: string | null
+          plano_id?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          valor_implantacao?: number
+          valor_mensalidade?: number
+          whatsapp_cobranca?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_financeiros_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_financeiros_contrato_base_id_fkey"
+            columns: ["contrato_base_id"]
+            isOneToOne: false
+            referencedRelation: "contratos_financeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_financeiros_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: true
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_financeiros_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_financeiros_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_financeiros_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contratos_vendedor_lembretes: {
         Row: {
