@@ -7,7 +7,6 @@ export function useCreateTicket() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ data, userId }: { data: TicketFormData; userId: string }) => {
-      // Create ticket
       const { data: ticket, error } = await supabase
         .from("tickets")
         .insert({
@@ -24,28 +23,26 @@ export function useCreateTicket() {
           previsao_entrega: data.previsao_entrega,
           ticket_pai_id: data.ticket_pai_id || null,
           criado_por: userId,
-        } as Record<string, unknown>)
+        })
         .select("id, numero_exibicao")
         .single();
       if (error) throw error;
 
-      // Add seguidores
       if (data.seguidores.length > 0) {
-        const seguidoresRows = data.seguidores.map((uid) => ({
+        const rows = data.seguidores.map((uid) => ({
           ticket_id: ticket.id,
           user_id: uid,
         }));
-        await supabase.from("ticket_seguidores").insert(seguidoresRows as Record<string, unknown>[]);
+        await supabase.from("ticket_seguidores").insert(rows);
       }
 
-      // Create system comment for creation
       await supabase.from("ticket_comentarios").insert({
         ticket_id: ticket.id,
         user_id: userId,
         tipo: "sistema",
         visibilidade: "publico",
         conteudo: "Ticket criado",
-      } as Record<string, unknown>);
+      });
 
       return ticket as { id: string; numero_exibicao: string };
     },
@@ -61,19 +58,11 @@ export function useUpdateTicketStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({
-      ticketId,
-      newStatus,
-      oldStatus,
-      userId,
-    }: {
-      ticketId: string;
-      newStatus: TicketStatus;
-      oldStatus: string;
-      userId: string;
-    }) => {
+      ticketId, newStatus, oldStatus, userId,
+    }: { ticketId: string; newStatus: TicketStatus; oldStatus: string; userId: string }) => {
       const { error } = await supabase
         .from("tickets")
-        .update({ status: newStatus } as Record<string, unknown>)
+        .update({ status: newStatus })
         .eq("id", ticketId);
       if (error) throw error;
 
@@ -84,7 +73,7 @@ export function useUpdateTicketStatus() {
         visibilidade: "publico",
         conteudo: `Status alterado de "${oldStatus}" para "${newStatus}"`,
         metadata: { old_status: oldStatus, new_status: newStatus },
-      } as Record<string, unknown>);
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tickets"] });
@@ -99,23 +88,15 @@ export function useAddTicketComment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({
-      ticketId,
-      userId,
-      conteudo,
-      visibilidade,
-    }: {
-      ticketId: string;
-      userId: string;
-      conteudo: string;
-      visibilidade: "publico" | "interno";
-    }) => {
+      ticketId, userId, conteudo, visibilidade,
+    }: { ticketId: string; userId: string; conteudo: string; visibilidade: "publico" | "interno" }) => {
       const { error } = await supabase.from("ticket_comentarios").insert({
         ticket_id: ticketId,
         user_id: userId,
         tipo: "comentario",
         visibilidade,
         conteudo,
-      } as Record<string, unknown>);
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -130,19 +111,11 @@ export function useUpdateTicketResponsavel() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({
-      ticketId,
-      responsavelId,
-      userId,
-      responsavelNome,
-    }: {
-      ticketId: string;
-      responsavelId: string;
-      userId: string;
-      responsavelNome: string;
-    }) => {
+      ticketId, responsavelId, userId, responsavelNome,
+    }: { ticketId: string; responsavelId: string; userId: string; responsavelNome: string }) => {
       const { error } = await supabase
         .from("tickets")
-        .update({ responsavel_id: responsavelId } as Record<string, unknown>)
+        .update({ responsavel_id: responsavelId })
         .eq("id", ticketId);
       if (error) throw error;
 
@@ -152,7 +125,7 @@ export function useUpdateTicketResponsavel() {
         tipo: "responsavel_change",
         visibilidade: "publico",
         conteudo: `Responsável alterado para ${responsavelNome}`,
-      } as Record<string, unknown>);
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tickets"] });
@@ -168,7 +141,7 @@ export function useAddTicketSeguidor() {
     mutationFn: async ({ ticketId, userId }: { ticketId: string; userId: string }) => {
       const { error } = await supabase
         .from("ticket_seguidores")
-        .insert({ ticket_id: ticketId, user_id: userId } as Record<string, unknown>);
+        .insert({ ticket_id: ticketId, user_id: userId });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -202,12 +175,10 @@ export function useAddTicketVinculo() {
     mutationFn: async ({ ticketId, ticketVinculadoId }: { ticketId: string; ticketVinculadoId: string }) => {
       const { error } = await supabase
         .from("ticket_vinculos")
-        .insert({ ticket_id: ticketId, ticket_vinculado_id: ticketVinculadoId } as Record<string, unknown>);
+        .insert({ ticket_id: ticketId, ticket_vinculado_id: ticketVinculadoId });
       if (error) throw error;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["ticket_vinculos"] });
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ticket_vinculos"] }),
   });
 }
 
@@ -217,7 +188,7 @@ export function useUpdateTicketDescription() {
     mutationFn: async ({ ticketId, descricao }: { ticketId: string; descricao: string }) => {
       const { error } = await supabase
         .from("tickets")
-        .update({ descricao_html: descricao } as Record<string, unknown>)
+        .update({ descricao_html: descricao })
         .eq("id", ticketId);
       if (error) throw error;
     },
@@ -228,34 +199,25 @@ export function useUpdateTicketDescription() {
   });
 }
 
-// Helpdesk parametros mutations
 export function useSaveHelpdeskTipo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: {
-      id?: string;
-      nome: string;
-      descricao: string | null;
-      sla_horas: number;
-      mesa_padrao: string;
-      ativo: boolean;
+      id?: string; nome: string; descricao: string | null;
+      sla_horas: number; mesa_padrao: string; ativo: boolean;
     }) => {
-      if (data.id) {
-        const { error } = await supabase
-          .from("helpdesk_tipos_atendimento")
-          .update(data as Record<string, unknown>)
-          .eq("id", data.id);
+      const { id, ...rest } = data;
+      if (id) {
+        const { error } = await supabase.from("helpdesk_tipos_atendimento").update(rest).eq("id", id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from("helpdesk_tipos_atendimento")
-          .insert(data as Record<string, unknown>);
+        const { error } = await supabase.from("helpdesk_tipos_atendimento").insert(rest);
         if (error) throw error;
       }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["helpdesk_tipos_atendimento"] });
-      toast.success("Tipo salvo com sucesso!");
+      toast.success("Tipo salvo!");
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -265,29 +227,21 @@ export function useSaveHelpdeskModelo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: {
-      id?: string;
-      nome: string;
-      tipo_atendimento_id: string | null;
-      titulo_padrao: string | null;
-      corpo_html: string;
-      ativo: boolean;
+      id?: string; nome: string; tipo_atendimento_id: string | null;
+      titulo_padrao: string | null; corpo_html: string; ativo: boolean;
     }) => {
-      if (data.id) {
-        const { error } = await supabase
-          .from("helpdesk_modelos_ticket")
-          .update(data as Record<string, unknown>)
-          .eq("id", data.id);
+      const { id, ...rest } = data;
+      if (id) {
+        const { error } = await supabase.from("helpdesk_modelos_ticket").update(rest).eq("id", id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from("helpdesk_modelos_ticket")
-          .insert(data as Record<string, unknown>);
+        const { error } = await supabase.from("helpdesk_modelos_ticket").insert(rest);
         if (error) throw error;
       }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["helpdesk_modelos_ticket"] });
-      toast.success("Modelo salvo com sucesso!");
+      toast.success("Modelo salvo!");
     },
     onError: (err: Error) => toast.error(err.message),
   });
