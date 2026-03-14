@@ -175,12 +175,8 @@ export default function TicketNovo() {
   }, [selfFollow, userId]);
 
   const handleSave = async () => {
-    if (!titulo.trim()) {
-      toast.error("Título é obrigatório");
-      return;
-    }
     const data: TicketFormData = {
-      titulo: titulo.trim(),
+      titulo: titulo.trim() || "Ticket",
       descricao_html: descricao,
       cliente_id: clienteId,
       contrato_id: contratoId,
@@ -216,10 +212,6 @@ export default function TicketNovo() {
             <div className="flex-1 basis-[60%] space-y-4">
               {/* Row 1 */}
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Título *</Label>
-                  <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Título do ticket" />
-                </div>
                 <div>
                   <Label className="text-xs">Nº do Ticket</Label>
                   <Input disabled value="(gerado automaticamente)" className="bg-muted" />
