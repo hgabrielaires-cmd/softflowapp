@@ -496,7 +496,7 @@ function AgendaCrmContent() {
               classNames={{
                 day_today: "!bg-primary !text-primary-foreground !font-bold !rounded-full !opacity-100",
               }}
-              className="rounded-md border"
+              className="crm-agenda-calendar rounded-md border"
             />
 
             {/* Day stats */}
