@@ -124,7 +124,7 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
         const { data: modulos } = await supabase
           .from("contrato_financeiro_modulos")
           .select("nome, valor_mensal, data_inicio")
-          .eq("contrato_financeiro_id", fatura.contrato_financeiro_id)
+          .eq("contrato_financeiro_id", cfId)
           .eq("ativo", true)
           .order("data_inicio");
 
