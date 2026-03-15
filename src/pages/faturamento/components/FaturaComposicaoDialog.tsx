@@ -90,7 +90,7 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
         const { data: cf } = await supabase
           .from("contratos_financeiros")
           .select("valor_mensalidade, valor_implantacao, parcelas_implantacao, parcelas_pagas, plano_id, planos(nome)")
-          .eq("id", fatura.contrato_financeiro_id)
+          .eq("id", cfId)
           .single();
 
         if (cf) {
