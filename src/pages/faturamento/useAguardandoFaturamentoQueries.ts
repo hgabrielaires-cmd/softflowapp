@@ -56,9 +56,11 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
       return;
     }
 
-    // Filter: not already billed AND actually signed (ZapSign = Assinado, or no ZapSign record but contract status = Assinado)
+    // Filter: not already billed AND (ZapSign = Assinado, or manual/retroactive, or no ZapSign + status = Assinado)
     let pendentes = (data || []).filter((c: any) => {
       if (idsFaturados.has(c.id)) return false;
+      // Retroactive contracts (status_geracao = 'Manual') always qualify
+      if (c.status_geracao === "Manual" && c.status === "Ativo") return true;
       const zStatus = zapsignMap.get(c.id);
       // Include if: ZapSign says "Assinado", OR no ZapSign record and contract itself is "Assinado"
       if (zStatus === "Assinado") return true;
