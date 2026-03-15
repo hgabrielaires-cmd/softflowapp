@@ -88,9 +88,12 @@ export function CancelarAditivosDialog({
             </label>
           ))}
         </div>
+        <p className="text-xs text-muted-foreground">
+          ⚠️ Aditivos não podem existir sem o contrato base. Todos os selecionados serão cancelados automaticamente.
+        </p>
         <div className="flex justify-end gap-2 mt-2">
           <Button variant="outline" onClick={onManterTodos} disabled={processando}>
-            Manter todos ativos
+            Voltar
           </Button>
           <Button
             variant="destructive"
@@ -98,7 +101,7 @@ export function CancelarAditivosDialog({
             disabled={aditivosSelecionados.length === 0 || processando}
           >
             {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Cancelar {aditivosSelecionados.length} selecionado(s)
+            Cancelar base + {aditivosSelecionados.length} aditivo(s)
           </Button>
         </div>
       </DialogContent>
