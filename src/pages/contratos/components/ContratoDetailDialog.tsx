@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PedidoComentarios } from "@/components/PedidoComentarios";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
   FileCheck, Loader2, FileOutput, Download, CheckCircle2, Send,
   RefreshCw, ClipboardCopy, ExternalLink, XCircle,
