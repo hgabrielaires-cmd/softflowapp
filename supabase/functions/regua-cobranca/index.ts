@@ -166,6 +166,16 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Resolve instance_name from setor "Financeiro"
+    const { data: setorFinanceiro } = await supabase
+      .from("setores")
+      .select("instance_name")
+      .eq("nome", "Financeiro")
+      .eq("ativo", true)
+      .maybeSingle();
+
+    const financeiroInstanceName = setorFinanceiro?.instance_name || "Softflow_WhatsApp";
+
     // Load all cobranca configs by filial
     const { data: configs } = await supabase
       .from("cobranca_config")
