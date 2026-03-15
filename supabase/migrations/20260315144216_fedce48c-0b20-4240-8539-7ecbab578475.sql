@@ -1,0 +1,1 @@
+UPDATE public.contratos SET status_geracao = 'Manual' WHERE id = '297dcc8f-b9a1-41cc-9fa7-ce38edd82c14';
