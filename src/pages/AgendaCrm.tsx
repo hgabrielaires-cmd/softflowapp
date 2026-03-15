@@ -492,9 +492,7 @@ function AgendaCrmContent() {
               }}
               modifiersClassNames={{
                 hasEvent: "bg-primary/15 font-bold text-primary",
-              }}
-              classNames={{
-                day_today: "!bg-primary !text-primary-foreground !font-bold !rounded-full !opacity-100",
+                today: "crm-agenda-today",
               }}
               className="crm-agenda-calendar rounded-md border"
             />
