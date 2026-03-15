@@ -377,7 +377,7 @@ function AgendaCrmContent() {
               {getStatusBadge(c)}
               {respProfile && (
                 <UserAvatar
-                  name={respProfile.full_name}
+                  fullName={respProfile.full_name}
                   avatarUrl={respProfile.avatar_url}
                   size="sm"
                 />
