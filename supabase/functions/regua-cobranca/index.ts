@@ -87,13 +87,13 @@ async function sendWhatsApp(
   apiKey: string,
   phone: string,
   text: string,
+  instanceName: string = "Softflow_WhatsApp",
 ): Promise<boolean> {
   let formattedNumber = phone.replace(/\D/g, "");
   if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
   if (!formattedNumber.startsWith("55")) formattedNumber = "55" + formattedNumber;
 
   const baseUrl = serverUrl.replace(/\/+$/, "");
-  const instanceName = "Softflow_WhatsApp";
   const headers = { "Content-Type": "application/json", apikey: apiKey };
 
   let res = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
