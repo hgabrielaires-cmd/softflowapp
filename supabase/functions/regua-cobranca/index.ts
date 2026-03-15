@@ -256,6 +256,19 @@ Deno.serve(async (req) => {
 
       if (alreadySent) { pulados++; continue; }
 
+      // Re-check payment status right before sending (avoid race condition with webhook)
+      const { data: freshFatura } = await supabase
+        .from("faturas")
+        .select("status")
+        .eq("id", fatura.id)
+        .single();
+
+      if (freshFatura && !["Pendente", "Vencido"].includes(freshFatura.status)) {
+        console.log(`Fatura ${fatura.id} já foi paga/cancelada (${freshFatura.status}), pulando`);
+        pulados++;
+        continue;
+      }
+
       // Get decisor contact
       const { data: decisor } = await supabase
         .from("cliente_contatos")
