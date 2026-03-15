@@ -227,10 +227,14 @@ async function fetchPaymentDetails(baseUrl: string, apiKey: string, paymentId: s
     if (billingType === "BOLETO") {
       const boletoData = await asaasFetch(baseUrl, apiKey, `/payments/${paymentId}/identificationField`, "GET");
       details.asaas_barcode = boletoData?.identificationField || null;
-    } else if (billingType === "PIX") {
+    }
+    // Always fetch PIX QR Code (Asaas generates PIX for all payment types)
+    try {
       const pixData = await asaasFetch(baseUrl, apiKey, `/payments/${paymentId}/pixQrCode`, "GET");
       details.asaas_pix_qrcode = pixData?.payload || null;
       details.asaas_pix_image = pixData?.encodedImage || null;
+    } catch (_pixErr) {
+      console.warn(`PIX QR not available for payment ${paymentId}`);
     }
   } catch (err) {
     console.warn(`Failed to fetch payment details for ${paymentId}:`, err);
