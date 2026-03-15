@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -22,9 +23,10 @@ interface Props {
   espelho: ContratoEspelho;
   canEditValues?: boolean;
   contratoFinanceiroBase?: ContratoFinanceiroBase | null;
+  isRetroativo?: boolean;
 }
 
-export function ConfiguracaoCobranca({ form, setForm, espelho, canEditValues = false, contratoFinanceiroBase }: Props) {
+export function ConfiguracaoCobranca({ form, setForm, espelho, canEditValues = false, contratoFinanceiroBase, isRetroativo = false }: Props) {
   const isOA = espelho.tipo === "OA";
   const tipoPedido = espelho.pedido?.tipo_pedido || "";
   const isSubRegistro = !!espelho.contrato_origem_id && !!contratoFinanceiroBase;
@@ -152,7 +154,7 @@ export function ConfiguracaoCobranca({ form, setForm, espelho, canEditValues = f
                 <Input
                   value={formatCurrencyInput(form.valor_implantacao)}
                   onChange={(e) => handleCurrencyChange("valor_implantacao", e.target.value)}
-                  className={`h-9 ${!canEditValues ? "bg-muted" : ""}`}
+                  className={`h-9 ${!canEditValues ? "bg-muted" : ""} ${form.implantacao_ja_cobrada ? "line-through opacity-50" : ""}`}
                   placeholder="R$ 0,00"
                   disabled={!canEditValues}
                 />
@@ -162,6 +164,7 @@ export function ConfiguracaoCobranca({ form, setForm, espelho, canEditValues = f
                 <Select
                   value={String(form.parcelas_implantacao)}
                   onValueChange={(v) => updateField("parcelas_implantacao", Number(v))}
+                  disabled={form.implantacao_ja_cobrada}
                 >
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -173,7 +176,26 @@ export function ConfiguracaoCobranca({ form, setForm, espelho, canEditValues = f
               </div>
             </div>
 
-            {form.parcelas_implantacao > 1 && form.valor_implantacao > 0 && (
+            {/* Correção 4: Toggle implantação já cobrada */}
+            {isRetroativo && (
+              <div className="flex items-center justify-between rounded-lg border border-border p-3 bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="implantacao-ja-cobrada"
+                    checked={form.implantacao_ja_cobrada}
+                    onCheckedChange={(checked) => updateField("implantacao_ja_cobrada", checked)}
+                  />
+                  <Label htmlFor="implantacao-ja-cobrada" className="text-xs cursor-pointer">
+                    Implantação já cobrada no sistema anterior
+                  </Label>
+                </div>
+                {form.implantacao_ja_cobrada && (
+                  <Badge variant="destructive" className="text-[10px]">Não será cobrada</Badge>
+                )}
+              </div>
+            )}
+
+            {form.parcelas_implantacao > 1 && form.valor_implantacao > 0 && !form.implantacao_ja_cobrada && (
               <div className="flex items-center gap-2 text-xs">
                 <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
                   {fmtCurrency(Math.round((form.valor_implantacao / form.parcelas_implantacao) * 100) / 100)} por parcela

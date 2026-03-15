@@ -6,6 +6,8 @@ import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2, Send, X, AlertTriangle } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -36,6 +38,13 @@ export default function ConfigurarFaturamento() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [canEditValues, setCanEditValues] = useState(false);
 
+  // ── Derived state (Correção 3) ──
+  const temOrigemContrato = !!espelho?.contrato_origem_id;
+  const temFinanceiroBase = !!contratoFinanceiroBase;
+  const isSubRegistro = temOrigemContrato && temFinanceiroBase;
+  const baseNaoFaturado = temOrigemContrato && !temFinanceiroBase && !form.force_novo;
+  const missingBase = isSubRegistro ? false : (temOrigemContrato && !temFinanceiroBase && !form.force_novo);
+
   // Check permission to edit billing values
   useEffect(() => {
     if (isAdmin) { setCanEditValues(true); return; }
@@ -59,7 +68,6 @@ export default function ConfigurarFaturamento() {
     if (!espelho) return;
 
     const tipoPedido = espelho.pedido?.tipo_pedido || "";
-    const isSubRegistro = !!espelho.contrato_origem_id;
     const isUpgradeOrDowngrade = tipoPedido === "Upgrade" || tipoPedido === "Downgrade";
 
     const valorMens = espelho.pedido?.valor_mensalidade_final
@@ -84,10 +92,11 @@ export default function ConfigurarFaturamento() {
     });
 
     // Se é sub-registro e temos o base, herdar dia_vencimento e forma_pagamento
-    const diaVenc = (isSubRegistro && contratoFinanceiroBase)
+    const isSubReg = !!espelho.contrato_origem_id && !!contratoFinanceiroBase;
+    const diaVenc = (isSubReg && contratoFinanceiroBase)
       ? contratoFinanceiroBase.dia_vencimento
       : 10;
-    const formaPagBase = (isSubRegistro && contratoFinanceiroBase)
+    const formaPagBase = (isSubReg && contratoFinanceiroBase)
       ? contratoFinanceiroBase.forma_pagamento
       : (formaPag === "Boleto" || formaPag === "Pix" ? formaPag : "Boleto");
 
@@ -101,6 +110,8 @@ export default function ConfigurarFaturamento() {
       modulos,
       email_cobranca: espelho.cliente.email || "",
       whatsapp_cobranca: espelho.cliente.telefone || "",
+      implantacao_ja_cobrada: false,
+      force_novo: false,
     }));
   }, [espelho, contratoFinanceiroBase]);
 
@@ -127,8 +138,11 @@ export default function ConfigurarFaturamento() {
 
   const tipoLabel = getBadgeTipoLabel(espelho.tipo, espelho.pedido?.tipo_pedido);
   const tipoColor = getBadgeTipoColor(tipoLabel);
-  const isSubRegistro = !!espelho.contrato_origem_id;
-  const missingBase = isSubRegistro && !contratoFinanceiroBase;
+  const isRetroativo = espelho.status_geracao === "Manual" || espelho.pedido?.status_pedido === "Contrato Retroativo";
+
+  // Determine if save should be blocked
+  const saveBlocked = saving || baseNaoFaturado;
+
   return (
     <AppLayout>
       <div className="flex flex-col h-[calc(100vh-64px)]">
@@ -154,13 +168,41 @@ export default function ConfigurarFaturamento() {
           </div>
         </div>
 
-        {/* Alerta: sub-registro sem contrato financeiro base */}
-        {missingBase && (
+        {/* Alerta: base não faturado (Correção 3) */}
+        {baseNaoFaturado && (
           <div className="px-4 pt-4">
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                Este cliente ainda não possui contrato financeiro base ativo. Configure o faturamento do contrato inicial antes de processar aditivos.
+              <AlertDescription className="space-y-2">
+                <p className="font-medium">Base ainda não configurado</p>
+                <p className="text-sm">
+                  O contrato base {espelho.contrato_base?.numero_exibicao || ""} ainda não possui faturamento configurado.
+                  Para garantir que o cliente receba apenas 1 boleto com os valores corretos, configure o aditivo APÓS configurar o base.
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <Button variant="outline" size="sm" onClick={() => navigate("/faturamento")}>
+                    <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Voltar
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => navigate(`/faturamento/configurar/${espelho.contrato_origem_id}`)}
+                  >
+                    Configurar Base Primeiro →
+                  </Button>
+                </div>
+                {/* Admin override */}
+                {isAdmin && (
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-destructive/20">
+                    <Checkbox
+                      id="force-novo"
+                      checked={form.force_novo}
+                      onCheckedChange={(checked) => setForm(f => ({ ...f, force_novo: !!checked }))}
+                    />
+                    <Label htmlFor="force-novo" className="text-xs cursor-pointer">
+                      Base já faturado externamente — configurar este aditivo como novo contrato financeiro
+                    </Label>
+                  </div>
+                )}
               </AlertDescription>
             </Alert>
           </div>
@@ -182,6 +224,7 @@ export default function ConfigurarFaturamento() {
                 espelho={espelho}
                 canEditValues={canEditValues}
                 contratoFinanceiroBase={contratoFinanceiroBase}
+                isRetroativo={isRetroativo}
               />
             </div>
 
@@ -205,7 +248,7 @@ export default function ConfigurarFaturamento() {
           <Button
             className="gap-1.5 bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90"
             onClick={() => setConfirmOpen(true)}
-            disabled={saving || missingBase}
+            disabled={saveBlocked}
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {isSubRegistro ? "Confirmar Alteração" : "Confirmar e Criar Faturamento"}

@@ -5,7 +5,10 @@ import { Input } from "@/components/ui/input";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Loader2, Search, Settings2, FileWarning } from "lucide-react";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Loader2, Search, Settings2, FileWarning, AlertTriangle, ArrowRight } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { format, parseISO } from "date-fns";
 import { fmtCurrency } from "../helpers";
@@ -28,6 +31,8 @@ interface AguardandoFaturamentoTabProps {
 export function AguardandoFaturamentoTab({ filialFilter = "all" }: AguardandoFaturamentoTabProps) {
   const navigate = useNavigate();
   const q = useAguardandoFaturamentoQueries(filialFilter);
+
+  const temAditivoPendente = (c: ContratoAguardando) => c.aditivos_pendentes.length > 0;
 
   return (
     <div className="space-y-4">
@@ -76,13 +81,36 @@ export function AguardandoFaturamentoTab({ filialFilter = "all" }: AguardandoFat
                 </TableCell>
               </TableRow>
             ) : q.contratos.map((c) => (
-              <TableRow key={c.id}>
+              <TableRow key={c.id} className={temAditivoPendente(c) ? "bg-amber-50/50 dark:bg-amber-900/10" : ""}>
                 <TableCell className="max-w-[180px] truncate font-medium">{c.cliente_nome}</TableCell>
                 <TableCell className="font-mono text-sm">{c.numero_exibicao}</TableCell>
                 <TableCell>
-                  <Badge className={`text-xs ${BADGE_COLORS[c.badge_tipo] || BADGE_COLORS["Não Faturado"]}`}>
-                    {c.badge_tipo}
-                  </Badge>
+                  <div className="flex items-center gap-1.5">
+                    <Badge className={`text-xs ${BADGE_COLORS[c.badge_tipo] || BADGE_COLORS["Não Faturado"]}`}>
+                      {c.badge_tipo}
+                    </Badge>
+                    {temAditivoPendente(c) && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Badge variant="outline" className="text-xs border-amber-400 text-amber-700 dark:text-amber-400 gap-1">
+                              <AlertTriangle className="h-3 w-3" />
+                              Aditivo pendente
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="font-medium mb-1">Existe upgrade/módulo pendente vinculado:</p>
+                            {c.aditivos_pendentes.map(a => (
+                              <p key={a.id} className="text-xs">• {a.numero_exibicao} ({a.tipo_pedido})</p>
+                            ))}
+                            <p className="text-xs mt-1 text-muted-foreground">
+                              Configure o aditivo primeiro para unificar o boleto.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="text-sm">
                   <div>{c.plano_nome}</div>
@@ -108,14 +136,46 @@ export function AguardandoFaturamentoTab({ filialFilter = "all" }: AguardandoFat
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    size="sm"
-                    className="gap-1.5 bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90"
-                    onClick={() => navigate(`/faturamento/configurar/${c.id}`)}
-                  >
-                    <Settings2 className="h-3.5 w-3.5" />
-                    Configurar
-                  </Button>
+                  {temAditivoPendente(c) ? (
+                    <div className="flex flex-col gap-1 items-end">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1.5 opacity-50 cursor-not-allowed"
+                              disabled
+                            >
+                              <Settings2 className="h-3.5 w-3.5" />
+                              Configurar
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Bloqueado: configure o aditivo pendente primeiro
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="gap-1.5 text-xs"
+                        onClick={() => navigate(`/faturamento/configurar/${c.aditivos_pendentes[0].id}`)}
+                      >
+                        Configurar Aditivo
+                        <ArrowRight className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="gap-1.5 bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90"
+                      onClick={() => navigate(`/faturamento/configurar/${c.id}`)}
+                    >
+                      <Settings2 className="h-3.5 w-3.5" />
+                      Configurar
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

@@ -74,6 +74,11 @@ export interface RetroSegmento {
   nome: string;
 }
 
+export interface RetroContratoBaseOption {
+  id: string;
+  numero_exibicao: string;
+}
+
 export interface RetroFormState {
   cliente_id: string;
   plano_id: string;
@@ -84,6 +89,7 @@ export interface RetroFormState {
   data_lancamento: string;
   vendedor_id: string;
   filial_id: string;
+  contrato_origem_id: string;
   desconto_implantacao_tipo: "R$" | "%";
   desconto_implantacao_valor: string;
   desconto_mensalidade_tipo: "R$" | "%";
@@ -145,6 +151,7 @@ export interface CadastroRetroativoDialogProps {
   retroSaving: boolean;
   handleRetroAddModulo: (moduloId: string) => void;
   handleSalvarRetroativo: () => void;
+  retroContratosBase: RetroContratoBaseOption[];
 
   // Computed values
   retroValorImpOriginal: number;
@@ -196,6 +203,7 @@ export function CadastroRetroativoDialog(props: CadastroRetroativoDialogProps) {
     retroClienteSearch, setRetroClienteSearch,
     retroClienteSearchFocused, setRetroClienteSearchFocused,
     retroSaving, handleRetroAddModulo, handleSalvarRetroativo,
+    retroContratosBase,
     retroValorImpOriginal, retroValorMensOriginal,
     retroValorImpFinal, retroValorMensFinal, retroValorTotal,
     filiais,
@@ -355,6 +363,31 @@ export function CadastroRetroativoDialog(props: CadastroRetroativoDialogProps) {
                 </Select>
               </div>
             </div>
+
+            {/* ── Contrato Base (obrigatório para Aditivo/OA) ── */}
+            {retroForm.tipo !== "Base" && (
+              <div className="space-y-1.5">
+                <Label>Contrato Base *</Label>
+                <Select
+                  value={retroForm.contrato_origem_id || "_none"}
+                  onValueChange={(v) => setRetroForm(f => ({ ...f, contrato_origem_id: v === "_none" ? "" : v }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione o contrato base..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none" disabled>Selecione...</SelectItem>
+                    {retroContratosBase.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.numero_exibicao}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {retroForm.cliente_id && retroContratosBase.length === 0 && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Nenhum contrato base ativo encontrado para este cliente.
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* ── Segmento ── */}
             <div className="space-y-1.5">

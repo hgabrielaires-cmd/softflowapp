@@ -5,6 +5,7 @@ export interface ContratoEspelho {
   numero_exibicao: string;
   tipo: string;
   status: string;
+  status_geracao: string | null;
   updated_at: string;
   contrato_origem_id: string | null;
   cliente: {
@@ -35,6 +36,7 @@ export interface ContratoEspelho {
     filial_id: string | null;
     modulos_adicionais: ModuloAdicionalPedido[] | null;
     servicos_pedido: ServicoPedido[] | null;
+    status_pedido?: string;
   } | null;
   zapsign: {
     sign_url: string | null;
@@ -65,6 +67,7 @@ export interface ConfigFaturamentoForm {
   // Implantação
   valor_implantacao: number;
   parcelas_implantacao: number;
+  implantacao_ja_cobrada: boolean;
   // Mensalidade
   valor_mensalidade: number;
   dia_vencimento: number;
@@ -84,6 +87,8 @@ export interface ConfigFaturamentoForm {
   whatsapp_cobranca: string;
   // Geral
   observacoes: string;
+  // Admin override: base já faturado externamente
+  force_novo: boolean;
 }
 
 export interface ModuloConfig {
@@ -99,6 +104,7 @@ export interface FaturaPreviewItem {
   descricao: string;
   valor: number;
   tipo: "mensalidade" | "implantacao" | "modulo" | "oa";
+  riscado?: boolean;
 }
 
 export interface FaturaPreviewMes {

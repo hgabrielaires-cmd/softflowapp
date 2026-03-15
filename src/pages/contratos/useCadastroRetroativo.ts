@@ -14,6 +14,7 @@ export interface RetroForm {
   data_lancamento: string;
   vendedor_id: string;
   filial_id: string;
+  contrato_origem_id: string;
   desconto_implantacao_tipo: "R$" | "%";
   desconto_implantacao_valor: string;
   desconto_mensalidade_tipo: "R$" | "%";
@@ -99,6 +100,7 @@ export interface RetroContatoForm {
 const defaultRetroForm: RetroForm = {
   cliente_id: "", plano_id: "", tipo: "Base", status: "Ativo",
   observacoes: "", segmento_id: "", data_lancamento: "", vendedor_id: "", filial_id: "",
+  contrato_origem_id: "",
   desconto_implantacao_tipo: "R$", desconto_implantacao_valor: "0",
   desconto_mensalidade_tipo: "R$", desconto_mensalidade_valor: "0",
   motivo_desconto: "",
@@ -131,6 +133,7 @@ export function useCadastroRetroativo({ profileFilialId, loadData }: UseCadastro
   const [retroModulos, setRetroModulos] = useState<RetroModuloOption[]>([]);
   const [retroVendedores, setRetroVendedores] = useState<RetroVendedorOption[]>([]);
   const [retroSegmentos, setRetroSegmentos] = useState<RetroSegmentoOption[]>([]);
+  const [retroContratosBase, setRetroContratosBase] = useState<{ id: string; numero_exibicao: string }[]>([]);
 
   // ── Form state ──
   const [retroForm, setRetroForm] = useState<RetroForm>(defaultRetroForm);
@@ -312,6 +315,7 @@ export function useCadastroRetroativo({ profileFilialId, loadData }: UseCadastro
     if (!retroForm.data_lancamento) { toast.error("Informe a data de lançamento"); return; }
     if (!retroForm.vendedor_id) { toast.error("Selecione o vendedor"); return; }
     if (!retroForm.filial_id) { toast.error("Selecione a filial"); return; }
+    if (retroForm.tipo !== "Base" && !retroForm.contrato_origem_id) { toast.error("Selecione o contrato base"); return; }
     setRetroSaving(true);
 
     const filialId = retroForm.filial_id;
@@ -362,6 +366,7 @@ export function useCadastroRetroativo({ profileFilialId, loadData }: UseCadastro
       status_geracao: "Manual",
       pedido_id: pedidoData.id,
       segmento_id: retroForm.segmento_id || null,
+      contrato_origem_id: retroForm.tipo !== "Base" && retroForm.contrato_origem_id ? retroForm.contrato_origem_id : null,
       created_at: dataLancamento,
     };
     if (retroForm.plano_id) insertData.plano_id = retroForm.plano_id;
@@ -373,6 +378,23 @@ export function useCadastroRetroativo({ profileFilialId, loadData }: UseCadastro
     setOpenRetroativo(false);
     loadData();
   }
+
+  // ── Load contratos base when client changes ──
+  useEffect(() => {
+    async function loadContratosBase() {
+      if (!retroForm.cliente_id) { setRetroContratosBase([]); return; }
+      const { data } = await supabase
+        .from("contratos")
+        .select("id, numero_exibicao")
+        .eq("cliente_id", retroForm.cliente_id)
+        .eq("tipo", "Base")
+        .in("status", ["Ativo", "Assinado"])
+        .order("created_at", { ascending: false })
+        .limit(10);
+      setRetroContratosBase((data || []) as any[]);
+    }
+    loadContratosBase();
+  }, [retroForm.cliente_id]);
 
   return {
     // Dialog
@@ -386,6 +408,7 @@ export function useCadastroRetroativo({ profileFilialId, loadData }: UseCadastro
     retroClienteSearchFocused, setRetroClienteSearchFocused,
     retroSaving,
     handleRetroAddModulo, handleSalvarRetroativo,
+    retroContratosBase,
     // Computed
     retroValorImpOriginal, retroValorMensOriginal,
     retroValorImpFinal, retroValorMensFinal, retroValorTotal,

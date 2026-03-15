@@ -702,6 +702,7 @@ export type Database = {
           filial_id: string | null
           forma_pagamento: string
           id: string
+          implantacao_ja_cobrada: boolean
           observacoes: string | null
           parcelas_implantacao: number
           parcelas_pagas: number
@@ -727,6 +728,7 @@ export type Database = {
           filial_id?: string | null
           forma_pagamento?: string
           id?: string
+          implantacao_ja_cobrada?: boolean
           observacoes?: string | null
           parcelas_implantacao?: number
           parcelas_pagas?: number
@@ -752,6 +754,7 @@ export type Database = {
           filial_id?: string | null
           forma_pagamento?: string
           id?: string
+          implantacao_ja_cobrada?: boolean
           observacoes?: string | null
           parcelas_implantacao?: number
           parcelas_pagas?: number
@@ -3477,6 +3480,7 @@ export type Database = {
           descricao: string
           id: string
           numero_parcelas: number
+          observacao: string | null
           parcelas_pagas: number
           status: string
           valor_por_parcela: number
@@ -3489,6 +3493,7 @@ export type Database = {
           descricao: string
           id?: string
           numero_parcelas?: number
+          observacao?: string | null
           parcelas_pagas?: number
           status?: string
           valor_por_parcela?: number
@@ -3501,6 +3506,7 @@ export type Database = {
           descricao?: string
           id?: string
           numero_parcelas?: number
+          observacao?: string | null
           parcelas_pagas?: number
           status?: string
           valor_por_parcela?: number
