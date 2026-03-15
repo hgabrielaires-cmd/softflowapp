@@ -315,6 +315,7 @@ export function useCadastroRetroativo({ profileFilialId, loadData }: UseCadastro
     if (!retroForm.data_lancamento) { toast.error("Informe a data de lançamento"); return; }
     if (!retroForm.vendedor_id) { toast.error("Selecione o vendedor"); return; }
     if (!retroForm.filial_id) { toast.error("Selecione a filial"); return; }
+    if (retroForm.tipo !== "Base" && !retroForm.contrato_origem_id) { toast.error("Selecione o contrato base"); return; }
     setRetroSaving(true);
 
     const filialId = retroForm.filial_id;
