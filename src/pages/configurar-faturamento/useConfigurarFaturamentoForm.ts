@@ -22,25 +22,24 @@ export function useConfigurarFaturamentoForm() {
     setSaving(true);
     try {
       const tipoPedido = espelho.pedido?.tipo_pedido || "";
-      const isSubRegistro = !!espelho.contrato_origem_id && !!contratoFinanceiroBase;
+      // Correção 3: force_novo overrides isSubRegistro
+      const isSubRegistro = !!espelho.contrato_origem_id && !!contratoFinanceiroBase && !form.force_novo;
       const isUpgrade = tipoPedido === "Upgrade";
       const isDowngrade = tipoPedido === "Downgrade";
       const isModuloAdicional = tipoPedido === "Módulo Adicional" || tipoPedido === "Aditivo";
       const isOA = espelho.tipo === "OA";
 
       if (isSubRegistro) {
-        // ═══════════════════════════════════════════════════
-        // SUB-REGISTRO: Upgrade, Downgrade, Módulo ou OA
-        // Atualiza o contrato financeiro BASE existente
-        // ═══════════════════════════════════════════════════
-        await handleSubRegistro(form, espelho, contratoFinanceiroBase, {
+        await handleSubRegistro(form, espelho, contratoFinanceiroBase!, {
           isUpgrade, isDowngrade, isModuloAdicional, isOA,
         });
       } else {
-        // ═══════════════════════════════════════════════════
-        // CONTRATO NOVO: Criar contrato financeiro base
-        // ═══════════════════════════════════════════════════
         await handleContratoNovo(form, espelho);
+      }
+
+      // Log force_novo override in history if used
+      if (form.force_novo && espelho.contrato_origem_id) {
+        // This is logged as part of handleContratoNovo's history
       }
 
       toast.success("Faturamento configurado com sucesso!");
@@ -56,12 +55,15 @@ export function useConfigurarFaturamentoForm() {
   async function handleContratoNovo(form: ConfigFaturamentoForm, espelho: ContratoEspelho) {
     const filialId = espelho.pedido?.filial_id || espelho.cliente?.filial_id || null;
 
+    // Correção 4: implantacao_ja_cobrada
+    const implJaCobrada = form.implantacao_ja_cobrada;
+
     // Criar contrato financeiro base
     const { data: cf, error: cfErr } = await supabase
       .from("contratos_financeiros")
       .insert({
         contrato_id: espelho.id,
-        contrato_base_id: null, // ele mesmo é o base
+        contrato_base_id: null,
         cliente_id: espelho.cliente.id,
         filial_id: filialId,
         plano_id: espelho.plano?.id || null,
@@ -78,13 +80,14 @@ export function useConfigurarFaturamentoForm() {
         whatsapp_cobranca: form.whatsapp_cobranca || null,
         observacoes: form.observacoes || null,
         status: "Ativo",
+        implantacao_ja_cobrada: implJaCobrada,
       })
       .select("id")
       .single();
 
     if (cfErr || !cf) throw new Error("Erro ao criar contrato financeiro: " + (cfErr?.message || ""));
 
-    // Criar parcelas de implantação se valor > 0
+    // Criar parcelas de implantação
     if (form.valor_implantacao > 0) {
       const valorParcela = Math.round((form.valor_implantacao / form.parcelas_implantacao) * 100) / 100;
       await supabase.from("parcelas_implantacao").insert({
@@ -94,8 +97,9 @@ export function useConfigurarFaturamentoForm() {
         valor_total: form.valor_implantacao,
         numero_parcelas: form.parcelas_implantacao,
         valor_por_parcela: valorParcela,
-        parcelas_pagas: 0,
-        status: "pendente",
+        parcelas_pagas: implJaCobrada ? form.parcelas_implantacao : 0,
+        status: implJaCobrada ? "quitada" : "pendente",
+        observacao: implJaCobrada ? "Quitada no sistema anterior" : null,
       });
     }
 
@@ -112,15 +116,21 @@ export function useConfigurarFaturamentoForm() {
     }
 
     // Registrar histórico
+    const historicoDesc = form.force_novo
+      ? `Contrato financeiro criado (base faturado externamente) — ${espelho.numero_exibicao}`
+      : `Contrato financeiro criado — ${espelho.numero_exibicao}`;
+
     await supabase.from("contrato_financeiro_historico").insert({
       contrato_financeiro_id: cf.id,
       tipo: "criacao",
-      descricao: `Contrato financeiro criado — ${espelho.numero_exibicao}`,
+      descricao: historicoDesc,
       dados_novos: {
         valor_mensalidade: form.valor_mensalidade,
         valor_implantacao: form.valor_implantacao,
         parcelas: form.parcelas_implantacao,
         plano: espelho.plano?.nome,
+        implantacao_ja_cobrada: implJaCobrada,
+        force_novo: form.force_novo || false,
       },
       contrato_origem_id: espelho.id,
     });
@@ -139,7 +149,6 @@ export function useConfigurarFaturamentoForm() {
     const { isUpgrade, isDowngrade, isModuloAdicional, isOA } = flags;
 
     if (isUpgrade || isDowngrade) {
-      // ── REGRA 1/2: Atualizar mensalidade e plano no base ──
       const dadosAnteriores = {
         valor_mensalidade: base.valor_mensalidade,
         plano_id: base.plano_id,
@@ -155,8 +164,9 @@ export function useConfigurarFaturamentoForm() {
         })
         .eq("id", base.id);
 
-      // Inserir nova parcela de implantação se houver
+      // Inserir nova parcela de implantação se houver (e não já cobrada)
       if (form.valor_implantacao > 0) {
+        const implJaCobrada = form.implantacao_ja_cobrada;
         const valorParcela = Math.round((form.valor_implantacao / form.parcelas_implantacao) * 100) / 100;
         await supabase.from("parcelas_implantacao").insert({
           contrato_financeiro_id: base.id,
@@ -165,12 +175,12 @@ export function useConfigurarFaturamentoForm() {
           valor_total: form.valor_implantacao,
           numero_parcelas: form.parcelas_implantacao,
           valor_por_parcela: valorParcela,
-          parcelas_pagas: 0,
-          status: "pendente",
+          parcelas_pagas: implJaCobrada ? form.parcelas_implantacao : 0,
+          status: implJaCobrada ? "quitada" : "pendente",
+          observacao: implJaCobrada ? "Quitada no sistema anterior" : null,
         });
       }
 
-      // Registrar histórico
       await supabase.from("contrato_financeiro_historico").insert({
         contrato_financeiro_id: base.id,
         tipo: isUpgrade ? "upgrade" : "downgrade",
@@ -182,13 +192,13 @@ export function useConfigurarFaturamentoForm() {
           plano_nome: espelho.plano?.nome,
           valor_implantacao: form.valor_implantacao,
           parcelas: form.parcelas_implantacao,
+          implantacao_ja_cobrada: form.implantacao_ja_cobrada,
         },
         contrato_origem_id: espelho.id,
       });
     }
 
     if (isModuloAdicional) {
-      // ── REGRA 3: Inserir módulos no contrato financeiro BASE ──
       if (form.modulos.length > 0) {
         const modulosPayload = form.modulos.map((m) => ({
           contrato_financeiro_id: base.id,
@@ -200,8 +210,8 @@ export function useConfigurarFaturamentoForm() {
         await supabase.from("contrato_financeiro_modulos").insert(modulosPayload);
       }
 
-      // Implantação de módulos (se houver)
       if (form.valor_implantacao > 0) {
+        const implJaCobrada = form.implantacao_ja_cobrada;
         const valorParcela = Math.round((form.valor_implantacao / form.parcelas_implantacao) * 100) / 100;
         await supabase.from("parcelas_implantacao").insert({
           contrato_financeiro_id: base.id,
@@ -210,12 +220,12 @@ export function useConfigurarFaturamentoForm() {
           valor_total: form.valor_implantacao,
           numero_parcelas: form.parcelas_implantacao,
           valor_por_parcela: valorParcela,
-          parcelas_pagas: 0,
-          status: "pendente",
+          parcelas_pagas: implJaCobrada ? form.parcelas_implantacao : 0,
+          status: implJaCobrada ? "quitada" : "pendente",
+          observacao: implJaCobrada ? "Quitada no sistema anterior" : null,
         });
       }
 
-      // Histórico
       await supabase.from("contrato_financeiro_historico").insert({
         contrato_financeiro_id: base.id,
         tipo: "modulo_adicional",
@@ -226,7 +236,6 @@ export function useConfigurarFaturamentoForm() {
     }
 
     if (isOA) {
-      // ── REGRA 4: Inserir OA vinculada ao base ──
       if (form.oa_valor > 0) {
         await supabase.from("contrato_financeiro_oas").insert({
           contrato_financeiro_id: base.id,
@@ -240,7 +249,6 @@ export function useConfigurarFaturamentoForm() {
         });
       }
 
-      // Histórico
       await supabase.from("contrato_financeiro_historico").insert({
         contrato_financeiro_id: base.id,
         tipo: "oa",
@@ -265,8 +273,6 @@ export function useConfigurarFaturamentoForm() {
     espelho: ContratoEspelho,
     form: ConfigFaturamentoForm
   ) {
-    // Verificar duplicidade
-    // Buscar o contrato_id do contrato financeiro base (não o contrato aditivo/OA)
     const { data: cfBase } = await supabase
       .from("contratos_financeiros")
       .select("contrato_id")
@@ -275,7 +281,6 @@ export function useConfigurarFaturamentoForm() {
 
     const baseContratoId = cfBase?.contrato_id || espelho.id;
 
-    // Validar duplicidade pelo contrato BASE do financeiro + mês/ano
     const { data: existing } = await supabase
       .from("faturas")
       .select("id")
@@ -289,7 +294,6 @@ export function useConfigurarFaturamentoForm() {
       return;
     }
 
-    // Buscar dados atualizados do contrato financeiro
     const { data: cf } = await supabase
       .from("contratos_financeiros")
       .select("*")
@@ -301,13 +305,13 @@ export function useConfigurarFaturamentoForm() {
     let valorTotal = cf.valor_mensalidade;
 
     // ── FASE 1: Buscar dados (somente leitura) ──────────────────────
+    // Correção 4: Only include pending (not already paid) implantation installments
     const { data: parcelas } = await supabase
       .from("parcelas_implantacao")
       .select("*")
       .eq("contrato_financeiro_id", contratoFinanceiroId)
       .eq("status", "pendente");
 
-    // Calcular valor das parcelas SEM atualizar ainda
     const parcelasUpdate: { id: string; novasPagas: number; novoStatus: string }[] = [];
     for (const p of (parcelas || [])) {
       valorTotal += p.valor_por_parcela;
@@ -392,13 +396,12 @@ export function useConfigurarFaturamentoForm() {
     }
 
     if (!asaasOk && filialId) {
-      // ── ROLLBACK: deletar fatura criada, NÃO incrementar parcelas ──
       await supabase.from("faturas").delete().eq("id", faturaData.id);
       toast.error("Falha ao gerar cobrança no Asaas. Fatura não foi criada. Tente novamente.");
       throw new Error("Asaas integration failed — rollback applied");
     }
 
-    // ── FASE 4: Commit — só atualiza parcelas/OAs após sucesso ──────
+    // ── FASE 4: Commit ──────
     for (const pu of parcelasUpdate) {
       await supabase.from("parcelas_implantacao").update({
         parcelas_pagas: pu.novasPagas,

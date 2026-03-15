@@ -22,6 +22,7 @@ export function defaultConfigForm(): ConfigFaturamentoForm {
   return {
     valor_implantacao: 0,
     parcelas_implantacao: 1,
+    implantacao_ja_cobrada: false,
     valor_mensalidade: 0,
     dia_vencimento: 10,
     forma_pagamento: "Boleto",
@@ -36,6 +37,7 @@ export function defaultConfigForm(): ConfigFaturamentoForm {
     email_cobranca: "",
     whatsapp_cobranca: "",
     observacoes: "",
+    force_novo: false,
   };
 }
 

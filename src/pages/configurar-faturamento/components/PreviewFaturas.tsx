@@ -19,9 +19,8 @@ interface Props {
 
 export function PreviewFaturas({ form, setForm, espelho, contratoFinanceiroBase }: Props) {
   const planoNome = espelho.plano?.nome || "Plano";
-  const isSubRegistro = !!espelho.contrato_origem_id && !!contratoFinanceiroBase;
+  const isSubRegistro = !!espelho.contrato_origem_id && !!contratoFinanceiroBase && !form.force_novo;
   const tipoPedido = espelho.pedido?.tipo_pedido || "";
-  const isUpgradeOrDowngrade = tipoPedido === "Upgrade" || tipoPedido === "Downgrade";
 
   const preview = useMemo(() => {
     if (isSubRegistro && contratoFinanceiroBase) {
@@ -156,10 +155,13 @@ function MesPreviewCard({ mes, index }: { mes: FaturaPreviewMes; index: number }
         </span>
       </div>
       {mes.itens.map((item, i) => (
-        <div key={i} className="flex justify-between text-xs py-0.5">
+        <div key={i} className={`flex justify-between text-xs py-0.5 ${item.riscado ? "line-through opacity-50" : ""}`}>
           <span className="flex items-center gap-1.5">
             <ItemDot tipo={item.tipo} />
             {item.descricao}
+            {item.riscado && (
+              <Badge variant="outline" className="text-[9px] px-1 py-0 border-red-300 text-red-500">já paga</Badge>
+            )}
           </span>
           <span className="font-medium">{fmtCurrency(item.valor)}</span>
         </div>

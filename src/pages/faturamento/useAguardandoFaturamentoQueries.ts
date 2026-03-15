@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { ContratoAguardando } from "./types";
+import type { ContratoAguardando, AditivoPendente } from "./types";
 
 const PAGE_SIZE = 15;
 
@@ -76,6 +76,52 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
       });
     }
 
+    // ── CORREÇÃO 2: Detectar aditivos pendentes vinculados a cada contrato Base ──
+    // Build a set of all pending contract IDs (not billed)
+    const pendentesIds = new Set(pendentes.map((c: any) => c.id));
+
+    // For each Base contract, find linked additives that are also pending
+    const aditivosPendentesMap = new Map<string, AditivoPendente[]>();
+    for (const c of pendentes) {
+      if ((c as any).tipo !== "Base") continue;
+      // Find contracts that reference this base as contrato_origem_id and are also pending
+      const linked = pendentes.filter((p: any) =>
+        p.contrato_origem_id === (c as any).id && p.id !== (c as any).id
+      );
+      if (linked.length > 0) {
+        aditivosPendentesMap.set((c as any).id, linked.map((l: any) => ({
+          id: l.id,
+          numero_exibicao: l.numero_exibicao,
+          tipo_pedido: l.pedidos?.tipo_pedido || l.tipo,
+        })));
+      }
+    }
+
+    // Also check DB for additives that might not be in the current pending list
+    // (e.g. different status combinations) - check contratos with contrato_origem_id pointing to base IDs
+    const baseIds = pendentes.filter((c: any) => c.tipo === "Base").map((c: any) => c.id);
+    if (baseIds.length > 0) {
+      const { data: aditivosDb } = await supabase
+        .from("contratos")
+        .select("id, numero_exibicao, contrato_origem_id, pedidos(tipo_pedido)")
+        .in("contrato_origem_id", baseIds)
+        .in("status", ["Assinado", "Ativo"]);
+
+      for (const ad of (aditivosDb || [])) {
+        if (idsFaturados.has(ad.id)) continue; // already billed
+        const baseId = ad.contrato_origem_id!;
+        const existing = aditivosPendentesMap.get(baseId) || [];
+        if (!existing.find(e => e.id === ad.id)) {
+          existing.push({
+            id: ad.id,
+            numero_exibicao: ad.numero_exibicao,
+            tipo_pedido: (ad.pedidos as any)?.tipo_pedido || "Aditivo",
+          });
+          aditivosPendentesMap.set(baseId, existing);
+        }
+      }
+    }
+
     // Map to typed structure
     const mapped: ContratoAguardando[] = pendentes.map((c: any) => {
       const diasAguardando = Math.floor(
@@ -116,6 +162,7 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
         badge_tipo: badgeTipo,
         is_retroativo: isRetroativo,
         modulos_adicionais: modulos,
+        aditivos_pendentes: aditivosPendentesMap.get(c.id) || [],
       };
     });
 

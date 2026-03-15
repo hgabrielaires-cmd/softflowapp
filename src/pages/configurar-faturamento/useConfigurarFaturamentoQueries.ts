@@ -17,11 +17,11 @@ export function useConfigurarFaturamentoQueries(contratoId: string | undefined) 
     const { data, error } = await supabase
       .from("contratos")
       .select(`
-        id, numero_exibicao, tipo, status, updated_at, contrato_origem_id,
+        id, numero_exibicao, tipo, status, status_geracao, updated_at, contrato_origem_id,
         clientes(id, nome_fantasia, razao_social, cnpj_cpf, email, telefone, filial_id),
         planos(id, nome, valor_mensalidade_padrao, valor_implantacao_padrao),
         pedidos(
-          id, tipo_pedido,
+          id, tipo_pedido, status_pedido,
           valor_mensalidade, valor_mensalidade_final,
           valor_implantacao, valor_implantacao_final,
           pagamento_implantacao_parcelas, pagamento_implantacao_forma,
@@ -61,6 +61,7 @@ export function useConfigurarFaturamentoQueries(contratoId: string | undefined) 
       numero_exibicao: c.numero_exibicao,
       tipo: c.tipo,
       status: c.status,
+      status_geracao: c.status_geracao || null,
       updated_at: c.updated_at,
       contrato_origem_id: c.contrato_origem_id,
       cliente: {
@@ -81,6 +82,7 @@ export function useConfigurarFaturamentoQueries(contratoId: string | undefined) 
       pedido: c.pedidos ? {
         id: c.pedidos.id,
         tipo_pedido: c.pedidos.tipo_pedido,
+        status_pedido: c.pedidos.status_pedido,
         valor_mensalidade: c.pedidos.valor_mensalidade,
         valor_mensalidade_final: c.pedidos.valor_mensalidade_final,
         valor_implantacao: c.pedidos.valor_implantacao,

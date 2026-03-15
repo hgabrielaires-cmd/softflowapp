@@ -88,6 +88,12 @@ export interface PagamentoFormState {
   forma_pagamento: string;
 }
 
+export interface AditivoPendente {
+  id: string;
+  numero_exibicao: string;
+  tipo_pedido: string;
+}
+
 export interface ContratoAguardando {
   id: string;
   numero_exibicao: string;
@@ -109,4 +115,5 @@ export interface ContratoAguardando {
   badge_tipo: "Não Faturado" | "Upgrade Pendente" | "OA Pendente" | "Módulo Pendente" | "Downgrade Pendente" | "Retroativo";
   is_retroativo: boolean;
   modulos_adicionais: { nome: string; quantidade: number; valor_mensalidade_modulo: number }[] | null;
+  aditivos_pendentes: AditivoPendente[];
 }

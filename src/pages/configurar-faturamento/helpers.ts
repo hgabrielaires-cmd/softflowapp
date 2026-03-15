@@ -24,7 +24,8 @@ export function parseCurrencyInput(raw: string): number {
 /** Calcula o preview das próximas faturas para CONTRATO NOVO. */
 export function calcularPreviewFaturas(form: ConfigFaturamentoForm, planoNome: string): FaturaPreviewMes[] {
   const result: FaturaPreviewMes[] = [];
-  const maxMeses = Math.max(form.parcelas_implantacao + 1, 6);
+  const implCobrar = !form.implantacao_ja_cobrada;
+  const maxMeses = implCobrar ? Math.max(form.parcelas_implantacao + 1, 6) : 6;
 
   let mes = form.mes_inicio;
   let ano = form.ano_inicio;
@@ -44,11 +45,21 @@ export function calcularPreviewFaturas(form: ConfigFaturamentoForm, planoNome: s
     // Parcela de implantação
     if (form.valor_implantacao > 0 && i < form.parcelas_implantacao) {
       const valorParcela = Math.round((form.valor_implantacao / form.parcelas_implantacao) * 100) / 100;
-      itens.push({
-        descricao: `Implantação ${i + 1}/${form.parcelas_implantacao}`,
-        valor: valorParcela,
-        tipo: "implantacao",
-      });
+      if (form.implantacao_ja_cobrada) {
+        // Show as strikethrough, don't add to total
+        itens.push({
+          descricao: `Implantação ${i + 1}/${form.parcelas_implantacao}`,
+          valor: valorParcela,
+          tipo: "implantacao",
+          riscado: true,
+        });
+      } else {
+        itens.push({
+          descricao: `Implantação ${i + 1}/${form.parcelas_implantacao}`,
+          valor: valorParcela,
+          tipo: "implantacao",
+        });
+      }
     }
 
     // Módulos
@@ -71,7 +82,8 @@ export function calcularPreviewFaturas(form: ConfigFaturamentoForm, planoNome: s
       });
     }
 
-    const total = itens.reduce((sum, item) => sum + item.valor, 0);
+    // Total excludes strikethrough items
+    const total = itens.filter(item => !item.riscado).reduce((sum, item) => sum + item.valor, 0);
 
     result.push({ mes, ano, label: getMesLabel(mes, ano), itens, total });
 
@@ -91,8 +103,6 @@ export function calcularPreviewFaturas(form: ConfigFaturamentoForm, planoNome: s
 
 /**
  * Calcula preview CONSOLIDADO para sub-registros (Upgrade, Módulo, OA).
- * Mostra a composição completa do boleto após a alteração, incluindo
- * itens já existentes no contrato base.
  */
 export function calcularPreviewConsolidado(
   form: ConfigFaturamentoForm,
@@ -105,11 +115,9 @@ export function calcularPreviewConsolidado(
   const isModulo = tipoPedido === "Módulo Adicional" || tipoPedido === "Aditivo";
   const isOA = espelho.tipo === "OA";
 
-  // Determinar a nova mensalidade base
   const novaMensalidade = isUpgrade ? form.valor_mensalidade : base.valor_mensalidade;
   const planoNome = isUpgrade ? (espelho.plano?.nome || "Novo plano") : (base.plano_nome || "Plano");
 
-  // Parcelas existentes pendentes do base
   const parcelasBase = base.parcelas_pendentes.map((p) => ({
     descricao: p.descricao,
     valor_por_parcela: p.valor_por_parcela,
@@ -118,30 +126,28 @@ export function calcularPreviewConsolidado(
     pagas: p.parcelas_pagas,
   }));
 
-  // Nova parcela de implantação (do aditivo/upgrade)
-  const novaParcela = form.valor_implantacao > 0 ? {
+  const implCobrar = !form.implantacao_ja_cobrada;
+  const novaParcela = (form.valor_implantacao > 0) ? {
     descricao: `Implantação ${tipoPedido} ${espelho.plano?.nome || ""}`.trim(),
     valor_por_parcela: Math.round((form.valor_implantacao / form.parcelas_implantacao) * 100) / 100,
     restantes: form.parcelas_implantacao,
     total_parcelas: form.parcelas_implantacao,
     pagas: 0,
+    riscado: !implCobrar,
   } : null;
 
-  // Módulos existentes no base
   const modulosBase = base.modulos_ativos.map((m) => ({
     nome: m.nome,
     valor_mensal: m.valor_mensal,
   }));
 
-  // Novos módulos do pedido
   const novosModulos = isModulo ? form.modulos.map((m) => ({
     nome: m.nome,
     valor_mensal: m.valor_mensal,
   })) : [];
 
-  // Calcular max meses para preview
   const maxParcelasExistentes = parcelasBase.reduce((max, p) => Math.max(max, p.restantes), 0);
-  const maxParcelasNova = novaParcela?.restantes || 0;
+  const maxParcelasNova = (novaParcela && implCobrar) ? novaParcela.restantes : 0;
   const maxMeses = Math.max(maxParcelasExistentes + 1, maxParcelasNova + 1, 4);
 
   const now = new Date();
@@ -152,14 +158,12 @@ export function calcularPreviewConsolidado(
   for (let i = 0; i < maxMeses; i++) {
     const itens: FaturaPreviewItem[] = [];
 
-    // 1. Mensalidade base
     itens.push({
       descricao: `Mensalidade ${planoNome}`,
       valor: novaMensalidade,
       tipo: "mensalidade",
     });
 
-    // 2. Parcelas existentes pendentes
     for (const p of parcelasBase) {
       if (i < p.restantes) {
         itens.push({
@@ -170,16 +174,15 @@ export function calcularPreviewConsolidado(
       }
     }
 
-    // 3. Nova parcela de implantação
     if (novaParcela && i < novaParcela.restantes) {
       itens.push({
         descricao: `${novaParcela.descricao} ${i + 1}/${novaParcela.total_parcelas}`,
         valor: novaParcela.valor_por_parcela,
         tipo: "implantacao",
+        riscado: novaParcela.riscado,
       });
     }
 
-    // 4. Módulos existentes
     for (const m of modulosBase) {
       itens.push({
         descricao: m.nome,
@@ -188,7 +191,6 @@ export function calcularPreviewConsolidado(
       });
     }
 
-    // 5. Novos módulos
     for (const m of novosModulos) {
       if (m.valor_mensal > 0) {
         itens.push({
@@ -199,7 +201,6 @@ export function calcularPreviewConsolidado(
       }
     }
 
-    // 6. OA (apenas no mês de referência)
     if (isOA && form.oa_valor > 0 && mes === form.oa_mes_referencia && ano === form.oa_ano_referencia) {
       itens.push({
         descricao: `OA: ${form.oa_descricao || "Ordem de Atendimento"}`,
@@ -208,14 +209,13 @@ export function calcularPreviewConsolidado(
       });
     }
 
-    const total = itens.reduce((sum, item) => sum + item.valor, 0);
+    const total = itens.filter(item => !item.riscado).reduce((sum, item) => sum + item.valor, 0);
     result.push({ mes, ano, label: getMesLabel(mes, ano), itens, total });
 
     mes++;
     if (mes > 12) { mes = 1; ano++; }
   }
 
-  // Cortar quando estabilizar
   for (let i = 2; i < result.length - 1; i++) {
     if (result[i].total === result[i + 1].total && result[i].total === result[i - 1].total) {
       return result.slice(0, i + 1);
