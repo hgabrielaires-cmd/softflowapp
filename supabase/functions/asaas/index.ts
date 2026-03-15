@@ -276,7 +276,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { action, filialId, ...params } = await req.json();
+    const { action, filialId, filial_id, ...params } = await req.json();
+    const effectiveFilialId = filialId || filial_id;
 
     if (!filialId) {
       return new Response(JSON.stringify({ error: "filialId é obrigatório" }), {
