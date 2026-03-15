@@ -518,6 +518,7 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
