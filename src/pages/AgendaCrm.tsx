@@ -494,7 +494,7 @@ function AgendaCrmContent() {
                 hasEvent: "bg-primary/15 font-bold text-primary",
               }}
               classNames={{
-                day_today: "bg-primary text-primary-foreground font-bold rounded-full hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                day_today: "!bg-primary !text-primary-foreground !font-bold !rounded-full !opacity-100",
               }}
               className="rounded-md border"
             />
