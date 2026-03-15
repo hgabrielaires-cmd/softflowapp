@@ -9,3 +9,4 @@ export { NotaFiscalEditorDialog } from "./components/NotaFiscalEditorDialog";
 export { AguardandoFaturamentoTab } from "./components/AguardandoFaturamentoTab";
 export { GerarFaturasButton } from "./components/GerarFaturasDialog";
 export { CronLogsSection } from "./components/CronLogsSection";
+export { FaturaComposicaoDialog } from "./components/FaturaComposicaoDialog";

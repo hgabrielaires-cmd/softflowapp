@@ -31,7 +31,7 @@ import {
 import {
   Receipt, Plus, Loader2, MoreHorizontal, Pencil, Trash2,
   CheckCircle, XCircle, Filter, FileText, Search,
-  DollarSign, AlertTriangle, Clock, Building2, Zap, MessageCircle,
+  DollarSign, AlertTriangle, Clock, Building2, Zap, MessageCircle, Eye,
 } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
@@ -56,6 +56,7 @@ import { NotaFiscalEditorDialog } from "@/pages/faturamento/components/NotaFisca
 import { AguardandoFaturamentoTab } from "@/pages/faturamento/components/AguardandoFaturamentoTab";
 import { GerarFaturasButton } from "@/pages/faturamento/components/GerarFaturasDialog";
 import { CronLogsSection } from "@/pages/faturamento/components/CronLogsSection";
+import { FaturaComposicaoDialog } from "@/pages/faturamento/components/FaturaComposicaoDialog";
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -184,6 +185,7 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<FaturaFormState>(newFaturaFormDefaults());
   const [detalheFatura, setDetalheFatura] = useState<Fatura | null>(null);
+  const [composicaoFaturaId, setComposicaoFaturaId] = useState<string | null>(null);
 
   function openNew() {
     setEditingFatura(null);
@@ -465,6 +467,16 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
                   }
                 </TableCell>
                 <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="Composição da fatura"
+                      onClick={() => setComposicaoFaturaId(f.id)}
+                    >
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -506,6 +518,7 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -558,6 +571,9 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
 
       {/* Detalhes Cobrança Dialog */}
       <FaturaCobrancaDialog fatura={detalheFatura} onClose={() => setDetalheFatura(null)} />
+
+      {/* Composição da Fatura Dialog */}
+      <FaturaComposicaoDialog faturaId={composicaoFaturaId} onClose={() => setComposicaoFaturaId(null)} />
     </div>
   );
 }
