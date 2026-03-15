@@ -467,6 +467,16 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
                   }
                 </TableCell>
                 <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="Composição da fatura"
+                      onClick={() => setComposicaoFaturaId(f.id)}
+                    >
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-7 w-7">
