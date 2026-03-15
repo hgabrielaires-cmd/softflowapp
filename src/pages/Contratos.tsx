@@ -767,6 +767,7 @@ export default function Contratos() {
           onBaixarContrato={handleBaixarContrato}
           onEnviarWhatsapp={hookEnviarWhatsapp}
           onCancelar={() => { setOpenDetail(false); setOpenEncerrar(true); }}
+          cancelamentoInfo={cancelamentoInfo}
         />
       )}
 
