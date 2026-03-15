@@ -364,6 +364,31 @@ export function CadastroRetroativoDialog(props: CadastroRetroativoDialogProps) {
               </div>
             </div>
 
+            {/* ── Contrato Base (obrigatório para Aditivo/OA) ── */}
+            {retroForm.tipo !== "Base" && (
+              <div className="space-y-1.5">
+                <Label>Contrato Base *</Label>
+                <Select
+                  value={retroForm.contrato_origem_id || "_none"}
+                  onValueChange={(v) => setRetroForm(f => ({ ...f, contrato_origem_id: v === "_none" ? "" : v }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione o contrato base..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none" disabled>Selecione...</SelectItem>
+                    {retroContratosBase.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.numero_exibicao}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {retroForm.cliente_id && retroContratosBase.length === 0 && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Nenhum contrato base ativo encontrado para este cliente.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* ── Segmento ── */}
             <div className="space-y-1.5">
               <Label>Segmento *</Label>
