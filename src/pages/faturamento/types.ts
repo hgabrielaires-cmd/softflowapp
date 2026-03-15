@@ -106,5 +106,7 @@ export interface ContratoAguardando {
   parcelas_implantacao: number;
   data_assinatura: string;
   dias_aguardando: number;
-  badge_tipo: "Não Faturado" | "Upgrade Pendente" | "OA Pendente" | "Módulo Pendente" | "Downgrade Pendente";
+  badge_tipo: "Não Faturado" | "Upgrade Pendente" | "OA Pendente" | "Módulo Pendente" | "Downgrade Pendente" | "Retroativo";
+  is_retroativo: boolean;
+  modulos_adicionais: { nome: string; quantidade: number; valor_mensalidade_modulo: number }[] | null;
 }

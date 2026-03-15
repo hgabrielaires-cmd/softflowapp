@@ -82,12 +82,18 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
         (Date.now() - new Date(c.updated_at).getTime()) / (1000 * 60 * 60 * 24)
       );
 
-      let badgeTipo: ContratoAguardando["badge_tipo"] = "Não Faturado";
-      if (c.tipo === "Aditivo" && c.pedidos?.tipo_pedido === "Upgrade") badgeTipo = "Upgrade Pendente";
-      else if (c.tipo === "Aditivo" && c.pedidos?.tipo_pedido === "Módulo Adicional") badgeTipo = "Módulo Pendente";
-      else if (c.tipo === "Aditivo" && c.pedidos?.tipo_pedido === "Downgrade") badgeTipo = "Downgrade Pendente";
-      else if (c.tipo === "OA") badgeTipo = "OA Pendente";
-      else if (c.tipo === "Aditivo") badgeTipo = "Upgrade Pendente";
+      const isRetroativo = c.status_geracao === "Manual";
+
+      let badgeTipo: ContratoAguardando["badge_tipo"] = isRetroativo ? "Retroativo" : "Não Faturado";
+      if (!isRetroativo) {
+        if (c.tipo === "Aditivo" && c.pedidos?.tipo_pedido === "Upgrade") badgeTipo = "Upgrade Pendente";
+        else if (c.tipo === "Aditivo" && c.pedidos?.tipo_pedido === "Módulo Adicional") badgeTipo = "Módulo Pendente";
+        else if (c.tipo === "Aditivo" && c.pedidos?.tipo_pedido === "Downgrade") badgeTipo = "Downgrade Pendente";
+        else if (c.tipo === "OA") badgeTipo = "OA Pendente";
+        else if (c.tipo === "Aditivo") badgeTipo = "Upgrade Pendente";
+      }
+
+      const modulos = c.pedidos?.modulos_adicionais as any[] | null;
 
       return {
         id: c.id,
@@ -108,6 +114,8 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
         data_assinatura: c.updated_at,
         dias_aguardando: diasAguardando,
         badge_tipo: badgeTipo,
+        is_retroativo: isRetroativo,
+        modulos_adicionais: modulos,
       };
     });
 
