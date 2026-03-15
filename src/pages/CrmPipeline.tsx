@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ export default function CrmPipeline() {
   const { profile, user, roles } = useAuth();
   const queryClient = useQueryClient();
   const { filiaisDoUsuario, filialPadraoId } = useUserFiliais();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [selectedFunilId, setSelectedFunilId] = useState<string>("");
   const [search, setSearch] = useState("");
@@ -75,7 +77,24 @@ export default function CrmPipeline() {
     }
   }, [funis, selectedFunilId, profile?.funil_favorito_id]);
 
-  // Contar filtros ativos
+  // Open oportunidade from URL params (e.g. ?oportunidade=ID&tab=tarefas)
+  useEffect(() => {
+    const opId = searchParams.get("oportunidade");
+    const tab = searchParams.get("tab");
+    if (!opId || !oportunidades.length) return;
+
+    const found = oportunidades.find(o => o.id === opId);
+    if (found) {
+      setDetailDefaultTab(tab || undefined);
+      setDetailOportunidade(found);
+      // Clear URL params
+      searchParams.delete("oportunidade");
+      searchParams.delete("tab");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [oportunidades, searchParams]);
+
+
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filterFilialId !== "__all__") count++;
