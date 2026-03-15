@@ -58,6 +58,7 @@ export function ContratoDetailDialog({
   onBaixarContrato,
   onEnviarWhatsapp,
   onCancelar,
+  cancelamentoInfo,
 }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
