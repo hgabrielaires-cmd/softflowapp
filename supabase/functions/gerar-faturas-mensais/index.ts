@@ -105,6 +105,16 @@ async function sendWhatsAppForFatura(
 
   if (!whatsConfig?.ativo || !whatsConfig?.server_url || !whatsConfig?.token) return;
 
+  // Resolve instance_name from setor "Financeiro"
+  const { data: setorFinanceiro } = await supabase
+    .from("setores")
+    .select("instance_name")
+    .eq("nome", "Financeiro")
+    .eq("ativo", true)
+    .maybeSingle();
+
+  const instanceName = setorFinanceiro?.instance_name || "Softflow_WhatsApp";
+
   const { data: decisor } = await supabase
     .from("cliente_contatos")
     .select("telefone, nome")
@@ -139,7 +149,6 @@ async function sendWhatsAppForFatura(
 
   const baseUrl = whatsConfig.server_url.replace(/\/+$/, "");
   const headers = { "Content-Type": "application/json", apikey: whatsConfig.token };
-  const instanceName = "Softflow_WhatsApp";
 
   let res = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
     method: "POST",

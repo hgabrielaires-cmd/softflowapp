@@ -87,13 +87,13 @@ async function sendWhatsApp(
   apiKey: string,
   phone: string,
   text: string,
+  instanceName: string = "Softflow_WhatsApp",
 ): Promise<boolean> {
   let formattedNumber = phone.replace(/\D/g, "");
   if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
   if (!formattedNumber.startsWith("55")) formattedNumber = "55" + formattedNumber;
 
   const baseUrl = serverUrl.replace(/\/+$/, "");
-  const instanceName = "Softflow_WhatsApp";
   const headers = { "Content-Type": "application/json", apikey: apiKey };
 
   let res = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
@@ -165,6 +165,16 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Resolve instance_name from setor "Financeiro"
+    const { data: setorFinanceiro } = await supabase
+      .from("setores")
+      .select("instance_name")
+      .eq("nome", "Financeiro")
+      .eq("ativo", true)
+      .maybeSingle();
+
+    const financeiroInstanceName = setorFinanceiro?.instance_name || "Softflow_WhatsApp";
 
     // Load all cobranca configs by filial
     const { data: configs } = await supabase
@@ -299,6 +309,7 @@ Deno.serve(async (req) => {
         whatsConfig.token,
         phone,
         text,
+        financeiroInstanceName,
       );
 
       await supabase.from("notificacoes_cobranca_log").insert({
