@@ -25,6 +25,7 @@ export default function CrmPipeline() {
   const { profile, user, roles } = useAuth();
   const queryClient = useQueryClient();
   const { filiaisDoUsuario, filialPadraoId } = useUserFiliais();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [selectedFunilId, setSelectedFunilId] = useState<string>("");
   const [search, setSearch] = useState("");
