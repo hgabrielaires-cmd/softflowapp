@@ -109,7 +109,7 @@ async function sendWhatsAppForFatura(
   const { data: setorFinanceiro } = await supabase
     .from("setores")
     .select("instance_name")
-    .eq("nome", "Financeiro")
+    .ilike("nome", "financeiro")
     .eq("ativo", true)
     .maybeSingle();
 
