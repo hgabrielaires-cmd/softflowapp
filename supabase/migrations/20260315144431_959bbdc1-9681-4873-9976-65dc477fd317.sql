@@ -1,0 +1,1 @@
+DELETE FROM public.contratos_zapsign WHERE contrato_id = '297dcc8f-b9a1-41cc-9fa7-ce38edd82c14';
