@@ -379,6 +379,23 @@ export function useCadastroRetroativo({ profileFilialId, loadData }: UseCadastro
     loadData();
   }
 
+  // ── Load contratos base when client changes ──
+  useEffect(() => {
+    async function loadContratosBase() {
+      if (!retroForm.cliente_id) { setRetroContratosBase([]); return; }
+      const { data } = await supabase
+        .from("contratos")
+        .select("id, numero_exibicao")
+        .eq("cliente_id", retroForm.cliente_id)
+        .eq("tipo", "Base")
+        .in("status", ["Ativo", "Assinado"])
+        .order("created_at", { ascending: false })
+        .limit(10);
+      setRetroContratosBase((data || []) as any[]);
+    }
+    loadContratosBase();
+  }, [retroForm.cliente_id]);
+
   return {
     // Dialog
     openRetroativo, setOpenRetroativo, openRetroativoDialog,
@@ -391,6 +408,7 @@ export function useCadastroRetroativo({ profileFilialId, loadData }: UseCadastro
     retroClienteSearchFocused, setRetroClienteSearchFocused,
     retroSaving,
     handleRetroAddModulo, handleSalvarRetroativo,
+    retroContratosBase,
     // Computed
     retroValorImpOriginal, retroValorMensOriginal,
     retroValorImpFinal, retroValorMensFinal, retroValorTotal,

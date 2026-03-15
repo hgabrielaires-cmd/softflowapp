@@ -864,6 +864,7 @@ export default function Contratos() {
         retroSaving={retro.retroSaving}
         handleRetroAddModulo={retro.handleRetroAddModulo}
         handleSalvarRetroativo={retro.handleSalvarRetroativo}
+        retroContratosBase={retro.retroContratosBase}
         retroValorImpOriginal={retro.retroValorImpOriginal}
         retroValorMensOriginal={retro.retroValorMensOriginal}
         retroValorImpFinal={retro.retroValorImpFinal}
