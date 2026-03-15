@@ -185,6 +185,7 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<FaturaFormState>(newFaturaFormDefaults());
   const [detalheFatura, setDetalheFatura] = useState<Fatura | null>(null);
+  const [composicaoFaturaId, setComposicaoFaturaId] = useState<string | null>(null);
 
   function openNew() {
     setEditingFatura(null);
