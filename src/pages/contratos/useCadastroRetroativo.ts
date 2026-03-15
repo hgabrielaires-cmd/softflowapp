@@ -14,6 +14,7 @@ export interface RetroForm {
   data_lancamento: string;
   vendedor_id: string;
   filial_id: string;
+  contrato_origem_id: string;
   desconto_implantacao_tipo: "R$" | "%";
   desconto_implantacao_valor: string;
   desconto_mensalidade_tipo: "R$" | "%";
