@@ -362,7 +362,7 @@ const App = () => {
               path="/crm-agenda"
               element={
                 <ProtectedRoute>
-                  <ComingSoon module="CRM" title="Agenda CRM" description="Em desenvolvimento. Agenda de atividades do CRM." />
+                  <AgendaCrm />
                 </ProtectedRoute>
               }
             />
