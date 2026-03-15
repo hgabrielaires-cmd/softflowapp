@@ -429,6 +429,16 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "fetch_pix": {
+        if (!params.payment_id) throw new Error("payment_id é obrigatório");
+        const pixData = await asaasFetch(baseUrl, apiKey, `/payments/${params.payment_id}/pixQrCode`, "GET");
+        result = {
+          pix_qrcode: pixData?.payload || null,
+          pix_image: pixData?.encodedImage || null,
+        };
+        break;
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: `Ação desconhecida: ${action}` }),
