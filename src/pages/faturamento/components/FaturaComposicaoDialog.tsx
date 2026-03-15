@@ -50,10 +50,10 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
   async function loadComposicao(id: string) {
     setLoading(true);
     try {
-      // 1. Fetch fatura with contrato_financeiro_id
+      // 1. Fetch fatura
       const { data: fatura } = await supabase
         .from("faturas")
-        .select("numero_fatura, valor_final, referencia_mes, referencia_ano, contrato_financeiro_id, cliente_id, clientes(nome_fantasia)")
+        .select("numero_fatura, valor_final, referencia_mes, referencia_ano, contrato_financeiro_id, contrato_id, cliente_id, clientes(nome_fantasia)")
         .eq("id", id)
         .single();
 
@@ -74,12 +74,23 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
         upgrades: [],
       };
 
-      if (fatura.contrato_financeiro_id) {
+      // Resolve contrato_financeiro_id: direct or via contrato_id
+      let cfId = fatura.contrato_financeiro_id;
+      if (!cfId && fatura.contrato_id) {
+        const { data: cfByContrato } = await supabase
+          .from("contratos_financeiros")
+          .select("id")
+          .eq("contrato_id", fatura.contrato_id)
+          .maybeSingle();
+        if (cfByContrato) cfId = cfByContrato.id;
+      }
+
+      if (cfId) {
         // 2. Fetch contrato financeiro
         const { data: cf } = await supabase
           .from("contratos_financeiros")
           .select("valor_mensalidade, valor_implantacao, parcelas_implantacao, parcelas_pagas, plano_id, planos(nome)")
-          .eq("id", fatura.contrato_financeiro_id)
+          .eq("id", cfId)
           .single();
 
         if (cf) {
@@ -113,7 +124,7 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
         const { data: modulos } = await supabase
           .from("contrato_financeiro_modulos")
           .select("nome, valor_mensal, data_inicio")
-          .eq("contrato_financeiro_id", fatura.contrato_financeiro_id)
+          .eq("contrato_financeiro_id", cfId)
           .eq("ativo", true)
           .order("data_inicio");
 
@@ -126,7 +137,7 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
           const { data: oas } = await supabase
             .from("contrato_financeiro_oas")
             .select("descricao, valor, mes_referencia, ano_referencia")
-            .eq("contrato_financeiro_id", fatura.contrato_financeiro_id)
+            .eq("contrato_financeiro_id", cfId)
             .eq("mes_referencia", fatura.referencia_mes)
             .eq("ano_referencia", fatura.referencia_ano);
 
@@ -144,7 +155,7 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
         const { data: historico } = await supabase
           .from("contrato_financeiro_historico")
           .select("tipo, descricao, dados_novos, created_at")
-          .eq("contrato_financeiro_id", fatura.contrato_financeiro_id)
+          .eq("contrato_financeiro_id", cfId)
           .in("tipo", ["upgrade", "downgrade"])
           .order("created_at", { ascending: false })
           .limit(5);
