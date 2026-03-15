@@ -295,7 +295,7 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
       if (billingType === "PIX") {
         text = `Olá ${nomeContato}! 👋\n\nSua fatura está disponível:\n\nEmpresa: ${nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*\n\n💠 PIX Copia e Cola:\n${f.asaas_pix_qrcode || "—"}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
       } else {
-        text = `Olá ${nomeContato}! 👋\n\nA fatura está disponível:\n\nEmpresa: ${nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*\n\n🔗 Acesse o boleto: ${f.asaas_url || "—"}\n\nLinha digitável:\n${f.asaas_barcode || "—"}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
+        text = `Olá ${nomeContato}! 👋\n\nA fatura está disponível:\n\nEmpresa: ${nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*\n\n🔗 Acesse o boleto: ${f.asaas_url || "—"}\n\nLinha digitável:\n${f.asaas_barcode || "—"}${f.asaas_pix_qrcode ? `\n\n💠 PIX Copia e Cola:\n${f.asaas_pix_qrcode}` : ""}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
       }
 
       // Format phone number
