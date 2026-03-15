@@ -44,6 +44,7 @@ import Tickets from "./pages/Tickets";
 import TicketNovo from "./pages/TicketNovo";
 import HelpdeskParametros from "./pages/HelpdeskParametros";
 import TesteAsaas from "./pages/TesteAsaas";
+import AgendaCrm from "./pages/AgendaCrm";
 
 const queryClient = new QueryClient();
 
