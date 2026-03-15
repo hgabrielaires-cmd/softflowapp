@@ -74,6 +74,11 @@ export interface RetroSegmento {
   nome: string;
 }
 
+export interface RetroContratoBaseOption {
+  id: string;
+  numero_exibicao: string;
+}
+
 export interface RetroFormState {
   cliente_id: string;
   plano_id: string;
@@ -84,6 +89,7 @@ export interface RetroFormState {
   data_lancamento: string;
   vendedor_id: string;
   filial_id: string;
+  contrato_origem_id: string;
   desconto_implantacao_tipo: "R$" | "%";
   desconto_implantacao_valor: string;
   desconto_mensalidade_tipo: "R$" | "%";
