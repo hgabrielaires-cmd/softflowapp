@@ -44,6 +44,7 @@ import Tickets from "./pages/Tickets";
 import TicketNovo from "./pages/TicketNovo";
 import HelpdeskParametros from "./pages/HelpdeskParametros";
 import TesteAsaas from "./pages/TesteAsaas";
+import AgendaCrm from "./pages/AgendaCrm";
 
 const queryClient = new QueryClient();
 
@@ -361,7 +362,7 @@ const App = () => {
               path="/crm-agenda"
               element={
                 <ProtectedRoute>
-                  <ComingSoon module="CRM" title="Agenda CRM" description="Em desenvolvimento. Agenda de atividades do CRM." />
+                  <AgendaCrm />
                 </ProtectedRoute>
               }
             />
