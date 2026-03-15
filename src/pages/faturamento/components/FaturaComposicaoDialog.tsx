@@ -137,7 +137,7 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
           const { data: oas } = await supabase
             .from("contrato_financeiro_oas")
             .select("descricao, valor, mes_referencia, ano_referencia")
-            .eq("contrato_financeiro_id", fatura.contrato_financeiro_id)
+            .eq("contrato_financeiro_id", cfId)
             .eq("mes_referencia", fatura.referencia_mes)
             .eq("ano_referencia", fatura.referencia_ano);
 
