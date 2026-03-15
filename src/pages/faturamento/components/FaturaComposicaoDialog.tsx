@@ -155,7 +155,7 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
         const { data: historico } = await supabase
           .from("contrato_financeiro_historico")
           .select("tipo, descricao, dados_novos, created_at")
-          .eq("contrato_financeiro_id", fatura.contrato_financeiro_id)
+          .eq("contrato_financeiro_id", cfId)
           .in("tipo", ["upgrade", "downgrade"])
           .order("created_at", { ascending: false })
           .limit(5);
