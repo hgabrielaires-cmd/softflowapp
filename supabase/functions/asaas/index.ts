@@ -279,7 +279,7 @@ Deno.serve(async (req) => {
     const { action, filialId, filial_id, ...params } = await req.json();
     const effectiveFilialId = filialId || filial_id;
 
-    if (!filialId) {
+    if (!effectiveFilialId) {
       return new Response(JSON.stringify({ error: "filialId é obrigatório" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -287,7 +287,7 @@ Deno.serve(async (req) => {
     }
 
     // Get Asaas config for this branch
-    const asaasConf = await getAsaasConfig(supabaseAdmin, filialId);
+    const asaasConf = await getAsaasConfig(supabaseAdmin, effectiveFilialId);
     const { apiKey, baseUrl } = asaasConf;
     const ambiente = baseUrl.includes("sandbox") ? "sandbox" : "production";
 
