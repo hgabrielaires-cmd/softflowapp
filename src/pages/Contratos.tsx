@@ -85,6 +85,7 @@ export default function Contratos() {
 
   const [selected, setSelected] = useState<Contrato | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
+  const [cancelamentoInfo, setCancelamentoInfo] = useState<{ nome: string; avatar_url: string | null; cancelado_em: string; motivo: string | null } | null>(null);
   const [openEncerrar, setOpenEncerrar] = useState(false);
   const [motivoCancelamento, setMotivoCancelamento] = useState("");
   const [openCancelarProjeto, setOpenCancelarProjeto] = useState(false);
