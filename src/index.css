@@ -184,3 +184,11 @@ td:has(.agenda-day-selected) {
   background-color: hsl(var(--primary) / 0.2) !important;
   color: hsl(var(--primary)) !important;
 }
+
+/* CRM Agenda - today highlight */
+.crm-agenda-calendar .rdp-day_today {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  border-radius: 50% !important;
+  font-weight: 700 !important;
+}
