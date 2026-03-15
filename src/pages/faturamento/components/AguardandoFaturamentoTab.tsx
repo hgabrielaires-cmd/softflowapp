@@ -18,6 +18,7 @@ const BADGE_COLORS: Record<string, string> = {
   "OA Pendente": "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
   "Módulo Pendente": "bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-400 dark:border-cyan-800",
   "Downgrade Pendente": "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800",
+  "Retroativo": "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/30 dark:text-slate-400 dark:border-slate-800",
 };
 
 interface AguardandoFaturamentoTabProps {
@@ -83,12 +84,23 @@ export function AguardandoFaturamentoTab({ filialFilter = "all" }: AguardandoFat
                     {c.badge_tipo}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-sm">{c.plano_nome}</TableCell>
+                <TableCell className="text-sm">
+                  <div>{c.plano_nome}</div>
+                  {c.modulos_adicionais && c.modulos_adicionais.length > 0 && (
+                    <div className="text-[10px] text-muted-foreground mt-0.5">
+                      +{c.modulos_adicionais.length} módulo{c.modulos_adicionais.length > 1 ? "s" : ""}
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell className="text-right font-medium">{fmtCurrency(c.valor_implantacao)}</TableCell>
                 <TableCell className="text-right text-sm">{c.parcelas_implantacao}x</TableCell>
                 <TableCell className="text-right font-medium">{fmtCurrency(c.valor_mensalidade)}</TableCell>
                 <TableCell className="text-sm whitespace-nowrap">
-                  {format(parseISO(c.data_assinatura), "dd/MM/yyyy")}
+                  {c.is_retroativo ? (
+                    <span className="text-muted-foreground italic">Retroativo</span>
+                  ) : (
+                    format(parseISO(c.data_assinatura), "dd/MM/yyyy")
+                  )}
                 </TableCell>
                 <TableCell className="text-center">
                   <Badge variant="outline" className={`text-xs ${c.dias_aguardando > 3 ? "border-red-300 text-red-600 dark:text-red-400" : ""}`}>

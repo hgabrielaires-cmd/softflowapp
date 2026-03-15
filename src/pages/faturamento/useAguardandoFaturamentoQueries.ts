@@ -29,15 +29,15 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
       .select("contrato_id, status");
     const zapsignMap = new Map((zapsignData || []).map((r: any) => [r.contrato_id, r.status]));
 
-    // 2. Get signed/active contracts
+    // 2. Get signed/active contracts (include retroactive with status_geracao = 'Manual')
     let query = supabase
       .from("contratos")
       .select(`
-        id, numero_exibicao, tipo, status, created_at, updated_at,
+        id, numero_exibicao, tipo, status, status_geracao, created_at, updated_at,
         cliente_id, plano_id, pedido_id, contrato_origem_id,
         clientes(nome_fantasia, cnpj_cpf, email, telefone, filial_id),
         planos(nome, valor_mensalidade_padrao, valor_implantacao_padrao),
-        pedidos(tipo_pedido, vendedor_id, valor_mensalidade_final, valor_implantacao_final, pagamento_implantacao_parcelas, filial_id)
+        pedidos(tipo_pedido, vendedor_id, valor_mensalidade_final, valor_implantacao_final, pagamento_implantacao_parcelas, filial_id, modulos_adicionais)
       `, { count: "exact" })
       .in("status", ["Assinado", "Ativo"]);
 
@@ -56,9 +56,11 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
       return;
     }
 
-    // Filter: not already billed AND actually signed (ZapSign = Assinado, or no ZapSign record but contract status = Assinado)
+    // Filter: not already billed AND (ZapSign = Assinado, or manual/retroactive, or no ZapSign + status = Assinado)
     let pendentes = (data || []).filter((c: any) => {
       if (idsFaturados.has(c.id)) return false;
+      // Retroactive contracts (status_geracao = 'Manual') always qualify
+      if (c.status_geracao === "Manual" && c.status === "Ativo") return true;
       const zStatus = zapsignMap.get(c.id);
       // Include if: ZapSign says "Assinado", OR no ZapSign record and contract itself is "Assinado"
       if (zStatus === "Assinado") return true;
@@ -80,12 +82,18 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
         (Date.now() - new Date(c.updated_at).getTime()) / (1000 * 60 * 60 * 24)
       );
 
-      let badgeTipo: ContratoAguardando["badge_tipo"] = "Não Faturado";
-      if (c.tipo === "Aditivo" && c.pedidos?.tipo_pedido === "Upgrade") badgeTipo = "Upgrade Pendente";
-      else if (c.tipo === "Aditivo" && c.pedidos?.tipo_pedido === "Módulo Adicional") badgeTipo = "Módulo Pendente";
-      else if (c.tipo === "Aditivo" && c.pedidos?.tipo_pedido === "Downgrade") badgeTipo = "Downgrade Pendente";
-      else if (c.tipo === "OA") badgeTipo = "OA Pendente";
-      else if (c.tipo === "Aditivo") badgeTipo = "Upgrade Pendente";
+      const isRetroativo = c.status_geracao === "Manual";
+
+      let badgeTipo: ContratoAguardando["badge_tipo"] = isRetroativo ? "Retroativo" : "Não Faturado";
+      if (!isRetroativo) {
+        if (c.tipo === "Aditivo" && c.pedidos?.tipo_pedido === "Upgrade") badgeTipo = "Upgrade Pendente";
+        else if (c.tipo === "Aditivo" && c.pedidos?.tipo_pedido === "Módulo Adicional") badgeTipo = "Módulo Pendente";
+        else if (c.tipo === "Aditivo" && c.pedidos?.tipo_pedido === "Downgrade") badgeTipo = "Downgrade Pendente";
+        else if (c.tipo === "OA") badgeTipo = "OA Pendente";
+        else if (c.tipo === "Aditivo") badgeTipo = "Upgrade Pendente";
+      }
+
+      const modulos = c.pedidos?.modulos_adicionais as any[] | null;
 
       return {
         id: c.id,
@@ -106,6 +114,8 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
         data_assinatura: c.updated_at,
         dias_aguardando: diasAguardando,
         badge_tipo: badgeTipo,
+        is_retroativo: isRetroativo,
+        modulos_adicionais: modulos,
       };
     });
 

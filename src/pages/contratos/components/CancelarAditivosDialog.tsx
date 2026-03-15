@@ -33,15 +33,15 @@ export function CancelarAditivosDialog({
 }: Props) {
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onManterTodos(); }}>
-      <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
             <AlertCircle className="h-5 w-5" />
             Cancelar contratos vinculados?
           </DialogTitle>
           <DialogDescription>
-            O contrato base <strong>{contratoBaseCancelado?.numero_exibicao}</strong> foi cancelado. Existem{" "}
-            <strong>{aditivosVinculados.length}</strong> contrato(s) vinculado(s) ativo(s). Selecione quais deseja cancelar também:
+            O contrato base <strong>{contratoBaseCancelado?.numero_exibicao}</strong> será cancelado. Existem{" "}
+            <strong>{aditivosVinculados.length}</strong> contrato(s) vinculado(s) ativo(s) que <strong>devem ser cancelados junto</strong>, pois aditivos não podem existir sem o plano base. Selecione quais deseja cancelar:
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -88,9 +88,12 @@ export function CancelarAditivosDialog({
             </label>
           ))}
         </div>
+        <p className="text-xs text-muted-foreground">
+          ⚠️ Aditivos não podem existir sem o contrato base. Todos os selecionados serão cancelados automaticamente.
+        </p>
         <div className="flex justify-end gap-2 mt-2">
           <Button variant="outline" onClick={onManterTodos} disabled={processando}>
-            Manter todos ativos
+            Voltar
           </Button>
           <Button
             variant="destructive"
@@ -98,7 +101,7 @@ export function CancelarAditivosDialog({
             disabled={aditivosSelecionados.length === 0 || processando}
           >
             {processando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Cancelar {aditivosSelecionados.length} selecionado(s)
+            Cancelar base + {aditivosSelecionados.length} aditivo(s)
           </Button>
         </div>
       </DialogContent>
