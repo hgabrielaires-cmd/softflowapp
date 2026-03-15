@@ -35,6 +35,7 @@ interface Props {
   onBaixarContrato: (contrato: Contrato) => void;
   onEnviarWhatsapp: (mensagem: string, contatos: Props["contatosCliente"], contrato: Contrato | null) => void;
   onCancelar: () => void;
+  cancelamentoInfo?: { nome: string; avatar_url: string | null; cancelado_em: string; motivo: string | null } | null;
 }
 
 export function ContratoDetailDialog({
