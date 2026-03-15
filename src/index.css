@@ -186,9 +186,10 @@ td:has(.agenda-day-selected) {
 }
 
 /* CRM Agenda - today highlight */
-.crm-agenda-calendar .rdp-day_today {
+.crm-agenda-calendar .crm-agenda-today,
+.crm-agenda-calendar .crm-agenda-today[aria-selected="true"] {
   background-color: hsl(var(--primary)) !important;
   color: hsl(var(--primary-foreground)) !important;
-  border-radius: 50% !important;
+  border-radius: 9999px !important;
   font-weight: 700 !important;
 }
