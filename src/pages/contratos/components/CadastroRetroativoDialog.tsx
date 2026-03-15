@@ -203,6 +203,7 @@ export function CadastroRetroativoDialog(props: CadastroRetroativoDialogProps) {
     retroClienteSearch, setRetroClienteSearch,
     retroClienteSearchFocused, setRetroClienteSearchFocused,
     retroSaving, handleRetroAddModulo, handleSalvarRetroativo,
+    retroContratosBase,
     retroValorImpOriginal, retroValorMensOriginal,
     retroValorImpFinal, retroValorMensFinal, retroValorTotal,
     filiais,
