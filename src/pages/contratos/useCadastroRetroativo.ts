@@ -366,6 +366,7 @@ export function useCadastroRetroativo({ profileFilialId, loadData }: UseCadastro
       status_geracao: "Manual",
       pedido_id: pedidoData.id,
       segmento_id: retroForm.segmento_id || null,
+      contrato_origem_id: retroForm.tipo !== "Base" && retroForm.contrato_origem_id ? retroForm.contrato_origem_id : null,
       created_at: dataLancamento,
     };
     if (retroForm.plano_id) insertData.plano_id = retroForm.plano_id;
