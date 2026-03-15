@@ -117,6 +117,33 @@ async function sendWhatsApp(
   return res.ok;
 }
 
+// ── Auth helper: accepts service role, cron secret, anon key, or valid JWT ──
+async function authenticateRequest(req: Request): Promise<boolean> {
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader) return false;
+
+  const token = authHeader.replace("Bearer ", "");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const cronSecret = Deno.env.get("CRON_SECRET") || "";
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+
+  // System calls: service role, cron secret, or anon key (for pg_cron when vault is unavailable)
+  if (serviceRoleKey && token === serviceRoleKey) return true;
+  if (cronSecret && token === cronSecret) return true;
+  if (anonKey && token === anonKey) return true;
+
+  // User JWT validation
+  try {
+    const { data: { user } } = await createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      anonKey
+    ).auth.getUser(token);
+    if (user) return true;
+  } catch { /* invalid token */ }
+
+  return false;
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -125,24 +152,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Auth: accept service role key (cron) or user JWT
-    const authHeader = req.headers.get("authorization");
-    const supabase = getSupabaseAdmin();
-    let authenticated = false;
-
-    if (authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      if (token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
-        authenticated = true;
-      } else {
-        const { data: { user } } = await createClient(
-          Deno.env.get("SUPABASE_URL")!,
-          Deno.env.get("SUPABASE_ANON_KEY")!
-        ).auth.getUser(token);
-        if (user) authenticated = true;
-      }
-    }
-
+    const authenticated = await authenticateRequest(req);
     if (!authenticated) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
         status: 401,
@@ -151,6 +161,8 @@ Deno.serve(async (req) => {
     }
 
     console.log("Régua de cobrança: iniciando processamento...");
+
+    const supabase = getSupabaseAdmin();
 
     // Get WhatsApp config
     const { data: whatsConfig } = await supabase
