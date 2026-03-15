@@ -141,7 +141,59 @@ export default function Contratos() {
   async function handleOpenDetail(contrato: Contrato) {
     setSelected(contrato);
     setOpenDetail(true);
+    setCancelamentoInfo(null);
     await loadDetailData(contrato);
+    // Carregar info de cancelamento
+    if (contrato.status === "Encerrado") {
+      loadCancelamentoInfo(contrato);
+    }
+  }
+
+  async function loadCancelamentoInfo(contrato: Contrato) {
+    // Tentar contratos_cancelados primeiro
+    const { data: cc } = await supabase
+      .from("contratos_cancelados")
+      .select("cancelado_por, cancelado_em, motivo")
+      .eq("contrato_id", contrato.id)
+      .limit(1)
+      .maybeSingle();
+    if (cc) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("full_name, avatar_url")
+        .eq("user_id", cc.cancelado_por)
+        .single();
+      setCancelamentoInfo({
+        nome: prof?.full_name || "Desconhecido",
+        avatar_url: prof?.avatar_url || null,
+        cancelado_em: cc.cancelado_em,
+        motivo: cc.motivo,
+      });
+      return;
+    }
+    // Fallback: audit_logs
+    const { data: audit } = await supabase
+      .from("audit_logs")
+      .select("user_id, created_at")
+      .eq("entity_id", contrato.id)
+      .eq("entity_type", "contratos")
+      .eq("action", "status_changed")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (audit?.user_id) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("full_name, avatar_url")
+        .eq("user_id", audit.user_id)
+        .single();
+      setCancelamentoInfo({
+        nome: prof?.full_name || "Desconhecido",
+        avatar_url: prof?.avatar_url || null,
+        cancelado_em: audit.created_at,
+        motivo: null,
+      });
+    }
   }
 
   async function handleEncerrar() {
