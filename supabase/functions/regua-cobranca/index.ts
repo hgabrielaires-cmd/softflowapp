@@ -63,22 +63,23 @@ function buildMessage(
   const valorFmt = fmtCurrency(valor);
   const dataFmt = fmtDate(dataVenc);
   const linkText = link || "—";
+  const pixSection = pixCode ? `\n\n💠 PIX Copia e Cola:\n${pixCode}` : "";
 
   switch (tipo) {
     case "lembrete_5d":
-      return `⏰ Olá ${nome}! Lembrete: sua fatura vence em 5 dias.\n\nEmpresa: ${nomeFantasia}\n💰 R$ ${valorFmt} — Vence em ${dataFmt}\n🔗 ${linkText}`;
+      return `⏰ Olá ${nome}! Lembrete: sua fatura vence em 5 dias.\n\nEmpresa: ${nomeFantasia}\n💰 R$ ${valorFmt} — Vence em ${dataFmt}\n🔗 ${linkText}${pixSection}`;
 
     case "vencimento_dia":
-      return `🔔 ${nome}, sua fatura vence *hoje*!\n\nEmpresa: ${nomeFantasia}\n💰 R$ ${valorFmt}\n🔗 ${linkText}`;
+      return `🔔 ${nome}, sua fatura vence *hoje*!\n\nEmpresa: ${nomeFantasia}\n💰 R$ ${valorFmt}\n🔗 ${linkText}${pixSection}`;
 
     case "atraso_3d":
-      return `🔴 ${nome}, sua fatura está em atraso há 3 dias.\nRegularize para evitar suspensão do sistema.\n\nEmpresa: ${nomeFantasia}\n💰 R$ ${valorFmt}\n🔗 ${linkText}`;
+      return `🔴 ${nome}, sua fatura está em atraso há 3 dias.\nRegularize para evitar suspensão do sistema.\n\nEmpresa: ${nomeFantasia}\n💰 R$ ${valorFmt}\n🔗 ${linkText}${pixSection}`;
 
     case "atraso_5d":
-      return `🔴 ${nome}, sua fatura está em atraso há 5 dias.\nO travamento do sistema ocorre de maneira automática e pode atrapalhar sua operação.\n\nEmpresa: ${nomeFantasia}\n💰 R$ ${valorFmt}\n🔗 ${linkText}`;
+      return `🔴 ${nome}, sua fatura está em atraso há 5 dias.\nO travamento do sistema ocorre de maneira automática e pode atrapalhar sua operação.\n\nEmpresa: ${nomeFantasia}\n💰 R$ ${valorFmt}\n🔗 ${linkText}${pixSection}`;
 
     default:
-      return `Olá ${nome}, sobre sua fatura de R$ ${valorFmt} com vencimento em ${dataFmt}.\n🔗 ${linkText}`;
+      return `Olá ${nome}, sobre sua fatura de R$ ${valorFmt} com vencimento em ${dataFmt}.\n🔗 ${linkText}${pixSection}`;
   }
 }
 
