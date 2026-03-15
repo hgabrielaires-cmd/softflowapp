@@ -29,15 +29,15 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
       .select("contrato_id, status");
     const zapsignMap = new Map((zapsignData || []).map((r: any) => [r.contrato_id, r.status]));
 
-    // 2. Get signed/active contracts
+    // 2. Get signed/active contracts (include retroactive with status_geracao = 'Manual')
     let query = supabase
       .from("contratos")
       .select(`
-        id, numero_exibicao, tipo, status, created_at, updated_at,
+        id, numero_exibicao, tipo, status, status_geracao, created_at, updated_at,
         cliente_id, plano_id, pedido_id, contrato_origem_id,
         clientes(nome_fantasia, cnpj_cpf, email, telefone, filial_id),
         planos(nome, valor_mensalidade_padrao, valor_implantacao_padrao),
-        pedidos(tipo_pedido, vendedor_id, valor_mensalidade_final, valor_implantacao_final, pagamento_implantacao_parcelas, filial_id)
+        pedidos(tipo_pedido, vendedor_id, valor_mensalidade_final, valor_implantacao_final, pagamento_implantacao_parcelas, filial_id, modulos_adicionais)
       `, { count: "exact" })
       .in("status", ["Assinado", "Ativo"]);
 
