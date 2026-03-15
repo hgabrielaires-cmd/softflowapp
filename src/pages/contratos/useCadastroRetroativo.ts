@@ -100,6 +100,7 @@ export interface RetroContatoForm {
 const defaultRetroForm: RetroForm = {
   cliente_id: "", plano_id: "", tipo: "Base", status: "Ativo",
   observacoes: "", segmento_id: "", data_lancamento: "", vendedor_id: "", filial_id: "",
+  contrato_origem_id: "",
   desconto_implantacao_tipo: "R$", desconto_implantacao_valor: "0",
   desconto_mensalidade_tipo: "R$", desconto_mensalidade_valor: "0",
   motivo_desconto: "",
