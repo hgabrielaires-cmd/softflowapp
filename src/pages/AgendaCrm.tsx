@@ -320,7 +320,7 @@ function AgendaCrmContent() {
               ? "border-l-red-500"
               : "border-l-primary"
         )}
-        onClick={() => navigate(`/crm-pipeline?oportunidade=${c.oportunidade_id}`)}
+        onClick={() => navigate(`/crm-pipeline?oportunidade=${c.oportunidade_id}&tab=tarefas`)}
       >
         <CardContent className={cn("p-3", compact && "p-2.5")}>
           <div className="flex items-start justify-between gap-2">
