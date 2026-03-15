@@ -325,10 +325,14 @@ async function processContrato(
           if (billingType === "BOLETO") {
             const boletoData = await asaasFetch(asaasConfig.baseUrl, asaasConfig.apiKey, `/payments/${payment.id}/identificationField`, "GET");
             if (boletoData?.identificationField) asaasUpdate.asaas_barcode = boletoData.identificationField;
-          } else if (billingType === "PIX") {
+          }
+          // Always fetch PIX QR Code (Asaas generates PIX for all payment types)
+          try {
             const pixData = await asaasFetch(asaasConfig.baseUrl, asaasConfig.apiKey, `/payments/${payment.id}/pixQrCode`, "GET");
             if (pixData?.payload) asaasUpdate.asaas_pix_qrcode = pixData.payload;
             if (pixData?.encodedImage) asaasUpdate.asaas_pix_image = pixData.encodedImage;
+          } catch (_pixErr) {
+            console.warn(`PIX QR not available for payment ${payment.id}`);
           }
         } catch (detailErr) {
           console.warn(`Failed to fetch payment details for ${payment.id}:`, detailErr);

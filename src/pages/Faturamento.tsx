@@ -289,13 +289,37 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
       const valorFmt = f.valor_final.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const dataFmt = format(parseISO(f.data_vencimento), "dd/MM/yyyy");
 
+      // If PIX code is missing but we have asaas_payment_id, try to fetch it
+      let pixCode = f.asaas_pix_qrcode;
+      if (!pixCode && f.asaas_payment_id && f.filial_id) {
+        try {
+          const { data: pixResult } = await supabase.functions.invoke("asaas", {
+            body: {
+              action: "fetch_pix",
+              payment_id: f.asaas_payment_id,
+              filial_id: f.filial_id,
+            },
+          });
+          if (pixResult?.pix_qrcode) {
+            pixCode = pixResult.pix_qrcode;
+            // Save for future use
+            await supabase.from("faturas").update({
+              asaas_pix_qrcode: pixCode,
+              asaas_pix_image: pixResult.pix_image || null,
+            }).eq("id", f.id);
+          }
+        } catch (_pixErr) {
+          console.warn("Could not fetch PIX code:", _pixErr);
+        }
+      }
+
       const billingType = (f.forma_pagamento || "").toUpperCase().includes("PIX") ? "PIX" : "BOLETO";
 
       let text = "";
       if (billingType === "PIX") {
-        text = `Olá ${nomeContato}! 👋\n\nSua fatura está disponível:\n\nEmpresa: ${nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*\n\n💠 PIX Copia e Cola:\n${f.asaas_pix_qrcode || "—"}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
+        text = `Olá ${nomeContato}! 👋\n\nSua fatura está disponível:\n\nEmpresa: ${nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*\n\n💠 PIX Copia e Cola:\n${pixCode || "—"}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
       } else {
-        text = `Olá ${nomeContato}! 👋\n\nA fatura está disponível:\n\nEmpresa: ${nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*\n\n🔗 Acesse o boleto: ${f.asaas_url || "—"}\n\nLinha digitável:\n${f.asaas_barcode || "—"}${f.asaas_pix_qrcode ? `\n\n💠 PIX Copia e Cola:\n${f.asaas_pix_qrcode}` : ""}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
+        text = `Olá ${nomeContato}! 👋\n\nA fatura está disponível:\n\nEmpresa: ${nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*\n\n🔗 Acesse o boleto: ${f.asaas_url || "—"}\n\nLinha digitável:\n${f.asaas_barcode || "—"}${pixCode ? `\n\n💠 PIX Copia e Cola:\n${pixCode}` : ""}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
       }
 
       // Format phone number

@@ -227,10 +227,14 @@ async function fetchPaymentDetails(baseUrl: string, apiKey: string, paymentId: s
     if (billingType === "BOLETO") {
       const boletoData = await asaasFetch(baseUrl, apiKey, `/payments/${paymentId}/identificationField`, "GET");
       details.asaas_barcode = boletoData?.identificationField || null;
-    } else if (billingType === "PIX") {
+    }
+    // Always fetch PIX QR Code (Asaas generates PIX for all payment types)
+    try {
       const pixData = await asaasFetch(baseUrl, apiKey, `/payments/${paymentId}/pixQrCode`, "GET");
       details.asaas_pix_qrcode = pixData?.payload || null;
       details.asaas_pix_image = pixData?.encodedImage || null;
+    } catch (_pixErr) {
+      console.warn(`PIX QR not available for payment ${paymentId}`);
     }
   } catch (err) {
     console.warn(`Failed to fetch payment details for ${paymentId}:`, err);
@@ -272,9 +276,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { action, filialId, ...params } = await req.json();
+    const { action, filialId, filial_id, ...params } = await req.json();
+    const effectiveFilialId = filialId || filial_id;
 
-    if (!filialId) {
+    if (!effectiveFilialId) {
       return new Response(JSON.stringify({ error: "filialId é obrigatório" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -282,7 +287,7 @@ Deno.serve(async (req) => {
     }
 
     // Get Asaas config for this branch
-    const asaasConf = await getAsaasConfig(supabaseAdmin, filialId);
+    const asaasConf = await getAsaasConfig(supabaseAdmin, effectiveFilialId);
     const { apiKey, baseUrl } = asaasConf;
     const ambiente = baseUrl.includes("sandbox") ? "sandbox" : "production";
 
@@ -420,6 +425,16 @@ Deno.serve(async (req) => {
         result = {
           webhookReceived: (events?.length ?? 0) > 0,
           events: events ?? [],
+        };
+        break;
+      }
+
+      case "fetch_pix": {
+        if (!params.payment_id) throw new Error("payment_id é obrigatório");
+        const pixData = await asaasFetch(baseUrl, apiKey, `/payments/${params.payment_id}/pixQrCode`, "GET");
+        result = {
+          pix_qrcode: pixData?.payload || null,
+          pix_image: pixData?.encodedImage || null,
         };
         break;
       }
