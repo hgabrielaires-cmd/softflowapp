@@ -40,8 +40,8 @@ export function CancelarAditivosDialog({
             Cancelar contratos vinculados?
           </DialogTitle>
           <DialogDescription>
-            O contrato base <strong>{contratoBaseCancelado?.numero_exibicao}</strong> foi cancelado. Existem{" "}
-            <strong>{aditivosVinculados.length}</strong> contrato(s) vinculado(s) ativo(s). Selecione quais deseja cancelar também:
+            O contrato base <strong>{contratoBaseCancelado?.numero_exibicao}</strong> será cancelado. Existem{" "}
+            <strong>{aditivosVinculados.length}</strong> contrato(s) vinculado(s) ativo(s) que <strong>devem ser cancelados junto</strong>, pois aditivos não podem existir sem o plano base. Selecione quais deseja cancelar:
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2 max-h-60 overflow-y-auto">
