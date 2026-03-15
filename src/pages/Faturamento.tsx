@@ -453,6 +453,16 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
                           <Receipt className="h-4 w-4 mr-2" /> Detalhes Cobrança
                         </DropdownMenuItem>
                       )}
+                      {f.status !== "Cancelado" && (
+                        <DropdownMenuItem
+                          onClick={() => handleEnviarWhatsApp(f)}
+                          disabled={sendingWhatsApp === f.id}
+                          className="cursor-pointer"
+                        >
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          {sendingWhatsApp === f.id ? "Enviando..." : "Enviar Mensagem"}
+                        </DropdownMenuItem>
+                      )}
                       {f.status === "Pendente" && (
                         <DropdownMenuItem onClick={() => q.openRegistrarPagamento(f.id, f.forma_pagamento)} className="cursor-pointer">
                           <CheckCircle className="h-4 w-4 mr-2" /> Registrar Pagamento
