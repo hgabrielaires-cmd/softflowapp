@@ -33,7 +33,7 @@ export function CancelarAditivosDialog({
 }: Props) {
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onManterTodos(); }}>
-      <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
             <AlertCircle className="h-5 w-5" />
