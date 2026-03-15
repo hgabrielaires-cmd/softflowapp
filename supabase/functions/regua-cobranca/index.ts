@@ -309,6 +309,7 @@ Deno.serve(async (req) => {
         whatsConfig.token,
         phone,
         text,
+        financeiroInstanceName,
       );
 
       await supabase.from("notificacoes_cobranca_log").insert({
