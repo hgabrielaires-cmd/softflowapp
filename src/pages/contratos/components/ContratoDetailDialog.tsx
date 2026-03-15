@@ -84,8 +84,35 @@ export function ContratoDetailDialog({
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Status</p>
-              {getStatusBadge(selected.status)}
+              <div className="flex items-center gap-2">
+                {getStatusBadge(selected.status)}
+              </div>
             </div>
+            {/* Info de cancelamento */}
+            {selected.status === "Encerrado" && cancelamentoInfo && (
+              <div className="col-span-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  <UserAvatar
+                    avatarUrl={cancelamentoInfo.avatar_url}
+                    fullName={cancelamentoInfo.nome}
+                    size="sm"
+                  />
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-foreground">
+                      Cancelado por {cancelamentoInfo.nome}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(cancelamentoInfo.cancelado_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                </div>
+                {cancelamentoInfo.motivo && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    <span className="font-medium text-foreground">Motivo:</span> {cancelamentoInfo.motivo}
+                  </p>
+                )}
+              </div>
+            )}
             <div>
               <p className="text-muted-foreground text-xs">Cliente</p>
               <p className="font-semibold">{selected.clientes?.nome_fantasia || "—"}</p>
