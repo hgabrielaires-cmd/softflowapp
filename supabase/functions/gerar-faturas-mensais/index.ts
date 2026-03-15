@@ -412,17 +412,20 @@ Deno.serve(async (req) => {
 
     if (authHeader) {
       const token = authHeader.replace("Bearer ", "");
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
 
-      // Try user auth
-      const { data: { user } } = await createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_ANON_KEY")!
-      ).auth.getUser(token);
-
-      if (user) authenticated = true;
-
-      // Also accept service role (from pg_cron)
-      if (token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) authenticated = true;
+      // Accept service role, anon key (pg_cron fallback), or valid user JWT
+      if (token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
+        authenticated = true;
+      } else if (anonKey && token === anonKey) {
+        authenticated = true;
+      } else {
+        const { data: { user } } = await createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          anonKey
+        ).auth.getUser(token);
+        if (user) authenticated = true;
+      }
     }
 
     if (!authenticated) {

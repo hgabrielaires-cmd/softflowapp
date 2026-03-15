@@ -25,8 +25,9 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const cronSecret = Deno.env.get("CRON_SECRET") || "";
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
 
-    const isSystemCall = token === serviceRoleKey || (cronSecret && token === cronSecret);
+    const isSystemCall = token === serviceRoleKey || (cronSecret && token === cronSecret) || (anonKey && token === anonKey);
 
     if (!isSystemCall) {
       const tempClient = createClient(
