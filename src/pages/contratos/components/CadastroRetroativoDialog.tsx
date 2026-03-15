@@ -151,6 +151,7 @@ export interface CadastroRetroativoDialogProps {
   retroSaving: boolean;
   handleRetroAddModulo: (moduloId: string) => void;
   handleSalvarRetroativo: () => void;
+  retroContratosBase: RetroContratoBaseOption[];
 
   // Computed values
   retroValorImpOriginal: number;
