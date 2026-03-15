@@ -133,6 +133,7 @@ export function useCadastroRetroativo({ profileFilialId, loadData }: UseCadastro
   const [retroModulos, setRetroModulos] = useState<RetroModuloOption[]>([]);
   const [retroVendedores, setRetroVendedores] = useState<RetroVendedorOption[]>([]);
   const [retroSegmentos, setRetroSegmentos] = useState<RetroSegmentoOption[]>([]);
+  const [retroContratosBase, setRetroContratosBase] = useState<{ id: string; numero_exibicao: string }[]>([]);
 
   // ── Form state ──
   const [retroForm, setRetroForm] = useState<RetroForm>(defaultRetroForm);
