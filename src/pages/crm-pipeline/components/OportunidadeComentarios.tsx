@@ -219,16 +219,39 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
         parent_id: parent.id,
       });
       if (error) throw error;
+      const meuNome = profiles[user.id]?.full_name || "Usuário";
       if (parent.user_id !== user.id) {
-        const meuNome = profiles[user.id]?.full_name || "Usuário";
         await supabase.from("notificacoes").insert({
           titulo: "Nova resposta no seu comentário",
-          mensagem: `${meuNome} respondeu ao seu comentário na oportunidade`,
+          mensagem: `${meuNome} respondeu ao seu comentário na oportunidade (CRM)`,
           tipo: "info",
           destinatario_user_id: parent.user_id,
           criado_por: user.id,
         });
       }
+
+      // Notificar usuários mencionados na resposta
+      const mentionRegex = /@([\w\u00C0-\u024F]+)/g;
+      let mentionMatch;
+      const notifiedIds = new Set<string>([parent.user_id]);
+      while ((mentionMatch = mentionRegex.exec(replyTexto)) !== null) {
+        const name = mentionMatch[1].trim();
+        const mentioned = allUsers.find(
+          (u) => u.full_name.toLowerCase() === name.toLowerCase() ||
+            u.full_name.split(" ")[0].toLowerCase() === name.toLowerCase()
+        );
+        if (mentioned && mentioned.user_id !== user.id && !notifiedIds.has(mentioned.user_id)) {
+          notifiedIds.add(mentioned.user_id);
+          await supabase.from("notificacoes").insert({
+            titulo: "Você foi mencionado em um comentário",
+            mensagem: `${meuNome} mencionou você em um comentário na oportunidade (CRM)`,
+            tipo: "info",
+            destinatario_user_id: mentioned.user_id,
+            criado_por: user.id,
+          });
+        }
+      }
+
       setReplyTexto(""); setReplyingTo(null);
       toast.success("Resposta enviada!");
       fetchComentarios();
