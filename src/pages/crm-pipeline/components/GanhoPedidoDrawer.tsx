@@ -329,26 +329,73 @@ export function GanhoPedidoDrawer({ open, onOpenChange, clienteId, clienteNome, 
                     )}
                   </div>
                 )}
-                {/* Valor total */}
-                <div className="border-t pt-3 flex justify-between items-center">
-                  <span className="text-sm font-semibold">Valor Total</span>
-                  <span className="text-lg font-bold text-foreground">{fmtBRL(valorTotal)}</span>
+                {/* Valor total editável - auto-calcula desconto */}
+                <div className="border-t pt-3 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold">Valor Final — Implantação</span>
+                    <Input
+                      type="number" min="0" step="0.01"
+                      value={valorImplantacaoFinal.toFixed(2)}
+                      onChange={e => {
+                        const desejado = parseFloat(e.target.value) || 0;
+                        const diff = valorImpComAcrescimo - desejado;
+                        if (diff >= 0) {
+                          setForm(f => ({ ...f, desconto_implantacao_tipo: "R$" as const, desconto_implantacao_valor: diff.toFixed(2) }));
+                          if (!descontoAtivo) setDescontoAtivo(true);
+                        }
+                      }}
+                      className="w-44 font-mono text-sm text-right"
+                    />
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold">Valor Final — Mensalidade</span>
+                    <Input
+                      type="number" min="0" step="0.01"
+                      value={valorMensalidadeFinal.toFixed(2)}
+                      onChange={e => {
+                        const desejado = parseFloat(e.target.value) || 0;
+                        const diff = valorMensComAcrescimo - desejado;
+                        if (diff >= 0) {
+                          setForm(f => ({ ...f, desconto_mensalidade_tipo: "R$" as const, desconto_mensalidade_valor: diff.toFixed(2) }));
+                          if (!descontoAtivo) setDescontoAtivo(true);
+                        }
+                      }}
+                      className="w-44 font-mono text-sm text-right"
+                    />
+                  </div>
+                  <div className="flex justify-between items-center pt-1">
+                    <span className="text-sm font-semibold">Valor Total</span>
+                    <span className="text-lg font-bold text-foreground">{fmtBRL(valorTotal)}</span>
+                  </div>
                 </div>
               </div>
             )}
 
             {/* Forma de pagamento implantação */}
-            <div className="space-y-1.5">
-              <Label>Forma de Pagamento — Implantação *</Label>
-              <Select value={form.pagamento_implantacao_forma} onValueChange={v => setForm(f => ({ ...f, pagamento_implantacao_forma: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Boleto">Boleto</SelectItem>
-                  <SelectItem value="Pix">Pix</SelectItem>
-                  <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
-                  <SelectItem value="Transferência">Transferência</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Forma de Pagamento — Implantação *</Label>
+                <Select value={form.pagamento_implantacao_forma} onValueChange={v => setForm(f => ({ ...f, pagamento_implantacao_forma: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Boleto">Boleto</SelectItem>
+                    <SelectItem value="Pix">Pix</SelectItem>
+                    <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
+                    <SelectItem value="Transferência">Transferência</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Parcelas da Implantação</Label>
+                <Select value={form.pagamento_implantacao_parcelas || "1"} onValueChange={v => setForm(f => ({ ...f, pagamento_implantacao_parcelas: v }))}>
+                  <SelectTrigger><SelectValue placeholder="1x" /></SelectTrigger>
+                  <SelectContent>
+                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                      <SelectItem key={n} value={String(n)}>{n}x {valorImplantacaoFinal > 0 ? `(${fmtBRL(valorImplantacaoFinal / n)})` : ""}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Observações */}

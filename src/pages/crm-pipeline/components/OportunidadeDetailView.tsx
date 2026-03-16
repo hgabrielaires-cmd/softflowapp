@@ -381,6 +381,12 @@ export function OportunidadeDetailView({
                 size="sm"
                 className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
                 onClick={async () => {
+                  // Validate products exist
+                  const { count } = await supabase.from("crm_oportunidade_produtos").select("id", { count: "exact", head: true }).eq("oportunidade_id", oportunidade.id);
+                  if (!count || count === 0) {
+                    toast.error("Adicione pelo menos um produto ou serviço antes de marcar como Ganho.");
+                    return;
+                  }
                   const { data: { user } } = await supabase.auth.getUser();
                   await supabase.from("crm_tarefas").update({
                     concluido_em: new Date().toISOString(),
@@ -397,7 +403,6 @@ export function OportunidadeDetailView({
                   invalidate();
                   queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
                   toast.success("Negócio ganho! 🎉🥳");
-                  // Open cliente drawer (or pedido if client exists)
                   if (oportunidade.cliente_id) {
                     setGanhoClienteId(oportunidade.cliente_id);
                     setGanhoClienteNome(oportunidade.clientes?.nome_fantasia || oportunidade.titulo);
@@ -639,6 +644,12 @@ export function OportunidadeDetailView({
             }
             onNegocioPerdido={() => setPerdidoDialogOpen(true)}
             onNegocioGanho={async () => {
+              // Validate products exist
+              const { count } = await supabase.from("crm_oportunidade_produtos").select("id", { count: "exact", head: true }).eq("oportunidade_id", oportunidade.id);
+              if (!count || count === 0) {
+                toast.error("Adicione pelo menos um produto ou serviço antes de marcar como Ganho.");
+                return;
+              }
               const { data: { user } } = await supabase.auth.getUser();
               await supabase.from("crm_tarefas").update({
                 concluido_em: new Date().toISOString(),
