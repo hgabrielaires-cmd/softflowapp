@@ -303,6 +303,22 @@ export default function CrmPipeline() {
                   </Select>
                 </div>
 
+                {/* Tarefas */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Tarefas</Label>
+                  <Select value={filterTarefa} onValueChange={setFilterTarefa}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">📋 Todas as Tarefas</SelectItem>
+                      <SelectItem value="ok">📅 Tarefa Agendada</SelectItem>
+                      <SelectItem value="vencida">⚠️ Tarefa Atrasada</SelectItem>
+                      <SelectItem value="sem_tarefa">🚫 Sem Tarefa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Limpar filtros */}
                 {activeFilterCount > 0 && (
                   <Button
@@ -313,6 +329,7 @@ export default function CrmPipeline() {
                       setFilterFilialId("__all__");
                       setFilterVendedorId("__all__");
                       setFilterStatus("em_andamento");
+                      setFilterTarefa("__all__");
                     }}
                   >
                     Limpar filtros
