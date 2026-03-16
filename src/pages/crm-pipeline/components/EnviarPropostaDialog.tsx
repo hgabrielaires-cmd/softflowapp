@@ -171,52 +171,21 @@ export function EnviarPropostaDialog({ open, onOpenChange, oportunidadeId, titul
 
     setSending(true);
     try {
-      // Find the setor 'Comercial' instance for WhatsApp
-      const { data: setores } = await supabase
-        .from("setores")
+      // Find the "Proposta Comercial" template to route via setor
+      const { data: tpl } = await supabase
+        .from("message_templates")
         .select("id")
-        .ilike("nome", "comercial")
-        .limit(1);
-
-      const setorId = setores?.[0]?.id;
-      let instanceName: string | null = null;
-
-      if (setorId) {
-        const { data: instancias } = await supabase
-          .from("whatsapp_instances")
-          .select("instance_name")
-          .eq("setor_id", setorId)
-          .eq("ativo", true)
-          .limit(1);
-        instanceName = instancias?.[0]?.instance_name || null;
-      }
-
-      // Fallback: try any active instance
-      if (!instanceName) {
-        const { data: instancias } = await supabase
-          .from("whatsapp_instances")
-          .select("instance_name")
-          .eq("ativo", true)
-          .limit(1);
-        instanceName = instancias?.[0]?.instance_name || null;
-      }
-
-      if (!instanceName) {
-        toast.error("Nenhuma instância de WhatsApp ativa encontrada.");
-        setSending(false);
-        return;
-      }
-
-      // Format phone for WhatsApp
-      let phone = selectedContato.telefone.replace(/\D/g, "");
-      if (!phone.startsWith("55")) phone = "55" + phone;
+        .eq("categoria", "proposta")
+        .eq("ativo", true)
+        .limit(1)
+        .maybeSingle();
 
       const { error } = await supabase.functions.invoke("evolution-api", {
         body: {
-          action: "sendText",
-          instance_name: instanceName,
-          number: phone,
+          action: "send_text",
+          number: selectedContato.telefone,
           text: preview,
+          template_id: tpl?.id || undefined,
         },
       });
 
