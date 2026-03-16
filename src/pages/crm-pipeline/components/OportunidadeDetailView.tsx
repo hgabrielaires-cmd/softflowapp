@@ -66,6 +66,7 @@ export function OportunidadeDetailView({
   const [classificacao, setClassificacao] = useState(oportunidade.classificacao || 0);
   const [savingField, setSavingField] = useState<string | null>(null);
   const [savingContatos, setSavingContatos] = useState(false);
+  const [perdidoDialogOpen, setPerdidoDialogOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const activeCampos = camposPersonalizados.filter(
