@@ -19,6 +19,8 @@ import { OportunidadeProdutos } from "./OportunidadeProdutos";
 import { OportunidadeTimeline } from "./OportunidadeTimeline";
 import { ContatoOportunidadeDialog } from "./ContatoOportunidadeDialog";
 import { NegocioPerdidoDialog } from "./NegocioPerdidoDialog";
+import { GanhoClienteDrawer } from "./GanhoClienteDrawer";
+import { GanhoPedidoDrawer } from "./GanhoPedidoDrawer";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
 import type { CrmCampoPersonalizado } from "@/pages/crm-parametros/types";
 
@@ -69,7 +71,29 @@ export function OportunidadeDetailView({
   const [savingField, setSavingField] = useState<string | null>(null);
   const [savingContatos, setSavingContatos] = useState(false);
   const [perdidoDialogOpen, setPerdidoDialogOpen] = useState(false);
+  const [ganhoStep, setGanhoStep] = useState<"idle" | "cliente" | "pedido">("idle");
+  const [ganhoClienteId, setGanhoClienteId] = useState<string | null>(null);
+  const [ganhoClienteNome, setGanhoClienteNome] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Fetch linked pedido
+  const { data: pedidoVinculado } = useQuery({
+    queryKey: ["crm_pedido_vinculado", oportunidade.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("crm_oportunidades")
+        .select("pedido_id")
+        .eq("id", oportunidade.id)
+        .single();
+      if (!data?.pedido_id) return null;
+      const { data: pedido } = await supabase
+        .from("pedidos")
+        .select("id, numero_exibicao, status_pedido")
+        .eq("id", data.pedido_id)
+        .single();
+      return pedido || null;
+    },
+  });
 
   const activeCampos = camposPersonalizados.filter(
     c => c.ativo && !CAMPOS_EXCLUIDOS.includes(c.nome.toLowerCase())
@@ -368,10 +392,19 @@ export function OportunidadeDetailView({
                     descricao: `Negócio marcado como Ganho 🎉`,
                     user_id: user?.id || null,
                   });
-                  saveField({ status: "ganho" }, "status");
+                  await supabase.from("crm_oportunidades").update({ status: "ganho", data_fechamento: new Date().toISOString() } as any).eq("id", oportunidade.id);
                   setLocalStatus("ganho");
+                  invalidate();
                   queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
                   toast.success("Negócio ganho! 🎉🥳");
+                  // Open cliente drawer (or pedido if client exists)
+                  if (oportunidade.cliente_id) {
+                    setGanhoClienteId(oportunidade.cliente_id);
+                    setGanhoClienteNome(oportunidade.clientes?.nome_fantasia || oportunidade.titulo);
+                    setGanhoStep("pedido");
+                  } else {
+                    setGanhoStep("cliente");
+                  }
                 }}
               >
                 🥳 Negócio Ganho
@@ -628,6 +661,45 @@ export function OportunidadeDetailView({
         </TabsContent>
       </Tabs>
 
+      {/* Pedido status card - shown when ganho */}
+      {localStatus === "ganho" && (
+        <div className="mx-4 mb-4">
+          {pedidoVinculado ? (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-emerald-800">Pedido Vinculado: #{pedidoVinculado.numero_exibicao}</p>
+                <Badge className={
+                  pedidoVinculado.status_pedido === "Aprovado Financeiro" ? "bg-emerald-100 text-emerald-700" :
+                  pedidoVinculado.status_pedido === "Aguardando Financeiro" ? "bg-blue-100 text-blue-700" :
+                  pedidoVinculado.status_pedido === "Aguardando Aprovação de Desconto" ? "bg-amber-100 text-amber-700" :
+                  pedidoVinculado.status_pedido === "Reprovado Financeiro" ? "bg-red-100 text-red-600" :
+                  "bg-muted text-muted-foreground"
+                }>{pedidoVinculado.status_pedido}</Badge>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-amber-600">⚠️</span>
+                <p className="text-sm font-medium text-amber-800">Pedido não criado</p>
+              </div>
+              <Button size="sm" variant="outline" className="gap-1 border-amber-300 text-amber-800 hover:bg-amber-100"
+                onClick={() => {
+                  if (oportunidade.cliente_id) {
+                    setGanhoClienteId(oportunidade.cliente_id);
+                    setGanhoClienteNome(oportunidade.clientes?.nome_fantasia || oportunidade.titulo);
+                    setGanhoStep("pedido");
+                  } else {
+                    setGanhoStep("cliente");
+                  }
+                }}>
+                <Plus className="h-3.5 w-3.5" /> Criar Pedido
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
       <NegocioPerdidoDialog
         open={perdidoDialogOpen}
         onOpenChange={setPerdidoDialogOpen}
@@ -639,6 +711,50 @@ export function OportunidadeDetailView({
           setLocalStatus("perdido");
           invalidate();
           queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
+        }}
+      />
+
+      {/* Ganho Flow Drawers */}
+      <GanhoClienteDrawer
+        open={ganhoStep === "cliente"}
+        onOpenChange={(open) => { if (!open) setGanhoStep("idle"); }}
+        oportunidadeId={oportunidade.id}
+        oportunidadeTitulo={oportunidade.titulo}
+        editingClienteId={ganhoClienteId}
+        onSaved={async (clienteId, clienteNome) => {
+          // Link client to oportunidade
+          await supabase.from("crm_oportunidades").update({ cliente_id: clienteId } as any).eq("id", oportunidade.id);
+          const { data: { user } } = await supabase.auth.getUser();
+          await (supabase as any).from("crm_historico").insert({
+            oportunidade_id: oportunidade.id, tipo: "campo_alterado",
+            descricao: `Cliente cadastrado: ${clienteNome}`, user_id: user?.id || null,
+          });
+          setGanhoClienteId(clienteId);
+          setGanhoClienteNome(clienteNome);
+          invalidate();
+          queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
+          setGanhoStep("pedido");
+        }}
+      />
+
+      <GanhoPedidoDrawer
+        open={ganhoStep === "pedido"}
+        onOpenChange={(open) => { if (!open) setGanhoStep("idle"); }}
+        clienteId={ganhoClienteId || ""}
+        clienteNome={ganhoClienteNome}
+        onBack={() => setGanhoStep("cliente")}
+        onSaved={async (pedidoId, pedidoNumero, pedidoStatus) => {
+          await supabase.from("crm_oportunidades").update({ pedido_id: pedidoId } as any).eq("id", oportunidade.id);
+          const { data: { user } } = await supabase.auth.getUser();
+          await (supabase as any).from("crm_historico").insert({
+            oportunidade_id: oportunidade.id, tipo: "campo_alterado",
+            descricao: `Pedido criado: #${pedidoNumero} — ${pedidoStatus}`, user_id: user?.id || null,
+          });
+          setGanhoStep("idle");
+          invalidate();
+          queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
+          queryClient.invalidateQueries({ queryKey: ["crm_pedido_vinculado", oportunidade.id] });
+          toast.success("Pedido criado com sucesso! 🎉");
         }}
       />
     </div>
