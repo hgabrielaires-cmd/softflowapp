@@ -480,6 +480,17 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
             limiteImplantacao={limiteImplantacao}
             limiteMensalidade={limiteMensalidade}
           />
+
+          {/* Botão Enviar Proposta WhatsApp */}
+          <div className="flex justify-end pt-4">
+            <Button
+              className="bg-[hsl(210,100%,45%)] hover:bg-[hsl(210,100%,38%)] text-white gap-2 h-10 px-6"
+              onClick={() => toast.info("Funcionalidade de envio de proposta via WhatsApp em breve!")}
+            >
+              <MessageCircle className="h-4 w-4" />
+              Enviar Proposta WhatsApp
+            </Button>
+          </div>
         </div>
       )}
     </div>
