@@ -129,12 +129,16 @@ export function NegocioPerdidoDialog({
             {/* Sistema Anterior */}
             <div className="space-y-1.5">
               <Label className="text-xs">Sistema Anterior <span className="text-destructive">*</span></Label>
-              <Input
-                className="h-9 text-xs"
-                placeholder="Ex: Sistema XYZ"
-                value={concorrente}
-                onChange={e => setConcorrente(e.target.value)}
-              />
+              <Select value={concorrente} onValueChange={setConcorrente}>
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue placeholder="Selecione o sistema..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {sistemaAnteriorOpcoes.map(op => (
+                    <SelectItem key={op} value={op}>{op}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
