@@ -44,6 +44,13 @@ export function NegocioPerdidoDialog({
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
+      // Get current etapa before updating
+      const { data: opData } = await supabase
+        .from("crm_oportunidades")
+        .select("etapa_id")
+        .eq("id", oportunidadeId)
+        .single();
+
       // 1. Update oportunidade
       const { error: errUpdate } = await supabase
         .from("crm_oportunidades")
@@ -54,24 +61,10 @@ export function NegocioPerdidoDialog({
           concorrente: concorrente.trim(),
           observacao_perda: observacao.trim() || null,
           data_perda: new Date().toISOString(),
-          etapa_perda_id: undefined, // will be set below
-        })
+          etapa_perda_id: opData?.etapa_id || null,
+        } as any)
         .eq("id", oportunidadeId);
       if (errUpdate) throw errUpdate;
-
-      // Update etapa_perda_id separately (need current etapa)
-      const { data: opData } = await supabase
-        .from("crm_oportunidades")
-        .select("etapa_id")
-        .eq("id", oportunidadeId)
-        .single();
-
-      if (opData?.etapa_id) {
-        await supabase
-          .from("crm_oportunidades")
-          .update({ etapa_perda_id: opData.etapa_id })
-          .eq("id", oportunidadeId);
-      }
 
       // 2. Registrar histórico
       const descricao = `Negócio marcado como Perdido — Motivo: ${motivoSelecionado?.nome || "N/A"} | Sistema Anterior: ${concorrente.trim()} | Etapa: ${etapaNome}${observacao.trim() ? ` | Obs: ${observacao.trim()}` : ""}`;
