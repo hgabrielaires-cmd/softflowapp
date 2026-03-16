@@ -171,6 +171,7 @@ export function ConcluirTarefaDialog({ open, tarefa, onClose, onConcluido, onCri
             {etapa === "resposta" && "Registrar Resposta"}
             {etapa === "escolha" && "O que deseja fazer?"}
             {etapa === "adiar" && "Adiar Tarefa"}
+            {etapa === "finalizar" && "Finalizar Oportunidade"}
           </DialogTitle>
         </DialogHeader>
 
