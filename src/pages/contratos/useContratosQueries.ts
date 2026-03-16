@@ -47,7 +47,7 @@ export function useContratosQueries() {
 
   // ── Filter states ──────────────────────────────────────────────────────
   const [filterFilial, setFilterFilial] = useState("_init_");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("Ativo");
   const [filterDe, setFilterDe] = useState("");
   const [filterAte, setFilterAte] = useState("");
   const [filterBusca, setFilterBusca] = useState("");
