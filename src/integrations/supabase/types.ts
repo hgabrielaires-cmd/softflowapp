@@ -1123,6 +1123,41 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_historico: {
+        Row: {
+          created_at: string
+          descricao: string
+          id: string
+          oportunidade_id: string
+          tipo: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          descricao: string
+          id?: string
+          oportunidade_id: string
+          tipo?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          id?: string
+          oportunidade_id?: string
+          tipo?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_historico_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "crm_oportunidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_motivos_perda: {
         Row: {
           ativo: boolean
@@ -1241,17 +1276,22 @@ export type Database = {
           campos_personalizados: Json
           classificacao: number
           cliente_id: string | null
+          concorrente: string | null
           contato_id: string | null
           created_at: string
+          data_perda: string | null
           data_previsao_fechamento: string | null
           desconto_implantacao: number
           desconto_implantacao_tipo: string
           desconto_mensalidade: number
           desconto_mensalidade_tipo: string
           etapa_id: string
+          etapa_perda_id: string | null
           funil_id: string
           id: string
           motivo_perda: string | null
+          motivo_perda_id: string | null
+          observacao_perda: string | null
           observacoes: string | null
           ordem: number
           origem: string | null
@@ -1266,17 +1306,22 @@ export type Database = {
           campos_personalizados?: Json
           classificacao?: number
           cliente_id?: string | null
+          concorrente?: string | null
           contato_id?: string | null
           created_at?: string
+          data_perda?: string | null
           data_previsao_fechamento?: string | null
           desconto_implantacao?: number
           desconto_implantacao_tipo?: string
           desconto_mensalidade?: number
           desconto_mensalidade_tipo?: string
           etapa_id: string
+          etapa_perda_id?: string | null
           funil_id: string
           id?: string
           motivo_perda?: string | null
+          motivo_perda_id?: string | null
+          observacao_perda?: string | null
           observacoes?: string | null
           ordem?: number
           origem?: string | null
@@ -1291,17 +1336,22 @@ export type Database = {
           campos_personalizados?: Json
           classificacao?: number
           cliente_id?: string | null
+          concorrente?: string | null
           contato_id?: string | null
           created_at?: string
+          data_perda?: string | null
           data_previsao_fechamento?: string | null
           desconto_implantacao?: number
           desconto_implantacao_tipo?: string
           desconto_mensalidade?: number
           desconto_mensalidade_tipo?: string
           etapa_id?: string
+          etapa_perda_id?: string | null
           funil_id?: string
           id?: string
           motivo_perda?: string | null
+          motivo_perda_id?: string | null
+          observacao_perda?: string | null
           observacoes?: string | null
           ordem?: number
           origem?: string | null
@@ -1335,10 +1385,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "crm_oportunidades_etapa_perda_id_fkey"
+            columns: ["etapa_perda_id"]
+            isOneToOne: false
+            referencedRelation: "crm_etapas"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "crm_oportunidades_funil_id_fkey"
             columns: ["funil_id"]
             isOneToOne: false
             referencedRelation: "crm_funis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_oportunidades_motivo_perda_id_fkey"
+            columns: ["motivo_perda_id"]
+            isOneToOne: false
+            referencedRelation: "crm_motivos_perda"
             referencedColumns: ["id"]
           },
         ]
