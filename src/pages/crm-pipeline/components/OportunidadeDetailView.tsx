@@ -16,6 +16,7 @@ import { OportunidadeComentarios } from "./OportunidadeComentarios";
 import { formatPhoneDisplay, applyPhoneMask } from "@/lib/utils";
 import { OportunidadeTarefas } from "./OportunidadeTarefas";
 import { OportunidadeProdutos } from "./OportunidadeProdutos";
+import { OportunidadeTimeline } from "./OportunidadeTimeline";
 import { ContatoOportunidadeDialog } from "./ContatoOportunidadeDialog";
 import { NegocioPerdidoDialog } from "./NegocioPerdidoDialog";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
