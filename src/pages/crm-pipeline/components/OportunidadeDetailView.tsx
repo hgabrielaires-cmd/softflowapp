@@ -637,6 +637,32 @@ export function OportunidadeDetailView({
             canais={
               (camposPersonalizados.find(c => c.nome.toLowerCase() === "canal")?.opcoes || []) as string[]
             }
+            onNegocioPerdido={() => setPerdidoDialogOpen(true)}
+            onNegocioGanho={async () => {
+              const { data: { user } } = await supabase.auth.getUser();
+              await supabase.from("crm_tarefas").update({
+                concluido_em: new Date().toISOString(),
+                concluido_por: user?.id || null,
+              } as any).eq("oportunidade_id", oportunidade.id).is("concluido_em", null);
+              await (supabase as any).from("crm_historico").insert({
+                oportunidade_id: oportunidade.id,
+                tipo: "ganho",
+                descricao: `Negócio marcado como Ganho 🎉`,
+                user_id: user?.id || null,
+              });
+              await supabase.from("crm_oportunidades").update({ status: "ganho", data_fechamento: new Date().toISOString() } as any).eq("id", oportunidade.id);
+              setLocalStatus("ganho");
+              invalidate();
+              queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
+              toast.success("Negócio ganho! 🎉🥳");
+              if (oportunidade.cliente_id) {
+                setGanhoClienteId(oportunidade.cliente_id);
+                setGanhoClienteNome(oportunidade.clientes?.nome_fantasia || oportunidade.titulo);
+                setGanhoStep("pedido");
+              } else {
+                setGanhoStep("cliente");
+              }
+            }}
           />
         </TabsContent>
 

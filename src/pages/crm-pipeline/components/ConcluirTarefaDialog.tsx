@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, Loader2, Clock, Plus } from "lucide-react";
+import { CalendarIcon, Loader2, Clock, Plus, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -26,11 +26,13 @@ interface Props {
   onClose: () => void;
   onConcluido: () => void;
   onCriarNova: () => void;
+  onNegocioPerdido?: () => void;
+  onNegocioGanho?: () => void;
 }
 
-type Etapa = "resposta" | "escolha" | "adiar";
+type Etapa = "resposta" | "escolha" | "adiar" | "finalizar";
 
-export function ConcluirTarefaDialog({ open, tarefa, onClose, onConcluido, onCriarNova }: Props) {
+export function ConcluirTarefaDialog({ open, tarefa, onClose, onConcluido, onCriarNova, onNegocioPerdido, onNegocioGanho }: Props) {
   const { user } = useAuth();
   const [etapa, setEtapa] = useState<Etapa>("resposta");
   const [resposta, setResposta] = useState("");
@@ -106,7 +108,6 @@ export function ConcluirTarefaDialog({ open, tarefa, onClose, onConcluido, onCri
     if (!user || !tarefa) return;
     setSaving(true);
     try {
-      // Save history as conclusion
       const { error: histErr } = await supabase.from("crm_tarefas_historico" as any).insert({
         tarefa_id: tarefa.id,
         resposta: resposta.trim(),
@@ -116,17 +117,42 @@ export function ConcluirTarefaDialog({ open, tarefa, onClose, onConcluido, onCri
         user_id: user.id,
       });
       if (histErr) throw histErr;
-
-      // Mark task as concluded
       const { error: updErr } = await supabase
         .from("crm_tarefas")
         .update({ concluido_em: new Date().toISOString(), concluido_por: user.id })
         .eq("id", tarefa.id);
       if (updErr) throw updErr;
-
       toast.success("Tarefa concluída!");
       resetState();
       onCriarNova();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error("Erro ao concluir tarefa: " + message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFinalizarConcluir = async () => {
+    if (!user || !tarefa) return;
+    setSaving(true);
+    try {
+      const { error: histErr } = await supabase.from("crm_tarefas_historico" as any).insert({
+        tarefa_id: tarefa.id,
+        resposta: resposta.trim(),
+        data_anterior: tarefa.data_reuniao,
+        data_nova: null,
+        tipo: "conclusao",
+        user_id: user.id,
+      });
+      if (histErr) throw histErr;
+      const { error: updErr } = await supabase
+        .from("crm_tarefas")
+        .update({ concluido_em: new Date().toISOString(), concluido_por: user.id })
+        .eq("id", tarefa.id);
+      if (updErr) throw updErr;
+      toast.success("Tarefa concluída!");
+      setEtapa("finalizar");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erro desconhecido";
       toast.error("Erro ao concluir tarefa: " + message);
@@ -139,12 +165,13 @@ export function ConcluirTarefaDialog({ open, tarefa, onClose, onConcluido, onCri
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+      <DialogContent className="sm:max-w-lg" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="text-base">
             {etapa === "resposta" && "Registrar Resposta"}
             {etapa === "escolha" && "O que deseja fazer?"}
             {etapa === "adiar" && "Adiar Tarefa"}
+            {etapa === "finalizar" && "Finalizar Oportunidade"}
           </DialogTitle>
         </DialogHeader>
 
@@ -168,13 +195,12 @@ export function ConcluirTarefaDialog({ open, tarefa, onClose, onConcluido, onCri
           </div>
         )}
 
-        {/* Etapa 2: Escolha */}
         {etapa === "escolha" && (
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
               Escolha uma ação para continuar. A oportunidade não pode ficar sem tarefa.
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <Button
                 variant="outline"
                 className="h-20 flex flex-col gap-1.5 text-xs"
@@ -194,10 +220,53 @@ export function ConcluirTarefaDialog({ open, tarefa, onClose, onConcluido, onCri
                 <span className="font-medium">Criar Nova Tarefa</span>
                 <span className="text-[10px] text-muted-foreground">Concluir e criar outra</span>
               </Button>
+              <Button
+                variant="outline"
+                className="h-20 flex flex-col gap-1.5 text-xs"
+                onClick={handleFinalizarConcluir}
+                disabled={saving}
+              >
+                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5 text-emerald-600" />}
+                <span className="font-medium">Finalizar e Concluir</span>
+                <span className="text-[10px] text-muted-foreground">Encerrar oportunidade</span>
+              </Button>
             </div>
             <Button variant="ghost" size="sm" className="text-xs h-7 w-full" onClick={() => setEtapa("resposta")}>
               ← Voltar
             </Button>
+          </div>
+        )}
+
+        {/* Etapa Finalizar: Perdido ou Ganho */}
+        {etapa === "finalizar" && (
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Tarefa concluída! Agora defina o resultado da oportunidade.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                className="h-20 flex flex-col gap-1.5 text-xs border-destructive/50 hover:bg-destructive hover:text-destructive-foreground"
+                onClick={() => {
+                  resetState();
+                  onNegocioPerdido?.();
+                }}
+              >
+                <span className="text-2xl">😢</span>
+                <span className="font-medium">Negócio Perdido</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-20 flex flex-col gap-1.5 text-xs border-emerald-300 hover:bg-emerald-600 hover:text-white"
+                onClick={() => {
+                  resetState();
+                  onNegocioGanho?.();
+                }}
+              >
+                <span className="text-2xl">🥳</span>
+                <span className="font-medium">Negócio Ganho</span>
+              </Button>
+            </div>
           </div>
         )}
 

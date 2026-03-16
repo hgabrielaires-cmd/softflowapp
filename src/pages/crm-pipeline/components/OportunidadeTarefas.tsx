@@ -50,9 +50,11 @@ interface Props {
   oportunidadeId: string;
   tiposAtendimento: string[];
   canais: string[];
+  onNegocioPerdido?: () => void;
+  onNegocioGanho?: () => void;
 }
 
-export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais }: Props) {
+export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais, onNegocioPerdido, onNegocioGanho }: Props) {
   const { user } = useAuth();
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
   const [historicos, setHistoricos] = useState<Record<string, HistoricoItem[]>>({});
@@ -361,6 +363,18 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais }
         onClose={() => { setConcluirOpen(false); setConcluirTarefa(null); }}
         onConcluido={handleConcluido}
         onCriarNova={handleCriarNovaAposConcluir}
+        onNegocioPerdido={() => {
+          setConcluirOpen(false);
+          setConcluirTarefa(null);
+          fetchTarefas();
+          onNegocioPerdido?.();
+        }}
+        onNegocioGanho={() => {
+          setConcluirOpen(false);
+          setConcluirTarefa(null);
+          fetchTarefas();
+          onNegocioGanho?.();
+        }}
       />
 
       {/* Dialog de visualização */}
