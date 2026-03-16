@@ -512,17 +512,17 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
           {/* Instances list - merged from Evolution API + Setores */}
           {(() => {
             const apiNames = new Set<string>();
-            const mergedItems: { name: string; state: string; setor?: string; fromApi: boolean }[] = [];
+            const mergedItems: { name: string; state: string; setor?: string; usuario?: string; fromApi: boolean }[] = [];
             instances.forEach((inst: any, i: number) => {
               const name = inst?.instance?.instanceName || inst?.instanceName || inst?.name || `Instância ${i + 1}`;
               const state = inst?.instance?.state || inst?.state || inst?.connectionStatus || "unknown";
               apiNames.add(name);
               const setor = setoresInstances.find(s => s.instance_name === name);
-              mergedItems.push({ name, state, setor: setor?.nome, fromApi: true });
+              mergedItems.push({ name, state, setor: setor?.nome, usuario: setor?.usuario_nome, fromApi: true });
             });
             setoresInstances.forEach(s => {
               if (!apiNames.has(s.instance_name)) {
-                mergedItems.push({ name: s.instance_name, state: "not_created", setor: s.nome, fromApi: false });
+                mergedItems.push({ name: s.instance_name, state: "not_created", setor: s.nome, usuario: s.usuario_nome, fromApi: false });
               }
             });
             if (mergedItems.length === 0) return null;
