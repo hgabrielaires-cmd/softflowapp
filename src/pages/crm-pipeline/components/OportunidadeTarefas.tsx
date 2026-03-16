@@ -50,6 +50,8 @@ interface Props {
   oportunidadeId: string;
   tiposAtendimento: string[];
   canais: string[];
+  onNegocioPerdido?: () => void;
+  onNegocioGanho?: () => void;
 }
 
 export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais }: Props) {
