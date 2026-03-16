@@ -293,13 +293,36 @@ export function OportunidadeDetailView({
             ))}
           </div>
         </div>
-        {/* Saving indicator */}
-        {isSaving && (
-          <div className="flex items-center gap-1.5 text-muted-foreground text-xs shrink-0">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            Salvando...
-          </div>
-        )}
+        {/* Saving indicator + Action buttons */}
+        <div className="flex items-center gap-2 shrink-0">
+          {isSaving && (
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Salvando...
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs gap-1.5 border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            onClick={() => {
+              saveField({ status: "perdido" }, "status");
+              toast.info("Negócio marcado como perdido 😢");
+            }}
+          >
+            😢 Negócio Perdido
+          </Button>
+          <Button
+            size="sm"
+            className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+            onClick={() => {
+              saveField({ status: "ganho" }, "status");
+              toast.success("Negócio ganho! 🎉🥳");
+            }}
+          >
+            🥳 Negócio Ganho
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
