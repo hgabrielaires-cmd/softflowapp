@@ -45,7 +45,7 @@ export default function CrmPipeline() {
 
   const isVendedor = roles.includes("vendedor");
 
-  const { funisQuery, etapasQuery, oportunidadesQuery, responsaveisQuery, segmentosQuery, clientesQuery, cargosQuery } = useCrmPipelineQueries(selectedFunilId);
+  const { funisQuery, etapasQuery, oportunidadesQuery, responsaveisQuery, segmentosQuery, clientesQuery, cargosQuery } = useCrmPipelineQueries(selectedFunilId, filterStatus);
   const { createMutation, updateMutation, moveToEtapaMutation } = useCrmPipelineForm(selectedFunilId);
   const { data: camposPersonalizados = [] } = useCrmCamposPersonalizados();
 
