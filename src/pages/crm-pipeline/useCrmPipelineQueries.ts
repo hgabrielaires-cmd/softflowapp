@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { CrmOportunidade, CrmFunilSimples, CrmEtapaSimples } from "./types";
 
-export function useCrmPipelineQueries(funilId?: string) {
+export function useCrmPipelineQueries(funilId?: string, statusFilter: string = "em_andamento") {
   const funisQuery = useQuery({
     queryKey: ["crm_funis_pipeline"],
     queryFn: async () => {
