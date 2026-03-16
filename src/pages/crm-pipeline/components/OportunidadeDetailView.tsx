@@ -644,6 +644,12 @@ export function OportunidadeDetailView({
             }
             onNegocioPerdido={() => setPerdidoDialogOpen(true)}
             onNegocioGanho={async () => {
+              // Validate products exist
+              const { count } = await supabase.from("crm_oportunidade_produtos").select("id", { count: "exact", head: true }).eq("oportunidade_id", oportunidade.id);
+              if (!count || count === 0) {
+                toast.error("Adicione pelo menos um produto ou serviço antes de marcar como Ganho.");
+                return;
+              }
               const { data: { user } } = await supabase.auth.getUser();
               await supabase.from("crm_tarefas").update({
                 concluido_em: new Date().toISOString(),
