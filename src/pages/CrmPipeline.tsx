@@ -188,14 +188,13 @@ export default function CrmPipeline() {
             etapas={etapas}
             clientes={clientes}
             responsaveis={responsaveis}
-            onSave={handleDetailSave}
             onBack={() => setDetailOportunidade(null)}
-            saving={updateMutation.isPending}
             exibeCliente={funis.find(f => f.id === selectedFunilId)?.exibe_cliente ?? true}
             camposPersonalizados={camposPersonalizados}
             segmentos={segmentos}
             cargos={cargos}
             defaultTab={detailDefaultTab}
+            funilId={selectedFunilId}
           />
         ) : (
         <>
