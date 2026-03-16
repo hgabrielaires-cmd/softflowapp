@@ -41,6 +41,7 @@ export default function CrmPipeline() {
   const [filterFilialId, setFilterFilialId] = useState<string>("__all__");
   const [filterVendedorId, setFilterVendedorId] = useState<string>("__all__");
   const [filterStatus, setFilterStatus] = useState<string>("em_andamento");
+  const [filterTarefa, setFilterTarefa] = useState<string>("__all__");
   const [filtersReady, setFiltersReady] = useState(false);
 
   const isVendedor = roles.includes("vendedor");
@@ -101,8 +102,9 @@ export default function CrmPipeline() {
     if (filterFilialId !== "__all__") count++;
     if (filterVendedorId !== "__all__") count++;
     if (filterStatus !== "em_andamento") count++;
+    if (filterTarefa !== "__all__") count++;
     return count;
-  }, [filterFilialId, filterVendedorId, filterStatus]);
+  }, [filterFilialId, filterVendedorId, filterStatus, filterTarefa]);
 
   // Filtro combinado: texto + filial + vendedor
   const filtered = useMemo(() => {
@@ -114,6 +116,9 @@ export default function CrmPipeline() {
     if (filterVendedorId !== "__all__") {
       result = result.filter(o => o.responsavel_id === filterVendedorId);
     }
+    if (filterTarefa !== "__all__") {
+      result = result.filter(o => o.tarefas_status === filterTarefa);
+    }
     if (search) {
       const s = search.toLowerCase();
       result = result.filter(o =>
@@ -122,7 +127,7 @@ export default function CrmPipeline() {
       );
     }
     return result;
-  }, [oportunidades, filterFilialId, filterVendedorId, search]);
+  }, [oportunidades, filterFilialId, filterVendedorId, filterTarefa, search]);
 
   const getOpsForEtapa = useCallback((etapaId: string) => {
     return filtered.filter(o => o.etapa_id === etapaId);
@@ -298,6 +303,22 @@ export default function CrmPipeline() {
                   </Select>
                 </div>
 
+                {/* Tarefas */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Tarefas</Label>
+                  <Select value={filterTarefa} onValueChange={setFilterTarefa}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">📋 Todas as Tarefas</SelectItem>
+                      <SelectItem value="ok">📅 Tarefa Agendada</SelectItem>
+                      <SelectItem value="vencida">⚠️ Tarefa Atrasada</SelectItem>
+                      <SelectItem value="sem_tarefa">🚫 Sem Tarefa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Limpar filtros */}
                 {activeFilterCount > 0 && (
                   <Button
@@ -308,6 +329,7 @@ export default function CrmPipeline() {
                       setFilterFilialId("__all__");
                       setFilterVendedorId("__all__");
                       setFilterStatus("em_andamento");
+                      setFilterTarefa("__all__");
                     }}
                   >
                     Limpar filtros
