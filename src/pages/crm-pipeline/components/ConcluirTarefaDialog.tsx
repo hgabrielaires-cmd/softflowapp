@@ -50,7 +50,9 @@ export function ConcluirTarefaDialog({ open, tarefa, onClose, onConcluido, onCri
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
-      // Don't allow closing without completing the flow
+      // Allow closing - keeps task open without concluding
+      resetState();
+      onClose();
       return;
     }
   };
