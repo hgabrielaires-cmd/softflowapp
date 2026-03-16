@@ -108,7 +108,6 @@ export function ConcluirTarefaDialog({ open, tarefa, onClose, onConcluido, onCri
     if (!user || !tarefa) return;
     setSaving(true);
     try {
-      // Save history as conclusion
       const { error: histErr } = await supabase.from("crm_tarefas_historico" as any).insert({
         tarefa_id: tarefa.id,
         resposta: resposta.trim(),
@@ -118,17 +117,42 @@ export function ConcluirTarefaDialog({ open, tarefa, onClose, onConcluido, onCri
         user_id: user.id,
       });
       if (histErr) throw histErr;
-
-      // Mark task as concluded
       const { error: updErr } = await supabase
         .from("crm_tarefas")
         .update({ concluido_em: new Date().toISOString(), concluido_por: user.id })
         .eq("id", tarefa.id);
       if (updErr) throw updErr;
-
       toast.success("Tarefa concluída!");
       resetState();
       onCriarNova();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error("Erro ao concluir tarefa: " + message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFinalizarConcluir = async () => {
+    if (!user || !tarefa) return;
+    setSaving(true);
+    try {
+      const { error: histErr } = await supabase.from("crm_tarefas_historico" as any).insert({
+        tarefa_id: tarefa.id,
+        resposta: resposta.trim(),
+        data_anterior: tarefa.data_reuniao,
+        data_nova: null,
+        tipo: "conclusao",
+        user_id: user.id,
+      });
+      if (histErr) throw histErr;
+      const { error: updErr } = await supabase
+        .from("crm_tarefas")
+        .update({ concluido_em: new Date().toISOString(), concluido_por: user.id })
+        .eq("id", tarefa.id);
+      if (updErr) throw updErr;
+      toast.success("Tarefa concluída!");
+      setEtapa("finalizar");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erro desconhecido";
       toast.error("Erro ao concluir tarefa: " + message);
