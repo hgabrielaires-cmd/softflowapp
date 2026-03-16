@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { User, Building2, Clock, DollarSign, AlertTriangle, ListChecks, Star, CalendarCheck } from "lucide-react";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
 import { formatValor, getTempoDesdeCreacao } from "../helpers";
