@@ -1,9 +1,15 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { MessageSquare, Paperclip, Trash2 } from "lucide-react";
 import { PRIORIDADES_DRAFT } from "../constants";
+import { MentionInput } from "@/components/MentionInput";
+
+interface MentionUser {
+  id: string;
+  user_id: string;
+  full_name: string;
+}
 
 interface Props {
   open: boolean;
@@ -18,6 +24,7 @@ interface Props {
   isEditing: boolean;
   onSave: () => void;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  users?: MentionUser[];
 }
 
 export function ComentarioDraftDialog({
@@ -33,6 +40,7 @@ export function ComentarioDraftDialog({
   isEditing,
   onSave,
   onFileChange,
+  users = [],
 }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -43,11 +51,12 @@ export function ComentarioDraftDialog({
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <Textarea
-            placeholder="Escreva um comentário..."
+          <MentionInput
             value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-            className="min-h-[80px] text-sm"
+            onChange={setTexto}
+            users={users}
+            placeholder="Escreva um comentário... Use @nome para mencionar"
+            className="min-h-[80px]"
           />
           <div>
             <Label className="text-xs text-muted-foreground mb-1 block">Prioridade:</Label>

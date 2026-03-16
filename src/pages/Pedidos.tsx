@@ -131,6 +131,14 @@ export default function Pedidos() {
   // Contatos inline do form novo cliente
    const [clienteContatos, setClienteContatos] = useState<ClienteContatoInline[]>([]);
 
+  // All users for @mentions
+  const [allMentionUsers, setAllMentionUsers] = useState<{ id: string; user_id: string; full_name: string }[]>([]);
+  useEffect(() => {
+    supabase.from("profiles").select("id, user_id, full_name").then(({ data }) => {
+      if (data) setAllMentionUsers(data as { id: string; user_id: string; full_name: string }[]);
+    });
+  }, []);
+
   // Draft comments (antes de salvar pedido)
   const [draftComentarios, setDraftComentarios] = useState<DraftComentario[]>([]);
   const [openComentarioDialog, setOpenComentarioDialog] = useState(false);
@@ -190,6 +198,27 @@ export default function Pedidos() {
         anexo_url,
         anexo_nome,
       });
+
+      // Extract @mentions and create notifications
+      const mentionRegex = /@([\w\u00C0-\u024F]+)/g;
+      let mentionMatch;
+      const meuNome = profile?.full_name || "Usuário";
+      while ((mentionMatch = mentionRegex.exec(draft.texto)) !== null) {
+        const name = mentionMatch[1].trim();
+        const mentioned = allMentionUsers.find(
+          (u) => u.full_name.toLowerCase() === name.toLowerCase() ||
+            u.full_name.split(" ")[0].toLowerCase() === name.toLowerCase()
+        );
+        if (mentioned && mentioned.user_id !== user.id) {
+          await supabase.from("notificacoes").insert({
+            titulo: "Você foi mencionado em um pedido",
+            mensagem: `${meuNome} mencionou você em um comentário de pedido`,
+            tipo: "info",
+            destinatario_user_id: mentioned.user_id,
+            criado_por: user.id,
+          });
+        }
+      }
     }
   }
 
@@ -1260,8 +1289,8 @@ export default function Pedidos() {
         isEditing={editingDraftIdx !== null}
         onSave={handleAddDraftComentario}
         onFileChange={handleDraftFileChange}
+        users={allMentionUsers}
       />
-
       <ClienteRapidoDialog
         open={openClienteDialog}
         onOpenChange={(open) => { setOpenClienteDialog(open); }}
