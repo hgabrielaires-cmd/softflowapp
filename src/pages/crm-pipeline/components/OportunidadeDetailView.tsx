@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
-import { ArrowLeft, Check, X, ChevronsUpDown, Plus, Trash2, ListChecks, Package, FolderOpen, Save, Eye, EyeOff, Star } from "lucide-react";
+import { ArrowLeft, Check, X, ChevronsUpDown, Plus, Trash2, ListChecks, Package, FolderOpen, Save, Eye, EyeOff, Star, Phone, Mail, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { OportunidadeComentarios } from "./OportunidadeComentarios";
