@@ -19,6 +19,8 @@ import { OportunidadeProdutos } from "./OportunidadeProdutos";
 import { OportunidadeTimeline } from "./OportunidadeTimeline";
 import { ContatoOportunidadeDialog } from "./ContatoOportunidadeDialog";
 import { NegocioPerdidoDialog } from "./NegocioPerdidoDialog";
+import { GanhoClienteDrawer } from "./GanhoClienteDrawer";
+import { GanhoPedidoDrawer } from "./GanhoPedidoDrawer";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
 import type { CrmCampoPersonalizado } from "@/pages/crm-parametros/types";
 
