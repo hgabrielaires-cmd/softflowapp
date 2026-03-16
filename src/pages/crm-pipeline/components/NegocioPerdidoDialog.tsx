@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,12 +16,13 @@ interface Props {
   etapaNome: string;
   motivosPerda: { id: string; nome: string }[];
   camposPersonalizados: Record<string, string>;
+  sistemaAnteriorOpcoes: string[];
   onSuccess: () => void;
 }
 
 export function NegocioPerdidoDialog({
   open, onOpenChange, oportunidadeId, etapaNome,
-  motivosPerda, camposPersonalizados, onSuccess,
+  motivosPerda, camposPersonalizados, sistemaAnteriorOpcoes, onSuccess,
 }: Props) {
   const [motivoPerdaId, setMotivoPerdaId] = useState("");
   const [concorrente, setConcorrente] = useState(camposPersonalizados["Sistema Anterior"] || "");
@@ -128,12 +129,16 @@ export function NegocioPerdidoDialog({
             {/* Sistema Anterior */}
             <div className="space-y-1.5">
               <Label className="text-xs">Sistema Anterior <span className="text-destructive">*</span></Label>
-              <Input
-                className="h-9 text-xs"
-                placeholder="Ex: Sistema XYZ"
-                value={concorrente}
-                onChange={e => setConcorrente(e.target.value)}
-              />
+              <Select value={concorrente} onValueChange={setConcorrente}>
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue placeholder="Selecione o sistema..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {sistemaAnteriorOpcoes.map(op => (
+                    <SelectItem key={op} value={op}>{op}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

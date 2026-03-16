@@ -591,6 +591,9 @@ export function OportunidadeDetailView({
         etapaNome={currentEtapa?.nome || "Desconhecida"}
         motivosPerda={motivosPerda}
         camposPersonalizados={oportunidade.campos_personalizados || {}}
+        sistemaAnteriorOpcoes={
+          (camposPersonalizados.find(c => c.nome.toLowerCase() === "sistema anterior")?.opcoes || []) as string[]
+        }
         onSuccess={invalidate}
       />
     </div>
