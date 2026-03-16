@@ -131,6 +131,14 @@ export default function Pedidos() {
   // Contatos inline do form novo cliente
    const [clienteContatos, setClienteContatos] = useState<ClienteContatoInline[]>([]);
 
+  // All users for @mentions
+  const [allMentionUsers, setAllMentionUsers] = useState<{ id: string; user_id: string; full_name: string }[]>([]);
+  useEffect(() => {
+    supabase.from("profiles").select("id, user_id, full_name").then(({ data }) => {
+      if (data) setAllMentionUsers(data as { id: string; user_id: string; full_name: string }[]);
+    });
+  }, []);
+
   // Draft comments (antes de salvar pedido)
   const [draftComentarios, setDraftComentarios] = useState<DraftComentario[]>([]);
   const [openComentarioDialog, setOpenComentarioDialog] = useState(false);
