@@ -69,6 +69,16 @@ export function useCrmPipelineForm(funilId?: string) {
       if (_contatos && _contatos.length > 0 && data?.id) {
         await saveContatos(data.id, _contatos);
       }
+      // Log creation in timeline
+      if (data?.id) {
+        const { data: { user } } = await supabase.auth.getUser();
+        await (supabase as any).from("crm_historico").insert({
+          oportunidade_id: data.id,
+          tipo: "criacao",
+          descricao: `Oportunidade "${rest.titulo}" criada`,
+          user_id: user?.id || null,
+        });
+      }
       return data;
     },
     onSuccess: () => { toast.success("Oportunidade criada!"); invalidate(); },

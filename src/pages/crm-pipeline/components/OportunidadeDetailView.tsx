@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
-import { ArrowLeft, Check, X, ChevronsUpDown, Plus, Trash2, ListChecks, Package, FolderOpen, Star, Phone, Mail, Pencil, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, X, ChevronsUpDown, Plus, Trash2, ListChecks, Package, FolderOpen, Star, Phone, Mail, Pencil, Loader2, Clock, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ import { OportunidadeComentarios } from "./OportunidadeComentarios";
 import { formatPhoneDisplay, applyPhoneMask } from "@/lib/utils";
 import { OportunidadeTarefas } from "./OportunidadeTarefas";
 import { OportunidadeProdutos } from "./OportunidadeProdutos";
+import { OportunidadeTimeline } from "./OportunidadeTimeline";
 import { ContatoOportunidadeDialog } from "./ContatoOportunidadeDialog";
 import { NegocioPerdidoDialog } from "./NegocioPerdidoDialog";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
@@ -54,6 +55,7 @@ export function OportunidadeDetailView({
 }: Props) {
   const queryClient = useQueryClient();
   const [titulo, setTitulo] = useState(oportunidade.titulo);
+  const [localStatus, setLocalStatus] = useState(oportunidade.status || "em_andamento");
   const [clienteId, setClienteId] = useState(oportunidade.cliente_id || "");
   const [responsavelId, setResponsavelId] = useState(oportunidade.responsavel_id || "");
   const [etapaId, setEtapaId] = useState(oportunidade.etapa_id);
@@ -316,30 +318,66 @@ export function OportunidadeDetailView({
               Salvando...
             </div>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs gap-1.5 border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            onClick={() => setPerdidoDialogOpen(true)}
-          >
-            😢 Negócio Perdido
-          </Button>
-          <Button
-            size="sm"
-            className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
-            onClick={async () => {
-              // Concluir tarefas ativas
-              const { data: { user } } = await supabase.auth.getUser();
-              await supabase.from("crm_tarefas").update({
-                concluido_em: new Date().toISOString(),
-                concluido_por: user?.id || null,
-              } as any).eq("oportunidade_id", oportunidade.id).is("concluido_em", null);
-              saveField({ status: "ganho" }, "status");
-              toast.success("Negócio ganho! 🎉🥳");
-            }}
-          >
-            🥳 Negócio Ganho
-          </Button>
+          {(localStatus === "perdido" || localStatus === "ganho") ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs gap-1.5"
+              onClick={async () => {
+                const { data: { user } } = await supabase.auth.getUser();
+                const statusAnterior = localStatus;
+                await supabase.from("crm_oportunidades")
+                  .update({ status: "em_andamento", motivo_perda: null, motivo_perda_id: null, concorrente: null, observacao_perda: null, data_perda: null, etapa_perda_id: null } as any)
+                  .eq("id", oportunidade.id);
+                await (supabase as any).from("crm_historico").insert({
+                  oportunidade_id: oportunidade.id,
+                  tipo: "revertido",
+                  descricao: `Oportunidade revertida de "${statusAnterior === "perdido" ? "Perdido" : "Ganho"}" para Em Andamento`,
+                  user_id: user?.id || null,
+                });
+                setLocalStatus("em_andamento");
+                invalidate();
+                queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
+                toast.success("Oportunidade revertida para Em Andamento! 🔄");
+              }}
+            >
+              🔄 Reverter
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs gap-1.5 border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                onClick={() => setPerdidoDialogOpen(true)}
+              >
+                😢 Negócio Perdido
+              </Button>
+              <Button
+                size="sm"
+                className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={async () => {
+                  const { data: { user } } = await supabase.auth.getUser();
+                  await supabase.from("crm_tarefas").update({
+                    concluido_em: new Date().toISOString(),
+                    concluido_por: user?.id || null,
+                  } as any).eq("oportunidade_id", oportunidade.id).is("concluido_em", null);
+                  await (supabase as any).from("crm_historico").insert({
+                    oportunidade_id: oportunidade.id,
+                    tipo: "ganho",
+                    descricao: `Negócio marcado como Ganho 🎉`,
+                    user_id: user?.id || null,
+                  });
+                  saveField({ status: "ganho" }, "status");
+                  setLocalStatus("ganho");
+                  queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
+                  toast.success("Negócio ganho! 🎉🥳");
+                }}
+              >
+                🥳 Negócio Ganho
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -351,6 +389,7 @@ export function OportunidadeDetailView({
             <TabsTrigger value="tarefas" className="gap-1"><ListChecks className="h-3.5 w-3.5" /> Tarefas</TabsTrigger>
             <TabsTrigger value="produtos" className="gap-1"><Package className="h-3.5 w-3.5" /> Produtos e Serviços</TabsTrigger>
             <TabsTrigger value="arquivos" className="gap-1"><FolderOpen className="h-3.5 w-3.5" /> Arquivos</TabsTrigger>
+            <TabsTrigger value="timeline" className="gap-1"><Clock className="h-3.5 w-3.5" /> Linha do Tempo</TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-4 pr-1">
             <div className="flex items-center gap-1.5" title="Valor Implantação (com desconto)">
@@ -582,6 +621,11 @@ export function OportunidadeDetailView({
             </div>
           </div>
         </TabsContent>
+
+        {/* Linha do Tempo */}
+        <TabsContent value="timeline" className="flex-1 overflow-y-auto px-4 pb-4 mt-0">
+          <OportunidadeTimeline oportunidadeId={oportunidade.id} />
+        </TabsContent>
       </Tabs>
 
       <NegocioPerdidoDialog
@@ -591,7 +635,11 @@ export function OportunidadeDetailView({
         etapaNome={currentEtapa?.nome || "Desconhecida"}
         motivosPerda={motivosPerda}
         camposPersonalizados={oportunidade.campos_personalizados || {}}
-        onSuccess={invalidate}
+        onSuccess={() => {
+          setLocalStatus("perdido");
+          invalidate();
+          queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
+        }}
       />
     </div>
   );
