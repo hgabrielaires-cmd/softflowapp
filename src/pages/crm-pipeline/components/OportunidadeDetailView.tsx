@@ -327,7 +327,13 @@ export function OportunidadeDetailView({
           <Button
             size="sm"
             className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
-            onClick={() => {
+            onClick={async () => {
+              // Concluir tarefas ativas
+              const { data: { user } } = await supabase.auth.getUser();
+              await supabase.from("crm_tarefas").update({
+                concluido_em: new Date().toISOString(),
+                concluido_por: user?.id || null,
+              } as any).eq("oportunidade_id", oportunidade.id).is("concluido_em", null);
               saveField({ status: "ganho" }, "status");
               toast.success("Negócio ganho! 🎉🥳");
             }}
