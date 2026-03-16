@@ -392,10 +392,19 @@ export function OportunidadeDetailView({
                     descricao: `Negócio marcado como Ganho 🎉`,
                     user_id: user?.id || null,
                   });
-                  saveField({ status: "ganho" }, "status");
+                  await supabase.from("crm_oportunidades").update({ status: "ganho", data_fechamento: new Date().toISOString() } as any).eq("id", oportunidade.id);
                   setLocalStatus("ganho");
+                  invalidate();
                   queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
                   toast.success("Negócio ganho! 🎉🥳");
+                  // Open cliente drawer (or pedido if client exists)
+                  if (oportunidade.cliente_id) {
+                    setGanhoClienteId(oportunidade.cliente_id);
+                    setGanhoClienteNome(oportunidade.clientes?.nome_fantasia || oportunidade.titulo);
+                    setGanhoStep("pedido");
+                  } else {
+                    setGanhoStep("cliente");
+                  }
                 }}
               >
                 🥳 Negócio Ganho
