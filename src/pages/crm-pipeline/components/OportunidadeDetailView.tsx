@@ -223,73 +223,77 @@ export function OportunidadeDetailView({
                     <Plus className="h-3 w-3" /> Adicionar
                   </Button>
                 </div>
-                {contatos.map((contato, idx) => {
-                  const isEditing = editingContatoIdx === idx;
-                  const cargoNome = cargos.find(c => c.id === contato.cargo_id)?.nome;
-                  return (
-                    <div key={idx}>
-                      {/* Linha compacta */}
-                      <div className="flex items-center gap-2 border rounded-md px-3 py-1.5 bg-muted/30">
-                        <span className="text-xs font-medium truncate">{contato.nome || "Sem nome"}</span>
-                        <span className="text-[10px] text-muted-foreground">•</span>
-                        <span className="text-xs text-muted-foreground truncate">{formatPhoneDisplay(contato.telefone) || "Sem telefone"}</span>
-                        {cargoNome && (
-                          <>
-                            <span className="text-[10px] text-muted-foreground">•</span>
-                            <span className="text-xs text-muted-foreground truncate">{cargoNome}</span>
-                          </>
-                        )}
-                        {contato.email && (
-                          <>
-                            <span className="text-[10px] text-muted-foreground">•</span>
-                            <span className="text-xs text-muted-foreground truncate">{contato.email}</span>
-                          </>
-                        )}
-                        <div className="ml-auto flex items-center gap-1 shrink-0">
-                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingContatoIdx(isEditing ? null : idx)}>
-                            {isEditing ? <EyeOff className="h-3.5 w-3.5 text-muted-foreground" /> : <Eye className="h-3.5 w-3.5 text-muted-foreground" />}
-                          </Button>
-                          {contatos.length > 1 && (
-                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeContato(idx)}>
-                              <Trash2 className="h-3.5 w-3.5" />
+                <div className="rounded-lg border border-border divide-y divide-border">
+                  {contatos.map((contato, idx) => {
+                    const isEditing = editingContatoIdx === idx;
+                    const cargoNome = cargos.find(c => c.id === contato.cargo_id)?.nome;
+                    return (
+                      <div key={idx}>
+                        <div className="flex items-start gap-3 px-4 py-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium">{contato.nome || "Sem nome"}</p>
+                            </div>
+                            {cargoNome && <p className="text-xs text-muted-foreground">{cargoNome}</p>}
+                            <div className="flex gap-3 mt-1">
+                              {contato.telefone && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />{formatPhoneDisplay(contato.telefone)}
+                                </span>
+                              )}
+                              {contato.email && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Mail className="h-3 w-3" />{contato.email}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingContatoIdx(isEditing ? null : idx)} title="Editar contato">
+                              <Pencil className={cn("h-3.5 w-3.5", isEditing ? "text-primary" : "text-muted-foreground")} />
                             </Button>
-                          )}
+                            {contatos.length > 1 && (
+                              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => removeContato(idx)} title="Remover contato">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
+                        {/* Formulário expandido */}
+                        {isEditing && (
+                          <div className="border-t border-border px-4 py-3 space-y-2 bg-muted/20">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-xs">Nome *</Label>
+                                <Input value={contato.nome} onChange={(e) => updateContato(idx, "nome", e.target.value)} placeholder="Nome do contato" className="h-8 text-xs" />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Telefone *</Label>
+                                <Input value={applyPhoneMask(contato.telefone)} onChange={(e) => updateContato(idx, "telefone", e.target.value.replace(/\D/g, ""))} placeholder="(00) 00000-0000" className="h-8 text-xs" />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-xs">Cargo</Label>
+                                <Select value={contato.cargo_id || "__none__"} onValueChange={(v) => updateContato(idx, "cargo_id", v === "__none__" ? "" : v)}>
+                                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="__none__">Nenhum</SelectItem>
+                                    {cargos.map(c => (<SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label className="text-xs">Email</Label>
+                                <Input value={contato.email} onChange={(e) => updateContato(idx, "email", e.target.value)} placeholder="email@exemplo.com" className="h-8 text-xs" type="email" />
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      {/* Formulário expandido */}
-                      {isEditing && (
-                        <div className="border border-t-0 rounded-b-md p-3 space-y-2 bg-muted/20">
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <Label className="text-xs">Nome *</Label>
-                              <Input value={contato.nome} onChange={(e) => updateContato(idx, "nome", e.target.value)} placeholder="Nome do contato" className="h-8 text-xs" />
-                            </div>
-                            <div>
-                              <Label className="text-xs">Telefone *</Label>
-                              <Input value={applyPhoneMask(contato.telefone)} onChange={(e) => updateContato(idx, "telefone", e.target.value.replace(/\D/g, ""))} placeholder="(00) 00000-0000" className="h-8 text-xs" />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <Label className="text-xs">Cargo</Label>
-                              <Select value={contato.cargo_id || "__none__"} onValueChange={(v) => updateContato(idx, "cargo_id", v === "__none__" ? "" : v)}>
-                                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__none__">Nenhum</SelectItem>
-                                  {cargos.map(c => (<SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label className="text-xs">Email</Label>
-                              <Input value={contato.email} onChange={(e) => updateContato(idx, "email", e.target.value)} placeholder="email@exemplo.com" className="h-8 text-xs" type="email" />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Etapa + Responsável lado a lado */}
