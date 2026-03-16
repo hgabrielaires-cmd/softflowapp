@@ -100,8 +100,9 @@ export default function CrmPipeline() {
     let count = 0;
     if (filterFilialId !== "__all__") count++;
     if (filterVendedorId !== "__all__") count++;
+    if (filterStatus !== "em_andamento") count++;
     return count;
-  }, [filterFilialId, filterVendedorId]);
+  }, [filterFilialId, filterVendedorId, filterStatus]);
 
   // Filtro combinado: texto + filial + vendedor
   const filtered = useMemo(() => {

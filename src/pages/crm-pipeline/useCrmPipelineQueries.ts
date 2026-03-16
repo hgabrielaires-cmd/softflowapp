@@ -32,15 +32,24 @@ export function useCrmPipelineQueries(funilId?: string, statusFilter: string = "
   });
 
   const oportunidadesQuery = useQuery({
-    queryKey: ["crm_oportunidades", funilId],
+    queryKey: ["crm_oportunidades", funilId, statusFilter],
     enabled: !!funilId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("crm_oportunidades")
         .select("*, clientes(nome_fantasia, apelido, filial_id)")
-        .eq("funil_id", funilId!)
-        .eq("status", "aberta")
-        .order("ordem");
+        .eq("funil_id", funilId!);
+
+      if (statusFilter === "em_andamento") {
+        q = q.eq("status", "aberta");
+      } else if (statusFilter === "perdido") {
+        q = q.eq("status", "perdido");
+      } else if (statusFilter === "ganho") {
+        q = q.eq("status", "ganho");
+      }
+      // else "todos" → no filter
+
+      const { data, error } = await q.order("ordem");
       if (error) throw error;
       const ids = [...new Set((data || []).map(d => d.responsavel_id).filter(Boolean))] as string[];
       let profilesMap: Record<string, string> = {};
