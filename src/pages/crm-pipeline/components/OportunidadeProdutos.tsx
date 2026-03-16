@@ -46,8 +46,9 @@ interface Props {
 const formatCurrency = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export function OportunidadeProdutos({ oportunidadeId }: Props) {
+export function OportunidadeProdutos({ oportunidadeId, titulo }: Props) {
   const { profile } = useAuth();
+  const [propostaOpen, setPropostaOpen] = useState(false);
   const queryClient = useQueryClient();
   const [items, setItems] = useState<ProdutoItem[]>([]);
   const [addType, setAddType] = useState<"plano" | "modulo">("plano");
