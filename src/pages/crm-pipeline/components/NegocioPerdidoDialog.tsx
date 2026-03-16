@@ -102,7 +102,7 @@ export function NegocioPerdidoDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg overflow-visible">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             😢 Marcar como Negócio Perdido
