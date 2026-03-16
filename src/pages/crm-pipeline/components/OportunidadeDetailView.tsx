@@ -112,6 +112,19 @@ export function OportunidadeDetailView({
     },
   });
 
+  const { data: motivosPerda = [] } = useQuery({
+    queryKey: ["crm_motivos_perda_dialog"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crm_motivos_perda")
+        .select("id, nome")
+        .eq("ativo", true)
+        .order("ordem");
+      if (error) throw error;
+      return (data || []) as { id: string; nome: string }[];
+    },
+  });
+
   // ─── Auto-save: update oportunidade fields directly ───
   const saveField = useCallback(async (fields: Record<string, unknown>, fieldLabel?: string) => {
     setSavingField(fieldLabel || "campo");
