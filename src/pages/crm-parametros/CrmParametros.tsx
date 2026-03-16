@@ -2,10 +2,11 @@ import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Filter, Settings2, Briefcase } from "lucide-react";
+import { Filter, Settings2, Briefcase, ThumbsDown } from "lucide-react";
 import { FunisTab } from "./components/FunisTab";
 import { CamposPersonalizadosTab } from "./components/CamposPersonalizadosTab";
 import { CargosTab } from "./components/CargosTab";
+import { MotivosPerdaTab } from "./components/MotivosPerdaTab";
 
 export default function CrmParametros() {
   const { isAdmin } = useAuth();
@@ -31,6 +32,9 @@ export default function CrmParametros() {
             <TabsTrigger value="cargos" className="gap-1.5">
               <Briefcase className="h-4 w-4" /> Cargos
             </TabsTrigger>
+            <TabsTrigger value="motivos_perda" className="gap-1.5">
+              <ThumbsDown className="h-4 w-4" /> Motivos de Perda
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="funis">
@@ -43,6 +47,10 @@ export default function CrmParametros() {
 
           <TabsContent value="cargos">
             <CargosTab />
+          </TabsContent>
+
+          <TabsContent value="motivos_perda">
+            <MotivosPerdaTab />
           </TabsContent>
         </Tabs>
       </div>
