@@ -173,6 +173,30 @@ export function OportunidadeComentarios({ oportunidadeId, readOnly = false }: Pr
         anexo_nome,
       });
       if (error) throw error;
+
+      // Notificar usuários mencionados
+      const meuNome = profiles[user.id]?.full_name || "Usuário";
+      const mentionRegex = /@([\w\u00C0-\u024F]+)/g;
+      let mentionMatch;
+      const notifiedIds = new Set<string>();
+      while ((mentionMatch = mentionRegex.exec(texto)) !== null) {
+        const name = mentionMatch[1].trim();
+        const mentioned = allUsers.find(
+          (u) => u.full_name.toLowerCase() === name.toLowerCase() ||
+            u.full_name.split(" ")[0].toLowerCase() === name.toLowerCase()
+        );
+        if (mentioned && mentioned.user_id !== user.id && !notifiedIds.has(mentioned.user_id)) {
+          notifiedIds.add(mentioned.user_id);
+          await supabase.from("notificacoes").insert({
+            titulo: "Você foi mencionado em um comentário",
+            mensagem: `${meuNome} mencionou você em um comentário na oportunidade (CRM)`,
+            tipo: "info",
+            destinatario_user_id: mentioned.user_id,
+            criado_por: user.id,
+          });
+        }
+      }
+
       setTexto(""); setPrioridade("normal"); setArquivo(null);
       if (fileRef.current) fileRef.current.value = "";
       toast.success("Comentário adicionado!");
