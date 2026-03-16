@@ -18,7 +18,10 @@ export function PipelineCard({ oportunidade, etapa, onDragStart, onClick }: Pipe
       draggable
       onDragStart={() => onDragStart(oportunidade.id)}
       onClick={() => onClick(oportunidade)}
-      className="bg-card rounded-lg border border-border/50 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12)] cursor-pointer hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.18)] transition-all duration-150 border-t-[3px]"
+      className={cn(
+        "bg-card rounded-lg border border-border/50 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12)] cursor-pointer hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.18)] transition-all duration-150 border-t-[3px]",
+        oportunidade.status === "ganho" && "border-l-4 border-l-emerald-500"
+      )}
       style={{ borderTopColor: etapa?.cor || "hsl(var(--muted))" }}
     >
       <div className="p-3 space-y-2">
