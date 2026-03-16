@@ -32,7 +32,7 @@ interface Props {
 
 type Etapa = "resposta" | "escolha" | "adiar" | "finalizar";
 
-export function ConcluirTarefaDialog({ open, tarefa, onClose, onConcluido, onCriarNova }: Props) {
+export function ConcluirTarefaDialog({ open, tarefa, onClose, onConcluido, onCriarNova, onNegocioPerdido, onNegocioGanho }: Props) {
   const { user } = useAuth();
   const [etapa, setEtapa] = useState<Etapa>("resposta");
   const [resposta, setResposta] = useState("");
