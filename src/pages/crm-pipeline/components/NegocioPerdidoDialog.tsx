@@ -66,7 +66,13 @@ export function NegocioPerdidoDialog({
         .eq("id", oportunidadeId);
       if (errUpdate) throw errUpdate;
 
-      // 2. Registrar histórico
+      // 2. Concluir tarefas ativas
+      await supabase.from("crm_tarefas").update({
+        concluido_em: new Date().toISOString(),
+        concluido_por: user?.id || null,
+      } as any).eq("oportunidade_id", oportunidadeId).is("concluido_em", null);
+
+      // 3. Registrar histórico
       const descricao = `Negócio marcado como Perdido — Motivo: ${motivoSelecionado?.nome || "N/A"} | Sistema Anterior: ${concorrente.trim()} | Etapa: ${etapaNome}${observacao.trim() ? ` | Obs: ${observacao.trim()}` : ""}`;
 
       await (supabase as any).from("crm_historico").insert({
