@@ -116,6 +116,9 @@ export default function CrmPipeline() {
     if (filterVendedorId !== "__all__") {
       result = result.filter(o => o.responsavel_id === filterVendedorId);
     }
+    if (filterTarefa !== "__all__") {
+      result = result.filter(o => o.tarefas_status === filterTarefa);
+    }
     if (search) {
       const s = search.toLowerCase();
       result = result.filter(o =>
@@ -124,7 +127,7 @@ export default function CrmPipeline() {
       );
     }
     return result;
-  }, [oportunidades, filterFilialId, filterVendedorId, search]);
+  }, [oportunidades, filterFilialId, filterVendedorId, filterTarefa, search]);
 
   const getOpsForEtapa = useCallback((etapaId: string) => {
     return filtered.filter(o => o.etapa_id === etapaId);
