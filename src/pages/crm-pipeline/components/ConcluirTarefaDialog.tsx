@@ -26,9 +26,11 @@ interface Props {
   onClose: () => void;
   onConcluido: () => void;
   onCriarNova: () => void;
+  onNegocioPerdido?: () => void;
+  onNegocioGanho?: () => void;
 }
 
-type Etapa = "resposta" | "escolha" | "adiar";
+type Etapa = "resposta" | "escolha" | "adiar" | "finalizar";
 
 export function ConcluirTarefaDialog({ open, tarefa, onClose, onConcluido, onCriarNova }: Props) {
   const { user } = useAuth();
