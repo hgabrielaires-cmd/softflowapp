@@ -1289,9 +1289,8 @@ export default function Pedidos() {
         isEditing={editingDraftIdx !== null}
         onSave={handleAddDraftComentario}
         onFileChange={handleDraftFileChange}
+        users={allMentionUsers}
       />
-
-      <ClienteRapidoDialog
         open={openClienteDialog}
         onOpenChange={(open) => { setOpenClienteDialog(open); }}
         clienteForm={clienteForm}
