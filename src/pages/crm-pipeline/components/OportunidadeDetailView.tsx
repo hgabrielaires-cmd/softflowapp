@@ -621,6 +621,11 @@ export function OportunidadeDetailView({
             </div>
           </div>
         </TabsContent>
+
+        {/* Linha do Tempo */}
+        <TabsContent value="timeline" className="flex-1 overflow-y-auto px-4 pb-4 mt-0">
+          <OportunidadeTimeline oportunidadeId={oportunidade.id} />
+        </TabsContent>
       </Tabs>
 
       <NegocioPerdidoDialog
