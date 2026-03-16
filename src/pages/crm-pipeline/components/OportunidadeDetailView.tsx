@@ -71,7 +71,29 @@ export function OportunidadeDetailView({
   const [savingField, setSavingField] = useState<string | null>(null);
   const [savingContatos, setSavingContatos] = useState(false);
   const [perdidoDialogOpen, setPerdidoDialogOpen] = useState(false);
+  const [ganhoStep, setGanhoStep] = useState<"idle" | "cliente" | "pedido">("idle");
+  const [ganhoClienteId, setGanhoClienteId] = useState<string | null>(null);
+  const [ganhoClienteNome, setGanhoClienteNome] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Fetch linked pedido
+  const { data: pedidoVinculado } = useQuery({
+    queryKey: ["crm_pedido_vinculado", oportunidade.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("crm_oportunidades")
+        .select("pedido_id")
+        .eq("id", oportunidade.id)
+        .single();
+      if (!data?.pedido_id) return null;
+      const { data: pedido } = await supabase
+        .from("pedidos")
+        .select("id, numero_exibicao, status_pedido")
+        .eq("id", data.pedido_id)
+        .single();
+      return pedido || null;
+    },
+  });
 
   const activeCampos = camposPersonalizados.filter(
     c => c.ativo && !CAMPOS_EXCLUIDOS.includes(c.nome.toLowerCase())
