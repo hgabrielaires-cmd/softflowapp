@@ -277,6 +277,7 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais }
 
             return (
               <div key={t.id} className={cn("border rounded-lg p-3 space-y-1.5", concluida ? "bg-muted/20 opacity-75" : "bg-background")}>
+                {/* Top row: user info + badges */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <UserAvatar avatarUrl={criador?.avatar_url} fullName={criador?.full_name} size="md" />
@@ -297,6 +298,24 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais }
                         <RotateCcw className="h-3 w-3" /> {adiamentos.length}x
                       </Badge>
                     )}
+                    {/* Status badge */}
+                    {concluida ? (
+                      <Badge className="text-[10px] gap-1 bg-emerald-100 text-emerald-700 border-emerald-200">
+                        <CheckCircle2 className="h-3 w-3" /> Concluída
+                      </Badge>
+                    ) : t.data_reuniao && new Date(t.data_reuniao) < new Date() ? (
+                      <Badge className="text-[10px] gap-1 bg-red-100 text-red-700 border-red-200">
+                        <Clock className="h-3 w-3" /> Tarefa Atrasada
+                      </Badge>
+                    ) : t.data_reuniao ? (
+                      <Badge className="text-[10px] gap-1 bg-blue-100 text-blue-700 border-blue-200">
+                        <Clock className="h-3 w-3" /> Tarefa Agendada
+                      </Badge>
+                    ) : (
+                      <Badge className="text-[10px] gap-1 bg-gray-100 text-gray-600 border-gray-200">
+                        Sem Agenda
+                      </Badge>
+                    )}
                     <Button
                       size="sm"
                       variant="ghost"
@@ -306,15 +325,6 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais }
                     >
                       <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                     </Button>
-                    {concluida ? (
-                      <Badge variant="secondary" className="text-[10px] gap-1 bg-emerald-100 text-emerald-700">
-                        <CheckCircle2 className="h-3 w-3" /> Concluída
-                      </Badge>
-                    ) : (
-                      <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 gap-1" onClick={() => handleConcluirClick(t)}>
-                        <CheckCircle2 className="h-3 w-3" /> Concluir
-                      </Button>
-                    )}
                   </div>
                 </div>
                 {t.data_reuniao && (
@@ -328,6 +338,14 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais }
                   <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground pt-0.5">
                     <CheckCircle2 className="h-3 w-3 text-emerald-600" />
                     Concluída por {concluidor.full_name} em {format(new Date(t.concluido_em!), "dd/MM/yy HH:mm", { locale: ptBR })}
+                  </div>
+                )}
+                {/* Concluir button - bottom right */}
+                {!concluida && (
+                  <div className="flex justify-end pt-1">
+                    <Button size="sm" variant="default" className="h-9 text-xs px-4 gap-1.5" onClick={() => handleConcluirClick(t)}>
+                      <CheckCircle2 className="h-4 w-4" /> Concluir Tarefa
+                    </Button>
                   </div>
                 )}
               </div>
