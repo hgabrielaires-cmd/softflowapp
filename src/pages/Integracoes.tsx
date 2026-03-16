@@ -544,8 +544,12 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
                       <div key={i} className="flex items-center justify-between text-sm py-1.5 px-2 rounded hover:bg-muted/50">
                         <div className="flex flex-col">
                           <span className="font-mono text-xs">{item.name}</span>
-                          {item.setor && (
-                            <span className="text-[10px] text-muted-foreground">Setor: {item.setor}</span>
+                          {(item.setor || item.usuario) && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {item.setor && `Setor: ${item.setor}`}
+                              {item.setor && item.usuario && " · "}
+                              {item.usuario && `Usuário: ${item.usuario}`}
+                            </span>
                           )}
                         </div>
                         <div className="flex items-center gap-2">
