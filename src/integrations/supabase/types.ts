@@ -1316,6 +1316,56 @@ export type Database = {
           },
         ]
       }
+      crm_proposta_envios: {
+        Row: {
+          contato_nome: string | null
+          created_at: string
+          erro: string | null
+          id: string
+          instancia_usada: string
+          numero_destino: string
+          oportunidade_id: string
+          setor_nome: string | null
+          status_envio: string
+          tipo: string
+          usuario_id: string
+        }
+        Insert: {
+          contato_nome?: string | null
+          created_at?: string
+          erro?: string | null
+          id?: string
+          instancia_usada: string
+          numero_destino: string
+          oportunidade_id: string
+          setor_nome?: string | null
+          status_envio?: string
+          tipo?: string
+          usuario_id: string
+        }
+        Update: {
+          contato_nome?: string | null
+          created_at?: string
+          erro?: string | null
+          id?: string
+          instancia_usada?: string
+          numero_destino?: string
+          oportunidade_id?: string
+          setor_nome?: string | null
+          status_envio?: string
+          tipo?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_proposta_envios_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "crm_oportunidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_tarefas: {
         Row: {
           canal: string
@@ -4232,6 +4282,7 @@ export type Database = {
           nome: string
           telefone: string | null
           updated_at: string
+          usuario_id: string | null
         }
         Insert: {
           ativo?: boolean
@@ -4242,6 +4293,7 @@ export type Database = {
           nome: string
           telefone?: string | null
           updated_at?: string
+          usuario_id?: string | null
         }
         Update: {
           ativo?: boolean
@@ -4252,8 +4304,17 @@ export type Database = {
           nome?: string
           telefone?: string | null
           updated_at?: string
+          usuario_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "setores_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       solicitacoes_desconto: {
         Row: {

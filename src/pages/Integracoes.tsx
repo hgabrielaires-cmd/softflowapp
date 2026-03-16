@@ -132,7 +132,7 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
   const [loadingState, setLoadingState] = useState(false);
   const [creatingInstance, setCreatingInstance] = useState(false);
   const [instances, setInstances] = useState<any[]>([]);
-  const [setoresInstances, setSetoresInstances] = useState<{ nome: string; instance_name: string }[]>([]);
+  const [setoresInstances, setSetoresInstances] = useState<{ nome: string; instance_name: string; usuario_nome?: string }[]>([]);
 
   useEffect(() => {
     if (config) {
@@ -164,10 +164,25 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
     try {
       const { data } = await supabase
         .from("setores")
-        .select("nome, instance_name")
+        .select("nome, instance_name, usuario_id")
         .not("instance_name", "is", null)
         .eq("ativo", true);
-      setSetoresInstances((data || []).filter((s: any) => s.instance_name?.trim()) as any);
+      const filtered = (data || []).filter((s: any) => s.instance_name?.trim());
+      // Enrich with user names
+      const userIds = filtered.map((s: any) => s.usuario_id).filter(Boolean);
+      let userMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", userIds);
+        (profiles || []).forEach((p: any) => { userMap[p.user_id] = p.full_name; });
+      }
+      setSetoresInstances(filtered.map((s: any) => ({
+        nome: s.nome,
+        instance_name: s.instance_name,
+        usuario_nome: s.usuario_id ? userMap[s.usuario_id] : undefined,
+      })));
     } catch (err) {
       console.error("fetchSetoresInstances error:", err);
     }
@@ -497,17 +512,17 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
           {/* Instances list - merged from Evolution API + Setores */}
           {(() => {
             const apiNames = new Set<string>();
-            const mergedItems: { name: string; state: string; setor?: string; fromApi: boolean }[] = [];
+            const mergedItems: { name: string; state: string; setor?: string; usuario?: string; fromApi: boolean }[] = [];
             instances.forEach((inst: any, i: number) => {
               const name = inst?.instance?.instanceName || inst?.instanceName || inst?.name || `Instância ${i + 1}`;
               const state = inst?.instance?.state || inst?.state || inst?.connectionStatus || "unknown";
               apiNames.add(name);
               const setor = setoresInstances.find(s => s.instance_name === name);
-              mergedItems.push({ name, state, setor: setor?.nome, fromApi: true });
+              mergedItems.push({ name, state, setor: setor?.nome, usuario: setor?.usuario_nome, fromApi: true });
             });
             setoresInstances.forEach(s => {
               if (!apiNames.has(s.instance_name)) {
-                mergedItems.push({ name: s.instance_name, state: "not_created", setor: s.nome, fromApi: false });
+                mergedItems.push({ name: s.instance_name, state: "not_created", setor: s.nome, usuario: s.usuario_nome, fromApi: false });
               }
             });
             if (mergedItems.length === 0) return null;
@@ -529,8 +544,12 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
                       <div key={i} className="flex items-center justify-between text-sm py-1.5 px-2 rounded hover:bg-muted/50">
                         <div className="flex flex-col">
                           <span className="font-mono text-xs">{item.name}</span>
-                          {item.setor && (
-                            <span className="text-[10px] text-muted-foreground">Setor: {item.setor}</span>
+                          {(item.setor || item.usuario) && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {item.setor && `Setor: ${item.setor}`}
+                              {item.setor && item.usuario && " · "}
+                              {item.usuario && `Usuário: ${item.usuario}`}
+                            </span>
                           )}
                         </div>
                         <div className="flex items-center gap-2">

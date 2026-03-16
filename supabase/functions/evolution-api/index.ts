@@ -77,8 +77,8 @@ serve(async (req) => {
       baseUrl = config.server_url;
       apiKey = config.token;
 
-      // Setor-based routing: if template_id is provided, resolve the setor's instance_name
-      if (template_id && !resolvedInstanceName) {
+      // Instance routing: prefer explicit instance_name, then template->setor routing
+      if (!resolvedInstanceName && template_id) {
         const { data: templateData } = await serviceClient
           .from("message_templates")
           .select("setor_id")
