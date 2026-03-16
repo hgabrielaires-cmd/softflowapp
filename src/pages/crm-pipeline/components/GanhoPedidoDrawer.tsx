@@ -372,17 +372,30 @@ export function GanhoPedidoDrawer({ open, onOpenChange, clienteId, clienteNome, 
             )}
 
             {/* Forma de pagamento implantação */}
-            <div className="space-y-1.5">
-              <Label>Forma de Pagamento — Implantação *</Label>
-              <Select value={form.pagamento_implantacao_forma} onValueChange={v => setForm(f => ({ ...f, pagamento_implantacao_forma: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Boleto">Boleto</SelectItem>
-                  <SelectItem value="Pix">Pix</SelectItem>
-                  <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
-                  <SelectItem value="Transferência">Transferência</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Forma de Pagamento — Implantação *</Label>
+                <Select value={form.pagamento_implantacao_forma} onValueChange={v => setForm(f => ({ ...f, pagamento_implantacao_forma: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Boleto">Boleto</SelectItem>
+                    <SelectItem value="Pix">Pix</SelectItem>
+                    <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
+                    <SelectItem value="Transferência">Transferência</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Parcelas da Implantação</Label>
+                <Select value={form.pagamento_implantacao_parcelas || "1"} onValueChange={v => setForm(f => ({ ...f, pagamento_implantacao_parcelas: v }))}>
+                  <SelectTrigger><SelectValue placeholder="1x" /></SelectTrigger>
+                  <SelectContent>
+                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                      <SelectItem key={n} value={String(n)}>{n}x {valorImplantacaoFinal > 0 ? `(${fmtBRL(valorImplantacaoFinal / n)})` : ""}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Observações */}

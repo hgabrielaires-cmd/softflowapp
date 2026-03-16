@@ -101,10 +101,10 @@ export function GanhoClienteDrawer({ open, onOpenChange, oportunidadeId, oportun
 
   async function loadContatosFromOportunidade() {
     const { data } = await supabase.from("crm_oportunidade_contatos")
-      .select("nome, telefone, email").eq("oportunidade_id", oportunidadeId);
+      .select("nome, telefone, email, cargo_id, crm_cargos(nome)").eq("oportunidade_id", oportunidadeId);
     if (data && data.length > 0) {
-      const imported: ContatoInline[] = data.map((c, i) => ({
-        nome: c.nome, cargo: "", telefone: c.telefone || "", email: c.email || "",
+      const imported: ContatoInline[] = data.map((c: any, i: number) => ({
+        nome: c.nome, cargo: c.crm_cargos?.nome || "", telefone: c.telefone || "", email: c.email || "",
         decisor: i === 0, ativo: true,
       }));
       setContatos(imported);

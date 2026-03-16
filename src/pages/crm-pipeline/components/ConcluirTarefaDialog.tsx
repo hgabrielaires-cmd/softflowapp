@@ -167,7 +167,7 @@ export function ConcluirTarefaDialog({ open, tarefa, onClose, onConcluido, onCri
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-base">
             {etapa === "resposta" && "Registrar Resposta"}
