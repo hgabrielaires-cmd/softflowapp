@@ -22,10 +22,18 @@ export function PipelineCard({ oportunidade, etapa, onDragStart, onClick }: Pipe
       style={{ borderTopColor: etapa?.cor || "hsl(var(--muted))" }}
     >
       <div className="p-3 space-y-2">
-        {/* Title */}
-        <p className="font-semibold text-sm text-foreground leading-tight truncate">
-          {oportunidade.titulo}
-        </p>
+        {/* Title + Status */}
+        <div className="flex items-center gap-2">
+          <p className="font-semibold text-sm text-foreground leading-tight truncate flex-1">
+            {oportunidade.titulo}
+          </p>
+          {oportunidade.status === "perdido" && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive font-medium shrink-0">😢 Perdido</span>
+          )}
+          {oportunidade.status === "ganho" && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-medium shrink-0">🥳 Ganho</span>
+          )}
+        </div>
 
         {/* Task status + Stars row */}
         <div className="flex items-center justify-between gap-2">
