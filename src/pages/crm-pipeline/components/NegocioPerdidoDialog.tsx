@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,18 +15,34 @@ interface Props {
   etapaNome: string;
   motivosPerda: { id: string; nome: string }[];
   camposPersonalizados: Record<string, string>;
-  sistemaAnteriorOpcoes: string[];
   onSuccess: () => void;
 }
 
 export function NegocioPerdidoDialog({
   open, onOpenChange, oportunidadeId, etapaNome,
-  motivosPerda, camposPersonalizados, sistemaAnteriorOpcoes, onSuccess,
+  motivosPerda, camposPersonalizados, onSuccess,
 }: Props) {
   const [motivoPerdaId, setMotivoPerdaId] = useState("");
   const [concorrente, setConcorrente] = useState(camposPersonalizados["Sistema Anterior"] || "");
   const [observacao, setObservacao] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sistemaOpcoes, setSistemaOpcoes] = useState<string[]>([]);
+
+  // Fetch fresh options from crm_campos_personalizados when dialog opens
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      const { data } = await supabase
+        .from("crm_campos_personalizados")
+        .select("opcoes")
+        .ilike("nome", "sistema anterior")
+        .eq("ativo", true)
+        .single();
+      if (data?.opcoes) {
+        setSistemaOpcoes(data.opcoes as unknown as string[]);
+      }
+    })();
+  }, [open]);
 
   const motivoSelecionado = motivosPerda.find(m => m.id === motivoPerdaId);
 
@@ -118,7 +133,7 @@ export function NegocioPerdidoDialog({
                 <SelectTrigger className="h-9 text-xs">
                   <SelectValue placeholder="Selecione o motivo..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper" className="z-[200] max-h-60">
                   {motivosPerda.map(m => (
                     <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
                   ))}
@@ -133,8 +148,8 @@ export function NegocioPerdidoDialog({
                 <SelectTrigger className="h-9 text-xs">
                   <SelectValue placeholder="Selecione o sistema..." />
                 </SelectTrigger>
-                <SelectContent>
-                  {sistemaAnteriorOpcoes.map(op => (
+                <SelectContent position="popper" className="z-[200] max-h-60">
+                  {sistemaOpcoes.map(op => (
                     <SelectItem key={op} value={op}>{op}</SelectItem>
                   ))}
                 </SelectContent>
