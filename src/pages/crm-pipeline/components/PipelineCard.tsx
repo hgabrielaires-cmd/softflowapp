@@ -22,18 +22,19 @@ export function PipelineCard({ oportunidade, etapa, onDragStart, onClick }: Pipe
       style={{ borderTopColor: etapa?.cor || "hsl(var(--muted))" }}
     >
       <div className="p-3 space-y-2">
-        {/* Title + Status */}
-        <div className="flex items-center gap-2">
-          <p className="font-semibold text-sm text-foreground leading-tight truncate flex-1">
-            {oportunidade.titulo}
-          </p>
-          {oportunidade.status === "perdido" && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive font-medium shrink-0">😢 Perdido</span>
-          )}
-          {oportunidade.status === "ganho" && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-medium shrink-0">🥳 Ganho</span>
-          )}
-        </div>
+        {/* Title */}
+        <p className="font-semibold text-sm text-foreground leading-tight truncate">
+          {oportunidade.titulo}
+        </p>
+
+        {/* Status badge - always visible */}
+        {oportunidade.status === "perdido" ? (
+          <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive font-medium w-fit">😢 Negócio Perdido</span>
+        ) : oportunidade.status === "ganho" ? (
+          <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-medium w-fit">🥳 Negócio Ganho</span>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium w-fit">💼 Em Andamento</span>
+        )}
 
         {/* Task status + Stars row */}
         <div className="flex items-center justify-between gap-2">

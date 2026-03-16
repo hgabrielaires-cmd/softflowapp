@@ -293,6 +293,7 @@ export default function CrmPipeline() {
                       <SelectItem value="em_andamento">💼 Em Andamento</SelectItem>
                       <SelectItem value="perdido">😢 Negócio Perdido</SelectItem>
                       <SelectItem value="ganho">🥳 Negócio Ganho</SelectItem>
+                      <SelectItem value="todos">📋 Todos</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
