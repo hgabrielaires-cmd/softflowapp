@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Package, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { ProdutosPrecificacao } from "./ProdutosPrecificacao";
+import { EnviarPropostaDialog } from "./EnviarPropostaDialog";
 
 interface Plano {
   id: string;
