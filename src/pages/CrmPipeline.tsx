@@ -41,6 +41,7 @@ export default function CrmPipeline() {
   const [filterFilialId, setFilterFilialId] = useState<string>("__all__");
   const [filterVendedorId, setFilterVendedorId] = useState<string>("__all__");
   const [filterStatus, setFilterStatus] = useState<string>("em_andamento");
+  const [filterTarefa, setFilterTarefa] = useState<string>("__all__");
   const [filtersReady, setFiltersReady] = useState(false);
 
   const isVendedor = roles.includes("vendedor");
