@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -24,8 +25,14 @@ interface Setor {
   descricao: string | null;
   telefone: string | null;
   instance_name: string | null;
+  usuario_id: string | null;
   ativo: boolean;
   created_at: string;
+}
+
+interface ProfileOption {
+  user_id: string;
+  full_name: string;
 }
 
 export default function Setores() {
@@ -34,23 +41,31 @@ export default function Setores() {
   const canAccess = isAdmin || canIncluir || canEditar;
 
   const [setores, setSetores] = useState<Setor[]>([]);
+  const [usuarios, setUsuarios] = useState<ProfileOption[]>([]);
+  const [usuariosMap, setUsuariosMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editando, setEditando] = useState<Setor | null>(null);
-  const [form, setForm] = useState({ nome: "", descricao: "", telefone: "", instance_name: "" });
+  const [form, setForm] = useState({ nome: "", descricao: "", telefone: "", instance_name: "", usuario_id: "" });
   const [saving, setSaving] = useState(false);
 
   if (!canAccess) return <Navigate to="/dashboard" replace />;
 
   async function loadSetores() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("setores")
-      .select("*")
-      .order("nome");
+    const [{ data, error }, { data: profilesData }] = await Promise.all([
+      supabase.from("setores").select("*").order("nome"),
+      supabase.from("profiles").select("user_id, full_name").eq("active", true).order("full_name"),
+    ]);
     if (error) toast.error("Erro ao carregar setores");
     else setSetores((data as Setor[]) || []);
+
+    const profiles = (profilesData || []) as ProfileOption[];
+    setUsuarios(profiles);
+    const map: Record<string, string> = {};
+    profiles.forEach(p => { map[p.user_id] = p.full_name; });
+    setUsuariosMap(map);
     setLoading(false);
   }
 
@@ -58,13 +73,19 @@ export default function Setores() {
 
   function openNew() {
     setEditando(null);
-    setForm({ nome: "", descricao: "", telefone: "", instance_name: "" });
+    setForm({ nome: "", descricao: "", telefone: "", instance_name: "", usuario_id: "" });
     setDialogOpen(true);
   }
 
   function openEdit(setor: Setor) {
     setEditando(setor);
-    setForm({ nome: setor.nome, descricao: setor.descricao || "", telefone: setor.telefone || "", instance_name: setor.instance_name || "" });
+    setForm({
+      nome: setor.nome,
+      descricao: setor.descricao || "",
+      telefone: setor.telefone || "",
+      instance_name: setor.instance_name || "",
+      usuario_id: setor.usuario_id || "",
+    });
     setDialogOpen(true);
   }
 
@@ -77,6 +98,7 @@ export default function Setores() {
       descricao: form.descricao.trim() || null,
       telefone: form.telefone.trim() || null,
       instance_name: form.instance_name.trim() || null,
+      usuario_id: form.usuario_id || null,
     };
 
     if (editando) {
@@ -147,6 +169,7 @@ export default function Setores() {
                 <TableHead>Descrição</TableHead>
                 <TableHead>Telefone</TableHead>
                 <TableHead>Instância WhatsApp</TableHead>
+                <TableHead>Usuário Responsável</TableHead>
                 <TableHead className="w-20 text-center">Ativo</TableHead>
                 <TableHead className="w-20 text-center">Ações</TableHead>
               </TableRow>
@@ -154,13 +177,13 @@ export default function Setores() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : filtrados.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     Nenhum setor encontrado
                   </TableCell>
                 </TableRow>
@@ -171,6 +194,9 @@ export default function Setores() {
                     <TableCell className="text-muted-foreground text-sm">{setor.descricao || "—"}</TableCell>
                     <TableCell className="text-sm">{setor.telefone || "—"}</TableCell>
                     <TableCell className="text-sm font-mono">{setor.instance_name || "—"}</TableCell>
+                    <TableCell className="text-sm">
+                      {setor.usuario_id ? (usuariosMap[setor.usuario_id] || "—") : "—"}
+                    </TableCell>
                     <TableCell className="text-center">
                       <Switch
                         checked={setor.ativo}
@@ -240,6 +266,26 @@ export default function Setores() {
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Nome da instância na Evolution API. Se vazio, usa a instância padrão.
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Usuário Responsável</label>
+              <Select
+                value={form.usuario_id || "__none__"}
+                onValueChange={v => setForm(f => ({ ...f, usuario_id: v === "__none__" ? "" : v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um usuário..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Nenhum</SelectItem>
+                  {usuarios.map(u => (
+                    <SelectItem key={u.user_id} value={u.user_id}>{u.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Vincule um usuário para que ele use automaticamente a instância WhatsApp deste setor ao enviar propostas.
               </p>
             </div>
           </div>

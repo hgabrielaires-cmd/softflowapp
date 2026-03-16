@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -14,8 +15,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageCircle, Send, Eye } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { MessageCircle, Send, Eye, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { getInstanciaDoUsuario, type InstanciaResult } from "@/lib/getInstanciaDoUsuario";
 import {
   buildPropostaMessage,
   type PropostaItem,
@@ -36,10 +39,24 @@ interface Props {
 }
 
 export function EnviarPropostaDialog({ open, onOpenChange, oportunidadeId, titulo }: Props) {
+  const { user } = useAuth();
   const [selectedContatoId, setSelectedContatoId] = useState("");
   const [motivoImplantacao, setMotivoImplantacao] = useState("");
   const [motivoMensalidade, setMotivoMensalidade] = useState("");
   const [sending, setSending] = useState(false);
+  const [instanciaInfo, setInstanciaInfo] = useState<InstanciaResult | null>(null);
+  const [loadingInstancia, setLoadingInstancia] = useState(false);
+
+  // Resolve instância when dialog opens
+  useEffect(() => {
+    if (open && user?.id) {
+      setLoadingInstancia(true);
+      getInstanciaDoUsuario(user.id)
+        .then(setInstanciaInfo)
+        .catch(() => setInstanciaInfo({ instancia: "Softflow_WhatsApp", setor_nome: null, fonte: "padrao" }))
+        .finally(() => setLoadingInstancia(false));
+    }
+  }, [open, user?.id]);
 
   // Fetch contatos
   const contatosQuery = useQuery({
@@ -68,7 +85,6 @@ export function EnviarPropostaDialog({ open, onOpenChange, oportunidadeId, titul
         .order("created_at");
       if (error) throw error;
 
-      // Get plano/modulo names and descriptions
       const planoIds = (items || []).filter(i => i.tipo === "plano").map(i => i.referencia_id);
       const moduloIds = (items || []).filter(i => i.tipo === "modulo").map(i => i.referencia_id);
 
@@ -169,32 +185,51 @@ export function EnviarPropostaDialog({ open, onOpenChange, oportunidadeId, titul
       return;
     }
 
+    const instanceName = instanciaInfo?.instancia || "Softflow_WhatsApp";
+
     setSending(true);
     try {
-      // Find the "Proposta Comercial" template to route via setor
-      const { data: tpl } = await supabase
-        .from("message_templates")
-        .select("id")
-        .eq("categoria", "proposta")
-        .eq("ativo", true)
-        .limit(1)
-        .maybeSingle();
-
       const { error } = await supabase.functions.invoke("evolution-api", {
         body: {
           action: "send_text",
           number: selectedContato.telefone,
           text: preview,
-          template_id: tpl?.id || undefined,
+          instance_name: instanceName,
         },
       });
 
       if (error) throw error;
 
+      // Log the send
+      await supabase.from("crm_proposta_envios").insert({
+        oportunidade_id: oportunidadeId,
+        usuario_id: user?.id || "",
+        instancia_usada: instanceName,
+        setor_nome: instanciaInfo?.setor_nome || null,
+        numero_destino: selectedContato.telefone,
+        contato_nome: selectedContato.nome,
+        status_envio: "enviado",
+        tipo: "proposta",
+      });
+
       toast.success("Proposta enviada com sucesso!");
       onOpenChange(false);
     } catch (err: any) {
       console.error("[Proposta WhatsApp]", err);
+
+      // Log error
+      await supabase.from("crm_proposta_envios").insert({
+        oportunidade_id: oportunidadeId,
+        usuario_id: user?.id || "",
+        instancia_usada: instanceName,
+        setor_nome: instanciaInfo?.setor_nome || null,
+        numero_destino: selectedContato.telefone,
+        contato_nome: selectedContato.nome,
+        status_envio: "erro",
+        tipo: "proposta",
+        erro: err.message || "Erro desconhecido",
+      });
+
       toast.error("Erro ao enviar proposta: " + (err.message || "Tente novamente."));
     } finally {
       setSending(false);
@@ -209,6 +244,8 @@ export function EnviarPropostaDialog({ open, onOpenChange, oportunidadeId, titul
       .replace(/_([^_]+)_/g, '<em>$1</em>')
       .replace(/\n/g, '<br/>');
   };
+
+  const isPadrao = instanciaInfo?.fonte === "padrao";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -225,6 +262,18 @@ export function EnviarPropostaDialog({ open, onOpenChange, oportunidadeId, titul
 
         <ScrollArea className="flex-1 min-h-0 pr-2">
           <div className="space-y-4">
+            {/* Warning for default instance */}
+            {isPadrao && !loadingInstancia && (
+              <Alert variant="default" className="border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20">
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-xs text-yellow-800 dark:text-yellow-300">
+                  ⚠️ Nenhuma instância WhatsApp vinculada ao seu usuário. O envio será feito pela instância padrão{" "}
+                  <strong>[{instanciaInfo?.instancia}]</strong>. Para usar sua instância pessoal, peça ao admin vincular seu usuário
+                  ao setor correto em Configurações {">"} Setores.
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Contato selection */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -295,18 +344,26 @@ export function EnviarPropostaDialog({ open, onOpenChange, oportunidadeId, titul
           </div>
         </ScrollArea>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button
-            onClick={handleSend}
-            disabled={!selectedContato || items.length === 0 || sending}
-            className="gap-2"
-          >
-            <Send className="h-4 w-4" />
-            {sending ? "Enviando..." : "Enviar Proposta"}
-          </Button>
+          <div className="flex flex-col items-end">
+            <Button
+              onClick={handleSend}
+              disabled={!selectedContato || items.length === 0 || sending || loadingInstancia}
+              className="gap-2"
+            >
+              <Send className="h-4 w-4" />
+              {sending ? "Enviando..." : "Enviar Proposta"}
+            </Button>
+            {instanciaInfo && !loadingInstancia && (
+              <span className="text-[10px] text-muted-foreground mt-1">
+                via [{instanciaInfo.instancia}]
+                {instanciaInfo.setor_nome && ` — ${instanciaInfo.setor_nome}`}
+              </span>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
