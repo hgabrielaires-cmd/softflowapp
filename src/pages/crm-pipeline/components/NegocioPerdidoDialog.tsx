@@ -16,6 +16,7 @@ interface Props {
   etapaNome: string;
   motivosPerda: { id: string; nome: string }[];
   camposPersonalizados: Record<string, string>;
+  sistemaAnteriorOpcoes: string[];
   onSuccess: () => void;
 }
 
