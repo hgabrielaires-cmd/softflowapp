@@ -17,6 +17,7 @@ import { formatPhoneDisplay, applyPhoneMask } from "@/lib/utils";
 import { OportunidadeTarefas } from "./OportunidadeTarefas";
 import { OportunidadeProdutos } from "./OportunidadeProdutos";
 import { ContatoOportunidadeDialog } from "./ContatoOportunidadeDialog";
+import { NegocioPerdidoDialog } from "./NegocioPerdidoDialog";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
 import type { CrmCampoPersonalizado } from "@/pages/crm-parametros/types";
 
@@ -65,6 +66,7 @@ export function OportunidadeDetailView({
   const [classificacao, setClassificacao] = useState(oportunidade.classificacao || 0);
   const [savingField, setSavingField] = useState<string | null>(null);
   const [savingContatos, setSavingContatos] = useState(false);
+  const [perdidoDialogOpen, setPerdidoDialogOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const activeCampos = camposPersonalizados.filter(
@@ -107,6 +109,19 @@ export function OportunidadeDetailView({
         implantacao: Math.max(0, totalImpl - descImpl),
         mensalidade: Math.max(0, totalMens - descMens),
       };
+    },
+  });
+
+  const { data: motivosPerda = [] } = useQuery({
+    queryKey: ["crm_motivos_perda_dialog"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crm_motivos_perda")
+        .select("id, nome")
+        .eq("ativo", true)
+        .order("ordem");
+      if (error) throw error;
+      return (data || []) as { id: string; nome: string }[];
     },
   });
 
@@ -305,10 +320,7 @@ export function OportunidadeDetailView({
             variant="outline"
             size="sm"
             className="text-xs gap-1.5 border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            onClick={() => {
-              saveField({ status: "perdido" }, "status");
-              toast.info("Negócio marcado como perdido 😢");
-            }}
+            onClick={() => setPerdidoDialogOpen(true)}
           >
             😢 Negócio Perdido
           </Button>
@@ -565,6 +577,16 @@ export function OportunidadeDetailView({
           </div>
         </TabsContent>
       </Tabs>
+
+      <NegocioPerdidoDialog
+        open={perdidoDialogOpen}
+        onOpenChange={setPerdidoDialogOpen}
+        oportunidadeId={oportunidade.id}
+        etapaNome={currentEtapa?.nome || "Desconhecida"}
+        motivosPerda={motivosPerda}
+        camposPersonalizados={oportunidade.campos_personalizados || {}}
+        onSuccess={invalidate}
+      />
     </div>
   );
 }
