@@ -132,7 +132,7 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
   const [loadingState, setLoadingState] = useState(false);
   const [creatingInstance, setCreatingInstance] = useState(false);
   const [instances, setInstances] = useState<any[]>([]);
-  const [setoresInstances, setSetoresInstances] = useState<{ nome: string; instance_name: string }[]>([]);
+  const [setoresInstances, setSetoresInstances] = useState<{ nome: string; instance_name: string; usuario_nome?: string }[]>([]);
 
   useEffect(() => {
     if (config) {
