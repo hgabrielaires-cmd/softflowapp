@@ -59,7 +59,8 @@ export function OportunidadeDetailView({
   const [camposValues, setCamposValues] = useState<Record<string, string>>(oportunidade.campos_personalizados || {});
   const [segmentoPopoverOpen, setSegmentoPopoverOpen] = useState(false);
   const [contatos, setContatos] = useState<ContatoLocal[]>([emptyContato()]);
-  const [editingContatoIdx, setEditingContatoIdx] = useState<number | null>(null);
+  const [contatoDialogOpen, setContatoDialogOpen] = useState(false);
+  const [contatoEditIdx, setContatoEditIdx] = useState<number | null>(null);
   const [classificacao, setClassificacao] = useState(oportunidade.classificacao || 0);
 
   const activeCampos = camposPersonalizados.filter(
