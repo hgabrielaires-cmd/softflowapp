@@ -223,77 +223,77 @@ export function EnviarPropostaDialog({ open, onOpenChange, oportunidadeId, titul
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 flex-1 min-h-0">
-          {/* Contato selection */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Contato *</Label>
-              <Select value={selectedContatoId} onValueChange={setSelectedContatoId}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Selecione o contato..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {contatos.map(c => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nome} — {c.telefone}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <ScrollArea className="flex-1 min-h-0 pr-2">
+          <div className="space-y-4">
+            {/* Contato selection */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Contato *</Label>
+                <Select value={selectedContatoId} onValueChange={setSelectedContatoId}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Selecione o contato..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contatos.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nome} — {c.telefone}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {items.length === 0 && (
+                <div className="flex items-center text-sm text-destructive">
+                  Adicione produtos antes de enviar a proposta.
+                </div>
+              )}
             </div>
 
-            {items.length === 0 && (
-              <div className="flex items-center text-sm text-destructive">
-                Adicione produtos antes de enviar a proposta.
+            {/* Motivo desconto fields */}
+            {(hasDescontoImpl || hasDescontoMens) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {hasDescontoImpl && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Motivo do desconto (Implantação)</Label>
+                    <Input
+                      value={motivoImplantacao}
+                      onChange={e => setMotivoImplantacao(e.target.value)}
+                      placeholder="Ex: Condição especial de lançamento"
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                )}
+                {hasDescontoMens && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Motivo do desconto (Mensalidade)</Label>
+                    <Input
+                      value={motivoMensalidade}
+                      onChange={e => setMotivoMensalidade(e.target.value)}
+                      placeholder="Ex: Fidelidade 12 meses"
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                )}
               </div>
             )}
-          </div>
 
-          {/* Motivo desconto fields */}
-          {(hasDescontoImpl || hasDescontoMens) && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {hasDescontoImpl && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Motivo do desconto (Implantação)</Label>
-                  <Input
-                    value={motivoImplantacao}
-                    onChange={e => setMotivoImplantacao(e.target.value)}
-                    placeholder="Ex: Condição especial de lançamento"
-                    className="h-9 text-sm"
-                  />
-                </div>
-              )}
-              {hasDescontoMens && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Motivo do desconto (Mensalidade)</Label>
-                  <Input
-                    value={motivoMensalidade}
-                    onChange={e => setMotivoMensalidade(e.target.value)}
-                    placeholder="Ex: Fidelidade 12 meses"
-                    className="h-9 text-sm"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Preview */}
-          {preview && (
-            <div className="space-y-1.5">
-              <Label className="text-xs flex items-center gap-1">
-                <Eye className="h-3.5 w-3.5" /> Pré-visualização
-              </Label>
-              <ScrollArea className="h-[340px] rounded-lg border bg-[#e5ddd5] dark:bg-[#0b141a]">
-                <div className="p-4">
+            {/* Preview */}
+            {preview && (
+              <div className="space-y-1.5">
+                <Label className="text-xs flex items-center gap-1">
+                  <Eye className="h-3.5 w-3.5" /> Pré-visualização
+                </Label>
+                <div className="rounded-lg border bg-[#e5ddd5] dark:bg-[#0b141a] p-4">
                   <div
                     className="bg-[#dcf8c6] dark:bg-[#005c4b] text-[13px] leading-relaxed rounded-lg p-3 max-w-[95%] ml-auto text-foreground shadow-sm whitespace-pre-wrap break-words"
                     dangerouslySetInnerHTML={{ __html: renderPreview(preview) }}
                   />
                 </div>
-              </ScrollArea>
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
