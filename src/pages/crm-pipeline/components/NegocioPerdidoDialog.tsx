@@ -69,7 +69,7 @@ export function NegocioPerdidoDialog({
       // 2. Registrar histórico
       const descricao = `Negócio marcado como Perdido — Motivo: ${motivoSelecionado?.nome || "N/A"} | Sistema Anterior: ${concorrente.trim()} | Etapa: ${etapaNome}${observacao.trim() ? ` | Obs: ${observacao.trim()}` : ""}`;
 
-      await supabase.from("crm_historico").insert({
+      await (supabase as any).from("crm_historico").insert({
         oportunidade_id: oportunidadeId,
         tipo: "status_alterado",
         descricao,
