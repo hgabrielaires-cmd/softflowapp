@@ -54,7 +54,7 @@ interface Props {
   onNegocioGanho?: () => void;
 }
 
-export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais }: Props) {
+export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais, onNegocioPerdido, onNegocioGanho }: Props) {
   const { user } = useAuth();
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
   const [historicos, setHistoricos] = useState<Record<string, HistoricoItem[]>>({});
