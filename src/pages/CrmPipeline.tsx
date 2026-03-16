@@ -175,12 +175,7 @@ export default function CrmPipeline() {
     }
   };
 
-  const handleDetailSave = (data: Record<string, unknown>) => {
-    if (!detailOportunidade) return;
-    updateMutation.mutate({ id: detailOportunidade.id, ...data } as CrmOportunidade, {
-      onSuccess: () => setDetailOportunidade(null),
-    });
-  };
+  // Detail view now auto-saves directly to DB
 
   const isLoading = funisQuery.isLoading || etapasQuery.isLoading || oportunidadesQuery.isLoading;
 
