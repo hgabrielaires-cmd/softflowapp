@@ -389,6 +389,7 @@ export function OportunidadeDetailView({
             <TabsTrigger value="tarefas" className="gap-1"><ListChecks className="h-3.5 w-3.5" /> Tarefas</TabsTrigger>
             <TabsTrigger value="produtos" className="gap-1"><Package className="h-3.5 w-3.5" /> Produtos e Serviços</TabsTrigger>
             <TabsTrigger value="arquivos" className="gap-1"><FolderOpen className="h-3.5 w-3.5" /> Arquivos</TabsTrigger>
+            <TabsTrigger value="timeline" className="gap-1"><Clock className="h-3.5 w-3.5" /> Linha do Tempo</TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-4 pr-1">
             <div className="flex items-center gap-1.5" title="Valor Implantação (com desconto)">
