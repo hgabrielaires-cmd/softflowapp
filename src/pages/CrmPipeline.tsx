@@ -175,12 +175,7 @@ export default function CrmPipeline() {
     }
   };
 
-  const handleDetailSave = (data: Record<string, unknown>) => {
-    if (!detailOportunidade) return;
-    updateMutation.mutate({ id: detailOportunidade.id, ...data } as CrmOportunidade, {
-      onSuccess: () => setDetailOportunidade(null),
-    });
-  };
+  // Detail view now auto-saves directly to DB
 
   const isLoading = funisQuery.isLoading || etapasQuery.isLoading || oportunidadesQuery.isLoading;
 
@@ -193,14 +188,13 @@ export default function CrmPipeline() {
             etapas={etapas}
             clientes={clientes}
             responsaveis={responsaveis}
-            onSave={handleDetailSave}
             onBack={() => setDetailOportunidade(null)}
-            saving={updateMutation.isPending}
             exibeCliente={funis.find(f => f.id === selectedFunilId)?.exibe_cliente ?? true}
             camposPersonalizados={camposPersonalizados}
             segmentos={segmentos}
             cargos={cargos}
             defaultTab={detailDefaultTab}
+            funilId={selectedFunilId}
           />
         ) : (
         <>
