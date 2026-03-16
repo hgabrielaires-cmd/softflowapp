@@ -414,7 +414,7 @@ export function OportunidadeDetailView({
 
         {/* Produtos e Serviços */}
         <TabsContent value="produtos" className="flex-1 overflow-y-auto px-4 pb-4 mt-0">
-          <OportunidadeProdutos oportunidadeId={oportunidade.id} />
+          <OportunidadeProdutos oportunidadeId={oportunidade.id} titulo={oportunidade.titulo} />
         </TabsContent>
 
         {/* Arquivos */}

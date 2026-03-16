@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Package, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { ProdutosPrecificacao } from "./ProdutosPrecificacao";
+import { EnviarPropostaDialog } from "./EnviarPropostaDialog";
 
 interface Plano {
   id: string;
@@ -39,13 +40,15 @@ interface ProdutoItem {
 
 interface Props {
   oportunidadeId: string;
+  titulo: string;
 }
 
 const formatCurrency = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export function OportunidadeProdutos({ oportunidadeId }: Props) {
+export function OportunidadeProdutos({ oportunidadeId, titulo }: Props) {
   const { profile } = useAuth();
+  const [propostaOpen, setPropostaOpen] = useState(false);
   const queryClient = useQueryClient();
   const [items, setItems] = useState<ProdutoItem[]>([]);
   const [addType, setAddType] = useState<"plano" | "modulo">("plano");
@@ -485,7 +488,7 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
           <div className="flex justify-end pt-4">
             <Button
               className="bg-[hsl(210,100%,45%)] hover:bg-[hsl(210,100%,38%)] text-white gap-2 h-10 px-6"
-              onClick={() => toast.info("Funcionalidade de envio de proposta via WhatsApp em breve!")}
+              onClick={() => setPropostaOpen(true)}
             >
               <MessageCircle className="h-4 w-4" />
               Enviar Proposta WhatsApp
@@ -493,6 +496,13 @@ export function OportunidadeProdutos({ oportunidadeId }: Props) {
           </div>
         </div>
       )}
+
+      <EnviarPropostaDialog
+        open={propostaOpen}
+        onOpenChange={setPropostaOpen}
+        oportunidadeId={oportunidadeId}
+        titulo={titulo}
+      />
     </div>
   );
 }
