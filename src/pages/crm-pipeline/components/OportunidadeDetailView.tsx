@@ -120,10 +120,24 @@ export function OportunidadeDetailView({
       });
   }, [oportunidade.id]);
 
-  const updateContato = (index: number, field: keyof ContatoLocal, value: string) => {
-    setContatos(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c));
+  const updateContato = (index: number, data: ContatoLocal) => {
+    setContatos(prev => prev.map((c, i) => i === index ? data : c));
   };
-  const addContato = () => setContatos(prev => [...prev, emptyContato()]);
+  const addContato = () => {
+    setContatoEditIdx(null);
+    setContatoDialogOpen(true);
+  };
+  const editContato = (idx: number) => {
+    setContatoEditIdx(idx);
+    setContatoDialogOpen(true);
+  };
+  const handleContatoDialogSave = (data: ContatoLocal) => {
+    if (contatoEditIdx !== null) {
+      updateContato(contatoEditIdx, data);
+    } else {
+      setContatos(prev => [...prev, data]);
+    }
+  };
   const removeContato = (index: number) => {
     if (contatos.length <= 1) return;
     setContatos(prev => prev.filter((_, i) => i !== index));
