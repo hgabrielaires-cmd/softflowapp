@@ -164,10 +164,25 @@ function WhatsAppConfigDialog({ open, onOpenChange, config, onSave }: WhatsAppCo
     try {
       const { data } = await supabase
         .from("setores")
-        .select("nome, instance_name")
+        .select("nome, instance_name, usuario_id")
         .not("instance_name", "is", null)
         .eq("ativo", true);
-      setSetoresInstances((data || []).filter((s: any) => s.instance_name?.trim()) as any);
+      const filtered = (data || []).filter((s: any) => s.instance_name?.trim());
+      // Enrich with user names
+      const userIds = filtered.map((s: any) => s.usuario_id).filter(Boolean);
+      let userMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", userIds);
+        (profiles || []).forEach((p: any) => { userMap[p.user_id] = p.full_name; });
+      }
+      setSetoresInstances(filtered.map((s: any) => ({
+        nome: s.nome,
+        instance_name: s.instance_name,
+        usuario_nome: s.usuario_id ? userMap[s.usuario_id] : undefined,
+      })));
     } catch (err) {
       console.error("fetchSetoresInstances error:", err);
     }
