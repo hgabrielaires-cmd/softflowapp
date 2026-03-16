@@ -40,6 +40,7 @@ interface ProdutoItem {
 
 interface Props {
   oportunidadeId: string;
+  titulo: string;
 }
 
 const formatCurrency = (v: number) =>
