@@ -8,13 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
-import { ArrowLeft, Check, X, ChevronsUpDown, Plus, Trash2, ListChecks, Package, FolderOpen, Save, Eye, EyeOff, Star, Phone, Mail, Pencil } from "lucide-react";
+import { ArrowLeft, Check, X, ChevronsUpDown, Plus, Trash2, ListChecks, Package, FolderOpen, Save, Star, Phone, Mail, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { OportunidadeComentarios } from "./OportunidadeComentarios";
 import { formatPhoneDisplay, applyPhoneMask } from "@/lib/utils";
 import { OportunidadeTarefas } from "./OportunidadeTarefas";
 import { OportunidadeProdutos } from "./OportunidadeProdutos";
+import { ContatoOportunidadeDialog } from "./ContatoOportunidadeDialog";
 import type { CrmOportunidade, CrmEtapaSimples } from "../types";
 import type { CrmCampoPersonalizado } from "@/pages/crm-parametros/types";
 
@@ -58,7 +59,8 @@ export function OportunidadeDetailView({
   const [camposValues, setCamposValues] = useState<Record<string, string>>(oportunidade.campos_personalizados || {});
   const [segmentoPopoverOpen, setSegmentoPopoverOpen] = useState(false);
   const [contatos, setContatos] = useState<ContatoLocal[]>([emptyContato()]);
-  const [editingContatoIdx, setEditingContatoIdx] = useState<number | null>(null);
+  const [contatoDialogOpen, setContatoDialogOpen] = useState(false);
+  const [contatoEditIdx, setContatoEditIdx] = useState<number | null>(null);
   const [classificacao, setClassificacao] = useState(oportunidade.classificacao || 0);
 
   const activeCampos = camposPersonalizados.filter(
@@ -118,10 +120,24 @@ export function OportunidadeDetailView({
       });
   }, [oportunidade.id]);
 
-  const updateContato = (index: number, field: keyof ContatoLocal, value: string) => {
-    setContatos(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c));
+  const updateContato = (index: number, data: ContatoLocal) => {
+    setContatos(prev => prev.map((c, i) => i === index ? data : c));
   };
-  const addContato = () => setContatos(prev => [...prev, emptyContato()]);
+  const addContato = () => {
+    setContatoEditIdx(null);
+    setContatoDialogOpen(true);
+  };
+  const editContato = (idx: number) => {
+    setContatoEditIdx(idx);
+    setContatoDialogOpen(true);
+  };
+  const handleContatoDialogSave = (data: ContatoLocal) => {
+    if (contatoEditIdx !== null) {
+      updateContato(contatoEditIdx, data);
+    } else {
+      setContatos(prev => [...prev, data]);
+    }
+  };
   const removeContato = (index: number) => {
     if (contatos.length <= 1) return;
     setContatos(prev => prev.filter((_, i) => i !== index));
@@ -225,76 +241,50 @@ export function OportunidadeDetailView({
                 </div>
                 <div className="rounded-lg border border-border divide-y divide-border">
                   {contatos.map((contato, idx) => {
-                    const isEditing = editingContatoIdx === idx;
                     const cargoNome = cargos.find(c => c.id === contato.cargo_id)?.nome;
                     return (
-                      <div key={idx}>
-                        <div className="flex items-start gap-3 px-4 py-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium">{contato.nome || "Sem nome"}</p>
-                            </div>
-                            {cargoNome && <p className="text-xs text-muted-foreground">{cargoNome}</p>}
-                            <div className="flex gap-3 mt-1">
-                              {contato.telefone && (
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Phone className="h-3 w-3" />{formatPhoneDisplay(contato.telefone)}
-                                </span>
-                              )}
-                              {contato.email && (
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Mail className="h-3 w-3" />{contato.email}
-                                </span>
-                              )}
-                            </div>
+                      <div key={idx} className="flex items-start gap-3 px-4 py-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium">{contato.nome || "Sem nome"}</p>
                           </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingContatoIdx(isEditing ? null : idx)} title="Editar contato">
-                              <Pencil className={cn("h-3.5 w-3.5", isEditing ? "text-primary" : "text-muted-foreground")} />
-                            </Button>
-                            {contatos.length > 1 && (
-                              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => removeContato(idx)} title="Remover contato">
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
+                          {cargoNome && <p className="text-xs text-muted-foreground">{cargoNome}</p>}
+                          <div className="flex gap-3 mt-1">
+                            {contato.telefone && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Phone className="h-3 w-3" />{formatPhoneDisplay(contato.telefone)}
+                              </span>
+                            )}
+                            {contato.email && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Mail className="h-3 w-3" />{contato.email}
+                              </span>
                             )}
                           </div>
                         </div>
-                        {/* Formulário expandido */}
-                        {isEditing && (
-                          <div className="border-t border-border px-4 py-3 space-y-2 bg-muted/20">
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <Label className="text-xs">Nome *</Label>
-                                <Input value={contato.nome} onChange={(e) => updateContato(idx, "nome", e.target.value)} placeholder="Nome do contato" className="h-8 text-xs" />
-                              </div>
-                              <div>
-                                <Label className="text-xs">Telefone *</Label>
-                                <Input value={applyPhoneMask(contato.telefone)} onChange={(e) => updateContato(idx, "telefone", e.target.value.replace(/\D/g, ""))} placeholder="(00) 00000-0000" className="h-8 text-xs" />
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <Label className="text-xs">Cargo</Label>
-                                <Select value={contato.cargo_id || "__none__"} onValueChange={(v) => updateContato(idx, "cargo_id", v === "__none__" ? "" : v)}>
-                                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="__none__">Nenhum</SelectItem>
-                                    {cargos.map(c => (<SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label className="text-xs">Email</Label>
-                                <Input value={contato.email} onChange={(e) => updateContato(idx, "email", e.target.value)} placeholder="email@exemplo.com" className="h-8 text-xs" type="email" />
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => editContato(idx)} title="Editar contato">
+                            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                          {contatos.length > 1 && (
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => removeContato(idx)} title="Remover contato">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
                 </div>
               </div>
+
+              <ContatoOportunidadeDialog
+                open={contatoDialogOpen}
+                onOpenChange={setContatoDialogOpen}
+                contato={contatoEditIdx !== null ? contatos[contatoEditIdx] : null}
+                cargos={cargos}
+                onSave={handleContatoDialogSave}
+              />
 
               {/* Etapa + Responsável lado a lado */}
               <div className="grid grid-cols-2 gap-3">
