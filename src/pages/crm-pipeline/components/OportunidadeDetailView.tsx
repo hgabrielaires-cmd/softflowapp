@@ -135,7 +135,11 @@ export function OportunidadeDetailView({
     if (contatoEditIdx !== null) {
       updateContato(contatoEditIdx, data);
     } else {
-      setContatos(prev => [...prev, data]);
+      // Replace empty placeholder if it's the only contact
+      setContatos(prev => {
+        const hasOnlyEmptyPlaceholder = prev.length === 1 && !prev[0].nome.trim() && !prev[0].telefone.trim();
+        return hasOnlyEmptyPlaceholder ? [data] : [...prev, data];
+      });
     }
   };
   const removeContato = (index: number) => {
