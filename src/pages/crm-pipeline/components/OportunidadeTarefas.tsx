@@ -363,6 +363,18 @@ export function OportunidadeTarefas({ oportunidadeId, tiposAtendimento, canais, 
         onClose={() => { setConcluirOpen(false); setConcluirTarefa(null); }}
         onConcluido={handleConcluido}
         onCriarNova={handleCriarNovaAposConcluir}
+        onNegocioPerdido={() => {
+          setConcluirOpen(false);
+          setConcluirTarefa(null);
+          fetchTarefas();
+          onNegocioPerdido?.();
+        }}
+        onNegocioGanho={() => {
+          setConcluirOpen(false);
+          setConcluirTarefa(null);
+          fetchTarefas();
+          onNegocioGanho?.();
+        }}
       />
 
       {/* Dialog de visualização */}
