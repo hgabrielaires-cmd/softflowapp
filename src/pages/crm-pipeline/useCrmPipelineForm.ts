@@ -98,9 +98,17 @@ export function useCrmPipelineForm(funilId?: string) {
   });
 
   const moveToEtapaMutation = useMutation({
-    mutationFn: async ({ id, etapa_id }: { id: string; etapa_id: string }) => {
+    mutationFn: async ({ id, etapa_id, etapa_nome }: { id: string; etapa_id: string; etapa_nome?: string }) => {
       const { error } = await supabase.from("crm_oportunidades").update({ etapa_id }).eq("id", id);
       if (error) throw error;
+      // Log in timeline
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from("crm_historico").insert({
+        oportunidade_id: id,
+        tipo: "etapa_alterada",
+        descricao: etapa_nome ? `Movida para etapa "${etapa_nome}"` : "Etapa alterada",
+        user_id: user?.id || null,
+      });
     },
     onSuccess: () => invalidate(),
     onError: () => toast.error("Erro ao mover oportunidade"),
