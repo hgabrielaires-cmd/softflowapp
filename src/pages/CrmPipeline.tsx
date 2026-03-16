@@ -282,6 +282,21 @@ export default function CrmPipeline() {
                   </div>
                 )}
 
+                {/* Status */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Status</Label>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="em_andamento">🔵 Em Andamento</SelectItem>
+                      <SelectItem value="perdido">😢 Negócio Perdido</SelectItem>
+                      <SelectItem value="ganho">🥳 Negócio Ganho</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Limpar filtros */}
                 {activeFilterCount > 0 && (
                   <Button
@@ -291,6 +306,7 @@ export default function CrmPipeline() {
                     onClick={() => {
                       setFilterFilialId("__all__");
                       setFilterVendedorId("__all__");
+                      setFilterStatus("em_andamento");
                     }}
                   >
                     Limpar filtros
