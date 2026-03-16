@@ -40,11 +40,12 @@ export default function CrmPipeline() {
   // Filtros
   const [filterFilialId, setFilterFilialId] = useState<string>("__all__");
   const [filterVendedorId, setFilterVendedorId] = useState<string>("__all__");
+  const [filterStatus, setFilterStatus] = useState<string>("em_andamento");
   const [filtersReady, setFiltersReady] = useState(false);
 
   const isVendedor = roles.includes("vendedor");
 
-  const { funisQuery, etapasQuery, oportunidadesQuery, responsaveisQuery, segmentosQuery, clientesQuery, cargosQuery } = useCrmPipelineQueries(selectedFunilId);
+  const { funisQuery, etapasQuery, oportunidadesQuery, responsaveisQuery, segmentosQuery, clientesQuery, cargosQuery } = useCrmPipelineQueries(selectedFunilId, filterStatus);
   const { createMutation, updateMutation, moveToEtapaMutation } = useCrmPipelineForm(selectedFunilId);
   const { data: camposPersonalizados = [] } = useCrmCamposPersonalizados();
 
@@ -99,8 +100,9 @@ export default function CrmPipeline() {
     let count = 0;
     if (filterFilialId !== "__all__") count++;
     if (filterVendedorId !== "__all__") count++;
+    if (filterStatus !== "em_andamento") count++;
     return count;
-  }, [filterFilialId, filterVendedorId]);
+  }, [filterFilialId, filterVendedorId, filterStatus]);
 
   // Filtro combinado: texto + filial + vendedor
   const filtered = useMemo(() => {
@@ -280,6 +282,21 @@ export default function CrmPipeline() {
                   </div>
                 )}
 
+                {/* Status */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Status</Label>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="em_andamento">🔵 Em Andamento</SelectItem>
+                      <SelectItem value="perdido">😢 Negócio Perdido</SelectItem>
+                      <SelectItem value="ganho">🥳 Negócio Ganho</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Limpar filtros */}
                 {activeFilterCount > 0 && (
                   <Button
@@ -289,6 +306,7 @@ export default function CrmPipeline() {
                     onClick={() => {
                       setFilterFilialId("__all__");
                       setFilterVendedorId("__all__");
+                      setFilterStatus("em_andamento");
                     }}
                   >
                     Limpar filtros
