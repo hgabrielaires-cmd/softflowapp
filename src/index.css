@@ -193,3 +193,19 @@ td:has(.agenda-day-selected) {
   border-radius: 9999px !important;
   font-weight: 700 !important;
 }
+
+/* CRM Agenda - red dot for overdue tasks */
+.crm-agenda-calendar .crm-agenda-overdue {
+  position: relative;
+}
+.crm-agenda-calendar .crm-agenda-overdue::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: hsl(var(--destructive));
+}

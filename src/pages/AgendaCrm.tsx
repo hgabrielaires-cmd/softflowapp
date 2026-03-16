@@ -489,9 +489,17 @@ function AgendaCrmContent() {
                   const key = format(date, "yyyy-MM-dd");
                   return !!compromissosByDate[key]?.length;
                 },
+                hasOverdue: (date) => {
+                  const key = format(date, "yyyy-MM-dd");
+                  const items = compromissosByDate[key];
+                  if (!items?.length) return false;
+                  const now = new Date();
+                  return items.some(c => !c.concluido_em && parseISO(c.data_reuniao) < now);
+                },
               }}
               modifiersClassNames={{
                 hasEvent: "bg-primary/15 font-bold text-primary",
+                hasOverdue: "crm-agenda-overdue",
                 today: "crm-agenda-today",
               }}
               className="crm-agenda-calendar rounded-md border"
