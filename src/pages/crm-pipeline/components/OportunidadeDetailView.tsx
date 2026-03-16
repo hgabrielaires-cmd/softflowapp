@@ -55,6 +55,7 @@ export function OportunidadeDetailView({
 }: Props) {
   const queryClient = useQueryClient();
   const [titulo, setTitulo] = useState(oportunidade.titulo);
+  const [localStatus, setLocalStatus] = useState(oportunidade.status || "em_andamento");
   const [clienteId, setClienteId] = useState(oportunidade.cliente_id || "");
   const [responsavelId, setResponsavelId] = useState(oportunidade.responsavel_id || "");
   const [etapaId, setEtapaId] = useState(oportunidade.etapa_id);
