@@ -198,16 +198,29 @@ export function EnviarPropostaDialog({ open, onOpenChange, oportunidadeId, titul
 
     setSending(true);
     try {
-      const { error } = await supabase.functions.invoke("evolution-api", {
-        body: {
-          action: "send_text",
-          number: selectedContato.telefone,
-          text: preview,
-          instance_name: instanceName,
-        },
-      });
-
-      if (error) throw error;
+      // Retry logic for cold-start failures
+      let lastError: any = null;
+      let success = false;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const { error, data } = await supabase.functions.invoke("evolution-api", {
+          body: {
+            action: "send_text",
+            number: selectedContato.telefone,
+            text: preview,
+            instance_name: instanceName,
+          },
+        });
+        if (!error) {
+          success = true;
+          break;
+        }
+        lastError = error;
+        if (attempt === 0) {
+          console.warn("[Proposta WhatsApp] Primeira tentativa falhou, retentando...", error.message);
+          await new Promise(r => setTimeout(r, 1500));
+        }
+      }
+      if (!success) throw lastError;
 
       await supabase.from("crm_proposta_envios").insert({
         oportunidade_id: oportunidadeId,
