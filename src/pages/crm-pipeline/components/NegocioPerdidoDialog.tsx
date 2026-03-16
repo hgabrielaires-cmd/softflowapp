@@ -22,7 +22,7 @@ interface Props {
 
 export function NegocioPerdidoDialog({
   open, onOpenChange, oportunidadeId, etapaNome,
-  motivosPerda, camposPersonalizados, onSuccess,
+  motivosPerda, camposPersonalizados, sistemaAnteriorOpcoes, onSuccess,
 }: Props) {
   const [motivoPerdaId, setMotivoPerdaId] = useState("");
   const [concorrente, setConcorrente] = useState(camposPersonalizados["Sistema Anterior"] || "");
