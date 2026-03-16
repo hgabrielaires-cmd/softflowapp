@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -14,9 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { MessageCircle, Send, Eye, AlertTriangle } from "lucide-react";
+import { Send, Eye, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { getInstanciaDoUsuario, type InstanciaResult } from "@/lib/getInstanciaDoUsuario";
 import {
@@ -40,6 +39,7 @@ interface Props {
 
 export function EnviarPropostaDialog({ open, onOpenChange, oportunidadeId, titulo }: Props) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedContatoId, setSelectedContatoId] = useState("");
   const [motivoImplantacao, setMotivoImplantacao] = useState("");
   const [motivoMensalidade, setMotivoMensalidade] = useState("");
@@ -47,21 +47,30 @@ export function EnviarPropostaDialog({ open, onOpenChange, oportunidadeId, titul
   const [instanciaInfo, setInstanciaInfo] = useState<InstanciaResult | null>(null);
   const [loadingInstancia, setLoadingInstancia] = useState(false);
 
-  // Resolve instância when dialog opens
+  // Reset state & refetch contacts when dialog opens
   useEffect(() => {
-    if (open && user?.id) {
-      setLoadingInstancia(true);
-      getInstanciaDoUsuario(user.id)
-        .then(setInstanciaInfo)
-        .catch(() => setInstanciaInfo({ instancia: "Softflow_WhatsApp", setor_nome: null, fonte: "padrao" }))
-        .finally(() => setLoadingInstancia(false));
+    if (open) {
+      setSelectedContatoId("");
+      setMotivoImplantacao("");
+      setMotivoMensalidade("");
+      // Force fresh fetch of contacts
+      queryClient.invalidateQueries({ queryKey: ["crm_proposta_contatos", oportunidadeId] });
+
+      if (user?.id) {
+        setLoadingInstancia(true);
+        getInstanciaDoUsuario(user.id)
+          .then(setInstanciaInfo)
+          .catch(() => setInstanciaInfo({ instancia: "Softflow_WhatsApp", setor_nome: null, fonte: "padrao" }))
+          .finally(() => setLoadingInstancia(false));
+      }
     }
-  }, [open, user?.id]);
+  }, [open, user?.id, oportunidadeId, queryClient]);
 
   // Fetch contatos
   const contatosQuery = useQuery({
     queryKey: ["crm_proposta_contatos", oportunidadeId],
     enabled: open,
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("crm_oportunidade_contatos")
@@ -200,7 +209,6 @@ export function EnviarPropostaDialog({ open, onOpenChange, oportunidadeId, titul
 
       if (error) throw error;
 
-      // Log the send
       await supabase.from("crm_proposta_envios").insert({
         oportunidade_id: oportunidadeId,
         usuario_id: user?.id || "",
@@ -217,7 +225,6 @@ export function EnviarPropostaDialog({ open, onOpenChange, oportunidadeId, titul
     } catch (err: any) {
       console.error("[Proposta WhatsApp]", err);
 
-      // Log error
       await supabase.from("crm_proposta_envios").insert({
         oportunidade_id: oportunidadeId,
         usuario_id: user?.id || "",
@@ -236,7 +243,6 @@ export function EnviarPropostaDialog({ open, onOpenChange, oportunidadeId, titul
     }
   };
 
-  // Render WhatsApp-formatted preview
   const renderPreview = (text: string) => {
     return text
       .replace(/\*([^*]+)\*/g, '<strong>$1</strong>')
@@ -249,122 +255,120 @@ export function EnviarPropostaDialog({ open, onOpenChange, oportunidadeId, titul
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl w-[95vw] max-h-[85vh] flex flex-col overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5 text-primary" />
-            Enviar Proposta via WhatsApp
-          </DialogTitle>
-          <DialogDescription>
-            Revise a proposta antes de enviar para o contato selecionado.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-xl w-[95vw] max-h-[90vh] flex flex-col overflow-hidden p-0">
+        <div className="px-5 pt-5 pb-3 border-b">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-base flex items-center gap-2">
+              Enviar Proposta via WhatsApp
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Revise a proposta antes de enviar para o contato selecionado.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <ScrollArea className="flex-1 min-h-0 pr-2">
-          <div className="space-y-4">
-            {/* Warning for default instance */}
-            {isPadrao && !loadingInstancia && (
-              <Alert variant="default" className="border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20">
-                <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                <AlertDescription className="text-xs text-yellow-800 dark:text-yellow-300">
-                  ⚠️ Nenhuma instância WhatsApp vinculada ao seu usuário. O envio será feito pela instância padrão{" "}
-                  <strong>[{instanciaInfo?.instancia}]</strong>. Para usar sua instância pessoal, peça ao admin vincular seu usuário
-                  ao setor correto em Configurações {">"} Setores.
-                </AlertDescription>
-              </Alert>
-            )}
+        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-3 min-h-0">
+          {/* Warning for default instance */}
+          {isPadrao && !loadingInstancia && (
+            <Alert variant="default" className="border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20 py-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-yellow-600" />
+              <AlertDescription className="text-[11px] text-yellow-800 dark:text-yellow-300">
+                Nenhuma instância vinculada ao seu usuário. Envio pela instância padrão{" "}
+                <strong>[{instanciaInfo?.instancia}]</strong>.
+              </AlertDescription>
+            </Alert>
+          )}
 
-            {/* Contato selection */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Contato *</Label>
-                <Select value={selectedContatoId} onValueChange={setSelectedContatoId}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Selecione o contato..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contatos.map(c => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.nome} — {c.telefone}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {items.length === 0 && (
-                <div className="flex items-center text-sm text-destructive">
-                  Adicione produtos antes de enviar a proposta.
-                </div>
-              )}
+          {/* Contato + Motivos — compact row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Contato *</Label>
+              <Select value={selectedContatoId} onValueChange={setSelectedContatoId}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Selecione o contato..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {contatos.map(c => (
+                    <SelectItem key={c.id} value={c.id} className="text-xs">
+                      {c.nome} — {c.telefone}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Motivo desconto fields */}
-            {(hasDescontoImpl || hasDescontoMens) && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {hasDescontoImpl && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Motivo do desconto (Implantação)</Label>
-                    <Input
-                      value={motivoImplantacao}
-                      onChange={e => setMotivoImplantacao(e.target.value)}
-                      placeholder="Ex: Condição especial de lançamento"
-                      className="h-9 text-sm"
-                    />
-                  </div>
-                )}
-                {hasDescontoMens && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Motivo do desconto (Mensalidade)</Label>
-                    <Input
-                      value={motivoMensalidade}
-                      onChange={e => setMotivoMensalidade(e.target.value)}
-                      placeholder="Ex: Fidelidade 12 meses"
-                      className="h-9 text-sm"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Preview */}
-            {preview && (
-              <div className="space-y-1.5">
-                <Label className="text-xs flex items-center gap-1">
-                  <Eye className="h-3.5 w-3.5" /> Pré-visualização
-                </Label>
-                <div className="rounded-lg border bg-[#e5ddd5] dark:bg-[#0b141a] p-4">
-                  <div
-                    className="bg-[#dcf8c6] dark:bg-[#005c4b] text-[13px] leading-relaxed rounded-lg p-3 max-w-[95%] ml-auto text-foreground shadow-sm whitespace-pre-wrap break-words"
-                    dangerouslySetInnerHTML={{ __html: renderPreview(preview) }}
-                  />
-                </div>
+            {items.length === 0 && (
+              <div className="flex items-center text-xs text-destructive">
+                Adicione produtos antes de enviar.
               </div>
             )}
           </div>
-        </ScrollArea>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          {(hasDescontoImpl || hasDescontoMens) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {hasDescontoImpl && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Motivo desconto (Implantação)</Label>
+                  <Input
+                    value={motivoImplantacao}
+                    onChange={e => setMotivoImplantacao(e.target.value)}
+                    placeholder="Ex: Condição especial"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              )}
+              {hasDescontoMens && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Motivo desconto (Mensalidade)</Label>
+                  <Input
+                    value={motivoMensalidade}
+                    onChange={e => setMotivoMensalidade(e.target.value)}
+                    placeholder="Ex: Fidelidade 12 meses"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Preview — compact WhatsApp bubble */}
+          {preview && (
+            <div className="space-y-1">
+              <Label className="text-[11px] flex items-center gap-1 text-muted-foreground">
+                <Eye className="h-3 w-3" /> Pré-visualização
+              </Label>
+              <div className="rounded-md border bg-[#e5ddd5] dark:bg-[#0b141a] p-2 max-h-[35vh] overflow-y-auto">
+                <div
+                  className="bg-[#dcf8c6] dark:bg-[#005c4b] text-[11px] leading-[1.5] rounded-md p-2.5 max-w-[95%] ml-auto text-foreground shadow-sm whitespace-pre-wrap break-words"
+                  dangerouslySetInnerHTML={{ __html: renderPreview(preview) }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="px-5 py-3 border-t flex items-center justify-between gap-2">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <div className="flex flex-col items-end">
+          <div className="flex flex-col items-end gap-0.5">
             <Button
+              size="sm"
               onClick={handleSend}
               disabled={!selectedContato || items.length === 0 || sending || loadingInstancia}
-              className="gap-2"
+              className="gap-1.5"
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-3.5 w-3.5" />
               {sending ? "Enviando..." : "Enviar Proposta"}
             </Button>
             {instanciaInfo && !loadingInstancia && (
-              <span className="text-[10px] text-muted-foreground mt-1">
+              <span className="text-[10px] text-muted-foreground">
                 via [{instanciaInfo.instancia}]
                 {instanciaInfo.setor_nome && ` — ${instanciaInfo.setor_nome}`}
               </span>
             )}
           </div>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
