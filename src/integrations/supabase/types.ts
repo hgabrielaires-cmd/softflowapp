@@ -1279,6 +1279,7 @@ export type Database = {
           concorrente: string | null
           contato_id: string | null
           created_at: string
+          data_fechamento: string | null
           data_perda: string | null
           data_previsao_fechamento: string | null
           desconto_implantacao: number
@@ -1295,6 +1296,7 @@ export type Database = {
           observacoes: string | null
           ordem: number
           origem: string | null
+          pedido_id: string | null
           responsavel_id: string | null
           segmento_ids: string[] | null
           status: string
@@ -1309,6 +1311,7 @@ export type Database = {
           concorrente?: string | null
           contato_id?: string | null
           created_at?: string
+          data_fechamento?: string | null
           data_perda?: string | null
           data_previsao_fechamento?: string | null
           desconto_implantacao?: number
@@ -1325,6 +1328,7 @@ export type Database = {
           observacoes?: string | null
           ordem?: number
           origem?: string | null
+          pedido_id?: string | null
           responsavel_id?: string | null
           segmento_ids?: string[] | null
           status?: string
@@ -1339,6 +1343,7 @@ export type Database = {
           concorrente?: string | null
           contato_id?: string | null
           created_at?: string
+          data_fechamento?: string | null
           data_perda?: string | null
           data_previsao_fechamento?: string | null
           desconto_implantacao?: number
@@ -1355,6 +1360,7 @@ export type Database = {
           observacoes?: string | null
           ordem?: number
           origem?: string | null
+          pedido_id?: string | null
           responsavel_id?: string | null
           segmento_ids?: string[] | null
           status?: string
@@ -1403,6 +1409,13 @@ export type Database = {
             columns: ["motivo_perda_id"]
             isOneToOne: false
             referencedRelation: "crm_motivos_perda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_oportunidades_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
             referencedColumns: ["id"]
           },
         ]
