@@ -635,7 +635,11 @@ export function OportunidadeDetailView({
         etapaNome={currentEtapa?.nome || "Desconhecida"}
         motivosPerda={motivosPerda}
         camposPersonalizados={oportunidade.campos_personalizados || {}}
-        onSuccess={invalidate}
+        onSuccess={() => {
+          setLocalStatus("perdido");
+          invalidate();
+          queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
+        }}
       />
     </div>
   );
