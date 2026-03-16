@@ -577,6 +577,16 @@ export function OportunidadeDetailView({
           </div>
         </TabsContent>
       </Tabs>
+
+      <NegocioPerdidoDialog
+        open={perdidoDialogOpen}
+        onOpenChange={setPerdidoDialogOpen}
+        oportunidadeId={oportunidade.id}
+        etapaNome={currentEtapa?.nome || "Desconhecida"}
+        motivosPerda={motivosPerda}
+        camposPersonalizados={oportunidade.campos_personalizados || {}}
+        onSuccess={invalidate}
+      />
     </div>
   );
 }
