@@ -139,7 +139,8 @@ export default function CrmPipeline() {
     if (dragCardId) {
       const card = oportunidades.find(o => o.id === dragCardId);
       if (card && card.etapa_id !== etapaId) {
-        moveToEtapaMutation.mutate({ id: dragCardId, etapa_id: etapaId });
+        const etapaNome = etapas.find(e => e.id === etapaId)?.nome;
+        moveToEtapaMutation.mutate({ id: dragCardId, etapa_id: etapaId, etapa_nome: etapaNome });
       }
       setDragCardId(null);
     }
