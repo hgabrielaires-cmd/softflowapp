@@ -54,15 +54,19 @@ export default function DashboardCrm() {
     if (funis.length > 0 && !selectedFunilId) setSelectedFunilId(funis[0].id);
   }, [funis, selectedFunilId]);
 
-  // Init filial
+  // Init filial — filial favorita ou todas
   useEffect(() => {
-    if (filialPadraoId) setFilterFilialId(filialPadraoId);
-  }, [filialPadraoId]);
+    if (filterFilialId !== "__all__") return; // já inicializado
+    const favId = profile?.filial_favorita_id;
+    if (favId && filiaisDoUsuario.some(f => f.id === favId)) {
+      setFilterFilialId(favId);
+    }
+  }, [profile?.filial_favorita_id, filiaisDoUsuario]);
 
-  // Init vendedor for vendedor role
+  // Init vendedor — sempre o logado
   useEffect(() => {
-    if (isVendedor && user?.id) setFilterVendedorId(user.id);
-  }, [isVendedor, user?.id]);
+    if (user?.id && filterVendedorId === "__all__") setFilterVendedorId(user.id);
+  }, [user?.id]);
 
   // Periodo calculation
   const periodo = useMemo(() => calcularPeriodo(periodoTipo, customInicio, customFim), [periodoTipo, customInicio, customFim]);
