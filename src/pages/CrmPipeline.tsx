@@ -24,7 +24,7 @@ import type { CrmOportunidade, CrmEtapaSimples } from "./crm-pipeline/types";
 export default function CrmPipeline() {
   const { profile, user, roles } = useAuth();
   const queryClient = useQueryClient();
-  const { filiaisDoUsuario, filialPadraoId } = useUserFiliais();
+  const { filiaisDoUsuario, filialPadraoId, loading: filiaisLoading } = useUserFiliais();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [selectedFunilId, setSelectedFunilId] = useState<string>("");
