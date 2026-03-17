@@ -52,6 +52,7 @@ const MENU_TREE: MenuNode[] = [
       { key: "menu.dashboard_vendas", label: "Dashboard Vendas", description: "Painel de vendas e comissões", icon: <ShoppingCart className="h-4 w-4" /> },
       { key: "menu.dashboard_financeiro", label: "Dashboard Financeiro", description: "Painel financeiro geral", icon: <DollarSign className="h-4 w-4" /> },
       { key: "menu.dashboard_atendimento", label: "Dashboard Atendimento", description: "Painel de atendimento e SLA", icon: <Headphones className="h-4 w-4" /> },
+      { key: "menu.dashboard_crm", label: "Dashboard CRM", description: "Painel de análise comercial do CRM", icon: <UserCheck className="h-4 w-4" /> },
     ],
   },
   {
