@@ -34,7 +34,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   oportunidadeId: string;
   oportunidadeTitulo: string;
-  onSaved: (clienteId: string, clienteNome: string) => void;
+  onSaved: (clienteId: string, clienteNome: string, clienteFilialId: string | null) => void;
   /** If editing an existing client */
   editingClienteId?: string | null;
 }
