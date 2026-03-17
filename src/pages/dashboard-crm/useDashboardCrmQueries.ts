@@ -24,27 +24,34 @@ export function useKpiFinalizadas(filters: Filters) {
       const { inicio, fim, funilId, responsavelIds } = filters;
       const anterior = calcularPeriodoAnterior(inicio, fim);
 
-      // Current period
-      let q = supabase
-        .from("crm_oportunidades")
-        .select("id, status, responsavel_id, data_fechamento, pedido_id")
-        .eq("funil_id", funilId!)
-        .in("status", ["ganho", "perdido"])
-        .gte("data_fechamento", inicio)
-        .lte("data_fechamento", fim);
-      if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
-      const { data: current } = await q;
+      // Helper to fetch finalizadas (ganho by data_fechamento, perdido by data_perda)
+      async function fetchFinalizadas(ini: string, fi: string) {
+        let qGanho = supabase
+          .from("crm_oportunidades")
+          .select("id, status, responsavel_id, data_fechamento, pedido_id")
+          .eq("funil_id", funilId!)
+          .eq("status", "ganho")
+          .gte("data_fechamento", ini)
+          .lte("data_fechamento", fi);
+        if (responsavelIds?.length) qGanho = qGanho.in("responsavel_id", responsavelIds);
 
-      // Previous period
-      let qp = supabase
-        .from("crm_oportunidades")
-        .select("id, status, responsavel_id, data_fechamento, pedido_id")
-        .eq("funil_id", funilId!)
-        .in("status", ["ganho", "perdido"])
-        .gte("data_fechamento", anterior.inicio)
-        .lte("data_fechamento", anterior.fim);
-      if (responsavelIds?.length) qp = qp.in("responsavel_id", responsavelIds);
-      const { data: prev } = await qp;
+        let qPerdido = supabase
+          .from("crm_oportunidades")
+          .select("id, status, responsavel_id, data_perda, pedido_id")
+          .eq("funil_id", funilId!)
+          .eq("status", "perdido")
+          .gte("data_perda", ini)
+          .lte("data_perda", fi);
+        if (responsavelIds?.length) qPerdido = qPerdido.in("responsavel_id", responsavelIds);
+
+        const [{ data: ganhoData }, { data: perdidoData }] = await Promise.all([qGanho, qPerdido]);
+        return [...(ganhoData || []), ...(perdidoData || [])];
+      }
+
+      const [current, prev] = await Promise.all([
+        fetchFinalizadas(inicio, fim),
+        fetchFinalizadas(anterior.inicio, anterior.fim),
+      ]);
 
       const ganhas = (current || []).filter(o => o.status === "ganho");
       const perdidas = (current || []).filter(o => o.status === "perdido");
