@@ -210,7 +210,7 @@ export function GanhoClienteDrawer({ open, onOpenChange, oportunidadeId, oportun
       }
     }
     setSaving(false);
-    if (clienteId) onSaved(clienteId, form.nome_fantasia);
+    if (clienteId) onSaved(clienteId, form.nome_fantasia, form.filial_id || null);
   }
 
   const isQuerying = loadingCep || loadingCnpj;
