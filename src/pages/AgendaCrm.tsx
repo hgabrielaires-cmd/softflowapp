@@ -100,16 +100,12 @@ function AgendaCrmContent() {
   const [calDate, setCalDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // Init filter
+  // Init filter — sempre trava no usuário logado
   useEffect(() => {
     if (filtroVendedor === "_init_" && user) {
-      if (isAdmin) {
-        setFiltroVendedor("all");
-      } else {
-        setFiltroVendedor(user.id);
-      }
+      setFiltroVendedor(user.id);
     }
-  }, [user, isAdmin, filtroVendedor]);
+  }, [user, filtroVendedor]);
 
   // Init filial filter
   useEffect(() => {
