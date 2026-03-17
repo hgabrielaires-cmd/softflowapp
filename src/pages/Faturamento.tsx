@@ -113,6 +113,7 @@ function FaturamentoContent() {
         <div className="flex items-center gap-2">
           {isAdmin && <GerarFaturasButton />}
 
+          {/* Botão Teste Asaas oculto — mantido para uso futuro se necessário
           {isAdmin && (
             <Button
               variant="outline"
@@ -123,6 +124,7 @@ function FaturamentoContent() {
               Teste Asaas
             </Button>
           )}
+          */}
 
           {showFilialFilter && (
             <Select value={effectiveFilter} onValueChange={setFilialFilter}>
