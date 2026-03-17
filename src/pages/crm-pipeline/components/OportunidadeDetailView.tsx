@@ -789,6 +789,44 @@ export function OportunidadeDetailView({
           toast.success("Pedido criado com sucesso! 🎉");
         }}
       />
+
+      {/* Sistema Anterior Dialog - shown before Ganho */}
+      <Dialog open={sistemaAnteriorDialogOpen} onOpenChange={setSistemaAnteriorDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">🥳 Confirmar Negócio Ganho</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-sm font-medium">Sistema Anterior *</Label>
+              <p className="text-xs text-muted-foreground mb-2">Qual sistema o cliente utilizava antes?</p>
+              <Select value={sistemaAnteriorValue} onValueChange={setSistemaAnteriorValue}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione o sistema anterior" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sistemaAnteriorOpcoes.map(op => (
+                    <SelectItem key={op} value={op}>{op}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSistemaAnteriorDialogOpen(false)}>Cancelar</Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={!sistemaAnteriorValue}
+              onClick={async () => {
+                setSistemaAnteriorDialogOpen(false);
+                await executeGanho();
+              }}
+            >
+              🥳 Confirmar Ganho
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
