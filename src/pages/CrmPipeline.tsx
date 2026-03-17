@@ -281,7 +281,7 @@ export default function CrmPipeline() {
                       <SelectTrigger className="h-8 text-xs">
                         <SelectValue placeholder="Todos" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent position="popper" className="max-h-60 overflow-y-auto">
                         <SelectItem value="__all__">Todos os Vendedores</SelectItem>
                         {responsaveis.map(r => (
                           <SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>
