@@ -51,9 +51,13 @@ export interface ContratoEspelho {
 export interface ModuloAdicionalPedido {
   modulo_id: string;
   nome: string;
-  valor_mensalidade: number;
-  valor_implantacao: number;
   quantidade: number;
+  valor_mensalidade?: number | null;
+  valor_mensalidade_final?: number | null;
+  valor_mensalidade_modulo?: number | null;
+  valor_implantacao?: number | null;
+  valor_implantacao_final?: number | null;
+  valor_implantacao_modulo?: number | null;
 }
 
 export interface ServicoPedido {
