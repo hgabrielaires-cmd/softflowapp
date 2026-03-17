@@ -107,16 +107,17 @@ function AgendaCrmContent() {
     }
   }, [user, filtroVendedor]);
 
-  // Init filial filter
+  // Init filial filter — filial favorita ou "all" se não houver
   useEffect(() => {
     if (filtroFilial === "_init_" && filiaisDoUsuario.length > 0) {
-      if (isGlobal || filiaisDoUsuario.length > 1) {
-        setFiltroFilial(filialPadraoId || "all");
+      const favId = profile?.filial_favorita_id;
+      if (favId && filiaisDoUsuario.some(f => f.id === favId)) {
+        setFiltroFilial(favId);
       } else {
-        setFiltroFilial(filiaisDoUsuario[0]?.id || "all");
+        setFiltroFilial("all");
       }
     }
-  }, [filtroFilial, filiaisDoUsuario, filialPadraoId, isGlobal]);
+  }, [filtroFilial, filiaisDoUsuario, profile?.filial_favorita_id]);
 
   // Mark initialized when both filters are ready
   useEffect(() => {

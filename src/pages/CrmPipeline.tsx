@@ -58,17 +58,20 @@ export default function CrmPipeline() {
   const clientes = clientesQuery.data || [];
   const cargos = cargosQuery.data || [];
 
-  // Inicializar filtros com filial do usuário e vendedor logado
+  // Inicializar filtros: filial favorita (ou todas) + vendedor logado sempre
   useEffect(() => {
     if (filtersReady) return;
-    if (filialPadraoId) {
-      setFilterFilialId(filialPadraoId);
+    const favId = profile?.filial_favorita_id;
+    if (favId && filiaisDoUsuario.some(f => f.id === favId)) {
+      setFilterFilialId(favId);
+    } else {
+      setFilterFilialId("__all__");
     }
-    if (isVendedor && user?.id) {
+    if (user?.id) {
       setFilterVendedorId(user.id);
     }
     setFiltersReady(true);
-  }, [filialPadraoId, isVendedor, user?.id, filtersReady]);
+  }, [profile?.filial_favorita_id, filiaisDoUsuario, user?.id, filtersReady]);
 
   // Selecionar funil favorito ou primeiro ao carregar
   useEffect(() => {
