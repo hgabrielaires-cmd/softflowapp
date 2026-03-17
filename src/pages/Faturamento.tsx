@@ -31,7 +31,7 @@ import {
 import {
   Receipt, Plus, Loader2, MoreHorizontal, Pencil, Trash2,
   CheckCircle, XCircle, Filter, FileText, Search,
-  DollarSign, AlertTriangle, Clock, Building2, Zap, MessageCircle, Eye,
+  DollarSign, AlertTriangle, Clock, Building2, Zap, MessageCircle, Eye, RefreshCw, Info,
 } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
@@ -187,6 +187,33 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
   const [detalheFatura, setDetalheFatura] = useState<Fatura | null>(null);
   const [composicaoFaturaId, setComposicaoFaturaId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
+
+  // ─── Sync banner state ─────────────────────────────────────────────────
+  const [syncingAll, setSyncingAll] = useState(false);
+
+  const faturasVencidasPendentes = q.faturas.filter(
+    (f) => f.status === "Pendente" && f.asaas_payment_id && isVencida(f)
+  );
+
+  async function handleSyncAll() {
+    setSyncingAll(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sincronizar-faturas-asaas", {
+        body: {},
+      });
+      if (error) throw error;
+      if (data?.updated > 0) {
+        toast.success(`${data.updated} fatura(s) atualizada(s) com sucesso!`);
+        q.loadFaturas();
+      } else {
+        toast.info(`Nenhuma alteração encontrada (${data?.total || 0} verificadas)`);
+      }
+    } catch (err: any) {
+      toast.error("Erro ao sincronizar: " + (err?.message || "Erro desconhecido"));
+    } finally {
+      setSyncingAll(false);
+    }
+  }
 
   async function handleSyncAsaas(f: Fatura) {
     if (!f.asaas_payment_id || !f.filial_id) {
@@ -430,6 +457,26 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
       {/* Summary Cards */}
       <FaturasResumo faturas={q.faturas} />
 
+      {/* Sync Banner */}
+      {faturasVencidasPendentes.length > 0 && (
+        <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+          <span className="text-sm text-amber-800 dark:text-amber-300 flex-1">
+            {faturasVencidasPendentes.length} fatura(s) vencida(s) com status pendente no Asaas.
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 shrink-0"
+            onClick={handleSyncAll}
+            disabled={syncingAll}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${syncingAll ? "animate-spin" : ""}`} />
+            {syncingAll ? "Sincronizando..." : "Sincronizar agora"}
+          </Button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
         <Table>
@@ -620,6 +667,18 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
 // ─── Detalhes Cobrança Dialog ─────────────────────────────────────────────
 
 function FaturaCobrancaDialog({ fatura, onClose }: { fatura: Fatura | null; onClose: () => void }) {
+  const [webhookCount, setWebhookCount] = useState<number | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!fatura?.asaas_payment_id) { setWebhookCount(null); return; }
+    supabase
+      .from("asaas_webhook_events")
+      .select("id", { count: "exact", head: true })
+      .like("event_id", `%${fatura.asaas_payment_id}`)
+      .then(({ count }) => setWebhookCount(count ?? 0));
+  }, [fatura?.asaas_payment_id]);
+
   if (!fatura) return null;
 
   const hasBoleto = !!fatura.asaas_barcode || !!fatura.asaas_bank_slip_url;
@@ -739,6 +798,25 @@ function FaturaCobrancaDialog({ fatura, onClose }: { fatura: Fatura | null; onCl
             <p className="text-sm text-muted-foreground text-center py-4">
               Nenhuma informação de cobrança disponível para esta fatura.
             </p>
+          )}
+
+          {/* Webhook diagnostic */}
+          {fatura.asaas_payment_id && webhookCount === 0 && (
+            <div className="flex items-start gap-2 bg-muted/50 border border-border rounded-lg px-3 py-2.5">
+              <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>
+                  Nenhum evento webhook recebido para esta cobrança.
+                  Use <strong>"Sincronizar Asaas"</strong> no menu da fatura para atualizar manualmente.
+                </p>
+                <button
+                  className="text-primary hover:underline font-medium"
+                  onClick={() => { onClose(); navigate("/configuracoes/integracoes"); }}
+                >
+                  Verificar configuração do webhook →
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </DialogContent>
