@@ -43,6 +43,7 @@ interface CrmCompromisso {
   created_at: string;
   oportunidade_titulo: string;
   cliente_nome: string | null;
+  cliente_filial_id: string | null;
   responsavel_id: string | null;
   funil_nome: string | null;
   etapa_nome: string | null;
