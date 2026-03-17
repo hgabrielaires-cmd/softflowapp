@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { dispararAutomacaoPedidoStatus } from "@/lib/automacoes";
+import { retomarOportunidadePorPedido } from "@/lib/retomarOportunidadeCrm";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";

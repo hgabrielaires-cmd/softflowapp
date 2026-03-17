@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { retomarOportunidadePorPedido } from "@/lib/retomarOportunidadeCrm";
 import { AppLayout } from "@/components/AppLayout";
 import type { Contrato } from "./contratos/types";
 import { ITEMS_PER_PAGE } from "./contratos/constants";
