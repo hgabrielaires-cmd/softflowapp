@@ -31,8 +31,9 @@ export function useKpiFinalizadas(filters: Filters) {
     queryKey: ["crm_dash_kpi_fin", filters],
     enabled: !!filters.funilId,
     queryFn: async (): Promise<KpiFinalizadas> => {
-      const { inicio, fim, funilId, responsavelIds } = filters;
+      const { inicio, fim, funilId, responsavelIds, filialId } = filters;
       const anterior = calcularPeriodoAnterior(inicio, fim);
+      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
 
       // Helper to fetch finalizadas (ganho by data_fechamento, perdido by data_perda)
       async function fetchFinalizadas(ini: string, fi: string) {
