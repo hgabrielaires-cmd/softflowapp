@@ -75,7 +75,7 @@ export function PreviewFaturas({ form, setForm, espelho, contratoFinanceiroBase 
         </CardHeader>
         <CardContent className="space-y-3">
           {preview.map((mes, i) => (
-            <MesPreviewCard key={`${mes.mes}-${mes.ano}`} mes={mes} index={i} />
+            <MesPreviewCard key={`${mes.mes}-${mes.ano}`} mes={mes} index={i} diaVencimento={form.dia_vencimento} />
           ))}
 
           {preview.length > 1 && (
@@ -144,14 +144,20 @@ export function PreviewFaturas({ form, setForm, espelho, contratoFinanceiroBase 
   );
 }
 
-function MesPreviewCard({ mes, index }: { mes: FaturaPreviewMes; index: number }) {
+function MesPreviewCard({ mes, index, diaVencimento }: { mes: FaturaPreviewMes; index: number; diaVencimento: number }) {
   if (mes.itens.length === 0) return null;
+
+  const diaFormatado = String(diaVencimento).padStart(2, "0");
+  const mesFormatado = String(mes.mes).padStart(2, "0");
 
   return (
     <div className="rounded-lg border border-border p-3 space-y-1.5">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-muted-foreground uppercase">
           Mês {index + 1} — {mes.label}
+        </span>
+        <span className="text-[10px] text-muted-foreground">
+          Venc. {diaFormatado}/{mesFormatado}/{mes.ano}
         </span>
       </div>
       {mes.itens.map((item, i) => (
