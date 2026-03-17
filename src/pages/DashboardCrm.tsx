@@ -71,15 +71,13 @@ export default function DashboardCrm() {
   const responsavelIds = useMemo(() => {
     if (isVendedor && user?.id) return [user.id];
     if (filterVendedorId !== "__all__") return [filterVendedorId];
-    if (filterFilialId !== "__all__") {
-      // TODO: filter responsaveis by filial if needed
-      return undefined;
-    }
     return undefined;
-  }, [isVendedor, user?.id, filterVendedorId, filterFilialId]);
+  }, [isVendedor, user?.id, filterVendedorId]);
 
-  const finFilters = { funilId: selectedFunilId, responsavelIds, inicio: periodo.inicio, fim: periodo.fim };
-  const andFilters = { funilId: selectedFunilId, responsavelIds };
+  const activeFilialId = filterFilialId !== "__all__" ? filterFilialId : undefined;
+
+  const finFilters = { funilId: selectedFunilId, responsavelIds, filialId: activeFilialId, inicio: periodo.inicio, fim: periodo.fim };
+  const andFilters = { funilId: selectedFunilId, responsavelIds, filialId: activeFilialId };
 
   // Queries - Finalizadas
   const kpiFin = useKpiFinalizadas(finFilters);

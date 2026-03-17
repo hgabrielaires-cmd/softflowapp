@@ -10,8 +10,18 @@ import { calcularPeriodoAnterior } from "./helpers";
 interface Filters {
   funilId?: string;
   responsavelIds?: string[];
+  filialId?: string;
   inicio: string;
   fim: string;
+}
+
+/** Busca IDs de clientes vinculados a uma filial — usado para filtrar oportunidades */
+async function getClienteIdsByFilial(filialId: string): Promise<string[]> {
+  const { data } = await supabase
+    .from("clientes")
+    .select("id")
+    .eq("filial_id", filialId);
+  return (data || []).map(c => c.id);
 }
 
 // ─── FINALIZADAS ──────────────────────────────────────────────
@@ -21,8 +31,9 @@ export function useKpiFinalizadas(filters: Filters) {
     queryKey: ["crm_dash_kpi_fin", filters],
     enabled: !!filters.funilId,
     queryFn: async (): Promise<KpiFinalizadas> => {
-      const { inicio, fim, funilId, responsavelIds } = filters;
+      const { inicio, fim, funilId, responsavelIds, filialId } = filters;
       const anterior = calcularPeriodoAnterior(inicio, fim);
+      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
 
       // Helper to fetch finalizadas (ganho by data_fechamento, perdido by data_perda)
       async function fetchFinalizadas(ini: string, fi: string) {
@@ -34,6 +45,7 @@ export function useKpiFinalizadas(filters: Filters) {
           .gte("data_fechamento", ini)
           .lte("data_fechamento", fi);
         if (responsavelIds?.length) qGanho = qGanho.in("responsavel_id", responsavelIds);
+        if (clienteIds) { if (clienteIds.length === 0) return []; qGanho = qGanho.in("cliente_id", clienteIds); }
 
         let qPerdido = supabase
           .from("crm_oportunidades")
@@ -43,6 +55,7 @@ export function useKpiFinalizadas(filters: Filters) {
           .gte("data_perda", ini)
           .lte("data_perda", fi);
         if (responsavelIds?.length) qPerdido = qPerdido.in("responsavel_id", responsavelIds);
+        if (clienteIds) { if (clienteIds.length === 0) return []; qPerdido = qPerdido.in("cliente_id", clienteIds); }
 
         const [{ data: ganhoData }, { data: perdidoData }] = await Promise.all([qGanho, qPerdido]);
         return [...(ganhoData || []), ...(perdidoData || [])];
@@ -143,7 +156,8 @@ export function useRankingVendedores(filters: Filters, tipo: "ganho" | "andament
     queryKey: ["crm_dash_ranking", filters, tipo],
     enabled: !!filters.funilId,
     queryFn: async (): Promise<VendedorRanking[]> => {
-      const { funilId, responsavelIds, inicio, fim } = filters;
+      const { funilId, responsavelIds, filialId, inicio, fim } = filters;
+      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
       let q = supabase
         .from("crm_oportunidades")
         .select("id, responsavel_id, status, valor, pedido_id")
@@ -155,6 +169,7 @@ export function useRankingVendedores(filters: Filters, tipo: "ganho" | "andament
         q = q.eq("status", "aberta");
       }
       if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
+      if (clienteIds) { if (clienteIds.length === 0) return []; q = q.in("cliente_id", clienteIds); }
       const { data: ops } = await q;
 
       // For "ganho" ranking, also include lost deals filtered by data_perda (for count purposes if needed)
@@ -252,7 +267,8 @@ export function useMotivosPerda(filters: Filters) {
     queryKey: ["crm_dash_motivos", filters],
     enabled: !!filters.funilId,
     queryFn: async (): Promise<MotivoPerda[]> => {
-      const { funilId, responsavelIds, inicio, fim } = filters;
+      const { funilId, responsavelIds, filialId, inicio, fim } = filters;
+      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
       let q = supabase
         .from("crm_oportunidades")
         .select("id, motivo_perda_id")
@@ -261,6 +277,7 @@ export function useMotivosPerda(filters: Filters) {
         .gte("data_perda", inicio)
         .lte("data_perda", fim);
       if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
+      if (clienteIds) { if (clienteIds.length === 0) return []; q = q.in("cliente_id", clienteIds); }
       const { data: ops } = await q;
       if (!ops?.length) return [];
 
@@ -291,7 +308,8 @@ export function useComparativoPeriodo(filters: Filters) {
     queryKey: ["crm_dash_comparativo", filters],
     enabled: !!filters.funilId,
     queryFn: async (): Promise<{ atual: ComparativoSemana[]; anterior: ComparativoSemana[] }> => {
-      const { funilId, responsavelIds, inicio, fim } = filters;
+      const { funilId, responsavelIds, filialId, inicio, fim } = filters;
+      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
       const ant = calcularPeriodoAnterior(inicio, fim);
 
       async function fetchPeriodo(ini: string, fi: string) {
@@ -303,6 +321,7 @@ export function useComparativoPeriodo(filters: Filters) {
           .gte("data_fechamento", ini)
           .lte("data_fechamento", fi);
         if (responsavelIds?.length) qGanho = qGanho.in("responsavel_id", responsavelIds);
+        if (clienteIds) { if (clienteIds.length === 0) return []; qGanho = qGanho.in("cliente_id", clienteIds); }
 
         let qPerdido = supabase
           .from("crm_oportunidades")
@@ -312,6 +331,7 @@ export function useComparativoPeriodo(filters: Filters) {
           .gte("data_perda", ini)
           .lte("data_perda", fi);
         if (responsavelIds?.length) qPerdido = qPerdido.in("responsavel_id", responsavelIds);
+        if (clienteIds) { if (clienteIds.length === 0) return []; qPerdido = qPerdido.in("cliente_id", clienteIds); }
 
         const [{ data: g }, { data: p }] = await Promise.all([qGanho, qPerdido]);
         // Normalize: use data_fechamento for ganho, data_perda for perdido
@@ -356,13 +376,15 @@ export function useKpiAndamento(filters: Omit<Filters, "inicio" | "fim">) {
     queryKey: ["crm_dash_kpi_and", filters],
     enabled: !!filters.funilId,
     queryFn: async (): Promise<KpiAndamento> => {
-      const { funilId, responsavelIds } = filters;
+      const { funilId, responsavelIds, filialId } = filters;
+      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
       let q = supabase
         .from("crm_oportunidades")
         .select("id, valor, data_previsao_fechamento")
         .eq("funil_id", funilId!)
         .eq("status", "aberta");
       if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
+      if (clienteIds) { if (clienteIds.length === 0) return { totalAndamento: 0, valorTotalPipeline: 0, previsaoEsteMes: 0, valorPrevisaoEsteMes: 0, previsaoProximoMes: 0, valorPrevisaoProximoMes: 0, semPrevisao: 0 }; q = q.in("cliente_id", clienteIds); }
       const { data } = await q;
       const ops = data || [];
 
@@ -402,7 +424,8 @@ export function useEtapasFunil(filters: Omit<Filters, "inicio" | "fim">) {
     queryKey: ["crm_dash_etapas", filters],
     enabled: !!filters.funilId,
     queryFn: async (): Promise<EtapaFunil[]> => {
-      const { funilId, responsavelIds } = filters;
+      const { funilId, responsavelIds, filialId } = filters;
+      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
       const [{ data: etapas }, { data: ops }] = await Promise.all([
         supabase.from("crm_etapas").select("id, nome, cor, ordem")
           .eq("funil_id", funilId!).eq("ativo", true).order("ordem"),
@@ -410,6 +433,7 @@ export function useEtapasFunil(filters: Omit<Filters, "inicio" | "fim">) {
           let q = supabase.from("crm_oportunidades").select("id, etapa_id, valor")
             .eq("funil_id", funilId!).eq("status", "aberta");
           if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
+          if (clienteIds) { if (clienteIds.length === 0) return Promise.resolve({ data: [] }); q = q.in("cliente_id", clienteIds); }
           return q;
         })(),
       ]);
@@ -435,12 +459,14 @@ export function useTarefasAnalise(filters: Omit<Filters, "inicio" | "fim"> & { i
     queryKey: ["crm_dash_tarefas", filters],
     enabled: !!filters.funilId,
     queryFn: async (): Promise<TarefasAnalise> => {
-      const { funilId, responsavelIds } = filters;
+      const { funilId, responsavelIds, filialId } = filters;
+      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
 
       // Get open ops
       let qOps = supabase.from("crm_oportunidades").select("id, etapa_id")
         .eq("funil_id", funilId!).eq("status", "aberta");
       if (responsavelIds?.length) qOps = qOps.in("responsavel_id", responsavelIds);
+      if (clienteIds) { if (clienteIds.length === 0) return { agendadas: 0, atrasadas: 0, diasMedioAtraso: 0, concluidas: 0, semTarefa: 0, porEtapa: [] }; qOps = qOps.in("cliente_id", clienteIds); }
       const { data: ops } = await qOps;
       const opIds = (ops || []).map(o => o.id);
       if (opIds.length === 0) return { agendadas: 0, atrasadas: 0, diasMedioAtraso: 0, concluidas: 0, semTarefa: 0, porEtapa: [] };
@@ -515,13 +541,15 @@ export function useAlertasAtencao(filters: Omit<Filters, "inicio" | "fim"> & { d
     queryKey: ["crm_dash_alertas", filters],
     enabled: !!filters.funilId,
     queryFn: async (): Promise<AlertaAtencao[]> => {
-      const { funilId, responsavelIds, diasSemInteracao } = filters;
+      const { funilId, responsavelIds, filialId, diasSemInteracao } = filters;
+      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
       let q = supabase
         .from("crm_oportunidades")
         .select("id, titulo, etapa_id, responsavel_id, cliente_id, data_previsao_fechamento, updated_at, clientes(nome_fantasia)")
         .eq("funil_id", funilId!)
         .eq("status", "aberta");
       if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
+      if (clienteIds) { if (clienteIds.length === 0) return []; q = q.in("cliente_id", clienteIds); }
       const { data: ops } = await q;
       if (!ops?.length) return [];
 
