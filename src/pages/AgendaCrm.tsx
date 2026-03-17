@@ -193,7 +193,7 @@ function AgendaCrmContent() {
 
       const [clientesRes, funisRes, etapasRes, histRes] = await Promise.all([
         clienteIds.length > 0
-          ? supabase.from("clientes").select("id, nome_fantasia").in("id", clienteIds)
+          ? supabase.from("clientes").select("id, nome_fantasia, filial_id").in("id", clienteIds)
           : { data: [] },
         funilIds.length > 0
           ? supabase.from("crm_funis").select("id, nome").in("id", funilIds)
