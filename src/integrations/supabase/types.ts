@@ -1768,6 +1768,41 @@ export type Database = {
           },
         ]
       }
+      faturamento_sync_log: {
+        Row: {
+          asaas_payment_id: string
+          fatura_id: string | null
+          id: string
+          sincronizado_em: string
+          status_anterior: string
+          status_novo: string
+        }
+        Insert: {
+          asaas_payment_id: string
+          fatura_id?: string | null
+          id?: string
+          sincronizado_em?: string
+          status_anterior: string
+          status_novo: string
+        }
+        Update: {
+          asaas_payment_id?: string
+          fatura_id?: string | null
+          id?: string
+          sincronizado_em?: string
+          status_anterior?: string
+          status_novo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faturamento_sync_log_fatura_id_fkey"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "faturas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       faturas: {
         Row: {
           asaas_bank_slip_url: string | null
