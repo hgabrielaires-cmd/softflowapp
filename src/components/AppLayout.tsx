@@ -178,6 +178,7 @@ interface SidebarProps {
   onNavigate: (path: string) => void;
   onSignOut: () => void;
   onMobileClose?: () => void;
+  onExpand?: () => void;
 }
 
 function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSignOut, onMobileClose }: SidebarProps) {
