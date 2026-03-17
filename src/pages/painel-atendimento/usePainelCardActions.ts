@@ -304,6 +304,8 @@ export function usePainelCardActions(deps: CardActionsDeps) {
       await supabase.from("painel_historico_etapas").delete().eq("card_id", detailCard.id);
       await supabase.from("painel_checklist_progresso").delete().eq("card_id", detailCard.id);
       await supabase.from("painel_agendamentos").delete().eq("card_id", detailCard.id);
+      await supabase.from("painel_atividade_execucao").delete().eq("card_id", detailCard.id);
+      await supabase.from("painel_apontamentos").delete().eq("card_id", detailCard.id);
       const etapaDestino = etapas.find(e => e.id === etapaDestinoId);
       await registrarEntradaEtapa(detailCard.id, etapaDestinoId!, etapaDestino?.nome || "Etapa Inicial");
       const { error } = await supabase.from("painel_atendimento").update({ etapa_id: etapaDestinoId, iniciado_em: null, iniciado_por: null, pausado: false, pausado_em: null, pausado_por: null, pausado_motivo: null, status_projeto: "ativo", etapa_origem_id: null }).eq("id", detailCard.id);
