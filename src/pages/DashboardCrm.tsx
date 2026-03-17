@@ -224,7 +224,7 @@ export default function DashboardCrm() {
                   <FunilEtapasVisual data={etapasFunil.data} isLoading={etapasFunil.isLoading} />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <AnaliseTarefasPanel data={tarefas.data} isLoading={tarefas.isLoading} />
                   <RankingVendedoresPanel
                     data={rankingAnd.data}
