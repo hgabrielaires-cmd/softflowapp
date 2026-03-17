@@ -157,6 +157,27 @@ export default function DashboardCrm() {
             </div>
           )}
 
+          {abaAtiva === "andamento" && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Label className="text-xs text-muted-foreground whitespace-nowrap">Sem interação:</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={90}
+                      value={diasSemInteracao}
+                      onChange={e => setDiasSemInteracao(Number(e.target.value) || 7)}
+                      className="h-9 w-[70px] text-xs"
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>Alertar oportunidades sem contato há mais de {diasSemInteracao} dias</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
           <div className="ml-auto flex items-center gap-3 shrink-0">
             <TooltipProvider>
               <Tooltip>
@@ -243,17 +264,6 @@ export default function DashboardCrm() {
                   />
                 </div>
 
-                <div className="flex items-center gap-2 mb-2">
-                  <Label className="text-xs text-muted-foreground">Dias sem interação:</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={90}
-                    value={diasSemInteracao}
-                    onChange={e => setDiasSemInteracao(Number(e.target.value) || 7)}
-                    className="h-7 w-16 text-xs"
-                  />
-                </div>
                 <AlertasAtencaoPanel data={alertas.data} isLoading={alertas.isLoading} />
               </div>
             </div>
