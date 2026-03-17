@@ -782,7 +782,7 @@ export function OportunidadeDetailView({
         oportunidadeId={oportunidade.id}
         oportunidadeTitulo={oportunidade.titulo}
         editingClienteId={ganhoClienteId}
-        onSaved={async (clienteId, clienteNome) => {
+        onSaved={async (clienteId, clienteNome, clienteFilialId) => {
           // Link client to oportunidade
           await supabase.from("crm_oportunidades").update({ cliente_id: clienteId } as any).eq("id", oportunidade.id);
           const { data: { user } } = await supabase.auth.getUser();
@@ -792,6 +792,7 @@ export function OportunidadeDetailView({
           });
           setGanhoClienteId(clienteId);
           setGanhoClienteNome(clienteNome);
+          setGanhoClienteFilialId(clienteFilialId);
           invalidate();
           queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
           setGanhoStep("pedido");
