@@ -145,7 +145,7 @@ export function useNotasFiscaisQueries(filialFilter: string = "all") {
 
     if (filialFilter !== "all") query = query.eq("filial_id", filialFilter);
     if (search.trim()) {
-      query = query.or(`numero_nf.ilike.%${search.trim()}%,clientes.nome_fantasia.ilike.%${search.trim()}%`);
+      query = query.ilike("numero_nf", `%${search.trim()}%`);
     }
 
     const from = (page - 1) * PAGE_SIZE;
