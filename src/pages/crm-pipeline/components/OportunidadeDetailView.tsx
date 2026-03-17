@@ -259,6 +259,25 @@ export function OportunidadeDetailView({
     await persistContatos(newContatos);
   };
 
+  // ─── Perdido Flow: validate products/values then open dialog ───
+  const initiatePerdido = useCallback(async () => {
+    const { data: produtos } = await supabase
+      .from("crm_oportunidade_produtos")
+      .select("valor_implantacao, valor_mensalidade, quantidade")
+      .eq("oportunidade_id", oportunidade.id);
+    if (!produtos || produtos.length === 0) {
+      toast.error("Adicione pelo menos um produto ou serviço antes de marcar como Perdido.");
+      return;
+    }
+    const totalImpl = produtos.reduce((s, p) => s + (p.valor_implantacao || 0) * (p.quantidade || 1), 0);
+    const totalMens = produtos.reduce((s, p) => s + (p.valor_mensalidade || 0) * (p.quantidade || 1), 0);
+    if (totalImpl <= 0 && totalMens <= 0) {
+      toast.error("Os produtos/serviços precisam ter valor de implantação ou mensalidade preenchido.");
+      return;
+    }
+    setPerdidoDialogOpen(true);
+  }, [oportunidade.id]);
+
   // ─── Ganho Flow: validate then ask for Sistema Anterior ───
   const initiateGanho = useCallback(async () => {
     const { data: produtos } = await supabase
@@ -437,7 +456,7 @@ export function OportunidadeDetailView({
                 variant="outline"
                 size="sm"
                 className="text-xs gap-1.5 border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                onClick={() => setPerdidoDialogOpen(true)}
+                onClick={() => initiatePerdido()}
               >
                 😢 Negócio Perdido
               </Button>
@@ -676,7 +695,7 @@ export function OportunidadeDetailView({
             canais={
               (camposPersonalizados.find(c => c.nome.toLowerCase() === "canal")?.opcoes || []) as string[]
             }
-            onNegocioPerdido={() => setPerdidoDialogOpen(true)}
+            onNegocioPerdido={() => initiatePerdido()}
             onNegocioGanho={() => initiateGanho()}
           />
         </TabsContent>
