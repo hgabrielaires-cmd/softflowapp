@@ -59,8 +59,9 @@ export default function CrmPipeline() {
   const cargos = cargosQuery.data || [];
 
   // Inicializar filtros: filial favorita (ou todas) + vendedor logado sempre
+  const { loading: filiaisLoading } = useUserFiliais();
   useEffect(() => {
-    if (filtersReady) return;
+    if (filtersReady || filiaisLoading) return;
     const favId = profile?.filial_favorita_id;
     if (favId && filiaisDoUsuario.some(f => f.id === favId)) {
       setFilterFilialId(favId);
@@ -71,7 +72,7 @@ export default function CrmPipeline() {
       setFilterVendedorId(user.id);
     }
     setFiltersReady(true);
-  }, [profile?.filial_favorita_id, filiaisDoUsuario, user?.id, filtersReady]);
+  }, [profile?.filial_favorita_id, filiaisDoUsuario, filiaisLoading, user?.id, filtersReady]);
 
   // Selecionar funil favorito ou primeiro ao carregar
   useEffect(() => {
