@@ -101,7 +101,6 @@ export function ImportClientesDialog({ open, onOpenChange, filialId, onSuccess }
     }
 
     setFileName(file.name);
-    const ext = file.name.split(".").pop()?.toLowerCase();
     const isCSV = ext === "csv";
 
     if (isCSV) {
@@ -136,43 +135,32 @@ export function ImportClientesDialog({ open, onOpenChange, filialId, onSuccess }
         } catch { toast.error("Erro ao processar planilha"); }
       }).catch(() => toast.error("Erro ao ler arquivo Excel"));
     }
-  };
 
-  const processJsonData = (jsonData: Record<string, string>[]) => {
-    try {
-
-        if (jsonData.length === 0) {
-          toast.error("Planilha vazia ou sem dados");
-          return;
-        }
-
-        const cols = Object.keys(jsonData[0]);
-        setSheetColumns(cols);
-        setSheetData(jsonData);
-
-        // Auto-map by similarity
-        const autoMap: Record<string, string> = {};
-        for (const field of SYSTEM_FIELDS) {
-          const match = cols.find(
-            (c) =>
-              c.toLowerCase().trim() === field.label.toLowerCase().trim() ||
-              c.toLowerCase().trim() === field.key.toLowerCase().replace(/_/g, " ") ||
-              c.toLowerCase().trim() === field.key.toLowerCase()
-          );
-          if (match) autoMap[field.key] = match;
-        }
-        setMapping(autoMap);
-        setStep("mapping");
-    } catch {
-      toast.error("Erro ao processar dados da planilha");
-    }
-  };
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    parseFile(file);
     e.target.value = "";
+  }
+
+  function processJsonData(jsonData: Record<string, string>[]) {
+    if (jsonData.length === 0) {
+      toast.error("Planilha vazia ou sem dados");
+      return;
+    }
+
+    const cols = Object.keys(jsonData[0]);
+    setSheetColumns(cols);
+    setSheetData(jsonData);
+
+    const autoMap: Record<string, string> = {};
+    for (const field of SYSTEM_FIELDS) {
+      const match = cols.find(
+        (c) =>
+          c.toLowerCase().trim() === field.label.toLowerCase().trim() ||
+          c.toLowerCase().trim() === field.key.toLowerCase().replace(/_/g, " ") ||
+          c.toLowerCase().trim() === field.key.toLowerCase()
+      );
+      if (match) autoMap[field.key] = match;
+    }
+    setMapping(autoMap);
+    setStep("mapping");
   }
 
   function setFieldMapping(systemField: string, sheetCol: string) {
