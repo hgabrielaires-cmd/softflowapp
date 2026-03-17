@@ -65,9 +65,9 @@ function agruparModulos(modulos: { nome: string; valor_mensal: number; data_inic
 }
 
 export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ComposicaoData | null>(null);
+  const [contratoViewId, setContratoViewId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!faturaId) { setData(null); return; }
