@@ -52,6 +52,82 @@ export function GanhoPedidoDrawer({ open, onOpenChange, clienteId, clienteNome, 
   const [moduloBuscaId, setModuloBuscaId] = useState("");
   const [moduloBuscaQtd, setModuloBuscaQtd] = useState("1");
 
+  // Import products from oportunidade
+  const importarProdutosOportunidade = useCallback(async (filialId: string) => {
+    if (!oportunidadeId) return;
+    // Fetch products
+    const { data: produtos } = await supabase
+      .from("crm_oportunidade_produtos")
+      .select("tipo, referencia_id, quantidade, valor_implantacao, valor_mensalidade")
+      .eq("oportunidade_id", oportunidadeId);
+    // Fetch discounts from oportunidade
+    const { data: oport } = await supabase
+      .from("crm_oportunidades")
+      .select("desconto_implantacao, desconto_implantacao_tipo, desconto_mensalidade, desconto_mensalidade_tipo")
+      .eq("id", oportunidadeId)
+      .single();
+
+    if (!produtos || produtos.length === 0) return;
+
+    // Find plano
+    const planoItem = produtos.find((p: any) => p.tipo === "plano");
+    const moduloItems = produtos.filter((p: any) => p.tipo === "modulo");
+
+    if (planoItem) {
+      // Load plano data
+      const { data: planoData } = await supabase
+        .from("planos")
+        .select("id, nome")
+        .eq("id", planoItem.referencia_id)
+        .single();
+      if (planoData) {
+        // Build modulos list
+        const modulosAdicionais: ModuloAdicionadoItem[] = [];
+        for (const mi of moduloItems) {
+          const { data: modData } = await supabase
+            .from("modulos")
+            .select("id, nome")
+            .eq("id", mi.referencia_id)
+            .single();
+          if (modData) {
+            modulosAdicionais.push({
+              modulo_id: modData.id,
+              nome: modData.nome,
+              quantidade: mi.quantidade,
+              valor_implantacao_modulo: mi.valor_implantacao,
+              valor_mensalidade_modulo: mi.valor_mensalidade,
+            });
+          }
+        }
+
+        // Set plano
+        setForm(f => ({ ...f, plano_id: planoData.id, modulos_adicionais: modulosAdicionais }));
+        await loadPlanoRaw(planoData.id, modulosAdicionais, filialId);
+
+        // Apply discounts
+        const descImp = oport?.desconto_implantacao ?? 0;
+        const descImpTipo = (oport?.desconto_implantacao_tipo === "%" ? "%" : "R$") as "R$" | "%";
+        const descMens = oport?.desconto_mensalidade ?? 0;
+        const descMensTipo = (oport?.desconto_mensalidade_tipo === "%" ? "%" : "R$") as "R$" | "%";
+        const hasDesconto = descImp > 0 || descMens > 0;
+
+        if (hasDesconto) {
+          setDescontoAtivo(true);
+        }
+
+        setForm(f => ({
+          ...f,
+          plano_id: planoData.id,
+          modulos_adicionais: modulosAdicionais,
+          desconto_implantacao_tipo: descImpTipo,
+          desconto_implantacao_valor: descImp > 0 ? descImp.toString() : "0",
+          desconto_mensalidade_tipo: descMensTipo,
+          desconto_mensalidade_valor: descMens > 0 ? descMens.toString() : "0",
+        }));
+      }
+    }
+  }, [oportunidadeId, loadPlanoRaw]);
+
   // Initialize form on open
   useEffect(() => {
     if (!open || !clienteId) return;
@@ -80,6 +156,11 @@ export function GanhoPedidoDrawer({ open, onOpenChange, clienteId, clienteNome, 
     if (defaultFilial) loadFilialParametros(defaultFilial);
     if (defaultVendedor) carregarLimitesDesconto(defaultVendedor);
     buscarContratoAtivo(clienteId);
+
+    // Import products from oportunidade after a short delay to let loadData finish
+    if (oportunidadeId) {
+      setTimeout(() => importarProdutosOportunidade(defaultFilial), 500);
+    }
   }, [open, clienteId]);
 
   useEffect(() => {
