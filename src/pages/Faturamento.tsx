@@ -667,6 +667,18 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
 // ─── Detalhes Cobrança Dialog ─────────────────────────────────────────────
 
 function FaturaCobrancaDialog({ fatura, onClose }: { fatura: Fatura | null; onClose: () => void }) {
+  const [webhookCount, setWebhookCount] = useState<number | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!fatura?.asaas_payment_id) { setWebhookCount(null); return; }
+    supabase
+      .from("asaas_webhook_events")
+      .select("id", { count: "exact", head: true })
+      .like("event_id", `%${fatura.asaas_payment_id}`)
+      .then(({ count }) => setWebhookCount(count ?? 0));
+  }, [fatura?.asaas_payment_id]);
+
   if (!fatura) return null;
 
   const hasBoleto = !!fatura.asaas_barcode || !!fatura.asaas_bank_slip_url;
@@ -786,6 +798,25 @@ function FaturaCobrancaDialog({ fatura, onClose }: { fatura: Fatura | null; onCl
             <p className="text-sm text-muted-foreground text-center py-4">
               Nenhuma informação de cobrança disponível para esta fatura.
             </p>
+          )}
+
+          {/* Webhook diagnostic */}
+          {fatura.asaas_payment_id && webhookCount === 0 && (
+            <div className="flex items-start gap-2 bg-muted/50 border border-border rounded-lg px-3 py-2.5">
+              <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>
+                  Nenhum evento webhook recebido para esta cobrança.
+                  Use <strong>"Sincronizar Asaas"</strong> no menu da fatura para atualizar manualmente.
+                </p>
+                <button
+                  className="text-primary hover:underline font-medium"
+                  onClick={() => { onClose(); navigate("/configuracoes/integracoes"); }}
+                >
+                  Verificar configuração do webhook →
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </DialogContent>
