@@ -68,6 +68,7 @@ export function GanhoPedidoDrawer({ open, onOpenChange, clienteId, clienteNome, 
       comissao_implantacao_percentual: defaultImp,
       comissao_mensalidade_percentual: defaultMens,
       comissao_servico_percentual: "5",
+      observacoes: observacoesOportunidade || "",
     });
     setDescontoAtivo(false);
     setAcrescimoAtivo(false);
