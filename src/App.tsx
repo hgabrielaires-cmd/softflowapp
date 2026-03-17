@@ -45,6 +45,7 @@ import TicketNovo from "./pages/TicketNovo";
 import HelpdeskParametros from "./pages/HelpdeskParametros";
 import TesteAsaas from "./pages/TesteAsaas";
 import AgendaCrm from "./pages/AgendaCrm";
+import DashboardCrm from "./pages/DashboardCrm";
 
 const queryClient = new QueryClient();
 
@@ -346,7 +347,7 @@ const App = () => {
               path="/dashboard-crm"
               element={
                 <ProtectedRoute>
-                  <ComingSoon module="CRM" title="Dashboard CRM" description="Em desenvolvimento. Painel de indicadores do CRM." />
+                  <DashboardCrm />
                 </ProtectedRoute>
               }
             />
