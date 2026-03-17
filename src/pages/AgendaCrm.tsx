@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useMenuPermissions } from "@/hooks/useMenuPermissions";
+import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,7 +18,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import {
   CalendarDays, Clock, User, Filter, List, Search,
   ChevronLeft, ChevronRight, CheckCircle2, Phone, Video,
-  MessageSquare, ExternalLink, RotateCcw,
+  MessageSquare, ExternalLink, RotateCcw, Building2,
 } from "lucide-react";
 import {
   format, parseISO, isSameDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
@@ -42,6 +43,7 @@ interface CrmCompromisso {
   created_at: string;
   oportunidade_titulo: string;
   cliente_nome: string | null;
+  cliente_filial_id: string | null;
   responsavel_id: string | null;
   funil_nome: string | null;
   etapa_nome: string | null;
@@ -73,9 +75,11 @@ export default function AgendaCrm() {
 function AgendaCrmContent() {
   const { user, profile, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
   const [activeView, setActiveView] = useState<"calendario" | "lista">("calendario");
   const [filtroVendedor, setFiltroVendedor] = useState<string>("_init_");
+  const [filtroFilial, setFiltroFilial] = useState<string>("_init_");
   const [filtersInitialized, setFiltersInitialized] = useState(false);
 
   // List-specific
@@ -104,9 +108,26 @@ function AgendaCrmContent() {
       } else {
         setFiltroVendedor(user.id);
       }
-      setFiltersInitialized(true);
     }
   }, [user, isAdmin, filtroVendedor]);
+
+  // Init filial filter
+  useEffect(() => {
+    if (filtroFilial === "_init_" && filiaisDoUsuario.length > 0) {
+      if (isGlobal || filiaisDoUsuario.length > 1) {
+        setFiltroFilial(filialPadraoId || "all");
+      } else {
+        setFiltroFilial(filiaisDoUsuario[0]?.id || "all");
+      }
+    }
+  }, [filtroFilial, filiaisDoUsuario, filialPadraoId, isGlobal]);
+
+  // Mark initialized when both filters are ready
+  useEffect(() => {
+    if (!filtersInitialized && filtroVendedor !== "_init_" && filtroFilial !== "_init_") {
+      setFiltersInitialized(true);
+    }
+  }, [filtroVendedor, filtroFilial, filtersInitialized]);
 
   // Fetch vendedores
   const { data: vendedores = [] } = useQuery({
@@ -140,7 +161,7 @@ function AgendaCrmContent() {
 
   // Main query
   const { data: compromissos = [], isLoading } = useQuery({
-    queryKey: ["crm-agenda-compromissos", dateRange, filtroVendedor, listSearch, listStatus],
+    queryKey: ["crm-agenda-compromissos", dateRange, filtroVendedor, filtroFilial, listSearch, listStatus],
     enabled: filtersInitialized,
     queryFn: async () => {
       // Fetch tasks with data_reuniao
@@ -172,7 +193,7 @@ function AgendaCrmContent() {
 
       const [clientesRes, funisRes, etapasRes, histRes] = await Promise.all([
         clienteIds.length > 0
-          ? supabase.from("clientes").select("id, nome_fantasia").in("id", clienteIds)
+          ? supabase.from("clientes").select("id, nome_fantasia, filial_id").in("id", clienteIds)
           : { data: [] },
         funilIds.length > 0
           ? supabase.from("crm_funis").select("id, nome").in("id", funilIds)
@@ -187,7 +208,7 @@ function AgendaCrmContent() {
           .eq("tipo", "adiamento"),
       ]);
 
-      const clienteMap = Object.fromEntries((clientesRes.data || []).map(c => [c.id, c.nome_fantasia]));
+      const clienteMap = Object.fromEntries((clientesRes.data || []).map(c => [c.id, { nome: c.nome_fantasia, filial_id: c.filial_id }]));
       const funilMap = Object.fromEntries((funisRes.data || []).map(f => [f.id, f.nome]));
       const etapaMap = Object.fromEntries((etapasRes.data || []).map(e => [e.id, e.nome]));
       const opMap = Object.fromEntries((oportunidades || []).map(o => [o.id, o]));
@@ -200,17 +221,24 @@ function AgendaCrmContent() {
 
       let result: CrmCompromisso[] = tarefas.map(t => {
         const op = opMap[t.oportunidade_id];
+        const clienteInfo = op?.cliente_id ? clienteMap[op.cliente_id] : null;
         return {
           ...t,
           data_reuniao: t.data_reuniao!,
           oportunidade_titulo: op?.titulo || "—",
-          cliente_nome: op?.cliente_id ? clienteMap[op.cliente_id] || null : null,
+          cliente_nome: clienteInfo?.nome || null,
+          cliente_filial_id: clienteInfo?.filial_id || null,
           responsavel_id: op?.responsavel_id || null,
           funil_nome: op?.funil_id ? funilMap[op.funil_id] || null : null,
           etapa_nome: op?.etapa_id ? etapaMap[op.etapa_id] || null : null,
           adiamentos: adiamentoCount[t.id] || 0,
         };
       });
+
+      // Filter by filial
+      if (filtroFilial && filtroFilial !== "all") {
+        result = result.filter(c => c.cliente_filial_id === filtroFilial);
+      }
 
       // Filter by vendedor (responsavel)
       if (filtroVendedor && filtroVendedor !== "all") {
@@ -404,6 +432,22 @@ function AgendaCrmContent() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Filial filter */}
+          {filiaisDoUsuario.length > 1 && (
+            <Select value={filtroFilial} onValueChange={setFiltroFilial}>
+              <SelectTrigger className="h-9 w-[260px]">
+                <Building2 className="h-3.5 w-3.5 mr-1.5" />
+                <SelectValue placeholder="Filial" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Filiais</SelectItem>
+                {filiaisDoUsuario.map(f => (
+                  <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           {/* Vendedor filter */}
           {(isAdmin || vendedores.length > 1) && (
             <Select value={filtroVendedor} onValueChange={setFiltroVendedor}>
