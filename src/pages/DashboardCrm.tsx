@@ -111,11 +111,11 @@ export default function DashboardCrm() {
     <AppLayout>
       <div className="flex flex-col min-h-[calc(100vh-64px)]">
         {/* Header */}
-        <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b bg-background">
-          <h1 className="text-lg font-bold text-foreground mr-auto sm:mr-0">Dashboard CRM</h1>
+        <div className="flex items-center gap-2 px-4 py-3 border-b bg-background overflow-x-auto">
+          <h1 className="text-lg font-bold text-foreground whitespace-nowrap">Dashboard CRM</h1>
 
           <Select value={selectedFunilId} onValueChange={setSelectedFunilId}>
-            <SelectTrigger className="w-[160px] h-9"><SelectValue placeholder="Funil" /></SelectTrigger>
+            <SelectTrigger className="w-[160px] h-9 shrink-0"><SelectValue placeholder="Funil" /></SelectTrigger>
             <SelectContent>
               {funis.map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
             </SelectContent>
@@ -123,7 +123,7 @@ export default function DashboardCrm() {
 
           {!isVendedor && (
             <Select value={filterVendedorId} onValueChange={setFilterVendedorId}>
-              <SelectTrigger className="w-[160px] h-9"><SelectValue placeholder="Vendedor" /></SelectTrigger>
+              <SelectTrigger className="w-[160px] h-9 shrink-0"><SelectValue placeholder="Vendedor" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">Todos Vendedores</SelectItem>
                 {responsaveis.map(r => <SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>)}
@@ -133,7 +133,7 @@ export default function DashboardCrm() {
 
           {filiaisDoUsuario.length > 1 && (
             <Select value={filterFilialId} onValueChange={setFilterFilialId}>
-              <SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="Filial" /></SelectTrigger>
+              <SelectTrigger className="w-[140px] h-9 shrink-0"><SelectValue placeholder="Filial" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">Todas Filiais</SelectItem>
                 {filiaisDoUsuario.map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
@@ -142,27 +142,28 @@ export default function DashboardCrm() {
           )}
 
           <Select value={periodoTipo} onValueChange={setPeriodoTipo}>
-            <SelectTrigger className="w-[150px] h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[150px] h-9 shrink-0"><SelectValue /></SelectTrigger>
             <SelectContent>
               {PERIODO_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
             </SelectContent>
           </Select>
 
           {periodoTipo === "personalizado" && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0">
               <Input type="date" value={customInicio} onChange={e => setCustomInicio(e.target.value)} className="h-9 w-[130px] text-xs" />
               <span className="text-xs text-muted-foreground">a</span>
               <Input type="date" value={customFim} onChange={e => setCustomFim(e.target.value)} className="h-9 w-[130px] text-xs" />
             </div>
           )}
 
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            {format(lastUpdate, "HH:mm")}
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={handleRefresh}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              {format(lastUpdate, "HH:mm")}
+            </div>
           </div>
         </div>
 

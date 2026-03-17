@@ -35,7 +35,7 @@ export function KpiFinalizadasCards({ data, isLoading }: { data?: KpiType; isLoa
   return (
     <div className="flex gap-3 overflow-x-auto pb-1">
       {/* Total Finalizadas */}
-      <Card className="border-none shadow-card">
+      <Card className="border-none shadow-card min-w-[180px] shrink-0">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 rounded-lg bg-primary/10">
