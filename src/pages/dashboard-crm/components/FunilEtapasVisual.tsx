@@ -32,7 +32,7 @@ export function FunilEtapasVisual({ data, isLoading }: { data?: EtapaFunil[]; is
               <span className="text-xs font-semibold truncate">{etapa.nome}</span>
             </div>
             <p className="text-xl font-bold text-foreground">{etapa.quantidade}</p>
-            <p className="text-[10px] text-muted-foreground">{formatValor(etapa.valorTotal)}</p>
+            <p className="text-[10px] text-muted-foreground">{etapa.valorTotal > 0 ? formatValor(etapa.valorTotal) : "—"}</p>
             <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
               <div
                 className="h-full rounded-full transition-all"
