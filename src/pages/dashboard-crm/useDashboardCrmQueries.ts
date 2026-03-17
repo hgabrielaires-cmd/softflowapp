@@ -308,7 +308,8 @@ export function useComparativoPeriodo(filters: Filters) {
     queryKey: ["crm_dash_comparativo", filters],
     enabled: !!filters.funilId,
     queryFn: async (): Promise<{ atual: ComparativoSemana[]; anterior: ComparativoSemana[] }> => {
-      const { funilId, responsavelIds, inicio, fim } = filters;
+      const { funilId, responsavelIds, filialId, inicio, fim } = filters;
+      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
       const ant = calcularPeriodoAnterior(inicio, fim);
 
       async function fetchPeriodo(ini: string, fi: string) {
