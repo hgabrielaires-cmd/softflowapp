@@ -221,17 +221,24 @@ function AgendaCrmContent() {
 
       let result: CrmCompromisso[] = tarefas.map(t => {
         const op = opMap[t.oportunidade_id];
+        const clienteInfo = op?.cliente_id ? clienteMap[op.cliente_id] : null;
         return {
           ...t,
           data_reuniao: t.data_reuniao!,
           oportunidade_titulo: op?.titulo || "—",
-          cliente_nome: op?.cliente_id ? clienteMap[op.cliente_id] || null : null,
+          cliente_nome: clienteInfo?.nome || null,
+          cliente_filial_id: clienteInfo?.filial_id || null,
           responsavel_id: op?.responsavel_id || null,
           funil_nome: op?.funil_id ? funilMap[op.funil_id] || null : null,
           etapa_nome: op?.etapa_id ? etapaMap[op.etapa_id] || null : null,
           adiamentos: adiamentoCount[t.id] || 0,
         };
       });
+
+      // Filter by filial
+      if (filtroFilial && filtroFilial !== "all") {
+        result = result.filter(c => c.cliente_filial_id === filtroFilial);
+      }
 
       // Filter by vendedor (responsavel)
       if (filtroVendedor && filtroVendedor !== "all") {
