@@ -292,16 +292,29 @@ export function useComparativoPeriodo(filters: Filters) {
       const ant = calcularPeriodoAnterior(inicio, fim);
 
       async function fetchPeriodo(ini: string, fi: string) {
-        let q = supabase
+        let qGanho = supabase
           .from("crm_oportunidades")
           .select("id, status, data_fechamento")
           .eq("funil_id", funilId!)
-          .in("status", ["ganho", "perdido"])
+          .eq("status", "ganho")
           .gte("data_fechamento", ini)
           .lte("data_fechamento", fi);
-        if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
-        const { data } = await q;
-        return data || [];
+        if (responsavelIds?.length) qGanho = qGanho.in("responsavel_id", responsavelIds);
+
+        let qPerdido = supabase
+          .from("crm_oportunidades")
+          .select("id, status, data_perda")
+          .eq("funil_id", funilId!)
+          .eq("status", "perdido")
+          .gte("data_perda", ini)
+          .lte("data_perda", fi);
+        if (responsavelIds?.length) qPerdido = qPerdido.in("responsavel_id", responsavelIds);
+
+        const [{ data: g }, { data: p }] = await Promise.all([qGanho, qPerdido]);
+        // Normalize: use data_fechamento for ganho, data_perda for perdido
+        const ganhoNorm = (g || []).map(o => ({ ...o, data_fechamento: o.data_fechamento }));
+        const perdidoNorm = (p || []).map(o => ({ ...o, data_fechamento: (o as any).data_perda }));
+        return [...ganhoNorm, ...perdidoNorm];
       }
 
       const [atualData, anteriorData] = await Promise.all([
