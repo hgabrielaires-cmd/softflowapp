@@ -285,14 +285,14 @@ export function OportunidadeFormDialog({
 
           {/* Segmento - Multi-select com busca */}
           <div>
-            <Label>Segmento *</Label>
+            <Label className={tried && segmentoIds.length === 0 ? "text-destructive" : ""}>Segmento *</Label>
             <Popover open={segmentoPopoverOpen} onOpenChange={setSegmentoPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
                   aria-expanded={segmentoPopoverOpen}
-                  className="w-full justify-between font-normal h-auto min-h-10"
+                  className={cn("w-full justify-between font-normal h-auto min-h-10", tried && segmentoIds.length === 0 && "border-destructive")}
                 >
                   {segmentoIds.length === 0 ? (
                     <span className="text-muted-foreground">Buscar segmento...</span>
