@@ -255,8 +255,8 @@ export function useMotivosPerda(filters: Filters) {
         .select("id, motivo_perda_id")
         .eq("funil_id", funilId!)
         .eq("status", "perdido")
-        .gte("data_fechamento", inicio)
-        .lte("data_fechamento", fim);
+        .gte("data_perda", inicio)
+        .lte("data_perda", fim);
       if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
       const { data: ops } = await q;
       if (!ops?.length) return [];
