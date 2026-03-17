@@ -179,7 +179,7 @@ export function OportunidadeFormDialog({
           {/* Contatos */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-semibold">Contatos *</Label>
+              <Label className={cn("text-sm font-semibold", tried && !contatosValid && "text-destructive")}>Contatos *</Label>
               <Button type="button" variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addContato}>
                 <Plus className="h-3 w-3" /> Adicionar
               </Button>
