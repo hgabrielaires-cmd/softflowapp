@@ -376,7 +376,8 @@ export function useKpiAndamento(filters: Omit<Filters, "inicio" | "fim">) {
     queryKey: ["crm_dash_kpi_and", filters],
     enabled: !!filters.funilId,
     queryFn: async (): Promise<KpiAndamento> => {
-      const { funilId, responsavelIds } = filters;
+      const { funilId, responsavelIds, filialId } = filters;
+      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
       let q = supabase
         .from("crm_oportunidades")
         .select("id, valor, data_previsao_fechamento")
