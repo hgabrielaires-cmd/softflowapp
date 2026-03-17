@@ -384,6 +384,7 @@ export function useKpiAndamento(filters: Omit<Filters, "inicio" | "fim">) {
         .eq("funil_id", funilId!)
         .eq("status", "aberta");
       if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
+      if (clienteIds) { if (clienteIds.length === 0) return { totalAndamento: 0, valorTotalPipeline: 0, previsaoEsteMes: 0, valorPrevisaoEsteMes: 0, previsaoProximoMes: 0, valorPrevisaoProximoMes: 0, semPrevisao: 0 }; q = q.in("cliente_id", clienteIds); }
       const { data } = await q;
       const ops = data || [];
 
