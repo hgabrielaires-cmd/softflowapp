@@ -377,5 +377,11 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
         )}
       </DialogContent>
     </Dialog>
+
+    <ContratoQuickViewDialog
+      contratoId={contratoViewId}
+      onClose={() => setContratoViewId(null)}
+    />
+    </>
   );
 }
