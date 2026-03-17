@@ -55,6 +55,7 @@ export function useKpiFinalizadas(filters: Filters) {
           .gte("data_perda", ini)
           .lte("data_perda", fi);
         if (responsavelIds?.length) qPerdido = qPerdido.in("responsavel_id", responsavelIds);
+        if (clienteIds) { if (clienteIds.length === 0) return []; qPerdido = qPerdido.in("cliente_id", clienteIds); }
 
         const [{ data: ganhoData }, { data: perdidoData }] = await Promise.all([qGanho, qPerdido]);
         return [...(ganhoData || []), ...(perdidoData || [])];
