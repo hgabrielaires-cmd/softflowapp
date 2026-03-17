@@ -261,9 +261,18 @@ export function OportunidadeDetailView({
 
   // ─── Ganho Flow: validate then ask for Sistema Anterior ───
   const initiateGanho = useCallback(async () => {
-    const { count } = await supabase.from("crm_oportunidade_produtos").select("id", { count: "exact", head: true }).eq("oportunidade_id", oportunidade.id);
-    if (!count || count === 0) {
+    const { data: produtos } = await supabase
+      .from("crm_oportunidade_produtos")
+      .select("valor_implantacao, valor_mensalidade, quantidade")
+      .eq("oportunidade_id", oportunidade.id);
+    if (!produtos || produtos.length === 0) {
       toast.error("Adicione pelo menos um produto ou serviço antes de marcar como Ganho.");
+      return;
+    }
+    const totalImpl = produtos.reduce((s, p) => s + (p.valor_implantacao || 0) * (p.quantidade || 1), 0);
+    const totalMens = produtos.reduce((s, p) => s + (p.valor_mensalidade || 0) * (p.quantidade || 1), 0);
+    if (totalImpl <= 0 && totalMens <= 0) {
+      toast.error("Os produtos/serviços precisam ter valor de implantação ou mensalidade preenchido.");
       return;
     }
     // Pre-fill if already set
