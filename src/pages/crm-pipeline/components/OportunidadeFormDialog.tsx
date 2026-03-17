@@ -102,6 +102,7 @@ export function OportunidadeFormDialog({
         setSegmentoIds([]);
         setCamposValues({});
         setContatos([emptyContato()]);
+        setTried(false);
       }
     }
   }, [open, oportunidade, etapaIdInicial, etapas]);
