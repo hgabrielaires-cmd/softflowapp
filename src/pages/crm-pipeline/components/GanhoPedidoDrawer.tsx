@@ -24,11 +24,12 @@ interface Props {
   clienteId: string;
   clienteNome: string;
   clienteFilialId?: string | null;
+  observacoesOportunidade?: string | null;
   onBack: () => void;
   onSaved: (pedidoId: string, pedidoNumero: string, pedidoStatus: string) => void;
 }
 
-export function GanhoPedidoDrawer({ open, onOpenChange, clienteId, clienteNome, clienteFilialId, onBack, onSaved }: Props) {
+export function GanhoPedidoDrawer({ open, onOpenChange, clienteId, clienteNome, clienteFilialId, observacoesOportunidade, onBack, onSaved }: Props) {
   const { profile, isAdmin } = useAuth();
   const { filiaisDoUsuario, filialPadraoId, todasFiliais } = useUserFiliais();
 
@@ -67,6 +68,7 @@ export function GanhoPedidoDrawer({ open, onOpenChange, clienteId, clienteNome, 
       comissao_implantacao_percentual: defaultImp,
       comissao_mensalidade_percentual: defaultMens,
       comissao_servico_percentual: "5",
+      observacoes: observacoesOportunidade || "",
     });
     setDescontoAtivo(false);
     setAcrescimoAtivo(false);
