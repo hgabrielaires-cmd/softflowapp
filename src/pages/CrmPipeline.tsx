@@ -24,7 +24,7 @@ import type { CrmOportunidade, CrmEtapaSimples } from "./crm-pipeline/types";
 export default function CrmPipeline() {
   const { profile, user, roles } = useAuth();
   const queryClient = useQueryClient();
-  const { filiaisDoUsuario, filialPadraoId } = useUserFiliais();
+  const { filiaisDoUsuario, filialPadraoId, loading: filiaisLoading } = useUserFiliais();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [selectedFunilId, setSelectedFunilId] = useState<string>("");
@@ -60,7 +60,7 @@ export default function CrmPipeline() {
 
   // Inicializar filtros: filial favorita (ou todas) + vendedor logado sempre
   useEffect(() => {
-    if (filtersReady) return;
+    if (filtersReady || filiaisLoading) return;
     const favId = profile?.filial_favorita_id;
     if (favId && filiaisDoUsuario.some(f => f.id === favId)) {
       setFilterFilialId(favId);
@@ -71,7 +71,7 @@ export default function CrmPipeline() {
       setFilterVendedorId(user.id);
     }
     setFiltersReady(true);
-  }, [profile?.filial_favorita_id, filiaisDoUsuario, user?.id, filtersReady]);
+  }, [profile?.filial_favorita_id, filiaisDoUsuario, filiaisLoading, user?.id, filtersReady]);
 
   // Selecionar funil favorito ou primeiro ao carregar
   useEffect(() => {
