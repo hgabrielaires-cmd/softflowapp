@@ -232,9 +232,9 @@ function AgendaCrmContent() {
         };
       });
 
-      // Filter by filial
+      // Filter by filial (inclui oportunidades sem cliente vinculado)
       if (filtroFilial && filtroFilial !== "all") {
-        result = result.filter(c => c.cliente_filial_id === filtroFilial);
+        result = result.filter(c => !c.cliente_filial_id || c.cliente_filial_id === filtroFilial);
       }
 
       // Filter by vendedor (responsavel)
