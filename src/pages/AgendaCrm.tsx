@@ -208,7 +208,7 @@ function AgendaCrmContent() {
           .eq("tipo", "adiamento"),
       ]);
 
-      const clienteMap = Object.fromEntries((clientesRes.data || []).map(c => [c.id, c.nome_fantasia]));
+      const clienteMap = Object.fromEntries((clientesRes.data || []).map(c => [c.id, { nome: c.nome_fantasia, filial_id: c.filial_id }]));
       const funilMap = Object.fromEntries((funisRes.data || []).map(f => [f.id, f.nome]));
       const etapaMap = Object.fromEntries((etapasRes.data || []).map(e => [e.id, e.nome]));
       const opMap = Object.fromEntries((oportunidades || []).map(o => [o.id, o]));
