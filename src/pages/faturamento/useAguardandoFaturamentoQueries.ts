@@ -23,6 +23,15 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
       .select("contrato_id");
     const idsFaturados = new Set((jaFaturados || []).map((r: any) => r.contrato_id));
 
+    // 1a. Get aditivo IDs that already have modules inserted (contrato_origem_id)
+    const { data: modulosJaInseridos } = await supabase
+      .from("contrato_financeiro_modulos")
+      .select("contrato_origem_id")
+      .not("contrato_origem_id", "is", null);
+    const idsModulosJaConfigurados = new Set(
+      (modulosJaInseridos || []).map((r: any) => r.contrato_origem_id)
+    );
+
     // 1b. Get all contratos that have ZapSign status "Assinado"
     const { data: zapsignData } = await supabase
       .from("contratos_zapsign")
@@ -59,6 +68,8 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
     // Filter: not already billed AND (ZapSign = Assinado, or manual/retroactive, or no ZapSign + status = Assinado)
     let pendentes = (data || []).filter((c: any) => {
       if (idsFaturados.has(c.id)) return false;
+      // Aditivos já configurados via contrato_financeiro_modulos
+      if (idsModulosJaConfigurados.has(c.id)) return false;
       // Retroactive contracts (status_geracao = 'Manual') always qualify
       if (c.status_geracao === "Manual" && c.status === "Ativo") return true;
       const zStatus = zapsignMap.get(c.id);
