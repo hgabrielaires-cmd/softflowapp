@@ -75,9 +75,11 @@ export default function AgendaCrm() {
 function AgendaCrmContent() {
   const { user, profile, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
   const [activeView, setActiveView] = useState<"calendario" | "lista">("calendario");
   const [filtroVendedor, setFiltroVendedor] = useState<string>("_init_");
+  const [filtroFilial, setFiltroFilial] = useState<string>("_init_");
   const [filtersInitialized, setFiltersInitialized] = useState(false);
 
   // List-specific
