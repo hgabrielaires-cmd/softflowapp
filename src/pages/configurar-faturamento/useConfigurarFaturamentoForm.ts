@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import type { ContratoEspelho, ConfigFaturamentoForm, ContratoFinanceiroBase } from "./types";
 import { validateConfigForm } from "./helpers";
+import { enviarFaturaWhatsApp } from "@/lib/enviarFaturaWhatsApp";
 
 export function useConfigurarFaturamentoForm() {
   const navigate = useNavigate();
