@@ -38,7 +38,7 @@ export function useFaturasQueries(filialFilter: string = "all") {
     if (statusFilter !== "all") query = query.eq("status", statusFilter);
     if (tipoFilter !== "all") query = query.eq("tipo", tipoFilter);
     if (search.trim()) {
-      query = query.or(`numero_fatura.ilike.%${search.trim()}%,clientes.nome_fantasia.ilike.%${search.trim()}%`);
+      query = query.ilike("numero_fatura", `%${search.trim()}%`);
     }
 
     const from = (page - 1) * PAGE_SIZE;
