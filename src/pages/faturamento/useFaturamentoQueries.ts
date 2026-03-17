@@ -163,13 +163,35 @@ export function useNotasFiscaisQueries(filialFilter: string = "all") {
 
   const loadNotas = useCallback(async () => {
     setLoading(true);
+
+    const term = search.trim();
+    let clienteIds: string[] | null = null;
+
+    if (term) {
+      const searchDigits = term.replace(/\D/g, "");
+      const orFilters = [`nome_fantasia.ilike.%${term}%`];
+      if (searchDigits.length > 0) {
+        orFilters.push(`cnpj_cpf.ilike.%${searchDigits}%`);
+      }
+      const { data: matchClientes } = await supabase
+        .from("clientes")
+        .select("id")
+        .or(orFilters.join(","));
+      clienteIds = (matchClientes || []).map((c: any) => c.id);
+    }
+
     let query = supabase
       .from("notas_fiscais")
       .select("*, clientes(nome_fantasia), faturas(numero_fatura)", { count: "exact" });
 
     if (filialFilter !== "all") query = query.eq("filial_id", filialFilter);
-    if (search.trim()) {
-      query = query.ilike("numero_nf", `%${search.trim()}%`);
+
+    if (term) {
+      if (clienteIds && clienteIds.length > 0) {
+        query = query.or(`numero_nf.ilike.%${term}%,cliente_id.in.(${clienteIds.join(",")})`);
+      } else {
+        query = query.ilike("numero_nf", `%${term}%`);
+      }
     }
 
     const from = (page - 1) * PAGE_SIZE;
