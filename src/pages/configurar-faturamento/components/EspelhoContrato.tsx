@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ExternalLink, FileText, Package, Briefcase, DollarSign } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import type { ContratoEspelho, ContratoFinanceiroBase } from "../types";
+import type { ContratoEspelho, ContratoFinanceiroBase, ModuloAdicionalPedido } from "../types";
 import { fmtCurrency, getBadgeTipoLabel, getBadgeTipoColor } from "../helpers";
 
 interface Props {
