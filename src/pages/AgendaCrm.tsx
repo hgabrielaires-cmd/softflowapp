@@ -100,27 +100,24 @@ function AgendaCrmContent() {
   const [calDate, setCalDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // Init filter
+  // Init filter — sempre trava no usuário logado
   useEffect(() => {
     if (filtroVendedor === "_init_" && user) {
-      if (isAdmin) {
-        setFiltroVendedor("all");
-      } else {
-        setFiltroVendedor(user.id);
-      }
+      setFiltroVendedor(user.id);
     }
-  }, [user, isAdmin, filtroVendedor]);
+  }, [user, filtroVendedor]);
 
-  // Init filial filter
+  // Init filial filter — filial favorita ou "all" se não houver
   useEffect(() => {
     if (filtroFilial === "_init_" && filiaisDoUsuario.length > 0) {
-      if (isGlobal || filiaisDoUsuario.length > 1) {
-        setFiltroFilial(filialPadraoId || "all");
+      const favId = profile?.filial_favorita_id;
+      if (favId && filiaisDoUsuario.some(f => f.id === favId)) {
+        setFiltroFilial(favId);
       } else {
-        setFiltroFilial(filiaisDoUsuario[0]?.id || "all");
+        setFiltroFilial("all");
       }
     }
-  }, [filtroFilial, filiaisDoUsuario, filialPadraoId, isGlobal]);
+  }, [filtroFilial, filiaisDoUsuario, profile?.filial_favorita_id]);
 
   // Mark initialized when both filters are ready
   useEffect(() => {
