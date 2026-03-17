@@ -456,7 +456,7 @@ export function OportunidadeDetailView({
                 variant="outline"
                 size="sm"
                 className="text-xs gap-1.5 border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                onClick={() => setPerdidoDialogOpen(true)}
+                onClick={() => initiatePerdido()}
               >
                 😢 Negócio Perdido
               </Button>
