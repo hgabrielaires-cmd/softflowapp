@@ -20,6 +20,12 @@ export function EspelhoContrato({ espelho, contratoFinanceiroBase }: Props) {
   const valorMensalidade = espelho.pedido?.valor_mensalidade_final ?? espelho.plano?.valor_mensalidade_padrao ?? 0;
   const valorImplantacao = espelho.pedido?.valor_implantacao_final ?? espelho.plano?.valor_implantacao_padrao ?? 0;
 
+  const toNumber = (value: unknown) => {
+    if (typeof value === "number") return value;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
   return (
     <div className="space-y-4">
       <Card>
