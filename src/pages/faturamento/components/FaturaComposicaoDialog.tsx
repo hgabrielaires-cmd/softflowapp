@@ -1,17 +1,25 @@
 // ─── Dialog: Composição da Fatura (Invoice Breakdown) ─────────────────────
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Package, Puzzle, Wrench, TrendingUp, CreditCard, FileText } from "lucide-react";
+import { Loader2, Package, Puzzle, Wrench, TrendingUp, CreditCard, FileText, ExternalLink } from "lucide-react";
 
 interface Props {
   faturaId: string | null;
   onClose: () => void;
+}
+
+interface ModuloAgrupado {
+  nome: string;
+  valor_mensal: number;
+  quantidade: number;
+  valor_total: number;
 }
 
 interface ComposicaoData {
@@ -22,6 +30,8 @@ interface ComposicaoData {
     referencia_mes: number | null;
     referencia_ano: number | null;
   };
+  contrato_id: string | null;
+  contrato_numero: string | null;
   plano: { nome: string; valor_mensalidade: number } | null;
   implantacao: {
     valor_total: number;
@@ -29,7 +39,7 @@ interface ComposicaoData {
     parcelas_pagas: number;
     valor_parcela: number;
   } | null;
-  modulos: { nome: string; valor_mensal: number; data_inicio: string }[];
+  modulos: ModuloAgrupado[];
   oas: { descricao: string; valor: number; mes: number; ano: number }[];
   upgrades: { descricao: string; dados: any }[];
 }
@@ -38,7 +48,24 @@ function fmtCurrency(val: number): string {
   return val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+/** Agrupa módulos por nome+valor_mensal para evitar duplicatas visuais */
+function agruparModulos(modulos: { nome: string; valor_mensal: number; data_inicio: string }[]): ModuloAgrupado[] {
+  const map = new Map<string, ModuloAgrupado>();
+  for (const m of modulos) {
+    const key = `${m.nome}||${m.valor_mensal}`;
+    const existing = map.get(key);
+    if (existing) {
+      existing.quantidade += 1;
+      existing.valor_total += m.valor_mensal;
+    } else {
+      map.set(key, { nome: m.nome, valor_mensal: m.valor_mensal, quantidade: 1, valor_total: m.valor_mensal });
+    }
+  }
+  return Array.from(map.values());
+}
+
 export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ComposicaoData | null>(null);
 
@@ -67,6 +94,8 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
           referencia_mes: fatura.referencia_mes,
           referencia_ano: fatura.referencia_ano,
         },
+        contrato_id: null,
+        contrato_numero: null,
         plano: null,
         implantacao: null,
         modulos: [],
@@ -86,14 +115,18 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
       }
 
       if (cfId) {
-        // 2. Fetch contrato financeiro
+        // 2. Fetch contrato financeiro + contrato vinculado
         const { data: cf } = await supabase
           .from("contratos_financeiros")
-          .select("valor_mensalidade, valor_implantacao, parcelas_implantacao, parcelas_pagas, plano_id, planos(nome)")
+          .select("valor_mensalidade, valor_implantacao, parcelas_implantacao, parcelas_pagas, plano_id, planos(nome), contrato_id, contratos(numero_exibicao)")
           .eq("id", cfId)
           .single();
 
         if (cf) {
+          // Resolve contrato info for header badge
+          result.contrato_id = cf.contrato_id || null;
+          result.contrato_numero = (cf as any).contratos?.numero_exibicao || null;
+
           if (cf.plano_id && (cf as any).planos) {
             result.plano = {
               nome: (cf as any).planos.nome,
@@ -120,7 +153,7 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
           }
         }
 
-        // 3. Fetch módulos adicionais
+        // 3. Fetch módulos adicionais e agrupar
         const { data: modulos } = await supabase
           .from("contrato_financeiro_modulos")
           .select("nome, valor_mensal, data_inicio")
@@ -129,7 +162,7 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
           .order("data_inicio");
 
         if (modulos && modulos.length > 0) {
-          result.modulos = modulos;
+          result.modulos = agruparModulos(modulos);
         }
 
         // 4. Fetch OAs for this month
@@ -179,10 +212,14 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
   const hasContent = data && (data.plano || data.implantacao || data.modulos.length > 0 || data.oas.length > 0 || data.upgrades.length > 0);
 
   // Calculate totals
-  const totalMensalidade = data?.plano?.valor_mensalidade || 0;
-  const totalModulos = data?.modulos.reduce((s, m) => s + m.valor_mensal, 0) || 0;
-  const totalImplantacao = data?.implantacao?.valor_parcela || 0;
+  const totalModulos = data?.modulos.reduce((s, m) => s + m.valor_total, 0) || 0;
   const totalOAs = data?.oas.reduce((s, o) => s + o.valor, 0) || 0;
+
+  function handleContratoClick() {
+    if (!data?.contrato_id) return;
+    onClose();
+    navigate(`/contratos?contrato=${data.contrato_id}`);
+  }
 
   return (
     <Dialog open={!!faturaId} onOpenChange={() => onClose()}>
@@ -193,10 +230,23 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
             Composição da Fatura
           </DialogTitle>
           {data && (
-            <DialogDescription>
+            <DialogDescription className="flex flex-wrap items-center gap-1">
               {data.fatura.numero_fatura} • {data.fatura.cliente_nome}
               {data.fatura.referencia_mes && data.fatura.referencia_ano && (
                 <> • Ref. {String(data.fatura.referencia_mes).padStart(2, "0")}/{data.fatura.referencia_ano}</>
+              )}
+              {data.contrato_numero && (
+                <>
+                  {" • "}
+                  <Badge
+                    variant="outline"
+                    className="cursor-pointer text-primary border-primary/30 hover:bg-primary/10 gap-1 inline-flex items-center"
+                    onClick={handleContratoClick}
+                  >
+                    {data.contrato_numero}
+                    <ExternalLink className="h-3 w-3" />
+                  </Badge>
+                </>
               )}
             </DialogDescription>
           )}
@@ -234,18 +284,22 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
               </div>
             )}
 
-            {/* Módulos Adicionais */}
+            {/* Módulos Adicionais (agrupados) */}
             {data.modulos.length > 0 && (
               <div className="p-3 rounded-lg bg-muted/50 space-y-2">
                 <div className="flex items-center gap-2">
                   <Puzzle className="h-5 w-5 text-violet-500 shrink-0" />
                   <p className="text-sm font-medium text-foreground">Módulos Adicionais</p>
-                  <Badge variant="secondary" className="text-xs ml-auto">{data.modulos.length}</Badge>
+                  <Badge variant="secondary" className="text-xs ml-auto">
+                    {data.modulos.reduce((s, m) => s + m.quantidade, 0)}
+                  </Badge>
                 </div>
                 {data.modulos.map((m, i) => (
                   <div key={i} className="flex items-center justify-between pl-7 text-xs">
-                    <span className="text-muted-foreground">{m.nome}</span>
-                    <span className="font-medium text-foreground">{fmtCurrency(m.valor_mensal)}</span>
+                    <span className="text-muted-foreground">
+                      {m.nome}{m.quantidade > 1 ? ` (${m.quantidade}x)` : ""}
+                    </span>
+                    <span className="font-medium text-foreground">{fmtCurrency(m.valor_total)}</span>
                   </div>
                 ))}
                 {data.modulos.length > 1 && (
