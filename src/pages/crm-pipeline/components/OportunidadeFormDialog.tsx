@@ -337,15 +337,17 @@ export function OportunidadeFormDialog({
           </div>
 
           {/* Campos Personalizados */}
-          {activeCampos.map((campo) => (
+          {activeCampos.map((campo) => {
+            const pendente = tried && campo.obrigatorio && !camposValues[campo.id]?.trim();
+            return (
             <div key={campo.id}>
-              <Label>{campo.nome}{campo.obrigatorio ? " *" : ""}</Label>
+              <Label className={pendente ? "text-destructive" : ""}>{campo.nome}{campo.obrigatorio ? " *" : ""}</Label>
               {campo.tipo === "select" ? (
                 <Select
                   value={camposValues[campo.id] || "__none__"}
                   onValueChange={(v) => setCampoValue(campo.id, v === "__none__" ? "" : v)}
                 >
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectTrigger className={pendente ? "border-destructive" : ""}><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">Nenhum</SelectItem>
                     {campo.opcoes.map((opcao) => (
@@ -358,10 +360,12 @@ export function OportunidadeFormDialog({
                   value={camposValues[campo.id] || ""}
                   onChange={(e) => setCampoValue(campo.id, e.target.value)}
                   placeholder={campo.nome}
+                  className={pendente ? "border-destructive" : ""}
                 />
               )}
             </div>
-          ))}
+            );
+          })}
 
           {/* Comunicação */}
           {oportunidade ? (
