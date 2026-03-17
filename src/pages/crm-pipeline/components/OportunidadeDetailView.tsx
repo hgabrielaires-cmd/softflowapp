@@ -695,7 +695,7 @@ export function OportunidadeDetailView({
             canais={
               (camposPersonalizados.find(c => c.nome.toLowerCase() === "canal")?.opcoes || []) as string[]
             }
-            onNegocioPerdido={() => setPerdidoDialogOpen(true)}
+            onNegocioPerdido={() => initiatePerdido()}
             onNegocioGanho={() => initiateGanho()}
           />
         </TabsContent>
