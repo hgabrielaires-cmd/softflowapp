@@ -21,7 +21,7 @@ import { useConfigurarFaturamentoQueries } from "../useConfigurarFaturamentoQuer
 import { useConfigurarFaturamentoForm } from "../useConfigurarFaturamentoForm";
 import { defaultConfigForm } from "../constants";
 import { getBadgeTipoLabel, getBadgeTipoColor } from "../helpers";
-import type { ConfigFaturamentoForm } from "../types";
+import type { ConfigFaturamentoForm, ModuloAdicionalPedido } from "../types";
 
 import { EspelhoContrato } from "./EspelhoContrato";
 import { ConfiguracaoCobranca } from "./ConfiguracaoCobranca";
@@ -68,25 +68,41 @@ export default function ConfigurarFaturamento() {
     if (!espelho) return;
 
     const tipoPedido = espelho.pedido?.tipo_pedido || "";
-    const isUpgradeOrDowngrade = tipoPedido === "Upgrade" || tipoPedido === "Downgrade";
+    const isModuloAdicional = tipoPedido === "Módulo Adicional" || tipoPedido === "Aditivo";
 
-    const valorMens = espelho.pedido?.valor_mensalidade_final
-      ?? espelho.plano?.valor_mensalidade_padrao ?? 0;
-    const valorImpl = espelho.pedido?.valor_implantacao_final
-      ?? espelho.plano?.valor_implantacao_padrao ?? 0;
+    const toNumber = (value: unknown) => {
+      if (typeof value === "number") return value;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    const valorMensPedido = espelho.pedido?.valor_mensalidade_final ?? espelho.pedido?.valor_mensalidade;
+    const valorImplPedido = espelho.pedido?.valor_implantacao_final ?? espelho.pedido?.valor_implantacao;
+
+    const valorMens = toNumber(
+      valorMensPedido ?? (isModuloAdicional ? 0 : (espelho.plano?.valor_mensalidade_padrao ?? 0)),
+    );
+    const valorImpl = toNumber(
+      isModuloAdicional
+        ? (valorImplPedido ?? 0)
+        : (valorImplPedido ?? espelho.plano?.valor_implantacao_padrao ?? 0),
+    );
     const parcImpl = espelho.pedido?.pagamento_implantacao_parcelas ?? 1;
     const formaPag = espelho.pedido?.pagamento_mensalidade_forma || "Boleto";
 
     // Módulos do pedido
-    const modulos = (espelho.pedido?.modulos_adicionais || []).map((m: any) => {
-      const valorUnit = m.valor_mensalidade ?? m.valor_mensalidade_modulo ?? 0;
-      const qtd = m.quantidade ?? 1;
+    const modulos = (espelho.pedido?.modulos_adicionais || []).map((m: ModuloAdicionalPedido) => {
+      const valorNegociado = toNumber(
+        m.valor_mensalidade_final ?? m.valor_mensalidade_modulo ?? m.valor_mensalidade ?? 0,
+      );
+      const qtd = Math.max(1, toNumber(m.quantidade ?? 1));
+
       return {
         id: crypto.randomUUID(),
         nome: m.nome,
-        valor_unitario: valorUnit,
+        valor_unitario: valorNegociado,
         quantidade: qtd,
-        valor_mensal: valorUnit * qtd,
+        valor_mensal: valorNegociado * qtd,
         data_inicio: format(new Date(), "yyyy-MM-dd"),
       };
     });
