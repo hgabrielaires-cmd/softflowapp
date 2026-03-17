@@ -213,6 +213,7 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
 
   // Calculate totals
   const totalModulos = data?.modulos.reduce((s, m) => s + m.valor_total, 0) || 0;
+  const totalOAs = data?.oas.reduce((s, o) => s + o.valor, 0) || 0;
 
   function handleContratoClick() {
     if (!data?.contrato_id) return;
