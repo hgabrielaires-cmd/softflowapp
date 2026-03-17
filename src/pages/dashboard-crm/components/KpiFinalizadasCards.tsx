@@ -7,6 +7,8 @@ import type { KpiFinalizadas as KpiType } from "../types";
 import { formatValor, calcVariacao } from "../helpers";
 
 function VariacaoBadge({ atual, anterior }: { atual: number; anterior: number }) {
+  if (anterior === 0 && atual === 0) return null;
+  if (anterior === 0) return <span className="text-xs text-muted-foreground">—</span>;
   const v = calcVariacao(atual, anterior);
   if (v === 0) return null;
   const up = v > 0;
