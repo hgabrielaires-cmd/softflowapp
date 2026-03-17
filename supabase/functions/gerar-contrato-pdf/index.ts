@@ -306,6 +306,15 @@ Deno.serve(async (req) => {
 
     const modulos = (pedido?.modulos_adicionais || []) as any[];
 
+    // Calcular descontos ANTES de usá-los nos módulos
+    const implOriginal = pedido?.valor_implantacao_original ?? 0;
+    const implFinal = pedido?.valor_implantacao_final ?? 0;
+    const implDesconto = implOriginal - implFinal;
+    const mensOriginal = pedido?.valor_mensalidade_original ?? 0;
+    const mensFinal = pedido?.valor_mensalidade_final ?? 0;
+    const mensDesconto = mensOriginal - mensFinal;
+    const totalGeral = pedido?.valor_total ?? 0;
+
     // Módulos inclusos: extrair da descrição do plano (separado por vírgula)
     const planoDescricao = plano?.descricao || "";
     const modulosInclusosLista = planoDescricao
@@ -353,14 +362,6 @@ Deno.serve(async (req) => {
           </tr>` : ""}</tbody>
         </table>`
       : "";
-
-    const implOriginal = pedido?.valor_implantacao_original ?? 0;
-    const implFinal = pedido?.valor_implantacao_final ?? 0;
-    const implDesconto = implOriginal - implFinal;
-    const mensOriginal = pedido?.valor_mensalidade_original ?? 0;
-    const mensFinal = pedido?.valor_mensalidade_final ?? 0;
-    const mensDesconto = mensOriginal - mensFinal;
-    const totalGeral = pedido?.valor_total ?? 0;
 
     // Buscar motivo do desconto: primeiro do campo motivo_desconto, depois de solicitações aprovadas
     let motivoDesconto = pedido?.motivo_desconto || "";
