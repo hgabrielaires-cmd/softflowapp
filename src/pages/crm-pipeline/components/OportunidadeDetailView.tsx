@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ArrowLeft, Check, X, ChevronsUpDown, Plus, Trash2, ListChecks, Package, FolderOpen, Star, Phone, Mail, Pencil, Loader2, Clock, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -74,7 +75,15 @@ export function OportunidadeDetailView({
   const [ganhoStep, setGanhoStep] = useState<"idle" | "cliente" | "pedido">("idle");
   const [ganhoClienteId, setGanhoClienteId] = useState<string | null>(null);
   const [ganhoClienteNome, setGanhoClienteNome] = useState("");
+  const [sistemaAnteriorDialogOpen, setSistemaAnteriorDialogOpen] = useState(false);
+  const [sistemaAnteriorValue, setSistemaAnteriorValue] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Find the "Sistema Anterior" custom field
+  const campoSistemaAnterior = camposPersonalizados.find(
+    c => c.nome.toLowerCase() === "sistema anterior"
+  );
+  const sistemaAnteriorOpcoes = (campoSistemaAnterior?.opcoes || []) as string[];
 
   // Fetch linked pedido
   const { data: pedidoVinculado } = useQuery({
@@ -250,6 +259,52 @@ export function OportunidadeDetailView({
     await persistContatos(newContatos);
   };
 
+  // ─── Ganho Flow: validate then ask for Sistema Anterior ───
+  const initiateGanho = useCallback(async () => {
+    const { count } = await supabase.from("crm_oportunidade_produtos").select("id", { count: "exact", head: true }).eq("oportunidade_id", oportunidade.id);
+    if (!count || count === 0) {
+      toast.error("Adicione pelo menos um produto ou serviço antes de marcar como Ganho.");
+      return;
+    }
+    // Pre-fill if already set
+    const currentVal = camposValues[campoSistemaAnterior?.id || ""] || "";
+    setSistemaAnteriorValue(currentVal);
+    setSistemaAnteriorDialogOpen(true);
+  }, [oportunidade.id, camposValues, campoSistemaAnterior]);
+
+  const executeGanho = useCallback(async () => {
+    // Save sistema anterior to campos_personalizados
+    if (campoSistemaAnterior && sistemaAnteriorValue) {
+      const newCampos = { ...camposValues, [campoSistemaAnterior.id]: sistemaAnteriorValue };
+      setCamposValues(newCampos);
+      await supabase.from("crm_oportunidades").update({ campos_personalizados: newCampos } as any).eq("id", oportunidade.id);
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from("crm_tarefas").update({
+      concluido_em: new Date().toISOString(),
+      concluido_por: user?.id || null,
+    } as any).eq("oportunidade_id", oportunidade.id).is("concluido_em", null);
+    await (supabase as any).from("crm_historico").insert({
+      oportunidade_id: oportunidade.id,
+      tipo: "ganho",
+      descricao: `Negócio marcado como Ganho 🎉`,
+      user_id: user?.id || null,
+    });
+    await supabase.from("crm_oportunidades").update({ status: "ganho", data_fechamento: new Date().toISOString() } as any).eq("id", oportunidade.id);
+    setLocalStatus("ganho");
+    invalidate();
+    queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
+    toast.success("Negócio ganho! 🎉🥳");
+    if (oportunidade.cliente_id) {
+      setGanhoClienteId(oportunidade.cliente_id);
+      setGanhoClienteNome(oportunidade.clientes?.nome_fantasia || oportunidade.titulo);
+      setGanhoStep("pedido");
+    } else {
+      setGanhoStep("cliente");
+    }
+  }, [oportunidade, campoSistemaAnterior, sistemaAnteriorValue, camposValues, invalidate, queryClient]);
+
   // ─── Field change handlers with auto-save ───
   const handleTituloBlur = () => {
     if (titulo.trim() && titulo.trim() !== oportunidade.titulo) {
@@ -380,37 +435,7 @@ export function OportunidadeDetailView({
               <Button
                 size="sm"
                 className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
-                onClick={async () => {
-                  // Validate products exist
-                  const { count } = await supabase.from("crm_oportunidade_produtos").select("id", { count: "exact", head: true }).eq("oportunidade_id", oportunidade.id);
-                  if (!count || count === 0) {
-                    toast.error("Adicione pelo menos um produto ou serviço antes de marcar como Ganho.");
-                    return;
-                  }
-                  const { data: { user } } = await supabase.auth.getUser();
-                  await supabase.from("crm_tarefas").update({
-                    concluido_em: new Date().toISOString(),
-                    concluido_por: user?.id || null,
-                  } as any).eq("oportunidade_id", oportunidade.id).is("concluido_em", null);
-                  await (supabase as any).from("crm_historico").insert({
-                    oportunidade_id: oportunidade.id,
-                    tipo: "ganho",
-                    descricao: `Negócio marcado como Ganho 🎉`,
-                    user_id: user?.id || null,
-                  });
-                  await supabase.from("crm_oportunidades").update({ status: "ganho", data_fechamento: new Date().toISOString() } as any).eq("id", oportunidade.id);
-                  setLocalStatus("ganho");
-                  invalidate();
-                  queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
-                  toast.success("Negócio ganho! 🎉🥳");
-                  if (oportunidade.cliente_id) {
-                    setGanhoClienteId(oportunidade.cliente_id);
-                    setGanhoClienteNome(oportunidade.clientes?.nome_fantasia || oportunidade.titulo);
-                    setGanhoStep("pedido");
-                  } else {
-                    setGanhoStep("cliente");
-                  }
-                }}
+                onClick={() => initiateGanho()}
               >
                 🥳 Negócio Ganho
               </Button>
@@ -643,37 +668,7 @@ export function OportunidadeDetailView({
               (camposPersonalizados.find(c => c.nome.toLowerCase() === "canal")?.opcoes || []) as string[]
             }
             onNegocioPerdido={() => setPerdidoDialogOpen(true)}
-            onNegocioGanho={async () => {
-              // Validate products exist
-              const { count } = await supabase.from("crm_oportunidade_produtos").select("id", { count: "exact", head: true }).eq("oportunidade_id", oportunidade.id);
-              if (!count || count === 0) {
-                toast.error("Adicione pelo menos um produto ou serviço antes de marcar como Ganho.");
-                return;
-              }
-              const { data: { user } } = await supabase.auth.getUser();
-              await supabase.from("crm_tarefas").update({
-                concluido_em: new Date().toISOString(),
-                concluido_por: user?.id || null,
-              } as any).eq("oportunidade_id", oportunidade.id).is("concluido_em", null);
-              await (supabase as any).from("crm_historico").insert({
-                oportunidade_id: oportunidade.id,
-                tipo: "ganho",
-                descricao: `Negócio marcado como Ganho 🎉`,
-                user_id: user?.id || null,
-              });
-              await supabase.from("crm_oportunidades").update({ status: "ganho", data_fechamento: new Date().toISOString() } as any).eq("id", oportunidade.id);
-              setLocalStatus("ganho");
-              invalidate();
-              queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
-              toast.success("Negócio ganho! 🎉🥳");
-              if (oportunidade.cliente_id) {
-                setGanhoClienteId(oportunidade.cliente_id);
-                setGanhoClienteNome(oportunidade.clientes?.nome_fantasia || oportunidade.titulo);
-                setGanhoStep("pedido");
-              } else {
-                setGanhoStep("cliente");
-              }
-            }}
+            onNegocioGanho={() => initiateGanho()}
           />
         </TabsContent>
 
@@ -794,6 +789,44 @@ export function OportunidadeDetailView({
           toast.success("Pedido criado com sucesso! 🎉");
         }}
       />
+
+      {/* Sistema Anterior Dialog - shown before Ganho */}
+      <Dialog open={sistemaAnteriorDialogOpen} onOpenChange={setSistemaAnteriorDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">🥳 Confirmar Negócio Ganho</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-sm font-medium">Sistema Anterior *</Label>
+              <p className="text-xs text-muted-foreground mb-2">Qual sistema o cliente utilizava antes?</p>
+              <Select value={sistemaAnteriorValue} onValueChange={setSistemaAnteriorValue}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione o sistema anterior" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sistemaAnteriorOpcoes.map(op => (
+                    <SelectItem key={op} value={op}>{op}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSistemaAnteriorDialogOpen(false)}>Cancelar</Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={!sistemaAnteriorValue}
+              onClick={async () => {
+                setSistemaAnteriorDialogOpen(false);
+                await executeGanho();
+              }}
+            >
+              🥳 Confirmar Ganho
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
