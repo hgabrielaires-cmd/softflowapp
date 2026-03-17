@@ -58,8 +58,6 @@ export default function Clientes() {
 
   const ct = useClienteContatos({ fetchContatos });
 
-  // Importação
-  const [importOpen, setImportOpen] = useState(false);
 
   async function handleToggleAtivo(c: Cliente) {
     const ok = await toggleAtivo(c);
