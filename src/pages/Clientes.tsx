@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Building2, Phone, Star, Upload, Eye, FileText } from "lucide-react";
-import { ImportClientesDialog } from "@/components/ImportClientesDialog";
+
 import { TablePagination } from "@/components/TablePagination";
 import { ITEMS_PER_PAGE } from "@/pages/clientes/constants";
 import { useClientesQueries } from "@/pages/clientes/useClientesQueries";
