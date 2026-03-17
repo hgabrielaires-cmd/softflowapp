@@ -432,6 +432,22 @@ function AgendaCrmContent() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Filial filter */}
+          {filiaisDoUsuario.length > 1 && (
+            <Select value={filtroFilial} onValueChange={setFiltroFilial}>
+              <SelectTrigger className="h-9 w-[260px]">
+                <Building2 className="h-3.5 w-3.5 mr-1.5" />
+                <SelectValue placeholder="Filial" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Filiais</SelectItem>
+                {filiaisDoUsuario.map(f => (
+                  <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           {/* Vendedor filter */}
           {(isAdmin || vendedores.length > 1) && (
             <Select value={filtroVendedor} onValueChange={setFiltroVendedor}>
