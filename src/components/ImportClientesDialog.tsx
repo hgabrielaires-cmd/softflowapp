@@ -27,7 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, Loader2, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
-import * as XLSX from "xlsx";
+import readXlsxFile from "read-excel-file";
 
 interface ImportClientesDialogProps {
   open: boolean;
