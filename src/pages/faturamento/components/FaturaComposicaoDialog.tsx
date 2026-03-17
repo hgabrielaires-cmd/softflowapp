@@ -1,7 +1,7 @@
 // ─── Dialog: Composição da Fatura (Invoice Breakdown) ─────────────────────
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { ContratoQuickViewDialog } from "./ContratoQuickViewDialog";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
