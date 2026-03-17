@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Clock } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { calcularPeriodo } from "./dashboard-crm/helpers";
@@ -156,12 +157,19 @@ export default function DashboardCrm() {
             </div>
           )}
 
-          <div className="ml-auto flex items-center gap-2 shrink-0">
-            <Button variant="outline" size="icon" className="h-9 w-9" onClick={handleRefresh}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Clock className="h-3 w-3" />
+          <div className="ml-auto flex items-center gap-3 shrink-0">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-10 w-10" onClick={handleRefresh}>
+                    <RefreshCw className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Atualizar dados</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
               {format(lastUpdate, "HH:mm")}
             </div>
           </div>
