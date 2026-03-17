@@ -18,7 +18,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import {
   CalendarDays, Clock, User, Filter, List, Search,
   ChevronLeft, ChevronRight, CheckCircle2, Phone, Video,
-  MessageSquare, ExternalLink, RotateCcw,
+  MessageSquare, ExternalLink, RotateCcw, Building2,
 } from "lucide-react";
 import {
   format, parseISO, isSameDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
