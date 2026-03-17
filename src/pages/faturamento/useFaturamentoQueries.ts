@@ -30,6 +30,24 @@ export function useFaturasQueries(filialFilter: string = "all") {
 
   const loadFaturas = useCallback(async () => {
     setLoading(true);
+
+    const term = search.trim();
+    let clienteIds: string[] | null = null;
+
+    // Se há termo de busca, primeiro buscar clientes que batem pelo nome ou CNPJ
+    if (term) {
+      const searchDigits = term.replace(/\D/g, "");
+      const orFilters = [`nome_fantasia.ilike.%${term}%`];
+      if (searchDigits.length > 0) {
+        orFilters.push(`cnpj_cpf.ilike.%${searchDigits}%`);
+      }
+      const { data: matchClientes } = await supabase
+        .from("clientes")
+        .select("id")
+        .or(orFilters.join(","));
+      clienteIds = (matchClientes || []).map((c: any) => c.id);
+    }
+
     let query = supabase
       .from("faturas")
       .select("*, clientes(nome_fantasia), contratos(numero_exibicao)", { count: "exact" });
@@ -37,8 +55,14 @@ export function useFaturasQueries(filialFilter: string = "all") {
     if (filialFilter !== "all") query = query.eq("filial_id", filialFilter);
     if (statusFilter !== "all") query = query.eq("status", statusFilter);
     if (tipoFilter !== "all") query = query.eq("tipo", tipoFilter);
-    if (search.trim()) {
-      query = query.or(`numero_fatura.ilike.%${search.trim()}%,clientes.nome_fantasia.ilike.%${search.trim()}%`);
+
+    if (term) {
+      // Buscar por numero_fatura OU por cliente_id que bateu na busca anterior
+      if (clienteIds && clienteIds.length > 0) {
+        query = query.or(`numero_fatura.ilike.%${term}%,cliente_id.in.(${clienteIds.join(",")})`);
+      } else {
+        query = query.ilike("numero_fatura", `%${term}%`);
+      }
     }
 
     const from = (page - 1) * PAGE_SIZE;
@@ -139,13 +163,35 @@ export function useNotasFiscaisQueries(filialFilter: string = "all") {
 
   const loadNotas = useCallback(async () => {
     setLoading(true);
+
+    const term = search.trim();
+    let clienteIds: string[] | null = null;
+
+    if (term) {
+      const searchDigits = term.replace(/\D/g, "");
+      const orFilters = [`nome_fantasia.ilike.%${term}%`];
+      if (searchDigits.length > 0) {
+        orFilters.push(`cnpj_cpf.ilike.%${searchDigits}%`);
+      }
+      const { data: matchClientes } = await supabase
+        .from("clientes")
+        .select("id")
+        .or(orFilters.join(","));
+      clienteIds = (matchClientes || []).map((c: any) => c.id);
+    }
+
     let query = supabase
       .from("notas_fiscais")
       .select("*, clientes(nome_fantasia), faturas(numero_fatura)", { count: "exact" });
 
     if (filialFilter !== "all") query = query.eq("filial_id", filialFilter);
-    if (search.trim()) {
-      query = query.or(`numero_nf.ilike.%${search.trim()}%,clientes.nome_fantasia.ilike.%${search.trim()}%`);
+
+    if (term) {
+      if (clienteIds && clienteIds.length > 0) {
+        query = query.or(`numero_nf.ilike.%${term}%,cliente_id.in.(${clienteIds.join(",")})`);
+      } else {
+        query = query.ilike("numero_nf", `%${term}%`);
+      }
     }
 
     const from = (page - 1) * PAGE_SIZE;
