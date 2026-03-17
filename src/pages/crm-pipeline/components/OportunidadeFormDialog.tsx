@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,6 +102,7 @@ export function OportunidadeFormDialog({
         setSegmentoIds([]);
         setCamposValues({});
         setContatos([emptyContato()]);
+        setTried(false);
       }
     }
   }, [open, oportunidade, etapaIdInicial, etapas]);
@@ -117,11 +119,19 @@ export function OportunidadeFormDialog({
   };
 
   const contatosValid = contatos.every(c => c.nome.trim() && c.telefone.trim());
+  const [tried, setTried] = useState(false);
+
+  const camposObrigatoriosPendentes = activeCampos.filter(
+    c => c.obrigatorio && !camposValues[c.id]?.trim()
+  );
+
+  const hasErrors = !titulo.trim() || segmentoIds.length === 0 || !contatosValid || camposObrigatoriosPendentes.length > 0;
 
   const handleSave = () => {
-    if (!titulo.trim() || segmentoIds.length === 0 || !contatosValid) return;
-    for (const campo of activeCampos) {
-      if (campo.obrigatorio && !camposValues[campo.id]?.trim()) return;
+    setTried(true);
+    if (hasErrors) {
+      toast.error("Preencha todos os campos obrigatórios antes de salvar.");
+      return;
     }
     onSave({
       titulo: titulo.trim(),
@@ -162,14 +172,14 @@ export function OportunidadeFormDialog({
         </DialogHeader>
         <div className="space-y-3 overflow-y-auto flex-1 pr-1 pb-2 min-h-0">
           <div>
-            <Label>Nome/Nome da Empresa *</Label>
-            <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Nome/Empresa" />
+            <Label className={tried && !titulo.trim() ? "text-destructive" : ""}>Nome/Nome da Empresa *</Label>
+            <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Nome/Empresa" className={tried && !titulo.trim() ? "border-destructive" : ""} />
           </div>
 
           {/* Contatos */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-semibold">Contatos *</Label>
+              <Label className={cn("text-sm font-semibold", tried && !contatosValid && "text-destructive")}>Contatos *</Label>
               <Button type="button" variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addContato}>
                 <Plus className="h-3 w-3" /> Adicionar
               </Button>
@@ -275,14 +285,14 @@ export function OportunidadeFormDialog({
 
           {/* Segmento - Multi-select com busca */}
           <div>
-            <Label>Segmento *</Label>
+            <Label className={tried && segmentoIds.length === 0 ? "text-destructive" : ""}>Segmento *</Label>
             <Popover open={segmentoPopoverOpen} onOpenChange={setSegmentoPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
                   aria-expanded={segmentoPopoverOpen}
-                  className="w-full justify-between font-normal h-auto min-h-10"
+                  className={cn("w-full justify-between font-normal h-auto min-h-10", tried && segmentoIds.length === 0 && "border-destructive")}
                 >
                   {segmentoIds.length === 0 ? (
                     <span className="text-muted-foreground">Buscar segmento...</span>
@@ -327,15 +337,17 @@ export function OportunidadeFormDialog({
           </div>
 
           {/* Campos Personalizados */}
-          {activeCampos.map((campo) => (
+          {activeCampos.map((campo) => {
+            const pendente = tried && campo.obrigatorio && !camposValues[campo.id]?.trim();
+            return (
             <div key={campo.id}>
-              <Label>{campo.nome}{campo.obrigatorio ? " *" : ""}</Label>
+              <Label className={pendente ? "text-destructive" : ""}>{campo.nome}{campo.obrigatorio ? " *" : ""}</Label>
               {campo.tipo === "select" ? (
                 <Select
                   value={camposValues[campo.id] || "__none__"}
                   onValueChange={(v) => setCampoValue(campo.id, v === "__none__" ? "" : v)}
                 >
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectTrigger className={pendente ? "border-destructive" : ""}><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">Nenhum</SelectItem>
                     {campo.opcoes.map((opcao) => (
@@ -348,10 +360,12 @@ export function OportunidadeFormDialog({
                   value={camposValues[campo.id] || ""}
                   onChange={(e) => setCampoValue(campo.id, e.target.value)}
                   placeholder={campo.nome}
+                  className={pendente ? "border-destructive" : ""}
                 />
               )}
             </div>
-          ))}
+            );
+          })}
 
           {/* Comunicação */}
           {oportunidade ? (
@@ -365,7 +379,7 @@ export function OportunidadeFormDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={!titulo.trim() || segmentoIds.length === 0 || !contatosValid || saving}>
+          <Button onClick={handleSave} disabled={saving}>
             {saving ? "Salvando..." : "Salvar"}
           </Button>
         </DialogFooter>
