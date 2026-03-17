@@ -1,0 +1,1 @@
+UPDATE asaas_config SET ambiente = 'producao', updated_at = now() WHERE ativo = true;
