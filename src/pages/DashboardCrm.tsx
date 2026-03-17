@@ -264,17 +264,6 @@ export default function DashboardCrm() {
                   />
                 </div>
 
-                <div className="flex items-center gap-2 mb-2">
-                  <Label className="text-xs text-muted-foreground">Dias sem interação:</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={90}
-                    value={diasSemInteracao}
-                    onChange={e => setDiasSemInteracao(Number(e.target.value) || 7)}
-                    className="h-7 w-16 text-xs"
-                  />
-                </div>
                 <AlertasAtencaoPanel data={alertas.data} isLoading={alertas.isLoading} />
               </div>
             </div>
