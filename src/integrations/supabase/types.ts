@@ -466,6 +466,7 @@ export type Database = {
         Row: {
           ativo: boolean
           contrato_financeiro_id: string
+          contrato_origem_id: string | null
           created_at: string
           data_inicio: string
           id: string
@@ -475,6 +476,7 @@ export type Database = {
         Insert: {
           ativo?: boolean
           contrato_financeiro_id: string
+          contrato_origem_id?: string | null
           created_at?: string
           data_inicio?: string
           id?: string
@@ -484,6 +486,7 @@ export type Database = {
         Update: {
           ativo?: boolean
           contrato_financeiro_id?: string
+          contrato_origem_id?: string | null
           created_at?: string
           data_inicio?: string
           id?: string
@@ -496,6 +499,13 @@ export type Database = {
             columns: ["contrato_financeiro_id"]
             isOneToOne: false
             referencedRelation: "contratos_financeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contrato_financeiro_modulos_contrato_origem_id_fkey"
+            columns: ["contrato_origem_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
             referencedColumns: ["id"]
           },
         ]
