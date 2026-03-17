@@ -157,6 +157,9 @@ export function useRankingVendedores(filters: Filters, tipo: "ganho" | "andament
       if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
       const { data: ops } = await q;
 
+      // For "ganho" ranking, also include lost deals filtered by data_perda (for count purposes if needed)
+      // Actually ranking ganho only needs ganho deals, so this is fine.
+
       // Group by responsavel_id
       const map: Record<string, { count: number; valor: number; ids: string[] }> = {};
       (ops || []).forEach(o => {
