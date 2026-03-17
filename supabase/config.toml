@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.regua-cobranca]
 verify_jwt = false
+
+[functions.sincronizar-faturas-asaas]
+verify_jwt = false
