@@ -312,7 +312,7 @@ export function usePainelCardActions(deps: CardActionsDeps) {
       if (error) throw error;
       const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
       await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, etapa_id: etapaDestinoId, criado_por: user.id, texto: `🔄 Projeto resetado por ${autorNome}: ${resetarMotivo.trim()}` });
-      queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] }); toast.success("Projeto resetado com sucesso!"); setResetarOpen(false); setResetarMotivo(""); setDetailCard(null);
+      queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] }); queryClient.invalidateQueries({ queryKey: ["painel_atividade_execucao"] }); queryClient.invalidateQueries({ queryKey: ["card_checklist_progress"] }); queryClient.invalidateQueries({ queryKey: ["card_apontamentos"] }); toast.success("Projeto resetado com sucesso!"); setResetarOpen(false); setResetarMotivo(""); setDetailCard(null);
     } catch (err: any) { toast.error("Erro ao resetar projeto: " + (err.message || "")); } finally { setResetando(false); }
   }
 
