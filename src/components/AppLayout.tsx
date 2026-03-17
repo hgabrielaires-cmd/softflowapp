@@ -178,9 +178,10 @@ interface SidebarProps {
   onNavigate: (path: string) => void;
   onSignOut: () => void;
   onMobileClose?: () => void;
+  onExpand?: () => void;
 }
 
-function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSignOut, onMobileClose }: SidebarProps) {
+function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSignOut, onMobileClose, onExpand }: SidebarProps) {
   const location = useLocation();
 
   const initialOpen = navGroups.reduce<Record<string, boolean>>((acc, group) => {
@@ -254,19 +255,19 @@ function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSign
 
           if (collapsed) {
             return (
-              <div key={group.groupLabel} className="space-y-0.5">
-                {items.map((item) => {
-                  const active = location.pathname === item.to || location.pathname.startsWith(item.to + "/");
-                  return (
-                    <NavLink key={item.to} to={item.to} onClick={onMobileClose} title={item.label}
-                      className={cn("flex items-center justify-center p-2 rounded-lg transition-all duration-150",
-                        active ? "bg-sidebar-primary text-sidebar-primary-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                      )}>
-                      <span className="flex-shrink-0">{item.icon}</span>
-                    </NavLink>
-                  );
-                })}
-                <div className="border-b border-sidebar-border/30 my-1" />
+              <div key={group.groupLabel}>
+                <button
+                  onClick={() => onExpand?.()}
+                  title={group.groupLabel}
+                  className={cn(
+                    "flex items-center justify-center w-full p-2 rounded-lg transition-all duration-150",
+                    isGroupActive
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                >
+                  <span className="flex-shrink-0">{group.groupIcon}</span>
+                </button>
               </div>
             );
           }
@@ -1308,7 +1309,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         "hidden lg:flex flex-col flex-shrink-0 bg-sidebar border-r border-sidebar-border",
         collapsed ? "w-14" : "w-60"
       )}>
-        <Sidebar collapsed={collapsed} profile={profile} permissions={permissions} initials={initials} onNavigate={navigate} onSignOut={handleSignOut} />
+        <Sidebar collapsed={collapsed} profile={profile} permissions={permissions} initials={initials} onNavigate={navigate} onSignOut={handleSignOut} onExpand={() => setCollapsed(false)} />
       </aside>
 
       {/* Mobile Drawer */}
