@@ -54,7 +54,7 @@ export function GanhoPedidoDrawer({ open, onOpenChange, clienteId, clienteNome, 
   useEffect(() => {
     if (!open || !clienteId) return;
     loadData();
-    const defaultFilial = filialPadraoId || profile?.filial_id || "";
+    const defaultFilial = clienteFilialId || filialPadraoId || profile?.filial_id || "";
     const defaultVendedor = profile?.user_id || "";
     const defaultImp = (profile as any)?.comissao_implantacao_percentual?.toString() ?? "5";
     const defaultMens = (profile as any)?.comissao_mensalidade_percentual?.toString() ?? "5";
