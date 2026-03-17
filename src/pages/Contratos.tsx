@@ -230,6 +230,11 @@ export default function Contratos() {
         .from("pedidos")
         .update({ status_pedido: "Cancelado", financeiro_status: "Cancelado" })
         .eq("id", contrato.pedido_id);
+      // Retomar oportunidade CRM vinculada ao pedido
+      retomarOportunidadePorPedido(contrato.pedido_id, {
+        numero: contrato.numero_exibicao,
+        tipo: "contrato",
+      });
     }
     // Registrar cancelamento para relatórios
     const { data: { user } } = await supabase.auth.getUser();
