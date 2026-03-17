@@ -424,7 +424,8 @@ export function useEtapasFunil(filters: Omit<Filters, "inicio" | "fim">) {
     queryKey: ["crm_dash_etapas", filters],
     enabled: !!filters.funilId,
     queryFn: async (): Promise<EtapaFunil[]> => {
-      const { funilId, responsavelIds } = filters;
+      const { funilId, responsavelIds, filialId } = filters;
+      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
       const [{ data: etapas }, { data: ops }] = await Promise.all([
         supabase.from("crm_etapas").select("id, nome, cor, ordem")
           .eq("funil_id", funilId!).eq("ativo", true).order("ordem"),
@@ -432,6 +433,7 @@ export function useEtapasFunil(filters: Omit<Filters, "inicio" | "fim">) {
           let q = supabase.from("crm_oportunidades").select("id, etapa_id, valor")
             .eq("funil_id", funilId!).eq("status", "aberta");
           if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
+          if (clienteIds) { if (clienteIds.length === 0) return Promise.resolve({ data: [] }); q = q.in("cliente_id", clienteIds); }
           return q;
         })(),
       ]);
