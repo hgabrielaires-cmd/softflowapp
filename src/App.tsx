@@ -351,7 +351,6 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
-            />
             <Route
               path="/crm-pipeline"
               element={
