@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useMenuPermissions } from "@/hooks/useMenuPermissions";
+import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
