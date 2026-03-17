@@ -29,7 +29,7 @@ import { AnaliseTarefasPanel } from "./dashboard-crm/components/AnaliseTarefasPa
 import { AlertasAtencaoPanel } from "./dashboard-crm/components/AlertasAtencaoPanel";
 
 export default function DashboardCrm() {
-  const { user, roles, isAdmin } = useAuth();
+  const { user, profile, roles, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const { filiaisDoUsuario, filialPadraoId } = useUserFiliais();
   const isVendedor = roles.includes("vendedor") && !isAdmin;
