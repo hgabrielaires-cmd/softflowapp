@@ -25,11 +25,12 @@ interface Props {
   clienteNome: string;
   clienteFilialId?: string | null;
   observacoesOportunidade?: string | null;
+  oportunidadeId?: string | null;
   onBack: () => void;
   onSaved: (pedidoId: string, pedidoNumero: string, pedidoStatus: string) => void;
 }
 
-export function GanhoPedidoDrawer({ open, onOpenChange, clienteId, clienteNome, clienteFilialId, observacoesOportunidade, onBack, onSaved }: Props) {
+export function GanhoPedidoDrawer({ open, onOpenChange, clienteId, clienteNome, clienteFilialId, observacoesOportunidade, oportunidadeId, onBack, onSaved }: Props) {
   const { profile, isAdmin } = useAuth();
   const { filiaisDoUsuario, filialPadraoId, todasFiliais } = useUserFiliais();
 
