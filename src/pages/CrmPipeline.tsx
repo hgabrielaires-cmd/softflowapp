@@ -59,7 +59,6 @@ export default function CrmPipeline() {
   const cargos = cargosQuery.data || [];
 
   // Inicializar filtros: filial favorita (ou todas) + vendedor logado sempre
-  const { loading: filiaisLoading } = useUserFiliais();
   useEffect(() => {
     if (filtersReady || filiaisLoading) return;
     const favId = profile?.filial_favorita_id;
