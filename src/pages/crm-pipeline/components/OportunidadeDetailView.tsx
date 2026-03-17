@@ -75,7 +75,15 @@ export function OportunidadeDetailView({
   const [ganhoStep, setGanhoStep] = useState<"idle" | "cliente" | "pedido">("idle");
   const [ganhoClienteId, setGanhoClienteId] = useState<string | null>(null);
   const [ganhoClienteNome, setGanhoClienteNome] = useState("");
+  const [sistemaAnteriorDialogOpen, setSistemaAnteriorDialogOpen] = useState(false);
+  const [sistemaAnteriorValue, setSistemaAnteriorValue] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Find the "Sistema Anterior" custom field
+  const campoSistemaAnterior = camposPersonalizados.find(
+    c => c.nome.toLowerCase() === "sistema anterior"
+  );
+  const sistemaAnteriorOpcoes = (campoSistemaAnterior?.opcoes || []) as string[];
 
   // Fetch linked pedido
   const { data: pedidoVinculado } = useQuery({
