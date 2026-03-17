@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { retomarOportunidadePorPedido } from "@/lib/retomarOportunidadeCrm";
 import { AppLayout } from "@/components/AppLayout";
 import type { Contrato } from "./contratos/types";
 import { ITEMS_PER_PAGE } from "./contratos/constants";
@@ -229,6 +230,11 @@ export default function Contratos() {
         .from("pedidos")
         .update({ status_pedido: "Cancelado", financeiro_status: "Cancelado" })
         .eq("id", contrato.pedido_id);
+      // Retomar oportunidade CRM vinculada ao pedido
+      retomarOportunidadePorPedido(contrato.pedido_id, {
+        numero: contrato.numero_exibicao,
+        tipo: "contrato",
+      });
     }
     // Registrar cancelamento para relatórios
     const { data: { user } } = await supabase.auth.getUser();

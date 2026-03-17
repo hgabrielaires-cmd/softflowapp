@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { dispararAutomacaoPedidoStatus } from "@/lib/automacoes";
+import { retomarOportunidadePorPedido } from "@/lib/retomarOportunidadeCrm";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
@@ -718,6 +719,11 @@ export default function Pedidos() {
     const { error } = await supabase.from("pedidos").update({ status_pedido: "Cancelado", financeiro_status: "Cancelado", comissao_valor: 0 }).eq("id", pedido.id);
     if (error) { toast.error("Erro ao cancelar pedido"); return; }
     dispararAutomacaoPedidoStatus(pedido.id, pedido.status_pedido, "Cancelado", pedido.tipo_pedido);
+    // Retomar oportunidade CRM vinculada ao pedido
+    retomarOportunidadePorPedido(pedido.id, {
+      numero: pedido.numero_exibicao,
+      tipo: "pedido",
+    });
     toast.success("Pedido cancelado");
     loadData();
   }
