@@ -447,6 +447,7 @@ export function useConfigurarFaturamentoForm() {
       console.error("Erro ao disparar WhatsApp da fatura:", whatsErr);
       // Não bloqueia o fluxo — fatura já foi criada
     }
+  }
 
   return { saving, handleSave };
 }
