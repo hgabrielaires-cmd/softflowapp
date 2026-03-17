@@ -75,7 +75,7 @@ export function PreviewFaturas({ form, setForm, espelho, contratoFinanceiroBase 
         </CardHeader>
         <CardContent className="space-y-3">
           {preview.map((mes, i) => (
-            <MesPreviewCard key={`${mes.mes}-${mes.ano}`} mes={mes} index={i} />
+            <MesPreviewCard key={`${mes.mes}-${mes.ano}`} mes={mes} index={i} diaVencimento={form.dia_vencimento} />
           ))}
 
           {preview.length > 1 && (
