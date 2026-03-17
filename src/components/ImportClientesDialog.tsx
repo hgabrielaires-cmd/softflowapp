@@ -27,7 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, Loader2, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
-import * as XLSX from "xlsx";
+import readXlsxFile from "read-excel-file";
 
 interface ImportClientesDialogProps {
   open: boolean;
@@ -101,47 +101,66 @@ export function ImportClientesDialog({ open, onOpenChange, filialId, onSuccess }
     }
 
     setFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(firstSheet, {
-          header: undefined,
-          defval: "",
-          raw: false,
-        });
+    const isCSV = ext === "csv";
 
-        if (jsonData.length === 0) {
-          toast.error("Planilha vazia ou sem dados");
-          return;
-        }
+    if (isCSV) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const text = evt.target?.result as string;
+          const lines = text.split(/\r?\n/).filter(l => l.trim());
+          if (lines.length < 2) { toast.error("Planilha vazia ou sem dados"); return; }
+          const headers = lines[0].split(/[;,]/).map(h => h.trim().replace(/^"|"$/g, ""));
+          const jsonData = lines.slice(1).map(line => {
+            const vals = line.split(/[;,]/).map(v => v.trim().replace(/^"|"$/g, ""));
+            const row: Record<string, string> = {};
+            headers.forEach((h, i) => { row[h] = vals[i] || ""; });
+            return row;
+          });
+          processJsonData(jsonData);
+        } catch { toast.error("Erro ao processar CSV"); }
+      };
+      reader.readAsText(file);
+    } else {
+      readXlsxFile(file).then((rows) => {
+        try {
+          if (rows.length < 2) { toast.error("Planilha vazia ou sem dados"); return; }
+          const headers = rows[0].map(h => String(h || "").trim());
+          const jsonData = rows.slice(1).map(row => {
+            const obj: Record<string, string> = {};
+            headers.forEach((h, i) => { obj[h] = String(row[i] ?? ""); });
+            return obj;
+          });
+          processJsonData(jsonData);
+        } catch { toast.error("Erro ao processar planilha"); }
+      }).catch(() => toast.error("Erro ao ler arquivo Excel"));
+    }
 
-        const cols = Object.keys(jsonData[0]);
-        setSheetColumns(cols);
-        setSheetData(jsonData);
-
-        // Auto-map by similarity
-        const autoMap: Record<string, string> = {};
-        for (const field of SYSTEM_FIELDS) {
-          const match = cols.find(
-            (c) =>
-              c.toLowerCase().trim() === field.label.toLowerCase().trim() ||
-              c.toLowerCase().trim() === field.key.toLowerCase().replace(/_/g, " ") ||
-              c.toLowerCase().trim() === field.key.toLowerCase()
-          );
-          if (match) autoMap[field.key] = match;
-        }
-        setMapping(autoMap);
-        setStep("mapping");
-      } catch {
-        toast.error("Erro ao ler a planilha");
-      }
-    };
-    reader.readAsArrayBuffer(file);
-    // Reset input so same file can be re-selected
     e.target.value = "";
+  }
+
+  function processJsonData(jsonData: Record<string, string>[]) {
+    if (jsonData.length === 0) {
+      toast.error("Planilha vazia ou sem dados");
+      return;
+    }
+
+    const cols = Object.keys(jsonData[0]);
+    setSheetColumns(cols);
+    setSheetData(jsonData);
+
+    const autoMap: Record<string, string> = {};
+    for (const field of SYSTEM_FIELDS) {
+      const match = cols.find(
+        (c) =>
+          c.toLowerCase().trim() === field.label.toLowerCase().trim() ||
+          c.toLowerCase().trim() === field.key.toLowerCase().replace(/_/g, " ") ||
+          c.toLowerCase().trim() === field.key.toLowerCase()
+      );
+      if (match) autoMap[field.key] = match;
+    }
+    setMapping(autoMap);
+    setStep("mapping");
   }
 
   function setFieldMapping(systemField: string, sheetCol: string) {
