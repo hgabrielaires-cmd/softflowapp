@@ -181,7 +181,7 @@ interface SidebarProps {
   onExpand?: () => void;
 }
 
-function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSignOut, onMobileClose }: SidebarProps) {
+function Sidebar({ collapsed, profile, permissions, initials, onNavigate, onSignOut, onMobileClose, onExpand }: SidebarProps) {
   const location = useLocation();
 
   const initialOpen = navGroups.reduce<Record<string, boolean>>((acc, group) => {
