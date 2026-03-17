@@ -51,57 +51,61 @@ export function useKpiFinalizadas(filters: Filters) {
       const ganhasAnt = (prev || []).filter(o => o.status === "ganho");
       const perdidasAnt = (prev || []).filter(o => o.status === "perdido");
 
-      // Fetch pedido values for ganhas (current)
-      const pedidoIds = ganhas.map(g => g.pedido_id).filter(Boolean) as string[];
-      let implTotal = 0, mensTotal = 0;
-      if (pedidoIds.length > 0) {
-        const { data: pedidos } = await supabase
-          .from("pedidos")
-          .select("id, valor_implantacao_final, valor_mensalidade_final")
-          .in("id", pedidoIds);
-        (pedidos || []).forEach(p => {
-          implTotal += (p as any).valor_implantacao_final || 0;
-          mensTotal += (p as any).valor_mensalidade_final || 0;
+      // Helper: compute impl+mens per oportunidade using pedido > produtos > 0
+      async function computeValues(oportunidades: typeof ganhas) {
+        if (oportunidades.length === 0) return { impl: 0, mens: 0 };
+
+        const pIds = oportunidades.map(o => o.pedido_id).filter(Boolean) as string[];
+        const oIds = oportunidades.map(o => o.id);
+
+        // Fetch pedidos
+        let pedidoMap: Record<string, { impl: number; mens: number }> = {};
+        if (pIds.length > 0) {
+          const { data: pedidos } = await supabase
+            .from("pedidos")
+            .select("id, valor_implantacao_final, valor_mensalidade_final")
+            .in("id", pIds);
+          (pedidos || []).forEach(p => {
+            pedidoMap[p.id] = {
+              impl: (p as any).valor_implantacao_final || 0,
+              mens: (p as any).valor_mensalidade_final || 0,
+            };
+          });
+        }
+
+        // Fetch produtos as fallback
+        let prodMap: Record<string, { impl: number; mens: number }> = {};
+        if (oIds.length > 0) {
+          const { data: prods } = await supabase
+            .from("crm_oportunidade_produtos")
+            .select("oportunidade_id, valor_implantacao, valor_mensalidade, quantidade")
+            .in("oportunidade_id", oIds);
+          (prods || []).forEach(p => {
+            if (!prodMap[p.oportunidade_id]) prodMap[p.oportunidade_id] = { impl: 0, mens: 0 };
+            prodMap[p.oportunidade_id].impl += (p.valor_implantacao || 0) * (p.quantidade || 1);
+            prodMap[p.oportunidade_id].mens += (p.valor_mensalidade || 0) * (p.quantidade || 1);
+          });
+        }
+
+        let impl = 0, mens = 0;
+        oportunidades.forEach(o => {
+          if (o.pedido_id && pedidoMap[o.pedido_id]) {
+            impl += pedidoMap[o.pedido_id].impl;
+            mens += pedidoMap[o.pedido_id].mens;
+          } else if (prodMap[o.id]) {
+            impl += prodMap[o.id].impl;
+            mens += prodMap[o.id].mens;
+          }
         });
+        return { impl, mens };
       }
 
-      // Also compute from crm_oportunidade_produtos as fallback
-      if (implTotal === 0 && mensTotal === 0 && ganhas.length > 0) {
-        const gIds = ganhas.map(g => g.id);
-        const { data: prods } = await supabase
-          .from("crm_oportunidade_produtos")
-          .select("oportunidade_id, valor_implantacao, valor_mensalidade, quantidade")
-          .in("oportunidade_id", gIds);
-        (prods || []).forEach(p => {
-          implTotal += (p.valor_implantacao || 0) * (p.quantidade || 1);
-          mensTotal += (p.valor_mensalidade || 0) * (p.quantidade || 1);
-        });
-      }
-
-      // Previous period values
-      const prevPedidoIds = ganhasAnt.map(g => g.pedido_id).filter(Boolean) as string[];
-      let implAnt = 0, mensAnt = 0;
-      if (prevPedidoIds.length > 0) {
-        const { data: pedidos } = await supabase
-          .from("pedidos")
-          .select("id, valor_implantacao_final, valor_mensalidade_final")
-          .in("id", prevPedidoIds);
-        (pedidos || []).forEach(p => {
-          implAnt += (p as any).valor_implantacao_final || 0;
-          mensAnt += (p as any).valor_mensalidade_final || 0;
-        });
-      }
-      if (implAnt === 0 && mensAnt === 0 && ganhasAnt.length > 0) {
-        const gIds = ganhasAnt.map(g => g.id);
-        const { data: prods } = await supabase
-          .from("crm_oportunidade_produtos")
-          .select("oportunidade_id, valor_implantacao, valor_mensalidade, quantidade")
-          .in("oportunidade_id", gIds);
-        (prods || []).forEach(p => {
-          implAnt += (p.valor_implantacao || 0) * (p.quantidade || 1);
-          mensAnt += (p.valor_mensalidade || 0) * (p.quantidade || 1);
-        });
-      }
+      const [valAtual, valAnterior] = await Promise.all([
+        computeValues(ganhas),
+        computeValues(ganhasAnt),
+      ]);
+      const implTotal = valAtual.impl, mensTotal = valAtual.mens;
+      const implAnt = valAnterior.impl, mensAnt = valAnterior.mens;
 
       const ticketMedio = ganhas.length > 0 ? (implTotal + mensTotal) / ganhas.length : 0;
       const ticketMedioAnt = ganhasAnt.length > 0 ? (implAnt + mensAnt) / ganhasAnt.length : 0;
