@@ -200,9 +200,23 @@ export function useConfigurarFaturamentoForm() {
     }
 
     if (isModuloAdicional) {
+      // Verificar duplicação: se já existem módulos vinculados a este aditivo
+      const { data: jaInseridos } = await supabase
+        .from("contrato_financeiro_modulos")
+        .select("id")
+        .eq("contrato_financeiro_id", base.id)
+        .eq("contrato_origem_id", espelho.id)
+        .limit(1);
+
+      if ((jaInseridos || []).length > 0) {
+        toast.info("Este módulo adicional já foi configurado anteriormente.");
+        return;
+      }
+
       if (form.modulos.length > 0) {
         const modulosPayload = form.modulos.map((m) => ({
           contrato_financeiro_id: base.id,
+          contrato_origem_id: espelho.id,
           nome: m.nome,
           valor_mensal: m.valor_mensal,
           data_inicio: m.data_inicio,
