@@ -7,6 +7,8 @@ import type { KpiFinalizadas as KpiType } from "../types";
 import { formatValor, calcVariacao } from "../helpers";
 
 function VariacaoBadge({ atual, anterior }: { atual: number; anterior: number }) {
+  if (anterior === 0 && atual === 0) return null;
+  if (anterior === 0) return <span className="text-xs text-muted-foreground">—</span>;
   const v = calcVariacao(atual, anterior);
   if (v === 0) return null;
   const up = v > 0;
@@ -21,9 +23,9 @@ function VariacaoBadge({ atual, anterior }: { atual: number; anterior: number })
 export function KpiFinalizadasCards({ data, isLoading }: { data?: KpiType; isLoading: boolean }) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="flex gap-3 overflow-x-auto pb-1">
         {[1, 2, 3, 4, 5].map(i => (
-          <Card key={i}><CardContent className="p-4"><Skeleton className="h-16" /></CardContent></Card>
+          <Card key={i} className="min-w-[180px] shrink-0"><CardContent className="p-4"><Skeleton className="h-16" /></CardContent></Card>
         ))}
       </div>
     );
@@ -31,9 +33,9 @@ export function KpiFinalizadasCards({ data, isLoading }: { data?: KpiType; isLoa
   if (!data) return null;
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+    <div className="flex gap-3 overflow-x-auto pb-1">
       {/* Total Finalizadas */}
-      <Card className="border-none shadow-card">
+      <Card className="border-none shadow-card min-w-[180px] shrink-0">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 rounded-lg bg-primary/10">
@@ -53,7 +55,7 @@ export function KpiFinalizadasCards({ data, isLoading }: { data?: KpiType; isLoa
       </Card>
 
       {/* Valor Implantação */}
-      <Card className="border-none shadow-card">
+      <Card className="border-none shadow-card min-w-[180px] shrink-0">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 rounded-lg bg-purple-500/10">
@@ -67,7 +69,7 @@ export function KpiFinalizadasCards({ data, isLoading }: { data?: KpiType; isLoa
       </Card>
 
       {/* Valor Mensalidade */}
-      <Card className="border-none shadow-card">
+      <Card className="border-none shadow-card min-w-[180px] shrink-0">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 rounded-lg bg-emerald-500/10">
@@ -81,7 +83,7 @@ export function KpiFinalizadasCards({ data, isLoading }: { data?: KpiType; isLoa
       </Card>
 
       {/* Ticket Médio */}
-      <Card className="border-none shadow-card">
+      <Card className="border-none shadow-card min-w-[180px] shrink-0">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 rounded-lg bg-blue-500/10">
@@ -95,7 +97,7 @@ export function KpiFinalizadasCards({ data, isLoading }: { data?: KpiType; isLoa
       </Card>
 
       {/* Taxa de Conversão */}
-      <Card className="border-none shadow-card">
+      <Card className="border-none shadow-card min-w-[180px] shrink-0">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 rounded-lg bg-green-500/10">
