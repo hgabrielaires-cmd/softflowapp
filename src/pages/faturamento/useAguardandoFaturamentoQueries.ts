@@ -51,7 +51,26 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
       .in("status", ["Assinado", "Ativo"]);
 
     if (search.trim()) {
-      query = query.or(`numero_exibicao.ilike.%${search.trim()}%,clientes.nome_fantasia.ilike.%${search.trim()}%`);
+      const term = search.trim().replace(/[(),]/g, " ");
+      const searchDigits = term.replace(/\D/g, "");
+
+      const clienteOrFilters = [`nome_fantasia.ilike.%${term}%`, `cnpj_cpf.ilike.%${term}%`];
+      if (searchDigits.length > 0 && searchDigits !== term) {
+        clienteOrFilters.push(`cnpj_cpf.ilike.%${searchDigits}%`);
+      }
+
+      const { data: clientesMatch } = await supabase
+        .from("clientes")
+        .select("id")
+        .or(clienteOrFilters.join(","));
+
+      const clienteIds = (clientesMatch || []).map((c: { id: string }) => c.id);
+
+      if (clienteIds.length > 0) {
+        query = query.or(`numero_exibicao.ilike.%${term}%,cliente_id.in.(${clienteIds.join(",")})`);
+      } else {
+        query = query.ilike("numero_exibicao", `%${term}%`);
+      }
     }
 
     const { data, count, error } = await query
