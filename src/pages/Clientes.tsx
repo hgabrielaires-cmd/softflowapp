@@ -295,12 +295,6 @@ export default function Clientes() {
         margemIdealHistorico={margemIdealHistorico}
       />
 
-      <ImportClientesDialog
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        filialId={filialPadraoId || profile?.filial_id || ""}
-        onSuccess={fetchData}
-      />
     </AppLayout>
   );
 }
