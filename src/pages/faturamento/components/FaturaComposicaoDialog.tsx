@@ -221,6 +221,7 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
   }
 
   return (
+    <>
     <Dialog open={!!faturaId} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
