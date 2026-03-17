@@ -804,6 +804,7 @@ export function OportunidadeDetailView({
         onOpenChange={(open) => { if (!open) setGanhoStep("idle"); }}
         clienteId={ganhoClienteId || ""}
         clienteNome={ganhoClienteNome}
+        clienteFilialId={ganhoClienteFilialId}
         onBack={() => setGanhoStep("cliente")}
         onSaved={async (pedidoId, pedidoNumero, pedidoStatus) => {
           await supabase.from("crm_oportunidades").update({ pedido_id: pedidoId } as any).eq("id", oportunidade.id);
