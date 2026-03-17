@@ -78,11 +78,21 @@ export function gerarTermoAceite(
       ? `🔘 *ADICIONAIS*\n\n${adicionaisTexto}\n\nTotal adicionais: ${fmtBRL(totalAdicionais)}`
       : "";
 
-    // Variáveis específicas para aditivo de módulos adicionais
+    // Variáveis específicas para aditivo de módulos adicionais (considerar desconto)
+    const descontoMensModulo = (pedido?.valor_mensalidade_original ?? 0) - (pedido?.valor_mensalidade_final ?? 0);
+    const temDescontoModulo = descontoMensModulo > 0 && (pedido?.tipo_pedido === "Módulo Adicional" || pedido?.tipo_pedido === "Aditivo");
+    const totalAdicionaisComDesconto = temDescontoModulo ? Math.max(0, totalAdicionais - descontoMensModulo) : totalAdicionais;
+
     const adicionaisNovosTexto = adicionais.length > 0
-      ? adicionais.map(m => `• ${m.nome} (${m.quantidade}x) - ${fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}/mês`).join("\n")
+      ? (() => {
+          const linhas = adicionais.map(m => `• ${m.nome} (${m.quantidade}x) - ${fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}/mês`).join("\n");
+          if (temDescontoModulo) {
+            return linhas + `\n\n⚡ *Desconto:* ~${fmtBRL(totalAdicionais)}~ por *${fmtBRL(totalAdicionaisComDesconto)}*/mês (economia de ${fmtBRL(descontoMensModulo)})`;
+          }
+          return linhas;
+        })()
       : "";
-    const totalAdicionaisNovos = fmtBRL(totalAdicionais);
+    const totalAdicionaisNovos = fmtBRL(totalAdicionaisComDesconto);
 
     // Variáveis específicas para upgrade de plano
     let planoNomeAnterior = "";

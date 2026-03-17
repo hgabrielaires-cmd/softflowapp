@@ -312,8 +312,20 @@ Deno.serve(async (req) => {
       ? "<ul style=\"margin:4px 0;padding-left:18px;\">" + planoDescricao.split(",").map((item: string) => item.trim()).filter((item: string) => item.length > 0).map((item: string) => `<li>${item}</li>`).join("") + "</ul>"
       : "<p>—</p>";
 
+    const totalBrutoModulos = modulos.reduce((s: number, m: any) => s + (m.valor_mensalidade_modulo || 0) * (m.quantidade || 1), 0);
+    const descontoMensModulo = mensDesconto;
+    const tipoEhModulo = pedido?.tipo_pedido === "Módulo Adicional" || pedido?.tipo_pedido === "Aditivo";
+    const temDescontoModulo = descontoMensModulo > 0 && tipoEhModulo;
+    const totalLiquidoModulos = temDescontoModulo ? Math.max(0, totalBrutoModulos - descontoMensModulo) : totalBrutoModulos;
+
     const modulosAdicionaisLista = modulos.length > 0
-      ? "<ul>" + modulos.map((m: any) => `<li>${m.nome} (${m.quantidade}x)</li>`).join("") + "</ul>"
+      ? (() => {
+          let html = "<ul>" + modulos.map((m: any) => `<li>${m.nome} (${m.quantidade}x)</li>`).join("") + "</ul>";
+          if (temDescontoModulo) {
+            html += `<p style="color:#28a745;font-size:11px;">⚡ Desconto: <span style="text-decoration:line-through;color:#999;">${fmtBRL(totalBrutoModulos)}</span> → <strong>${fmtBRL(totalLiquidoModulos)}/mês</strong></p>`;
+          }
+          return html;
+        })()
       : "";
 
     const modulosTabelaDetalhada = modulos.length > 0
@@ -331,7 +343,14 @@ Deno.serve(async (req) => {
             <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmtBRL(m.valor_implantacao_modulo * m.quantidade)}</td>
             <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmtBRL(m.valor_mensalidade_modulo)}</td>
             <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmtBRL(m.valor_mensalidade_modulo * m.quantidade)}</td>
-          </tr>`).join("")}</tbody>
+          </tr>`).join("")}${temDescontoModulo ? `<tr style="background:#fff3cd;">
+            <td colspan="4" style="border:1px solid #ccc;padding:6px;text-align:right;"><strong>⚡ Desconto:</strong></td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;color:#28a745;"><strong>-${fmtBRL(descontoMensModulo)}</strong></td>
+          </tr>
+          <tr style="background:#e8f5e9;">
+            <td colspan="4" style="border:1px solid #ccc;padding:6px;text-align:right;"><strong>Total com desconto:</strong></td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;"><strong>${fmtBRL(totalLiquidoModulos)}/mês</strong></td>
+          </tr>` : ""}</tbody>
         </table>`
       : "";
 
@@ -455,7 +474,7 @@ Deno.serve(async (req) => {
       "modulos.adicionais_existentes_html": "",
       "modulos.tabela_detalhada": modulosTabelaDetalhada,
       "modulos.quantidade_total": modulos.reduce((s: number, m: any) => s + (m.quantidade || 1), 0).toString(),
-      "valores.total_adicionais_novos": fmtBRL(modulos.reduce((s: number, m: any) => s + (m.valor_mensalidade_modulo || 0) * (m.quantidade || 1), 0)),
+      "valores.total_adicionais_novos": fmtBRL(totalLiquidoModulos),
       "valores.implantacao.original": fmtBRL(implOriginal),
       "valores.implantacao.desconto": fmtBRL(implDesconto),
       "valores.implantacao.final": fmtBRL(implFinal),
