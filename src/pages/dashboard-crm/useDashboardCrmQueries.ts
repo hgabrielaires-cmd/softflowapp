@@ -156,7 +156,8 @@ export function useRankingVendedores(filters: Filters, tipo: "ganho" | "andament
     queryKey: ["crm_dash_ranking", filters, tipo],
     enabled: !!filters.funilId,
     queryFn: async (): Promise<VendedorRanking[]> => {
-      const { funilId, responsavelIds, inicio, fim } = filters;
+      const { funilId, responsavelIds, filialId, inicio, fim } = filters;
+      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
       let q = supabase
         .from("crm_oportunidades")
         .select("id, responsavel_id, status, valor, pedido_id")
