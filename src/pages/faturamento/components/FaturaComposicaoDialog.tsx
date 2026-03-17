@@ -1,7 +1,7 @@
 // ─── Dialog: Composição da Fatura (Invoice Breakdown) ─────────────────────
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { ContratoQuickViewDialog } from "./ContratoQuickViewDialog";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -65,9 +65,9 @@ function agruparModulos(modulos: { nome: string; valor_mensal: number; data_inic
 }
 
 export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ComposicaoData | null>(null);
+  const [contratoViewId, setContratoViewId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!faturaId) { setData(null); return; }
@@ -217,11 +217,11 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
 
   function handleContratoClick() {
     if (!data?.contrato_id) return;
-    onClose();
-    navigate(`/contratos?contrato=${data.contrato_id}`);
+    setContratoViewId(data.contrato_id);
   }
 
   return (
+    <>
     <Dialog open={!!faturaId} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
@@ -378,5 +378,11 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
         )}
       </DialogContent>
     </Dialog>
+
+    <ContratoQuickViewDialog
+      contratoId={contratoViewId}
+      onClose={() => setContratoViewId(null)}
+    />
+    </>
   );
 }
