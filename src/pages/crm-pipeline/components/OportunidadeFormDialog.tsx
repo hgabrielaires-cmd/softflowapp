@@ -117,11 +117,19 @@ export function OportunidadeFormDialog({
   };
 
   const contatosValid = contatos.every(c => c.nome.trim() && c.telefone.trim());
+  const [tried, setTried] = useState(false);
+
+  const camposObrigatoriosPendentes = activeCampos.filter(
+    c => c.obrigatorio && !camposValues[c.id]?.trim()
+  );
+
+  const hasErrors = !titulo.trim() || segmentoIds.length === 0 || !contatosValid || camposObrigatoriosPendentes.length > 0;
 
   const handleSave = () => {
-    if (!titulo.trim() || segmentoIds.length === 0 || !contatosValid) return;
-    for (const campo of activeCampos) {
-      if (campo.obrigatorio && !camposValues[campo.id]?.trim()) return;
+    setTried(true);
+    if (hasErrors) {
+      toast.error("Preencha todos os campos obrigatórios antes de salvar.");
+      return;
     }
     onSave({
       titulo: titulo.trim(),
