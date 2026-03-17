@@ -188,6 +188,33 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
   const [composicaoFaturaId, setComposicaoFaturaId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
+  // ─── Sync banner state ─────────────────────────────────────────────────
+  const [syncingAll, setSyncingAll] = useState(false);
+
+  const faturasVencidasPendentes = q.faturas.filter(
+    (f) => f.status === "Pendente" && f.asaas_payment_id && isVencida(f)
+  );
+
+  async function handleSyncAll() {
+    setSyncingAll(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sincronizar-faturas-asaas", {
+        body: {},
+      });
+      if (error) throw error;
+      if (data?.updated > 0) {
+        toast.success(`${data.updated} fatura(s) atualizada(s) com sucesso!`);
+        q.loadFaturas();
+      } else {
+        toast.info(`Nenhuma alteração encontrada (${data?.total || 0} verificadas)`);
+      }
+    } catch (err: any) {
+      toast.error("Erro ao sincronizar: " + (err?.message || "Erro desconhecido"));
+    } finally {
+      setSyncingAll(false);
+    }
+  }
+
   async function handleSyncAsaas(f: Fatura) {
     if (!f.asaas_payment_id || !f.filial_id) {
       toast.error("Fatura sem cobrança Asaas vinculada");
