@@ -23,6 +23,15 @@ export function useAguardandoFaturamentoQueries(filialFilter: string = "all") {
       .select("contrato_id");
     const idsFaturados = new Set((jaFaturados || []).map((r: any) => r.contrato_id));
 
+    // 1a. Get aditivo IDs that already have modules inserted (contrato_origem_id)
+    const { data: modulosJaInseridos } = await supabase
+      .from("contrato_financeiro_modulos")
+      .select("contrato_origem_id")
+      .not("contrato_origem_id", "is", null);
+    const idsModulosJaConfigurados = new Set(
+      (modulosJaInseridos || []).map((r: any) => r.contrato_origem_id)
+    );
+
     // 1b. Get all contratos that have ZapSign status "Assinado"
     const { data: zapsignData } = await supabase
       .from("contratos_zapsign")
