@@ -23,6 +23,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   clienteId: string;
   clienteNome: string;
+  clienteFilialId?: string | null;
   onBack: () => void;
   onSaved: (pedidoId: string, pedidoNumero: string, pedidoStatus: string) => void;
 }
