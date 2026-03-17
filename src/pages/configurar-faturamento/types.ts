@@ -28,6 +28,7 @@ export interface ContratoEspelho {
     tipo_pedido: string;
     valor_mensalidade: number;
     valor_mensalidade_final: number;
+    valor_mensalidade_original: number | null;
     valor_implantacao: number;
     valor_implantacao_final: number;
     pagamento_implantacao_parcelas: number | null;

@@ -90,19 +90,22 @@ export default function ConfigurarFaturamento() {
     const parcImpl = espelho.pedido?.pagamento_implantacao_parcelas ?? 1;
     const formaPag = espelho.pedido?.pagamento_mensalidade_forma || "Boleto";
 
-    // Módulos do pedido
+    // Módulos do pedido — distribuição proporcional do desconto
+    const valorBrutoModulos = toNumber(espelho.pedido?.valor_mensalidade_original ?? espelho.pedido?.valor_mensalidade ?? 0);
+    const valorFinalModulos = toNumber(espelho.pedido?.valor_mensalidade_final ?? valorBrutoModulos);
+    const fatorDesconto = valorBrutoModulos > 0 ? valorFinalModulos / valorBrutoModulos : 1;
+
     const modulos = (espelho.pedido?.modulos_adicionais || []).map((m: ModuloAdicionalPedido) => {
-      const valorNegociado = toNumber(
-        m.valor_mensalidade_final ?? m.valor_mensalidade_modulo ?? m.valor_mensalidade ?? 0,
-      );
+      const valorPadrao = toNumber(m.valor_mensalidade_modulo ?? m.valor_mensalidade ?? 0);
       const qtd = Math.max(1, toNumber(m.quantidade ?? 1));
+      const valorComDesconto = Math.round(valorPadrao * fatorDesconto * 100) / 100;
 
       return {
         id: crypto.randomUUID(),
         nome: m.nome,
-        valor_unitario: valorNegociado,
+        valor_unitario: valorComDesconto,
         quantidade: qtd,
-        valor_mensal: valorNegociado * qtd,
+        valor_mensal: Math.round(valorComDesconto * qtd * 100) / 100,
         data_inicio: format(new Date(), "yyyy-MM-dd"),
       };
     });
