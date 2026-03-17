@@ -75,6 +75,7 @@ export function OportunidadeDetailView({
   const [ganhoStep, setGanhoStep] = useState<"idle" | "cliente" | "pedido">("idle");
   const [ganhoClienteId, setGanhoClienteId] = useState<string | null>(null);
   const [ganhoClienteNome, setGanhoClienteNome] = useState("");
+  const [ganhoClienteFilialId, setGanhoClienteFilialId] = useState<string | null>(null);
   const [sistemaAnteriorDialogOpen, setSistemaAnteriorDialogOpen] = useState(false);
   const [sistemaAnteriorValue, setSistemaAnteriorValue] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -781,7 +782,7 @@ export function OportunidadeDetailView({
         oportunidadeId={oportunidade.id}
         oportunidadeTitulo={oportunidade.titulo}
         editingClienteId={ganhoClienteId}
-        onSaved={async (clienteId, clienteNome) => {
+        onSaved={async (clienteId, clienteNome, clienteFilialId) => {
           // Link client to oportunidade
           await supabase.from("crm_oportunidades").update({ cliente_id: clienteId } as any).eq("id", oportunidade.id);
           const { data: { user } } = await supabase.auth.getUser();
@@ -791,6 +792,7 @@ export function OportunidadeDetailView({
           });
           setGanhoClienteId(clienteId);
           setGanhoClienteNome(clienteNome);
+          setGanhoClienteFilialId(clienteFilialId);
           invalidate();
           queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
           setGanhoStep("pedido");
@@ -802,6 +804,7 @@ export function OportunidadeDetailView({
         onOpenChange={(open) => { if (!open) setGanhoStep("idle"); }}
         clienteId={ganhoClienteId || ""}
         clienteNome={ganhoClienteNome}
+        clienteFilialId={ganhoClienteFilialId}
         onBack={() => setGanhoStep("cliente")}
         onSaved={async (pedidoId, pedidoNumero, pedidoStatus) => {
           await supabase.from("crm_oportunidades").update({ pedido_id: pedidoId } as any).eq("id", oportunidade.id);

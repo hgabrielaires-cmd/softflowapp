@@ -34,7 +34,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   oportunidadeId: string;
   oportunidadeTitulo: string;
-  onSaved: (clienteId: string, clienteNome: string) => void;
+  onSaved: (clienteId: string, clienteNome: string, clienteFilialId: string | null) => void;
   /** If editing an existing client */
   editingClienteId?: string | null;
 }
@@ -210,7 +210,7 @@ export function GanhoClienteDrawer({ open, onOpenChange, oportunidadeId, oportun
       }
     }
     setSaving(false);
-    if (clienteId) onSaved(clienteId, form.nome_fantasia);
+    if (clienteId) onSaved(clienteId, form.nome_fantasia, form.filial_id || null);
   }
 
   const isQuerying = loadingCep || loadingCnpj;
