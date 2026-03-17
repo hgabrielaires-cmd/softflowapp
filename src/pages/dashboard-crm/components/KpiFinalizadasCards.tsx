@@ -55,7 +55,7 @@ export function KpiFinalizadasCards({ data, isLoading }: { data?: KpiType; isLoa
       </Card>
 
       {/* Valor Implantação */}
-      <Card className="border-none shadow-card">
+      <Card className="border-none shadow-card min-w-[180px] shrink-0">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 rounded-lg bg-purple-500/10">
