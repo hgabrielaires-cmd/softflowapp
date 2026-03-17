@@ -28,7 +28,7 @@ interface Props {
   onSaved: (pedidoId: string, pedidoNumero: string, pedidoStatus: string) => void;
 }
 
-export function GanhoPedidoDrawer({ open, onOpenChange, clienteId, clienteNome, onBack, onSaved }: Props) {
+export function GanhoPedidoDrawer({ open, onOpenChange, clienteId, clienteNome, clienteFilialId, onBack, onSaved }: Props) {
   const { profile, isAdmin } = useAuth();
   const { filiaisDoUsuario, filialPadraoId, todasFiliais } = useUserFiliais();
 
