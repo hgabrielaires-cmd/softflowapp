@@ -10,8 +10,18 @@ import { calcularPeriodoAnterior } from "./helpers";
 interface Filters {
   funilId?: string;
   responsavelIds?: string[];
+  filialId?: string;
   inicio: string;
   fim: string;
+}
+
+/** Busca IDs de clientes vinculados a uma filial — usado para filtrar oportunidades */
+async function getClienteIdsByFilial(filialId: string): Promise<string[]> {
+  const { data } = await supabase
+    .from("clientes")
+    .select("id")
+    .eq("filial_id", filialId);
+  return (data || []).map(c => c.id);
 }
 
 // ─── FINALIZADAS ──────────────────────────────────────────────
