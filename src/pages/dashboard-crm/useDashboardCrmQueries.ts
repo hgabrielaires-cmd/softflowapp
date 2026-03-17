@@ -169,6 +169,7 @@ export function useRankingVendedores(filters: Filters, tipo: "ganho" | "andament
         q = q.eq("status", "aberta");
       }
       if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
+      if (clienteIds) { if (clienteIds.length === 0) return []; q = q.in("cliente_id", clienteIds); }
       const { data: ops } = await q;
 
       // For "ganho" ranking, also include lost deals filtered by data_perda (for count purposes if needed)
