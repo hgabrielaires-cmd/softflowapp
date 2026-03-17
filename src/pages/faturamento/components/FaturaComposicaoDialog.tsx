@@ -217,8 +217,7 @@ export function FaturaComposicaoDialog({ faturaId, onClose }: Props) {
 
   function handleContratoClick() {
     if (!data?.contrato_id) return;
-    onClose();
-    navigate(`/contratos?contrato=${data.contrato_id}`);
+    setContratoViewId(data.contrato_id);
   }
 
   return (
