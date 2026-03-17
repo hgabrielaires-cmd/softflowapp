@@ -55,39 +55,52 @@ export function EspelhoContrato({ espelho, contratoFinanceiroBase }: Props) {
           />
 
           {/* Módulos do pedido */}
-          {espelho.pedido?.modulos_adicionais && espelho.pedido.modulos_adicionais.length > 0 && (
-            <>
-              <Separator />
-              <div className="space-y-2">
-                <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Package className="h-3 w-3" /> Produtos/Serviços contratados
-                </span>
-                {espelho.pedido.modulos_adicionais.map((m: ModuloAdicionalPedido, i) => {
-                  const qtd = Math.max(1, toNumber(m.quantidade ?? 1));
-                  const valorPadraoUnit = toNumber(m.valor_mensalidade ?? m.valor_mensalidade_modulo ?? 0);
-                  const valorNegociadoUnit = toNumber(
-                    m.valor_mensalidade_final ?? m.valor_mensalidade_modulo ?? m.valor_mensalidade ?? 0,
-                  );
-                  const valorPadraoTotal = valorPadraoUnit * qtd;
-                  const valorNegociadoTotal = valorNegociadoUnit * qtd;
-                  const temDesconto = valorNegociadoTotal < valorPadraoTotal;
+          {espelho.pedido?.modulos_adicionais && espelho.pedido.modulos_adicionais.length > 0 && (() => {
+            // Distribuição proporcional do desconto do pedido
+            const valorBruto = toNumber(espelho.pedido?.valor_mensalidade_original ?? espelho.pedido?.valor_mensalidade ?? 0);
+            const valorFinal = toNumber(espelho.pedido?.valor_mensalidade_final ?? valorBruto);
+            const fator = valorBruto > 0 ? valorFinal / valorBruto : 1;
 
-                  return (
-                    <div key={i} className="rounded border border-border bg-muted/40 px-2 py-2 space-y-0.5">
-                      <p className="text-xs font-medium">{m.nome}</p>
-                      <p className="text-[11px] text-muted-foreground">Qtd: {qtd}</p>
-                      <p className={`text-[11px] ${temDesconto ? "line-through text-muted-foreground" : "text-muted-foreground"}`}>
-                        Valor padrão: {fmtCurrency(valorPadraoTotal)}/mês
-                      </p>
-                      <p className="text-[11px] font-semibold text-success">
-                        Valor negociado: {fmtCurrency(valorNegociadoTotal)}/mês
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
+            return (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <Package className="h-3 w-3" /> Produtos/Serviços contratados
+                  </span>
+                  {espelho.pedido!.modulos_adicionais!.map((m: ModuloAdicionalPedido, i) => {
+                    const qtd = Math.max(1, toNumber(m.quantidade ?? 1));
+                    const valorPadraoUnit = toNumber(m.valor_mensalidade_modulo ?? m.valor_mensalidade ?? 0);
+                    const valorNegociadoUnit = Math.round(valorPadraoUnit * fator * 100) / 100;
+                    const valorPadraoTotal = valorPadraoUnit * qtd;
+                    const valorNegociadoTotal = Math.round(valorNegociadoUnit * qtd * 100) / 100;
+                    const temDesconto = fator < 1;
+
+                    return (
+                      <div key={i} className="rounded border border-border bg-muted/40 px-2 py-2 space-y-0.5">
+                        <p className="text-xs font-medium">{m.nome}</p>
+                        <p className="text-[11px] text-muted-foreground">Qtd: {qtd}</p>
+                        {temDesconto ? (
+                          <>
+                            <p className="text-[11px] line-through text-muted-foreground">
+                              Valor padrão: {fmtCurrency(valorPadraoTotal)}/mês
+                            </p>
+                            <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                              Valor negociado: {fmtCurrency(valorNegociadoTotal)}/mês
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-[11px] text-muted-foreground">
+                            Valor: {fmtCurrency(valorPadraoTotal)}/mês
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            );
+          })()}
 
           {/* ZapSign link */}
           {espelho.zapsign?.sign_url && (

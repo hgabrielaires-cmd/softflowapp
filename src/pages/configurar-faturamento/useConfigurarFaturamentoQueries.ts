@@ -22,7 +22,7 @@ export function useConfigurarFaturamentoQueries(contratoId: string | undefined) 
         planos(id, nome, valor_mensalidade_padrao, valor_implantacao_padrao),
         pedidos(
           id, tipo_pedido, status_pedido,
-          valor_mensalidade, valor_mensalidade_final,
+          valor_mensalidade, valor_mensalidade_final, valor_mensalidade_original,
           valor_implantacao, valor_implantacao_final,
           pagamento_implantacao_parcelas, pagamento_implantacao_forma,
           pagamento_mensalidade_forma, filial_id,
