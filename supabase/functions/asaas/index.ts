@@ -439,6 +439,64 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "sync_payment_status": {
+        if (!params.faturaId) throw new Error("faturaId é obrigatório");
+
+        // Buscar fatura
+        const { data: fatura, error: fatErr } = await supabaseAdmin
+          .from("faturas")
+          .select("id, asaas_payment_id, status")
+          .eq("id", params.faturaId)
+          .maybeSingle();
+
+        if (fatErr || !fatura) throw new Error("Fatura não encontrada");
+        if (!fatura.asaas_payment_id) throw new Error("Fatura sem cobrança no Asaas");
+
+        // Consultar status no Asaas
+        const asaasPayment = await asaasFetch(baseUrl, apiKey, `/payments/${fatura.asaas_payment_id}`, "GET");
+
+        let newStatus: string | null = null;
+        let dataPagamento: string | null = null;
+
+        switch (asaasPayment.status) {
+          case "RECEIVED":
+          case "RECEIVED_IN_CASH":
+          case "CONFIRMED":
+            newStatus = "Pago";
+            dataPagamento = asaasPayment.confirmedDate || asaasPayment.paymentDate || asaasPayment.clientPaymentDate || new Date().toISOString().split("T")[0];
+            break;
+          case "OVERDUE":
+            newStatus = "Vencido";
+            break;
+          case "REFUNDED":
+          case "REFUND_REQUESTED":
+          case "CHARGEBACK_REQUESTED":
+          case "CHARGEBACK_DISPUTE":
+          case "AWAITING_CHARGEBACK_REVERSAL":
+          case "DUNNING_REQUESTED":
+          case "DUNNING_RECEIVED":
+            newStatus = "Cancelado";
+            break;
+          case "PENDING":
+            newStatus = "Pendente";
+            break;
+        }
+
+        if (newStatus && newStatus !== fatura.status) {
+          const updatePayload: Record<string, unknown> = { status: newStatus };
+          if (dataPagamento) updatePayload.data_pagamento = dataPagamento;
+          await supabaseAdmin.from("faturas").update(updatePayload).eq("id", fatura.id);
+        }
+
+        result = {
+          asaas_status: asaasPayment.status,
+          previous_status: fatura.status,
+          new_status: newStatus || fatura.status,
+          updated: newStatus !== null && newStatus !== fatura.status,
+        };
+        break;
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: `Ação desconhecida: ${action}` }),
