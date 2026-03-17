@@ -533,6 +533,16 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
                           <CheckCircle className="h-4 w-4 mr-2" /> Registrar Pagamento
                         </DropdownMenuItem>
                       )}
+                      {f.asaas_payment_id && (
+                        <DropdownMenuItem
+                          onClick={() => handleSyncAsaas(f)}
+                          disabled={syncingId === f.id}
+                          className="cursor-pointer"
+                        >
+                          <Zap className="h-4 w-4 mr-2" />
+                          {syncingId === f.id ? "Sincronizando..." : "Sincronizar Asaas"}
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={() => openEdit(f)} className="cursor-pointer">
                         <Pencil className="h-4 w-4 mr-2" /> Editar
                       </DropdownMenuItem>
