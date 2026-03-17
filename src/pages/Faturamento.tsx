@@ -457,6 +457,26 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
       {/* Summary Cards */}
       <FaturasResumo faturas={q.faturas} />
 
+      {/* Sync Banner */}
+      {faturasVencidasPendentes.length > 0 && (
+        <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+          <span className="text-sm text-amber-800 dark:text-amber-300 flex-1">
+            {faturasVencidasPendentes.length} fatura(s) vencida(s) com status pendente no Asaas.
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 shrink-0"
+            onClick={handleSyncAll}
+            disabled={syncingAll}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${syncingAll ? "animate-spin" : ""}`} />
+            {syncingAll ? "Sincronizando..." : "Sincronizar agora"}
+          </Button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
         <Table>
