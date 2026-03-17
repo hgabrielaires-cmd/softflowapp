@@ -108,9 +108,26 @@ function AgendaCrmContent() {
       } else {
         setFiltroVendedor(user.id);
       }
-      setFiltersInitialized(true);
     }
   }, [user, isAdmin, filtroVendedor]);
+
+  // Init filial filter
+  useEffect(() => {
+    if (filtroFilial === "_init_" && filiaisDoUsuario.length > 0) {
+      if (isGlobal || filiaisDoUsuario.length > 1) {
+        setFiltroFilial(filialPadraoId || "all");
+      } else {
+        setFiltroFilial(filiaisDoUsuario[0]?.id || "all");
+      }
+    }
+  }, [filtroFilial, filiaisDoUsuario, filialPadraoId, isGlobal]);
+
+  // Mark initialized when both filters are ready
+  useEffect(() => {
+    if (!filtersInitialized && filtroVendedor !== "_init_" && filtroFilial !== "_init_") {
+      setFiltersInitialized(true);
+    }
+  }, [filtroVendedor, filtroFilial, filtersInitialized]);
 
   // Fetch vendedores
   const { data: vendedores = [] } = useQuery({
