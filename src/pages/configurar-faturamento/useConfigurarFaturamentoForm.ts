@@ -108,6 +108,7 @@ export function useConfigurarFaturamentoForm() {
     if (form.modulos.length > 0) {
       const modulosPayload = form.modulos.map((m) => ({
         contrato_financeiro_id: cf.id,
+        contrato_origem_id: espelho.id,
         nome: m.nome,
         valor_mensal: m.valor_mensal,
         data_inicio: m.data_inicio,
