@@ -21,7 +21,7 @@ import { useConfigurarFaturamentoQueries } from "../useConfigurarFaturamentoQuer
 import { useConfigurarFaturamentoForm } from "../useConfigurarFaturamentoForm";
 import { defaultConfigForm } from "../constants";
 import { getBadgeTipoLabel, getBadgeTipoColor } from "../helpers";
-import type { ConfigFaturamentoForm } from "../types";
+import type { ConfigFaturamentoForm, ModuloAdicionalPedido } from "../types";
 
 import { EspelhoContrato } from "./EspelhoContrato";
 import { ConfiguracaoCobranca } from "./ConfiguracaoCobranca";
