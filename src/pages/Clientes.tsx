@@ -21,8 +21,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Building2, Phone, Star, Upload, Eye, FileText } from "lucide-react";
-import { ImportClientesDialog } from "@/components/ImportClientesDialog";
+import { Plus, Search, Pencil, Building2, Phone, Star, Eye, FileText } from "lucide-react";
+
 import { TablePagination } from "@/components/TablePagination";
 import { ITEMS_PER_PAGE } from "@/pages/clientes/constants";
 import { useClientesQueries } from "@/pages/clientes/useClientesQueries";
@@ -58,8 +58,6 @@ export default function Clientes() {
 
   const ct = useClienteContatos({ fetchContatos });
 
-  // Importação
-  const [importOpen, setImportOpen] = useState(false);
 
   async function handleToggleAtivo(c: Cliente) {
     const ok = await toggleAtivo(c);
@@ -75,11 +73,6 @@ export default function Clientes() {
             <p className="text-muted-foreground text-sm mt-1">Gestão de clientes cadastrados</p>
           </div>
           <div className="flex items-center gap-2">
-            {podeImportar && (
-              <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-2">
-                <Upload className="h-4 w-4" /> Importação
-              </Button>
-            )}
             {crudIncluir && (
               <Button onClick={f.openCreate} className="gap-2">
                 <Plus className="h-4 w-4" /> Novo cliente
@@ -301,12 +294,6 @@ export default function Clientes() {
         margemIdealHistorico={margemIdealHistorico}
       />
 
-      <ImportClientesDialog
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        filialId={filialPadraoId || profile?.filial_id || ""}
-        onSuccess={fetchData}
-      />
     </AppLayout>
   );
 }
