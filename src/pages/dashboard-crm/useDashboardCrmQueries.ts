@@ -459,12 +459,14 @@ export function useTarefasAnalise(filters: Omit<Filters, "inicio" | "fim"> & { i
     queryKey: ["crm_dash_tarefas", filters],
     enabled: !!filters.funilId,
     queryFn: async (): Promise<TarefasAnalise> => {
-      const { funilId, responsavelIds } = filters;
+      const { funilId, responsavelIds, filialId } = filters;
+      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
 
       // Get open ops
       let qOps = supabase.from("crm_oportunidades").select("id, etapa_id")
         .eq("funil_id", funilId!).eq("status", "aberta");
       if (responsavelIds?.length) qOps = qOps.in("responsavel_id", responsavelIds);
+      if (clienteIds) { if (clienteIds.length === 0) return { agendadas: 0, atrasadas: 0, diasMedioAtraso: 0, concluidas: 0, semTarefa: 0, porEtapa: [] }; qOps = qOps.in("cliente_id", clienteIds); }
       const { data: ops } = await qOps;
       const opIds = (ops || []).map(o => o.id);
       if (opIds.length === 0) return { agendadas: 0, atrasadas: 0, diasMedioAtraso: 0, concluidas: 0, semTarefa: 0, porEtapa: [] };
