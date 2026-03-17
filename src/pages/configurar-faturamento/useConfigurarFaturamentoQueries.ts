@@ -85,6 +85,7 @@ export function useConfigurarFaturamentoQueries(contratoId: string | undefined) 
         status_pedido: c.pedidos.status_pedido,
         valor_mensalidade: c.pedidos.valor_mensalidade,
         valor_mensalidade_final: c.pedidos.valor_mensalidade_final,
+        valor_mensalidade_original: c.pedidos.valor_mensalidade_original ?? null,
         valor_implantacao: c.pedidos.valor_implantacao,
         valor_implantacao_final: c.pedidos.valor_implantacao_final,
         pagamento_implantacao_parcelas: c.pedidos.pagamento_implantacao_parcelas,
