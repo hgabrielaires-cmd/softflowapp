@@ -172,8 +172,8 @@ export function OportunidadeFormDialog({
         </DialogHeader>
         <div className="space-y-3 overflow-y-auto flex-1 pr-1 pb-2 min-h-0">
           <div>
-            <Label>Nome/Nome da Empresa *</Label>
-            <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Nome/Empresa" />
+            <Label className={tried && !titulo.trim() ? "text-destructive" : ""}>Nome/Nome da Empresa *</Label>
+            <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Nome/Empresa" className={tried && !titulo.trim() ? "border-destructive" : ""} />
           </div>
 
           {/* Contatos */}
