@@ -79,10 +79,14 @@ export default function ConfigurarFaturamento() {
     const valorMensPedido = espelho.pedido?.valor_mensalidade_final ?? espelho.pedido?.valor_mensalidade;
     const valorImplPedido = espelho.pedido?.valor_implantacao_final ?? espelho.pedido?.valor_implantacao;
 
-    const valorMens = valorMensPedido ?? (isModuloAdicional ? 0 : (espelho.plano?.valor_mensalidade_padrao ?? 0));
-    const valorImpl = isModuloAdicional
-      ? (valorImplPedido ?? 0)
-      : (valorImplPedido ?? espelho.plano?.valor_implantacao_padrao ?? 0);
+    const valorMens = toNumber(
+      valorMensPedido ?? (isModuloAdicional ? 0 : (espelho.plano?.valor_mensalidade_padrao ?? 0)),
+    );
+    const valorImpl = toNumber(
+      isModuloAdicional
+        ? (valorImplPedido ?? 0)
+        : (valorImplPedido ?? espelho.plano?.valor_implantacao_padrao ?? 0),
+    );
     const parcImpl = espelho.pedido?.pagamento_implantacao_parcelas ?? 1;
     const formaPag = espelho.pedido?.pagamento_mensalidade_forma || "Boleto";
 
