@@ -200,7 +200,7 @@ export default function DashboardCrm() {
               <div className="min-w-full space-y-4 pr-4">
                 <KpiFinalizadasCards data={kpiFin.data} isLoading={kpiFin.isLoading} />
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <RankingVendedoresPanel
                     data={rankingGanho.data}
                     isLoading={rankingGanho.isLoading}
