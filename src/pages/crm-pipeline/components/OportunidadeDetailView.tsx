@@ -75,6 +75,7 @@ export function OportunidadeDetailView({
   const [ganhoStep, setGanhoStep] = useState<"idle" | "cliente" | "pedido">("idle");
   const [ganhoClienteId, setGanhoClienteId] = useState<string | null>(null);
   const [ganhoClienteNome, setGanhoClienteNome] = useState("");
+  const [ganhoClienteFilialId, setGanhoClienteFilialId] = useState<string | null>(null);
   const [sistemaAnteriorDialogOpen, setSistemaAnteriorDialogOpen] = useState(false);
   const [sistemaAnteriorValue, setSistemaAnteriorValue] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
