@@ -161,7 +161,7 @@ function AgendaCrmContent() {
 
   // Main query
   const { data: compromissos = [], isLoading } = useQuery({
-    queryKey: ["crm-agenda-compromissos", dateRange, filtroVendedor, listSearch, listStatus],
+    queryKey: ["crm-agenda-compromissos", dateRange, filtroVendedor, filtroFilial, listSearch, listStatus],
     enabled: filtersInitialized,
     queryFn: async () => {
       // Fetch tasks with data_reuniao
