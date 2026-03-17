@@ -302,105 +302,24 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
     if (!f.cliente_id) { toast.error("Fatura sem cliente vinculado"); return; }
     setSendingWhatsApp(f.id);
     try {
-      // Get client data
-      const { data: cliente } = await supabase
-        .from("clientes")
-        .select("nome_fantasia, telefone")
-        .eq("id", f.cliente_id)
-        .single();
-
-      // Get decisor contact
-      const { data: decisor } = await supabase
-        .from("cliente_contatos")
-        .select("telefone, nome")
-        .eq("cliente_id", f.cliente_id)
-        .eq("decisor", true)
-        .eq("ativo", true)
-        .maybeSingle();
-
-      const phone = decisor?.telefone || cliente?.telefone;
-      if (!phone) { toast.error("Nenhum telefone encontrado para o cliente"); setSendingWhatsApp(null); return; }
-
-      // Get WhatsApp config
-      const { data: whatsConfig } = await supabase
-        .from("integracoes_config")
-        .select("server_url, token, ativo")
-        .eq("nome", "whatsapp")
-        .maybeSingle();
-
-      if (!whatsConfig?.ativo || !whatsConfig?.server_url || !whatsConfig?.token) {
-        toast.error("Integração WhatsApp não configurada");
-        setSendingWhatsApp(null);
-        return;
-      }
-
-      // Get Financeiro sector instance
-      const { data: setorFinanceiro } = await supabase
-        .from("setores")
-        .select("instance_name")
-        .ilike("nome", "financeiro")
-        .eq("ativo", true)
-        .maybeSingle();
-
-      const instanceName = setorFinanceiro?.instance_name || "Softflow_WhatsApp";
-
-      const nomeContato = decisor?.nome || cliente?.nome_fantasia || "Cliente";
-      const nomeFantasia = cliente?.nome_fantasia || "—";
-      const valorFmt = f.valor_final.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      const dataFmt = format(parseISO(f.data_vencimento), "dd/MM/yyyy");
-
-      // If PIX code is missing but we have asaas_payment_id, try to fetch it
-      let pixCode = f.asaas_pix_qrcode;
-      if (!pixCode && f.asaas_payment_id && f.filial_id) {
-        try {
-          const { data: pixResult } = await supabase.functions.invoke("asaas", {
-            body: {
-              action: "fetch_pix",
-              payment_id: f.asaas_payment_id,
-              filial_id: f.filial_id,
-            },
-          });
-          if (pixResult?.pix_qrcode) {
-            pixCode = pixResult.pix_qrcode;
-            // Save for future use
-            await supabase.from("faturas").update({
-              asaas_pix_qrcode: pixCode,
-              asaas_pix_image: pixResult.pix_image || null,
-            }).eq("id", f.id);
-          }
-        } catch (_pixErr) {
-          console.warn("Could not fetch PIX code:", _pixErr);
-        }
-      }
-
-      const billingType = (f.forma_pagamento || "").toUpperCase().includes("PIX") ? "PIX" : "BOLETO";
-
-      let text = "";
-      if (billingType === "PIX") {
-        text = `Olá ${nomeContato}! 👋\n\nSua fatura está disponível:\n\nEmpresa: ${nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*\n\n💠 PIX Copia e Cola:\n${pixCode || "—"}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
-      } else {
-        text = `Olá ${nomeContato}! 👋\n\nA fatura está disponível:\n\nEmpresa: ${nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*\n\n🔗 Acesse o boleto: ${f.asaas_url || "—"}\n\nLinha digitável:\n${f.asaas_barcode || "—"}${pixCode ? `\n\n💠 PIX Copia e Cola:\n${pixCode}` : ""}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
-      }
-
-      // Format phone number
-      let formattedNumber = phone.replace(/\D/g, "");
-      if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
-      if (!formattedNumber.startsWith("55")) formattedNumber = "55" + formattedNumber;
-
-      const baseUrl = whatsConfig.server_url.replace(/\/+$/, "");
-
-      const { data: result, error } = await supabase.functions.invoke("evolution-api", {
-        body: {
-          action: "send_text",
-          instance_name: instanceName,
-          number: formattedNumber,
-          text,
-        },
+      const { enviarFaturaWhatsApp } = await import("@/lib/enviarFaturaWhatsApp");
+      const resultado = await enviarFaturaWhatsApp({
+        id: f.id,
+        cliente_id: f.cliente_id,
+        filial_id: f.filial_id,
+        valor_final: f.valor_final,
+        data_vencimento: f.data_vencimento,
+        forma_pagamento: f.forma_pagamento,
+        asaas_payment_id: f.asaas_payment_id,
+        asaas_url: f.asaas_url,
+        asaas_barcode: f.asaas_barcode,
+        asaas_pix_qrcode: f.asaas_pix_qrcode,
       });
-
-      if (error) throw error;
-
-      toast.success("Mensagem enviada com sucesso!");
+      if (resultado.ok) {
+        toast.success("Mensagem enviada com sucesso!");
+      } else {
+        toast.error("Erro ao enviar mensagem: " + (resultado.error || "Erro desconhecido"));
+      }
     } catch (err: any) {
       console.error("Erro ao enviar WhatsApp:", err);
       toast.error("Erro ao enviar mensagem: " + (err?.message || "Erro desconhecido"));

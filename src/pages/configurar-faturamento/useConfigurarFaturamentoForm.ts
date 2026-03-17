@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import type { ContratoEspelho, ConfigFaturamentoForm, ContratoFinanceiroBase } from "./types";
 import { validateConfigForm } from "./helpers";
+import { enviarFaturaWhatsApp } from "@/lib/enviarFaturaWhatsApp";
 
 export function useConfigurarFaturamentoForm() {
   const navigate = useNavigate();
@@ -411,6 +412,40 @@ export function useConfigurarFaturamentoForm() {
 
     for (const oaId of oaIds) {
       await supabase.from("contrato_financeiro_oas").update({ faturada: true }).eq("id", oaId);
+    }
+
+    // ── FASE 5: Enviar fatura pelo WhatsApp (setor Financeiro) ──────
+    try {
+      // Recarregar a fatura completa com dados do Asaas já salvos
+      const { data: faturaCompleta } = await supabase
+        .from("faturas")
+        .select("id, cliente_id, filial_id, valor_final, data_vencimento, forma_pagamento, asaas_payment_id, asaas_url, asaas_barcode, asaas_pix_qrcode")
+        .eq("id", faturaData.id)
+        .single();
+
+      if (faturaCompleta) {
+        const resultado = await enviarFaturaWhatsApp({
+          id: faturaCompleta.id,
+          cliente_id: faturaCompleta.cliente_id,
+          filial_id: faturaCompleta.filial_id,
+          valor_final: faturaCompleta.valor_final,
+          data_vencimento: faturaCompleta.data_vencimento,
+          forma_pagamento: faturaCompleta.forma_pagamento,
+          asaas_payment_id: faturaCompleta.asaas_payment_id,
+          asaas_url: faturaCompleta.asaas_url,
+          asaas_barcode: faturaCompleta.asaas_barcode,
+          asaas_pix_qrcode: faturaCompleta.asaas_pix_qrcode,
+        });
+        if (resultado.ok) {
+          toast.success("Fatura enviada ao cliente via WhatsApp!");
+        } else {
+          console.warn("WhatsApp não enviado:", resultado.error);
+          toast.warning("Fatura criada, mas o WhatsApp não foi enviado: " + (resultado.error || ""));
+        }
+      }
+    } catch (whatsErr) {
+      console.error("Erro ao disparar WhatsApp da fatura:", whatsErr);
+      // Não bloqueia o fluxo — fatura já foi criada
     }
   }
 
