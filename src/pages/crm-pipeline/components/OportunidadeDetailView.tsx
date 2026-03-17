@@ -259,6 +259,52 @@ export function OportunidadeDetailView({
     await persistContatos(newContatos);
   };
 
+  // ─── Ganho Flow: validate then ask for Sistema Anterior ───
+  const initiateGanho = useCallback(async () => {
+    const { count } = await supabase.from("crm_oportunidade_produtos").select("id", { count: "exact", head: true }).eq("oportunidade_id", oportunidade.id);
+    if (!count || count === 0) {
+      toast.error("Adicione pelo menos um produto ou serviço antes de marcar como Ganho.");
+      return;
+    }
+    // Pre-fill if already set
+    const currentVal = camposValues[campoSistemaAnterior?.id || ""] || "";
+    setSistemaAnteriorValue(currentVal);
+    setSistemaAnteriorDialogOpen(true);
+  }, [oportunidade.id, camposValues, campoSistemaAnterior]);
+
+  const executeGanho = useCallback(async () => {
+    // Save sistema anterior to campos_personalizados
+    if (campoSistemaAnterior && sistemaAnteriorValue) {
+      const newCampos = { ...camposValues, [campoSistemaAnterior.id]: sistemaAnteriorValue };
+      setCamposValues(newCampos);
+      await supabase.from("crm_oportunidades").update({ campos_personalizados: newCampos } as any).eq("id", oportunidade.id);
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from("crm_tarefas").update({
+      concluido_em: new Date().toISOString(),
+      concluido_por: user?.id || null,
+    } as any).eq("oportunidade_id", oportunidade.id).is("concluido_em", null);
+    await (supabase as any).from("crm_historico").insert({
+      oportunidade_id: oportunidade.id,
+      tipo: "ganho",
+      descricao: `Negócio marcado como Ganho 🎉`,
+      user_id: user?.id || null,
+    });
+    await supabase.from("crm_oportunidades").update({ status: "ganho", data_fechamento: new Date().toISOString() } as any).eq("id", oportunidade.id);
+    setLocalStatus("ganho");
+    invalidate();
+    queryClient.invalidateQueries({ queryKey: ["crm_timeline", oportunidade.id] });
+    toast.success("Negócio ganho! 🎉🥳");
+    if (oportunidade.cliente_id) {
+      setGanhoClienteId(oportunidade.cliente_id);
+      setGanhoClienteNome(oportunidade.clientes?.nome_fantasia || oportunidade.titulo);
+      setGanhoStep("pedido");
+    } else {
+      setGanhoStep("cliente");
+    }
+  }, [oportunidade, campoSistemaAnterior, sistemaAnteriorValue, camposValues, invalidate, queryClient]);
+
   // ─── Field change handlers with auto-save ───
   const handleTituloBlur = () => {
     if (titulo.trim() && titulo.trim() !== oportunidade.titulo) {
