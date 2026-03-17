@@ -23,9 +23,9 @@ function VariacaoBadge({ atual, anterior }: { atual: number; anterior: number })
 export function KpiFinalizadasCards({ data, isLoading }: { data?: KpiType; isLoading: boolean }) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="flex gap-3 overflow-x-auto pb-1">
         {[1, 2, 3, 4, 5].map(i => (
-          <Card key={i}><CardContent className="p-4"><Skeleton className="h-16" /></CardContent></Card>
+          <Card key={i} className="min-w-[180px] shrink-0"><CardContent className="p-4"><Skeleton className="h-16" /></CardContent></Card>
         ))}
       </div>
     );
