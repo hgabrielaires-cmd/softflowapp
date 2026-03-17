@@ -73,7 +73,6 @@ export default function Clientes() {
             <p className="text-muted-foreground text-sm mt-1">Gestão de clientes cadastrados</p>
           </div>
           <div className="flex items-center gap-2">
-            )}
             {crudIncluir && (
               <Button onClick={f.openCreate} className="gap-2">
                 <Plus className="h-4 w-4" /> Novo cliente
