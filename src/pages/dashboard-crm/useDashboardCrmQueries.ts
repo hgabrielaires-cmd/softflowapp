@@ -277,6 +277,7 @@ export function useMotivosPerda(filters: Filters) {
         .gte("data_perda", inicio)
         .lte("data_perda", fim);
       if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
+      if (clienteIds) { if (clienteIds.length === 0) return []; q = q.in("cliente_id", clienteIds); }
       const { data: ops } = await q;
       if (!ops?.length) return [];
 
