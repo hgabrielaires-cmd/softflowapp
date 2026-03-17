@@ -163,12 +163,15 @@ export function ImportClientesDialog({ open, onOpenChange, filialId, onSuccess }
         }
         setMapping(autoMap);
         setStep("mapping");
-      } catch {
-        toast.error("Erro ao ler a planilha");
-      }
-    };
-    reader.readAsArrayBuffer(file);
-    // Reset input so same file can be re-selected
+    } catch {
+      toast.error("Erro ao processar dados da planilha");
+    }
+  };
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    parseFile(file);
     e.target.value = "";
   }
 
