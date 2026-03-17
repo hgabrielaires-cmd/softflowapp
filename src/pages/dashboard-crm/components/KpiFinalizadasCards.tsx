@@ -33,7 +33,7 @@ export function KpiFinalizadasCards({ data, isLoading }: { data?: KpiType; isLoa
   if (!data) return null;
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+    <div className="flex gap-3 overflow-x-auto pb-1">
       {/* Total Finalizadas */}
       <Card className="border-none shadow-card">
         <CardContent className="p-4">
