@@ -331,6 +331,7 @@ export function useComparativoPeriodo(filters: Filters) {
           .gte("data_perda", ini)
           .lte("data_perda", fi);
         if (responsavelIds?.length) qPerdido = qPerdido.in("responsavel_id", responsavelIds);
+        if (clienteIds) { if (clienteIds.length === 0) return []; qPerdido = qPerdido.in("cliente_id", clienteIds); }
 
         const [{ data: g }, { data: p }] = await Promise.all([qGanho, qPerdido]);
         // Normalize: use data_fechamento for ganho, data_perda for perdido
