@@ -45,6 +45,7 @@ export function useKpiFinalizadas(filters: Filters) {
           .gte("data_fechamento", ini)
           .lte("data_fechamento", fi);
         if (responsavelIds?.length) qGanho = qGanho.in("responsavel_id", responsavelIds);
+        if (clienteIds) { if (clienteIds.length === 0) return []; qGanho = qGanho.in("cliente_id", clienteIds); }
 
         let qPerdido = supabase
           .from("crm_oportunidades")
