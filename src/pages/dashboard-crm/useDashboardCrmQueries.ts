@@ -541,7 +541,8 @@ export function useAlertasAtencao(filters: Omit<Filters, "inicio" | "fim"> & { d
     queryKey: ["crm_dash_alertas", filters],
     enabled: !!filters.funilId,
     queryFn: async (): Promise<AlertaAtencao[]> => {
-      const { funilId, responsavelIds, diasSemInteracao } = filters;
+      const { funilId, responsavelIds, filialId, diasSemInteracao } = filters;
+      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
       let q = supabase
         .from("crm_oportunidades")
         .select("id, titulo, etapa_id, responsavel_id, cliente_id, data_previsao_fechamento, updated_at, clientes(nome_fantasia)")
