@@ -762,7 +762,7 @@ export default function PainelAtendimento() {
                                         )}
                                         {item.tipo === "agendamento" && statusAtiv !== "pendente" && (
                                           <div className="pl-1 mt-0.5">
-                                            <AgendamentoChecklist cardId={detailCard.id} atividadeId={atividade.id} checklistIndex={idx} etapaId={detailCard.etapa_id} filialId={detailCard.filial_id} mesaId={item.mesa_id || etapaMesaInfo?.id} mesaCor={etapaMesaInfo?.cor} etapaExecucaoId={item.etapa_execucao_id || null} titulo={item.texto} allowDelete={!!(item.etapa_execucao_id && detailCard.etapa_id === item.etapa_execucao_id)} disabled={statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} />
+                                            <AgendamentoChecklist cardId={detailCard.id} atividadeId={atividade.id} checklistIndex={idx} etapaId={detailCard.etapa_id} filialId={detailCard.filial_id} mesaId={item.mesa_id || etapaMesaInfo?.id} mesaCor={etapaMesaInfo?.cor} etapaExecucaoId={item.etapa_execucao_id || null} titulo={item.texto} allowDelete={!!(item.etapa_execucao_id && detailCard.etapa_id === item.etapa_execucao_id)} disabled={statusAtiv === "concluida" || (!checklistEditMode && !podeEditarChecklist)} onUpdate={(hasAgendamentos) => setChecklistProgresso(prev => ({ ...prev, [key]: { ...prev[key], concluido: hasAgendamentos } }))} />
                                           </div>
                                         )}
                                       {(item.tipo === "texto" || item.tipo === "quantitativo") && (
