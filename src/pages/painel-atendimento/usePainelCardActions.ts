@@ -237,24 +237,28 @@ export function usePainelCardActions(deps: CardActionsDeps) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
+      // Tenta encontrar etapa Standby; se não existir, mantém na etapa atual
       const standbyEtapa = etapas.find(e => e.nome.toLowerCase() === "standby");
-      if (!standbyEtapa) { toast.error("Etapa 'Standby' não encontrada."); setPausando(false); return; }
+      const etapaDestinoId = standbyEtapa?.id || detailCard.etapa_id;
+      const etapaDestinoNome = standbyEtapa?.nome || etapas.find(e => e.id === detailCard.etapa_id)?.nome || "Etapa atual";
       const sla = getSlaEtapaForCard(detailCard, jornadaSlaMap, etapas);
       await registrarSaidaEtapa(detailCard.id, detailCard.etapa_id, sla);
       const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
       await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, etapa_id: detailCard.etapa_id, criado_por: user.id, texto: `⏸️ Projeto pausado por ${autorNome}: ${pausarMotivo.trim()}` });
-      await registrarEntradaEtapa(detailCard.id, standbyEtapa.id, standbyEtapa.nome);
-      const { error } = await supabase.from("painel_atendimento").update({ pausado: true, pausado_em: new Date().toISOString(), pausado_por: user.id, pausado_motivo: pausarMotivo.trim(), iniciado_em: null, iniciado_por: null, etapa_id: standbyEtapa.id, status_projeto: "pausado", etapa_origem_id: detailCard.etapa_id }).eq("id", detailCard.id);
+      if (standbyEtapa) {
+        await registrarEntradaEtapa(detailCard.id, standbyEtapa.id, standbyEtapa.nome);
+      }
+      const { error } = await supabase.from("painel_atendimento").update({ pausado: true, pausado_em: new Date().toISOString(), pausado_por: user.id, pausado_motivo: pausarMotivo.trim(), iniciado_em: null, iniciado_por: null, etapa_id: etapaDestinoId, status_projeto: "pausado", etapa_origem_id: detailCard.etapa_id }).eq("id", detailCard.id);
       if (error) throw error;
       if (apontamentoUsuarios.length > 0) {
         const clienteNome = detailCard.clientes?.nome_fantasia || "Cliente";
         await supabase.from("painel_apontamentos").insert(apontamentoUsuarios.map(uid => ({ card_id: detailCard.id, usuario_id: uid, apontado_por: user.id, motivo: pausarMotivo.trim() })));
         for (const uid of apontamentoUsuarios) { const prof = responsaveis.find((r) => r.id === uid); await supabase.from("notificacoes").insert({ titulo: "📌 Apontamento - Projeto Pausado", mensagem: `Você foi designado(a) para resolver uma pendência do projeto ${clienteNome}. Motivo: ${pausarMotivo.trim()}`, tipo: "alerta", criado_por: user.id, destinatario_user_id: prof?.user_id || uid, metadata: { card_id: detailCard.id } }); }
         const nomes = apontamentoUsuarios.map(uid => { const p = responsaveis.find((r) => r.id === uid); return p?.full_name?.split(" ")[0] || "Usuário"; });
-        await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, etapa_id: standbyEtapa.id, criado_por: user.id, texto: `📌 Apontamento: ${nomes.join(", ")} designado(s) para resolução.` });
+        await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, etapa_id: etapaDestinoId, criado_por: user.id, texto: `📌 Apontamento: ${nomes.join(", ")} designado(s) para resolução.` });
       }
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] }); queryClient.invalidateQueries({ queryKey: ["card_apontamentos"] });
-      toast.success("Projeto pausado e movido para Standby!"); setPausarOpen(false); setPausarMotivo(""); setApontamentoUsuarios([]); setBuscaApontamento(""); setDetailCard(null);
+      toast.success("Projeto pausado com sucesso!"); setPausarOpen(false); setPausarMotivo(""); setApontamentoUsuarios([]); setBuscaApontamento(""); setDetailCard(null);
     } catch (err: any) { toast.error("Erro ao pausar projeto: " + (err.message || "")); } finally { setPausando(false); }
   }
 
@@ -265,23 +269,25 @@ export function usePainelCardActions(deps: CardActionsDeps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
       const standbyEtapa = etapas.find(e => e.nome.toLowerCase() === "standby");
-      if (!standbyEtapa) { toast.error("Etapa 'Standby' não encontrada."); setRecusando(false); return; }
+      const etapaDestinoId = standbyEtapa?.id || detailCard.etapa_id;
       const sla = getSlaEtapaForCard(detailCard, jornadaSlaMap, etapas);
       await registrarSaidaEtapa(detailCard.id, detailCard.etapa_id, sla);
       const autorNome = profile?.full_name?.split(" ")[0] || "Usuário";
       await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, etapa_id: detailCard.etapa_id, criado_por: user.id, texto: `❌ Projeto recusado por ${autorNome}: ${recusarMotivo.trim()}` });
-      await registrarEntradaEtapa(detailCard.id, standbyEtapa.id, standbyEtapa.nome);
-      const { error } = await supabase.from("painel_atendimento").update({ pausado: true, pausado_em: new Date().toISOString(), pausado_por: user.id, pausado_motivo: recusarMotivo.trim(), iniciado_em: null, iniciado_por: null, etapa_id: standbyEtapa.id, status_projeto: "recusado", etapa_origem_id: detailCard.etapa_id }).eq("id", detailCard.id);
+      if (standbyEtapa) {
+        await registrarEntradaEtapa(detailCard.id, standbyEtapa.id, standbyEtapa.nome);
+      }
+      const { error } = await supabase.from("painel_atendimento").update({ pausado: true, pausado_em: new Date().toISOString(), pausado_por: user.id, pausado_motivo: recusarMotivo.trim(), iniciado_em: null, iniciado_por: null, etapa_id: etapaDestinoId, status_projeto: "recusado", etapa_origem_id: detailCard.etapa_id }).eq("id", detailCard.id);
       if (error) throw error;
       if (apontamentoUsuarios.length > 0) {
         const clienteNome = detailCard.clientes?.nome_fantasia || "Cliente";
         await supabase.from("painel_apontamentos").insert(apontamentoUsuarios.map(uid => ({ card_id: detailCard.id, usuario_id: uid, apontado_por: user.id, motivo: recusarMotivo.trim() })));
         for (const uid of apontamentoUsuarios) { const prof = responsaveis.find((r) => r.id === uid); await supabase.from("notificacoes").insert({ titulo: "📌 Apontamento - Projeto Recusado", mensagem: `Você foi designado(a) para resolver uma pendência do projeto ${clienteNome}. Motivo: ${recusarMotivo.trim()}`, tipo: "alerta", criado_por: user.id, destinatario_user_id: prof?.user_id || uid, metadata: { card_id: detailCard.id } }); }
         const nomes = apontamentoUsuarios.map(uid => { const p = responsaveis.find((r) => r.id === uid); return p?.full_name?.split(" ")[0] || "Usuário"; });
-        await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, etapa_id: standbyEtapa.id, criado_por: user.id, texto: `📌 Apontamento: ${nomes.join(", ")} designado(s) para resolução.` });
+        await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, etapa_id: etapaDestinoId, criado_por: user.id, texto: `📌 Apontamento: ${nomes.join(", ")} designado(s) para resolução.` });
       }
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] }); queryClient.invalidateQueries({ queryKey: ["card_apontamentos"] });
-      toast.success("Projeto recusado e movido para Standby!"); setRecusarOpen(false); setRecusarMotivo(""); setApontamentoUsuarios([]); setBuscaApontamento(""); setDetailCard(null);
+      toast.success("Projeto recusado com sucesso!"); setRecusarOpen(false); setRecusarMotivo(""); setApontamentoUsuarios([]); setBuscaApontamento(""); setDetailCard(null);
     } catch (err: any) { toast.error("Erro ao recusar projeto: " + (err.message || "")); } finally { setRecusando(false); }
   }
 
