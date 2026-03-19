@@ -36,68 +36,122 @@ export function EspelhoContrato({ espelho, contratoFinanceiroBase }: Props) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
-          <FieldReadonly label="Plano" value={espelho.plano?.nome || "—"} />
-          <div className="grid grid-cols-2 gap-3">
-            <FieldReadonly label="Mensalidade" value={fmtCurrency(valorMensalidade)} highlight />
-            <FieldReadonly label="Implantação" value={fmtCurrency(valorImplantacao)} />
-          </div>
+          {(() => {
+            // ── Calcular fator proporcional correto para Contrato Inicial ──
+            const tipoPedido = espelho.pedido?.tipo_pedido || "";
+            const isUpgrade = tipoPedido === "Upgrade";
+            const isDowngrade = tipoPedido === "Downgrade";
+            const isModuloAdicional = tipoPedido === "Módulo Adicional" || tipoPedido === "Aditivo";
+            const isSubRegFluxo = isModuloAdicional || isUpgrade || isDowngrade;
 
-          {espelho.pedido?.pagamento_implantacao_parcelas && (
-            <FieldReadonly
-              label="Parcelas previstas"
-              value={`${espelho.pedido.pagamento_implantacao_parcelas}x de ${fmtCurrency(valorImplantacao / espelho.pedido.pagamento_implantacao_parcelas)}`}
-            />
-          )}
+            const valorBrutoPlano = toNumber(espelho.plano?.valor_mensalidade_padrao ?? 0);
 
-          <FieldReadonly
-            label="Data de assinatura"
-            value={format(parseISO(espelho.updated_at), "dd/MM/yyyy 'às' HH:mm")}
-          />
+            let fator = 1;
+            if (!isSubRegFluxo) {
+              // Contrato Inicial: fator sobre plano + módulos
+              const valorBrutoModulosCalc = (espelho.pedido?.modulos_adicionais || []).reduce((sum, m) => {
+                const vUnit = toNumber(m.valor_mensalidade_modulo ?? m.valor_mensalidade ?? 0);
+                const qtd = Math.max(1, toNumber(m.quantidade ?? 1));
+                return sum + (vUnit * qtd);
+              }, 0);
+              const valorBrutoTotal = valorBrutoPlano + valorBrutoModulosCalc;
+              const valorFinalTotal = toNumber(espelho.pedido?.valor_mensalidade_final ?? valorBrutoTotal);
+              fator = valorBrutoTotal > 0 ? valorFinalTotal / valorBrutoTotal : 1;
+            } else {
+              // Sub-registro: fator sobre módulos apenas
+              const valorBruto = toNumber(espelho.pedido?.valor_mensalidade_original ?? espelho.pedido?.valor_mensalidade ?? 0);
+              const valorFinal = toNumber(espelho.pedido?.valor_mensalidade_final ?? valorBruto);
+              fator = valorBruto > 0 ? valorFinal / valorBruto : 1;
+            }
 
-          {/* Módulos do pedido */}
-          {espelho.pedido?.modulos_adicionais && espelho.pedido.modulos_adicionais.length > 0 && (() => {
-            // Distribuição proporcional do desconto do pedido
-            const valorBruto = toNumber(espelho.pedido?.valor_mensalidade_original ?? espelho.pedido?.valor_mensalidade ?? 0);
-            const valorFinal = toNumber(espelho.pedido?.valor_mensalidade_final ?? valorBruto);
-            const fator = valorBruto > 0 ? valorFinal / valorBruto : 1;
+            const temDesconto = fator < 1;
+            const valorPlanoNegociado = Math.round(valorBrutoPlano * fator * 100) / 100;
 
             return (
               <>
-                <Separator />
-                <div className="space-y-2">
-                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    <Package className="h-3 w-3" /> Produtos/Serviços contratados
-                  </span>
-                  {espelho.pedido!.modulos_adicionais!.map((m: ModuloAdicionalPedido, i) => {
-                    const qtd = Math.max(1, toNumber(m.quantidade ?? 1));
-                    const valorPadraoUnit = toNumber(m.valor_mensalidade_modulo ?? m.valor_mensalidade ?? 0);
-                    const valorNegociadoUnit = Math.round(valorPadraoUnit * fator * 100) / 100;
-                    const valorPadraoTotal = valorPadraoUnit * qtd;
-                    const valorNegociadoTotal = Math.round(valorNegociadoUnit * qtd * 100) / 100;
-                    const temDesconto = fator < 1;
+                <FieldReadonly label="Plano" value={espelho.plano?.nome || "—"} />
 
-                    return (
-                      <div key={i} className="rounded border border-border bg-muted/40 px-2 py-2 space-y-0.5">
-                        <p className="text-xs font-medium">{m.nome}</p>
-                        <p className="text-[11px] text-muted-foreground">Qtd: {qtd}</p>
-                        {temDesconto ? (
-                          <>
-                            <p className="text-[11px] line-through text-muted-foreground">
-                              Valor padrão: {fmtCurrency(valorPadraoTotal)}/mês
-                            </p>
-                            <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                              Valor negociado: {fmtCurrency(valorNegociadoTotal)}/mês
-                            </p>
-                          </>
-                        ) : (
-                          <p className="text-[11px] text-muted-foreground">
-                            Valor: {fmtCurrency(valorPadraoTotal)}/mês
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                {/* Plano: bruto vs negociado */}
+                {temDesconto && !isSubRegFluxo ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className="text-xs text-muted-foreground">Mensalidade Plano</span>
+                      <p className="text-[11px] line-through text-muted-foreground">{fmtCurrency(valorBrutoPlano)}/mês</p>
+                      <p className="font-semibold text-primary">{fmtCurrency(valorPlanoNegociado)}/mês</p>
+                    </div>
+                    <FieldReadonly label="Implantação" value={fmtCurrency(valorImplantacao)} />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <FieldReadonly label="Mensalidade" value={fmtCurrency(valorMensalidade)} highlight />
+                    <FieldReadonly label="Implantação" value={fmtCurrency(valorImplantacao)} />
+                  </div>
+                )}
+
+                {espelho.pedido?.pagamento_implantacao_parcelas && (
+                  <FieldReadonly
+                    label="Parcelas previstas"
+                    value={`${espelho.pedido.pagamento_implantacao_parcelas}x de ${fmtCurrency(valorImplantacao / espelho.pedido.pagamento_implantacao_parcelas)}`}
+                  />
+                )}
+
+                <FieldReadonly
+                  label="Data de assinatura"
+                  value={format(parseISO(espelho.updated_at), "dd/MM/yyyy 'às' HH:mm")}
+                />
+
+                {/* Módulos do pedido */}
+                {espelho.pedido?.modulos_adicionais && espelho.pedido.modulos_adicionais.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                        <Package className="h-3 w-3" /> Produtos/Serviços contratados
+                      </span>
+                      {espelho.pedido!.modulos_adicionais!.map((m: ModuloAdicionalPedido, i) => {
+                        const qtd = Math.max(1, toNumber(m.quantidade ?? 1));
+                        const valorPadraoUnit = toNumber(m.valor_mensalidade_modulo ?? m.valor_mensalidade ?? 0);
+                        const valorNegociadoUnit = Math.round(valorPadraoUnit * fator * 100) / 100;
+                        const valorPadraoTotal = valorPadraoUnit * qtd;
+                        const valorNegociadoTotal = Math.round(valorNegociadoUnit * qtd * 100) / 100;
+
+                        return (
+                          <div key={i} className="rounded border border-border bg-muted/40 px-2 py-2 space-y-0.5">
+                            <p className="text-xs font-medium">{m.nome}</p>
+                            <p className="text-[11px] text-muted-foreground">Qtd: {qtd}</p>
+                            {temDesconto ? (
+                              <>
+                                <p className="text-[11px] line-through text-muted-foreground">
+                                  Valor padrão: {fmtCurrency(valorPadraoTotal)}/mês
+                                </p>
+                                <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                  Valor negociado: {fmtCurrency(valorNegociadoTotal)}/mês
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-[11px] text-muted-foreground">
+                                Valor: {fmtCurrency(valorPadraoTotal)}/mês
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+
+                {/* Total mensalidade com desconto */}
+                {temDesconto && !isSubRegFluxo && (
+                  <>
+                    <Separator />
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-xs font-semibold text-foreground">Total mensalidade</span>
+                      <span className="text-sm font-bold text-primary">
+                        {fmtCurrency(toNumber(espelho.pedido?.valor_mensalidade_final ?? valorMensalidade))}/mês
+                      </span>
+                    </div>
+                  </>
+                )}
               </>
             );
           })()}
