@@ -137,6 +137,98 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Buscar contrato_id vinculado ao doc_token
+      const { data: zapsignRecord } = await supabaseWh
+        .from("contratos_zapsign")
+        .select("contrato_id")
+        .eq("zapsign_doc_token", docToken)
+        .maybeSingle();
+
+      // Atualizar contratos.status diretamente (redundância ao trigger para garantir consistência)
+      if (zapsignRecord?.contrato_id) {
+        const contratoStatusMap: Record<string, string> = {
+          "Assinado": "Assinado",
+          "Recusado": "Recusado",
+          "Pendente": "Pendente Assinatura",
+        };
+        const newContratoStatus = contratoStatusMap[mappedStatus];
+        if (newContratoStatus) {
+          const { error: contratoUpdateError } = await supabaseWh
+            .from("contratos")
+            .update({ status: newContratoStatus, updated_at: new Date().toISOString() })
+            .eq("id", zapsignRecord.contrato_id);
+
+          if (contratoUpdateError) {
+            console.warn("[ZapSign Webhook] Erro ao atualizar contratos.status:", contratoUpdateError);
+          } else {
+            console.log(`[ZapSign Webhook] contratos.status atualizado para: ${newContratoStatus}`);
+          }
+        }
+
+        // Notificação interna quando contrato é assinado
+        if (mappedStatus === "Assinado") {
+          try {
+            // Buscar dados do contrato para a notificação
+            const { data: contrato } = await supabaseWh
+              .from("contratos")
+              .select("numero_exibicao, cliente_id, pedido_id, clientes(nome_fantasia)")
+              .eq("id", zapsignRecord.contrato_id)
+              .maybeSingle();
+
+            if (contrato) {
+              const clienteNome = (contrato as any).clientes?.nome_fantasia || "Cliente";
+              const numero = contrato.numero_exibicao || "";
+
+              // Buscar responsável (vendedor do pedido)
+              let responsavelId: string | null = null;
+              if (contrato.pedido_id) {
+                const { data: pedido } = await supabaseWh
+                  .from("pedidos")
+                  .select("vendedor_id")
+                  .eq("id", contrato.pedido_id)
+                  .maybeSingle();
+                responsavelId = pedido?.vendedor_id || null;
+              }
+
+              // Inserir notificação para o responsável (se existir) e para admins
+              const notificacoes: any[] = [];
+
+              if (responsavelId) {
+                notificacoes.push({
+                  tipo: "contrato_assinado",
+                  titulo: "Contrato assinado!",
+                  mensagem: `O contrato ${numero} de ${clienteNome} foi assinado por todos os signatários.`,
+                  destinatario_user_id: responsavelId,
+                  metadata: { contrato_id: zapsignRecord.contrato_id },
+                });
+              }
+
+              // Notificação para admins
+              notificacoes.push({
+                tipo: "contrato_assinado",
+                titulo: "Contrato assinado!",
+                mensagem: `O contrato ${numero} de ${clienteNome} foi assinado por todos os signatários.`,
+                destinatario_role: "admin",
+                metadata: { contrato_id: zapsignRecord.contrato_id },
+              });
+
+              if (notificacoes.length > 0) {
+                const { error: notifError } = await supabaseWh
+                  .from("notificacoes")
+                  .insert(notificacoes);
+                if (notifError) {
+                  console.warn("[ZapSign Webhook] Erro ao criar notificação:", notifError);
+                } else {
+                  console.log(`[ZapSign Webhook] Notificações criadas: ${notificacoes.length}`);
+                }
+              }
+            }
+          } catch (notifErr) {
+            console.warn("[ZapSign Webhook] Erro ao processar notificação:", notifErr);
+          }
+        }
+      }
+
       // Registrar evento como processado (dedup) com IP
       await supabaseWh.from("webhook_events").insert({
         source: "zapsign",
