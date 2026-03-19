@@ -426,6 +426,9 @@ export function usePainelCardActions(deps: CardActionsDeps) {
       await registrarEntradaEtapa(detailCard.id, proximaEtapa.id, proximaEtapa.nome);
       const { error } = await supabase.from("painel_atendimento").update({ etapa_id: proximaEtapa.id, iniciado_em: null, iniciado_por: null }).eq("id", detailCard.id);
       if (error) throw error;
+      // Verify the update actually happened (RLS may silently block)
+      const { data: verifyData } = await supabase.from("painel_atendimento").select("etapa_id").eq("id", detailCard.id).single();
+      if (verifyData && verifyData.etapa_id !== proximaEtapa.id) throw new Error("Sem permissão para atualizar este projeto. Verifique suas permissões.");
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
       queryClient.invalidateQueries({ queryKey: ["painel_atividade_execucao"] });
       toast.success(`Avançado para etapa: ${proximaEtapa.nome}`);
