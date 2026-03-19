@@ -42,6 +42,7 @@ export interface Contrato {
   } | null;
   planos?: { nome: string; descricao: string | null; valor_mensalidade_padrao: number } | null;
   pedidos?: {
+    numero_exibicao: string;
     status_pedido: string;
     contrato_liberado: boolean;
     financeiro_status: string;

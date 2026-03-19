@@ -131,6 +131,12 @@ export function ContratoDetailDialog({
                 {format(new Date(selected.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
               </p>
             </div>
+            {selected.pedidos?.numero_exibicao && (
+              <div>
+                <p className="text-muted-foreground text-xs">Pedido de Origem</p>
+                <p className="font-mono font-semibold">{selected.pedidos.numero_exibicao}</p>
+              </div>
+            )}
           </div>
 
           {/* Contratos vinculados */}

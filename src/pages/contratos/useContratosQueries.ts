@@ -64,7 +64,7 @@ export function useContratosQueries() {
           clientes(nome_fantasia, filial_id, razao_social, cnpj_cpf, inscricao_estadual, cidade, uf, cep, logradouro, numero, complemento, bairro, telefone, email, apelido, responsavel_nome),
           planos(nome, descricao, valor_mensalidade_padrao),
           pedidos(
-            status_pedido, contrato_liberado, financeiro_status,
+            numero_exibicao, status_pedido, contrato_liberado, financeiro_status,
             valor_implantacao_final, valor_mensalidade_final,
             valor_implantacao_original, valor_mensalidade_original,
             valor_total, desconto_implantacao_tipo, desconto_implantacao_valor,
