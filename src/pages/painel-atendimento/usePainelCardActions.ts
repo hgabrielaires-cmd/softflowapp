@@ -424,8 +424,9 @@ export function usePainelCardActions(deps: CardActionsDeps) {
       if (!proximaEtapa) { toast.error("Não há próxima etapa configurada após a etapa atual."); return; }
       await registrarSaidaEtapa(detailCard.id, detailCard.etapa_id, slaEtapaJornada);
       await registrarEntradaEtapa(detailCard.id, proximaEtapa.id, proximaEtapa.nome);
-      const { error } = await supabase.from("painel_atendimento").update({ etapa_id: proximaEtapa.id, iniciado_em: null, iniciado_por: null }).eq("id", detailCard.id);
+      const { error, count } = await supabase.from("painel_atendimento").update({ etapa_id: proximaEtapa.id, iniciado_em: null, iniciado_por: null }).eq("id", detailCard.id).select("id", { count: "exact", head: true });
       if (error) throw error;
+      if (count === 0) throw new Error("Sem permissão para atualizar este projeto. Verifique suas permissões.");
       queryClient.invalidateQueries({ queryKey: ["painel_atendimento"] });
       queryClient.invalidateQueries({ queryKey: ["painel_atividade_execucao"] });
       toast.success(`Avançado para etapa: ${proximaEtapa.nome}`);
