@@ -90,10 +90,38 @@ export default function ConfigurarFaturamento() {
     const parcImpl = espelho.pedido?.pagamento_implantacao_parcelas ?? 1;
     const formaPag = espelho.pedido?.pagamento_mensalidade_forma || "Boleto";
 
-    // Módulos do pedido — distribuição proporcional do desconto
-    const valorBrutoModulos = toNumber(espelho.pedido?.valor_mensalidade_original ?? espelho.pedido?.valor_mensalidade ?? 0);
-    const valorFinalModulos = toNumber(espelho.pedido?.valor_mensalidade_final ?? valorBrutoModulos);
-    const fatorDesconto = valorBrutoModulos > 0 ? valorFinalModulos / valorBrutoModulos : 1;
+    // ── Distribuição proporcional do desconto ──
+    // Para Contrato Inicial: fator = valorFinalTotal / (valorBrutoPlano + valorBrutoModulos)
+    // Para sub-registros (upgrade/aditivo): mantém lógica original (fator sobre módulos apenas)
+    const tipoPedidoNorm = tipoPedido;
+    const isUpgrade = tipoPedidoNorm === "Upgrade";
+    const isDowngrade = tipoPedidoNorm === "Downgrade";
+    const isSubRegFluxo = isModuloAdicional || isUpgrade || isDowngrade;
+
+    let fatorDesconto = 1;
+    let valorMensBase = valorMens; // valor_mensalidade do form
+
+    if (!isSubRegFluxo) {
+      // ── CONTRATO INICIAL: fator sobre plano + módulos ──
+      const valorBrutoPlano = toNumber(espelho.plano?.valor_mensalidade_padrao ?? 0);
+      const valorBrutoModulosCalc = (espelho.pedido?.modulos_adicionais || []).reduce((sum, m) => {
+        const vUnit = toNumber(m.valor_mensalidade_modulo ?? m.valor_mensalidade ?? 0);
+        const qtd = Math.max(1, toNumber(m.quantidade ?? 1));
+        return sum + (vUnit * qtd);
+      }, 0);
+      const valorBrutoTotal = valorBrutoPlano + valorBrutoModulosCalc;
+      const valorFinalTotal = toNumber(espelho.pedido?.valor_mensalidade_final ?? valorBrutoTotal);
+
+      fatorDesconto = valorBrutoTotal > 0 ? valorFinalTotal / valorBrutoTotal : 1;
+
+      // Mensalidade base do plano com fator aplicado
+      valorMensBase = Math.round(valorBrutoPlano * fatorDesconto * 100) / 100;
+    } else {
+      // ── SUB-REGISTRO: fator sobre módulos apenas (lógica original) ──
+      const valorBrutoModulosOrig = toNumber(espelho.pedido?.valor_mensalidade_original ?? espelho.pedido?.valor_mensalidade ?? 0);
+      const valorFinalModulosOrig = toNumber(espelho.pedido?.valor_mensalidade_final ?? valorBrutoModulosOrig);
+      fatorDesconto = valorBrutoModulosOrig > 0 ? valorFinalModulosOrig / valorBrutoModulosOrig : 1;
+    }
 
     const modulos = (espelho.pedido?.modulos_adicionais || []).map((m: ModuloAdicionalPedido) => {
       const valorPadrao = toNumber(m.valor_mensalidade_modulo ?? m.valor_mensalidade ?? 0);
@@ -110,6 +138,18 @@ export default function ConfigurarFaturamento() {
       };
     });
 
+    // ── Ajuste de centavos (apenas Contrato Inicial) ──
+    if (!isSubRegFluxo && fatorDesconto < 1) {
+      const valorFinalTotal = toNumber(espelho.pedido?.valor_mensalidade_final ?? 0);
+      const somaModulos = modulos.reduce((s, m) => s + m.valor_mensal, 0);
+      const somaAtual = Math.round((valorMensBase + somaModulos) * 100) / 100;
+      const diff = Math.round((valorFinalTotal - somaAtual) * 100) / 100;
+      if (diff !== 0) {
+        // Ajustar na mensalidade base
+        valorMensBase = Math.round((valorMensBase + diff) * 100) / 100;
+      }
+    }
+
     // Se é sub-registro e temos o base, herdar dia_vencimento e forma_pagamento
     const isSubReg = !!espelho.contrato_origem_id && !!contratoFinanceiroBase;
     const diaVenc = (isSubReg && contratoFinanceiroBase)
@@ -121,7 +161,7 @@ export default function ConfigurarFaturamento() {
 
     setForm((f) => ({
       ...f,
-      valor_mensalidade: valorMens,
+      valor_mensalidade: !isSubRegFluxo ? valorMensBase : valorMens,
       valor_implantacao: valorImpl,
       parcelas_implantacao: parcImpl > 0 ? parcImpl : 1,
       dia_vencimento: diaVenc,
