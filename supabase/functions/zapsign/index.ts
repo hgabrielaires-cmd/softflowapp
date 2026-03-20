@@ -36,6 +36,15 @@ Deno.serve(async (req) => {
 
   // ── Webhook ZapSign (público, validado por token secreto) ──
   const reqUrl = new URL(req.url);
+
+  // ── Ping: teste de acessibilidade ──
+  if (reqUrl.searchParams.get("action") === "ping") {
+    return new Response(
+      JSON.stringify({ ok: true, timestamp: new Date().toISOString(), message: "ZapSign edge function acessível" }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   if (reqUrl.searchParams.get("action") === "webhook") {
     try {
       const webhookToken = reqUrl.searchParams.get("token");
