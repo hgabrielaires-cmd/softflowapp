@@ -116,10 +116,13 @@ export function useChatHistorico(numero: string | null, conversaAtualId: string 
       if (!numero) return [];
       let q = supabase
         .from("chat_conversas")
-        .select("id, protocolo, status, created_at, encerrado_em, nome_cliente")
+        .select(`id, protocolo, status, created_at, encerrado_em, nome_cliente,
+          nps_nota, tempo_atendimento_segundos, setor_id,
+          atendente:profiles!chat_conversas_atendente_id_fkey(full_name),
+          setor:setores!chat_conversas_setor_id_fkey(nome)`)
         .eq("numero_cliente", numero)
         .order("created_at", { ascending: false })
-        .limit(6);
+        .limit(11);
 
       if (conversaAtualId) {
         q = q.neq("id", conversaAtualId);
@@ -127,7 +130,7 @@ export function useChatHistorico(numero: string | null, conversaAtualId: string 
 
       const { data, error } = await q;
       if (error) throw error;
-      return (data || []).slice(0, 5);
+      return (data || []).slice(0, 10);
     },
     enabled: !!numero,
   });
