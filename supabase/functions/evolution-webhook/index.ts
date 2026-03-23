@@ -201,12 +201,19 @@ serve(async (req) => {
 
     if (conversa) {
       // ── Existing conversation ──
+      // Download and persist media if present
+      let finalMediaUrl = mediaUrl || null;
+      if (mediaUrl && tipo !== "texto") {
+        const ext = mediaNome || (mediaTipo ? `media.${mediaTipo.split("/")[1]?.split(";")[0] || "bin"}` : "media.bin");
+        finalMediaUrl = await salvarMidiaStorage(mediaUrl, conversa.id, ext, mediaTipo);
+      }
+
       // Save message
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversa.id,
         tipo,
         conteudo,
-        media_url: mediaUrl || null,
+        media_url: finalMediaUrl,
         media_tipo: mediaTipo || null,
         media_nome: mediaNome || null,
         remetente: "cliente",
