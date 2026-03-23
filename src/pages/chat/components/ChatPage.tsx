@@ -8,6 +8,7 @@ import TransferirDialog from "./TransferirDialog";
 import { useChatConversas, useChatMensagens } from "../useChatQueries";
 import { useChatActions } from "../useChatActions";
 import { ChatConversa } from "../types";
+import { useNotificacaoChat } from "@/hooks/useNotificacaoChat";
 
 export default function ChatPage() {
   const { user, profile } = useAuth();
