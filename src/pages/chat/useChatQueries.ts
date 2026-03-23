@@ -156,7 +156,7 @@ export function useAtendentes() {
         .from("profiles")
         .select("user_id, full_name, avatar_url")
         .eq("ativo", true)
-        .order("full_name");
+        .order("full_name") as { data: Array<{ user_id: string; full_name: string | null; avatar_url: string | null }> | null; error: any };
       if (error) throw error;
       return data || [];
     },

@@ -48,7 +48,7 @@ export default function ChatMessageArea({
   const podeComentar =
     conversa.status === "em_atendimento" && conversa.atendente_id === userId;
   const podeIniciar =
-    (conversa.status === "aguardando" || conversa.status === "bot") && conversa.status !== "encerrado";
+    conversa.status === "aguardando" || conversa.status === "bot";
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
