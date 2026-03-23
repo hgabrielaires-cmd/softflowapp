@@ -120,7 +120,6 @@ export default function ChatPage() {
                 setTab("meus");
               },
             });
-            });
           }}
           onTransferir={() => setShowTransferir(true)}
         />
