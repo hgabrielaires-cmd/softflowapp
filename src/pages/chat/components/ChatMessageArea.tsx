@@ -2,12 +2,22 @@ import { useRef, useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Paperclip, Zap, Lock, MessageSquare } from "lucide-react";
+import { Send, Paperclip, Lock, MessageSquare, Download, FileText, FileSpreadsheet, File as FileIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ChatConversa, ChatMensagem, STATUS_COLORS, STATUS_LABELS, ChatStatus } from "../types";
 import { formatarTelefone } from "../helpers";
 import { format } from "date-fns";
+import ChatMediaUpload from "./ChatMediaUpload";
+
+function getDocIcon(nome: string | null) {
+  if (!nome) return <FileIcon className="h-4 w-4" />;
+  const ext = nome.split(".").pop()?.toLowerCase();
+  if (ext === "pdf") return <FileText className="h-4 w-4 text-destructive" />;
+  if (ext === "xls" || ext === "xlsx") return <FileSpreadsheet className="h-4 w-4 text-green-600" />;
+  if (ext === "doc" || ext === "docx") return <FileText className="h-4 w-4 text-blue-600" />;
+  return <FileIcon className="h-4 w-4 text-muted-foreground" />;
+}
 
 interface Props {
   conversa: ChatConversa | null;
@@ -15,6 +25,7 @@ interface Props {
   userId: string | null;
   userName: string;
   onSend: (texto: string, tipo?: string) => void;
+  onSendMedia: (file: File, caption: string) => void;
   onIniciarAtendimento: () => void;
   onEncerrar: () => void;
   onTransferir: () => void;
@@ -23,10 +34,12 @@ interface Props {
 
 export default function ChatMessageArea({
   conversa, mensagens, userId, userName,
-  onSend, onIniciarAtendimento, onEncerrar, onTransferir, isLoading,
+  onSend, onSendMedia, onIniciarAtendimento, onEncerrar, onTransferir, isLoading,
 }: Props) {
   const [texto, setTexto] = useState("");
   const [modoNota, setModoNota] = useState(false);
+  const [modoMidia, setModoMidia] = useState(false);
+  const [imagemFull, setImagemFull] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -162,15 +175,22 @@ export default function ChatMessageArea({
               )}>
                 {/* Media */}
                 {msg.tipo === "imagem" && msg.media_url && (
-                  <img src={msg.media_url} alt="" className="rounded-lg max-w-full max-h-60 mb-1" />
+                  <img
+                    src={msg.media_url}
+                    alt=""
+                    className="rounded-lg max-w-full max-h-60 mb-1 cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setImagemFull(msg.media_url)}
+                  />
                 )}
                 {msg.tipo === "audio" && msg.media_url && (
                   <audio controls src={msg.media_url} className="max-w-full mb-1" />
                 )}
                 {msg.tipo === "documento" && msg.media_url && (
                   <a href={msg.media_url} target="_blank" rel="noreferrer"
-                    className="flex items-center gap-2 text-xs underline mb-1">
-                    📄 {msg.media_nome || "Documento"}
+                    className="flex items-center gap-2 text-xs mb-1 p-2 rounded bg-background/10 hover:bg-background/20 transition-colors">
+                    {getDocIcon(msg.media_nome)}
+                    <span className="truncate flex-1">{msg.media_nome || "Documento"}</span>
+                    <Download className="h-3 w-3 flex-shrink-0" />
                   </a>
                 )}
                 {msg.conteudo && (
@@ -191,8 +211,29 @@ export default function ChatMessageArea({
         })}
       </div>
 
+      {/* Fullscreen image overlay */}
+      {imagemFull && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center cursor-pointer"
+          onClick={() => setImagemFull(null)}
+        >
+          <img src={imagemFull} alt="" className="max-w-[90vw] max-h-[90vh] rounded-lg" />
+        </div>
+      )}
+
+      {/* Media upload */}
+      {modoMidia && podeComentar && (
+        <ChatMediaUpload
+          onConfirm={(file, caption) => {
+            onSendMedia(file, caption);
+            setModoMidia(false);
+          }}
+          onCancel={() => setModoMidia(false)}
+        />
+      )}
+
       {/* Input */}
-      {(podeComentar || podeIniciar) && conversa.status !== "encerrado" && (
+      {!modoMidia && (podeComentar || podeIniciar) && conversa.status !== "encerrado" && (
         <div className="border-t border-border p-3 bg-card">
           {!podeComentar && podeIniciar ? (
             <p className="text-sm text-center text-muted-foreground">
@@ -201,7 +242,12 @@ export default function ChatMessageArea({
           ) : (
             <>
               <div className="flex items-center gap-2 mb-2">
-                <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" disabled>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => setModoMidia(true)}
+                >
                   <Paperclip className="h-3 w-3" /> Mídia
                 </Button>
                 <Button
