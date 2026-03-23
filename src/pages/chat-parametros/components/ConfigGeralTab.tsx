@@ -81,6 +81,8 @@ export function ConfigGeralTab() {
 
   const handleSave = () => salvarConfig.mutate(form);
 
+  const isNew = !config;
+
   if (configQuery.isLoading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
@@ -271,8 +273,11 @@ export function ConfigGeralTab() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={salvarConfig.isPending}>
+      <div className="flex items-center justify-between">
+        {isNew && (
+          <p className="text-sm text-amber-600 font-medium">⚠️ Configurações ainda não salvas no banco. Clique em Salvar.</p>
+        )}
+        <Button onClick={handleSave} disabled={salvarConfig.isPending} className="ml-auto">
           {salvarConfig.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
           Salvar Configurações
         </Button>

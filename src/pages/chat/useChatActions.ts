@@ -171,7 +171,7 @@ export function useChatActions() {
       }
 
       const msgEnc = config?.mensagem_encerramento || "Obrigado pelo contato! Foi um prazer atendê-lo. 😊";
-      const msgNps = config?.mensagem_nps || "De 1 a 5, como você avalia o atendimento que recebeu? Responda apenas com o número. ⭐";
+      const msgNps = config?.mensagem_nps || "Como você avalia nosso atendimento?\n1 - Péssimo 😞\n2 - Ruim 😕\n3 - Regular 😐\n4 - Bom 😊\n5 - Excelente 🌟";
 
       await supabase
         .from("chat_conversas")
