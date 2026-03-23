@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ExternalLink, Plus, Phone, Building2, Clock, Search, X, Star, User } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { ChatConversa, STATUS_LABELS, ChatStatus } from "../types";
 import { formatarTelefone, tempoRelativo } from "../helpers";
 import { useChatHistorico } from "../useChatQueries";
