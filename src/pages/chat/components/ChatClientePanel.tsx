@@ -72,25 +72,25 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     }
   }
 
-  async function vincularCliente(clienteId: string) {
+  async function vincularCliente(cli: any) {
     try {
       const { error } = await supabase
         .from("chat_conversas")
-        .update({ cliente_id: clienteId })
+        .update({ cliente_id: cli.id })
         .eq("id", conversa!.id);
       if (error) throw error;
 
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversa!.id,
         tipo: "sistema",
-        conteudo: `Cliente vinculado: ${clienteEncontrado?.nome_fantasia}`,
+        conteudo: `Cliente vinculado: ${cli.nome_fantasia}`,
         remetente: "sistema",
       });
 
       toast.success("Cliente vinculado!");
       qc.invalidateQueries({ queryKey: ["chat-conversas"] });
-      setClienteEncontrado(null);
-      setCnpjBusca("");
+      setClientesEncontrados([]);
+      setTermoBusca("");
       setBuscaFeita(false);
     } catch (e: any) {
       toast.error("Erro ao vincular: " + e.message);
