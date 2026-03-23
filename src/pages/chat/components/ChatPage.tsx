@@ -21,6 +21,9 @@ export default function ChatPage() {
   const { data: mensagens = [] } = useChatMensagens(selectedConversa?.id || null);
   const actions = useChatActions();
 
+  // Notifications
+  useNotificacaoChat({ userId: user?.id, conversaAbertaId: selectedConversa?.id || null });
+
   // Counts per tab
   const { data: filaConversas = [] } = useChatConversas("fila", user?.id, "");
   const { data: meusConversas = [] } = useChatConversas("meus", user?.id, "");
