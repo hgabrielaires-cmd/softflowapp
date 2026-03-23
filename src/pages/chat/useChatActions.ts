@@ -16,6 +16,7 @@ export function useChatActions() {
       texto,
       tipo = "texto",
       atendenteId,
+      userName,
       numero,
       instanceName,
     }: {
@@ -23,6 +24,7 @@ export function useChatActions() {
       texto: string;
       tipo?: string;
       atendenteId: string;
+      userName?: string;
       numero: string;
       instanceName?: string;
     }) => {
