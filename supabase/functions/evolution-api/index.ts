@@ -315,7 +315,7 @@ serve(async (req) => {
       }
 
       case "configure_webhook": {
-        const { webhook_url } = await req.json().catch(() => ({}));
+        // webhook_url already destructured from body
         if (!webhook_url) {
           return new Response(JSON.stringify({ error: "webhook_url é obrigatório" }), {
             status: 400,
