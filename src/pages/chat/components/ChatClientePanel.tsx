@@ -22,9 +22,9 @@ interface Props {
 
 export default function ChatClientePanel({ conversa, onSelectHistorico }: Props) {
   const qc = useQueryClient();
-  const [cnpjBusca, setCnpjBusca] = useState("");
+  const [termoBusca, setTermoBusca] = useState("");
   const [buscando, setBuscando] = useState(false);
-  const [clienteEncontrado, setClienteEncontrado] = useState<any>(null);
+  const [clientesEncontrados, setClientesEncontrados] = useState<any[]>([]);
   const [buscaFeita, setBuscaFeita] = useState(false);
   const [drawerAberto, setDrawerAberto] = useState(false);
   const [historicoSelecionado, setHistoricoSelecionado] = useState<any>(null);
@@ -39,19 +39,32 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
   const cliente = conversa.cliente as any;
   const atendente = conversa.atendente as any;
 
-  async function buscarPorCnpj() {
-    const limpo = cnpjBusca.replace(/\D/g, "");
-    if (!limpo) return;
+  async function buscarCliente() {
+    const termo = termoBusca.trim();
+    if (!termo) return;
     setBuscando(true);
     setBuscaFeita(true);
     try {
-      const { data, error } = await supabase
+      const limpo = termo.replace(/\D/g, "");
+      const isNumerico = limpo.length >= 3 && /^\d+$/.test(limpo);
+
+      let query = supabase
         .from("clientes")
-        .select("id, nome_fantasia, razao_social, cnpj_cpf, segmento_id, filial_id")
-        .eq("cnpj_cpf", limpo)
-        .maybeSingle();
+        .select("id, nome_fantasia, razao_social, cnpj_cpf, apelido, filial_id")
+        .eq("ativo", true)
+        .limit(10);
+
+      if (isNumerico && limpo.length >= 11) {
+        query = query.eq("cnpj_cpf", limpo);
+      } else {
+        query = query.or(
+          `nome_fantasia.ilike.%${termo}%,razao_social.ilike.%${termo}%,apelido.ilike.%${termo}%,cnpj_cpf.ilike.%${limpo}%`
+        );
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
-      setClienteEncontrado(data);
+      setClientesEncontrados(data || []);
     } catch (e: any) {
       toast.error("Erro na busca: " + e.message);
     } finally {
