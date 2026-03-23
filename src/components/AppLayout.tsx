@@ -1335,6 +1335,10 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           <div className="flex-1" />
 
+          <Button variant="ghost" size="icon" className="h-8 w-8 relative" onClick={() => navigate("/chat")} title="Chat">
+            <MessageSquare className="h-4 w-4" />
+          </Button>
+
           <NotificationBell profile={profile} roles={roles} />
 
           {/* Avatar com menu de perfil/sair */}
