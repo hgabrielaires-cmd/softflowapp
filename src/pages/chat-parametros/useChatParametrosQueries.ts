@@ -1,15 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
+import { useUserFiliais } from "@/hooks/useUserFiliais";
 
 export function useChatParametrosQueries() {
-  const { filialId } = useAuth();
+  const { filialPadraoId } = useUserFiliais();
 
   const configQuery = useQuery({
-    queryKey: ["chat-configuracoes", filialId],
+    queryKey: ["chat-configuracoes", filialPadraoId],
     queryFn: async () => {
       let query = supabase.from("chat_configuracoes").select("*");
-      if (filialId) query = query.eq("filial_id", filialId);
+      if (filialPadraoId) query = query.eq("filial_id", filialPadraoId);
       const { data, error } = await query.limit(1).maybeSingle();
       if (error) throw error;
       return data;
@@ -17,10 +17,10 @@ export function useChatParametrosQueries() {
   });
 
   const fluxoQuery = useQuery({
-    queryKey: ["chat-bot-fluxo", filialId],
+    queryKey: ["chat-bot-fluxo", filialPadraoId],
     queryFn: async () => {
       let query = supabase.from("chat_bot_fluxo").select("*").order("ordem");
-      if (filialId) query = query.eq("filial_id", filialId);
+      if (filialPadraoId) query = query.eq("filial_id", filialPadraoId);
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
@@ -28,13 +28,13 @@ export function useChatParametrosQueries() {
   });
 
   const respostasQuery = useQuery({
-    queryKey: ["chat-respostas-rapidas", filialId],
+    queryKey: ["chat-respostas-rapidas", filialPadraoId],
     queryFn: async () => {
       let query = supabase
         .from("chat_respostas_rapidas")
-        .select("*, setor:setores(id, nome)")
+        .select("*")
         .order("atalho");
-      if (filialId) query = query.eq("filial_id", filialId);
+      if (filialPadraoId) query = query.eq("filial_id", filialPadraoId);
       const { data, error } = await query;
       if (error) throw error;
       return data || [];

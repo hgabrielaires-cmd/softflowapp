@@ -1,15 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
+import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { toast } from "sonner";
 
 export function useChatParametrosForm() {
   const qc = useQueryClient();
-  const { filialId } = useAuth();
+  const { filialPadraoId } = useUserFiliais();
 
   const salvarConfig = useMutation({
     mutationFn: async (values: Record<string, any>) => {
-      const payload = { ...values, filial_id: filialId || null };
+      const payload = { ...values, filial_id: filialPadraoId || null };
       if (values.id) {
         const { error } = await supabase
           .from("chat_configuracoes")
@@ -32,7 +32,7 @@ export function useChatParametrosForm() {
 
   const salvarFluxo = useMutation({
     mutationFn: async (values: { id?: string; ordem: number; pergunta: string; tipo: string; opcoes: any; campo_destino: string | null; ativo: boolean }) => {
-      const payload = { ...values, filial_id: filialId || null };
+      const payload = { ...values, filial_id: filialPadraoId || null };
       if (values.id) {
         const { error } = await supabase
           .from("chat_bot_fluxo")
@@ -68,7 +68,7 @@ export function useChatParametrosForm() {
 
   const salvarResposta = useMutation({
     mutationFn: async (values: { id?: string; atalho: string; conteudo: string; setor_id: string | null; ativo: boolean }) => {
-      const payload = { ...values, filial_id: filialId || null };
+      const payload = { ...values, filial_id: filialPadraoId || null };
       if (values.id) {
         const { error } = await supabase
           .from("chat_respostas_rapidas")
@@ -104,11 +104,12 @@ export function useChatParametrosForm() {
 
   const configurarWebhook = useMutation({
     mutationFn: async (instancia: string) => {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const { data, error } = await supabase.functions.invoke("evolution-api", {
         body: {
           action: "configure_webhook",
           instance: instancia,
-          webhook_url: `${window.location.origin.replace("localhost:8080", "gjovmocrotguhjrqroin.supabase.co")}/functions/v1/evolution-webhook`,
+          webhook_url: `${supabaseUrl}/functions/v1/evolution-webhook`,
         },
       });
       if (error) throw error;
