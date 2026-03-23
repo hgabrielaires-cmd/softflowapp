@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Loader2, Zap, CheckCircle2, XCircle } from "lucide-react";
 import { useChatParametrosForm } from "../useChatParametrosForm";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
 
 interface InstanceStatus {
   name: string;
@@ -15,48 +14,38 @@ interface InstanceStatus {
 
 export function WebhookEvolutionTab() {
   const { configurarWebhook } = useChatParametrosForm();
+  const [instancias, setInstancias] = useState<string[]>([]);
+  const [novaInstancia, setNovaInstancia] = useState("");
   const [statuses, setStatuses] = useState<InstanceStatus[]>([]);
   const [configuring, setConfiguring] = useState(false);
 
-  const instanciasQuery = useQuery({
-    queryKey: ["evolution-instancias"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("integracoes")
-        .select("config")
-        .eq("tipo", "evolution_api")
-        .eq("ativo", true);
-      if (error) throw error;
-      const instances: string[] = [];
-      (data || []).forEach((row: any) => {
-        const config = row.config;
-        if (config?.instance_name) instances.push(config.instance_name);
-        if (config?.instances && Array.isArray(config.instances)) {
-          config.instances.forEach((i: any) => {
-            if (i.name) instances.push(i.name);
-          });
-        }
-      });
-      return instances;
-    },
-  });
+  const addInstancia = () => {
+    const name = novaInstancia.trim();
+    if (name && !instancias.includes(name)) {
+      setInstancias((prev) => [...prev, name]);
+      setNovaInstancia("");
+    }
+  };
+
+  const removeInstancia = (name: string) => {
+    setInstancias((prev) => prev.filter((i) => i !== name));
+  };
+
+  const handleConfigurar = async (instanceName: string) => {
+    setStatuses((prev) => [...prev.filter((s) => s.name !== instanceName), { name: instanceName, status: "pending" }]);
+    try {
+      await configurarWebhook.mutateAsync(instanceName);
+      setStatuses((prev) => prev.map((s) => (s.name === instanceName ? { ...s, status: "success" } : s)));
+    } catch (err: any) {
+      setStatuses((prev) => prev.map((s) => (s.name === instanceName ? { ...s, status: "error", message: err.message } : s)));
+    }
+  };
 
   const handleConfigurarTodas = async () => {
-    const instances = instanciasQuery.data || [];
-    if (instances.length === 0) return;
-
+    if (instancias.length === 0) return;
     setConfiguring(true);
-    const results: InstanceStatus[] = instances.map((name) => ({ name, status: "pending" as const }));
-    setStatuses([...results]);
-
-    for (let i = 0; i < instances.length; i++) {
-      try {
-        await configurarWebhook.mutateAsync(instances[i]);
-        results[i] = { name: instances[i], status: "success" };
-      } catch (err: any) {
-        results[i] = { name: instances[i], status: "error", message: err.message };
-      }
-      setStatuses([...results]);
+    for (const name of instancias) {
+      await handleConfigurar(name);
     }
     setConfiguring(false);
   };
@@ -77,45 +66,45 @@ export function WebhookEvolutionTab() {
           </div>
 
           <p className="text-sm text-muted-foreground">
-            Ao clicar no botão abaixo, o webhook será configurado automaticamente em todas as instâncias ativas da Evolution API,
-            apontando para a edge function de recebimento de mensagens.
+            Informe o nome das instâncias da Evolution API e clique para configurar o webhook automaticamente.
           </p>
 
-          {instanciasQuery.isLoading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Buscando instâncias...
-            </div>
-          ) : (instanciasQuery.data?.length || 0) === 0 ? (
-            <div className="text-sm text-muted-foreground">
-              Nenhuma instância da Evolution API encontrada. Configure uma integração primeiro em Parâmetros → Integrações.
-            </div>
-          ) : (
-            <>
-              <p className="text-sm">
-                <strong>{instanciasQuery.data?.length}</strong> instância(s) encontrada(s):
-                {instanciasQuery.data?.map((name) => (
-                  <Badge key={name} variant="outline" className="ml-2">{name}</Badge>
-                ))}
-              </p>
-              <Button onClick={handleConfigurarTodas} disabled={configuring}>
-                {configuring ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
-                Configurar Webhook em Todas as Instâncias
-              </Button>
-            </>
-          )}
+          <div className="flex gap-2">
+            <Input
+              placeholder="Nome da instância (ex: softplus-01)"
+              value={novaInstancia}
+              onChange={(e) => setNovaInstancia(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addInstancia()}
+            />
+            <Button variant="outline" onClick={addInstancia}>Adicionar</Button>
+          </div>
 
-          {statuses.length > 0 && (
-            <div className="space-y-2 mt-4">
-              {statuses.map((s) => (
-                <div key={s.name} className="flex items-center gap-2 text-sm">
-                  {s.status === "pending" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                  {s.status === "success" && <CheckCircle2 className="h-4 w-4 text-green-600" />}
-                  {s.status === "error" && <XCircle className="h-4 w-4 text-destructive" />}
-                  <span className="font-mono">{s.name}</span>
-                  {s.status === "success" && <span className="text-green-600">Configurado!</span>}
-                  {s.status === "error" && <span className="text-destructive text-xs">{s.message}</span>}
-                </div>
-              ))}
+          {instancias.length > 0 && (
+            <div className="space-y-2">
+              {instancias.map((name) => {
+                const st = statuses.find((s) => s.name === name);
+                return (
+                  <div key={name} className="flex items-center gap-2 text-sm border rounded-lg px-3 py-2">
+                    {st?.status === "pending" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                    {st?.status === "success" && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                    {st?.status === "error" && <XCircle className="h-4 w-4 text-destructive" />}
+                    {!st && <Zap className="h-4 w-4 text-muted-foreground" />}
+                    <span className="font-mono flex-1">{name}</span>
+                    {st?.status === "error" && <span className="text-destructive text-xs">{st.message}</span>}
+                    <Button variant="ghost" size="sm" onClick={() => handleConfigurar(name)} disabled={configuring}>
+                      Configurar
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => removeInstancia(name)} className="text-destructive">
+                      Remover
+                    </Button>
+                  </div>
+                );
+              })}
+
+              <Button onClick={handleConfigurarTodas} disabled={configuring} className="mt-2">
+                {configuring ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
+                Configurar Todas
+              </Button>
             </div>
           )}
         </CardContent>
