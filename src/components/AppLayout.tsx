@@ -411,7 +411,44 @@ const TIPO_ICON: Record<string, ReactNode> = {
   urgente: <Zap className="h-4 w-4 text-destructive" />,
 };
 
-function NotificationBell({ profile, roles }: { profile: Profile | null; roles: AppRole[] }) {
+function ChatHeaderButton() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    async function fetchCount() {
+      const { count: filaCount } = await supabase
+        .from("chat_conversas")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["bot", "aguardando"]);
+      setCount(filaCount || 0);
+    }
+
+    fetchCount();
+
+    const channel = supabase
+      .channel("chat-header-badge")
+      .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversas" }, fetchCount)
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id]);
+
+  return (
+    <Button variant="ghost" size="icon" className="h-8 w-8 relative" onClick={() => navigate("/chat")} title="Chat">
+      <MessageSquare className="h-4 w-4" />
+      {count > 0 && (
+        <span className="absolute -top-1 -right-1 h-4 min-w-[1rem] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-1">
+          {count > 99 ? "99+" : count}
+        </span>
+      )}
+    </Button>
+  );
+}
+
   const navigate = useNavigate();
   const [solicitacoes, setSolicitacoes] = useState<SolicitacaoDesconto[]>([]);
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
