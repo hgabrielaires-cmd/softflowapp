@@ -357,7 +357,7 @@ serve(async (req) => {
       await supabase.from("chat_mensagens").insert({
         conversa_id: novaConversa.id,
         tipo: "bot",
-        conteudo: `${msgBV}\n\n${msgAg}`,
+        conteudo: textoFull,
         remetente: "bot",
       });
 
