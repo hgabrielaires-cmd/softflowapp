@@ -102,8 +102,8 @@ export default function ChatMessageArea({
         </div>
         <div className="flex items-center gap-2">
           {podeIniciar && (
-            <Button size="sm" onClick={onIniciarAtendimento}>
-              Iniciar Atendimento
+            <Button size="sm" onClick={onIniciarAtendimento} disabled={isLoading}>
+              {isLoading ? "Iniciando..." : "Iniciar Atendimento"}
             </Button>
           )}
           {conversa.status === "em_atendimento" && (
