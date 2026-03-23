@@ -382,12 +382,19 @@ serve(async (req) => {
       return ok({ error: "failed_to_create_conversation" });
     }
 
+    // Download media for new conversation
+    let newMediaUrl = mediaUrl || null;
+    if (mediaUrl && tipo !== "texto") {
+      const ext = mediaNome || `media.${(mediaTipo || "application/octet-stream").split("/")[1]?.split(";")[0] || "bin"}`;
+      newMediaUrl = await salvarMidiaStorage(mediaUrl, novaConversa.id, ext, mediaTipo);
+    }
+
     // Save original message
     await supabase.from("chat_mensagens").insert({
       conversa_id: novaConversa.id,
       tipo,
       conteudo,
-      media_url: mediaUrl || null,
+      media_url: newMediaUrl,
       media_tipo: mediaTipo || null,
       media_nome: mediaNome || null,
       remetente: "cliente",
