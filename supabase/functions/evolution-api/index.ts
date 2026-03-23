@@ -42,7 +42,7 @@ serve(async (req) => {
     const { action, server_url, api_key, instance_name, number, text, template_id, mediatype, media, caption, fileName, webhook_url } = await req.json();
 
     // Actions that read credentials from DB vs from request body
-    const dbCredentialActions = ["send_text", "send_media", "configure_webhook"];
+    const dbCredentialActions = ["send_text", "send_media", "configure_webhook", "get_webhook"];
     let baseUrl: string;
     let apiKey: string;
     let resolvedInstanceName: string | undefined = instance_name;
