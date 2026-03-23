@@ -8,9 +8,23 @@ export function useChatParametrosQueries() {
   const configQuery = useQuery({
     queryKey: ["chat-configuracoes", filialPadraoId],
     queryFn: async () => {
-      let query = supabase.from("chat_configuracoes").select("*");
-      if (filialPadraoId) query = query.eq("filial_id", filialPadraoId);
-      const { data, error } = await query.limit(1).maybeSingle();
+      // Try filial-specific first, then fallback to any config
+      if (filialPadraoId) {
+        const { data, error } = await supabase
+          .from("chat_configuracoes")
+          .select("*")
+          .eq("filial_id", filialPadraoId)
+          .limit(1)
+          .maybeSingle();
+        if (error) throw error;
+        if (data) return data;
+      }
+      // Fallback: any config (filial_id is null or first available)
+      const { data, error } = await supabase
+        .from("chat_configuracoes")
+        .select("*")
+        .limit(1)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
