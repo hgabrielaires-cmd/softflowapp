@@ -67,10 +67,11 @@ export default function ChatPage() {
             onSelect={(c) => { setSelectedConversa(c); setView("chat"); }}
             counts={counts}
           />
+          </div>
           {/* Dashboard toggle */}
-          <div className="border-t border-r border-border p-2 bg-card">
+          <div className="border-t border-r border-border p-2 bg-card flex-shrink-0">
             <Button
-              variant={view === "dashboard" ? "secondary" : "ghost"}
+              variant={view === "dashboard" ? "default" : "ghost"}
               size="sm"
               className="w-full justify-start text-xs gap-2"
               onClick={() => setView(view === "dashboard" ? "chat" : "dashboard")}
