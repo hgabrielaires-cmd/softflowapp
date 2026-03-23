@@ -41,13 +41,13 @@ serve(async (req) => {
 
     const { action, server_url, api_key, instance_name, number, text, template_id, mediatype, media, caption, fileName, webhook_url } = await req.json();
 
-    // For send_text, read credentials from DB using service role (secure)
-    // For config actions (create_instance, connect, etc.), accept from request body (admin setup)
+    // Actions that read credentials from DB vs from request body
+    const dbCredentialActions = ["send_text", "send_media", "configure_webhook"];
     let baseUrl: string;
     let apiKey: string;
     let resolvedInstanceName: string | undefined = instance_name;
 
-    if (action === "send_text") {
+    if (dbCredentialActions.includes(action)) {
       // Read WhatsApp config from DB using service role key
       const serviceClient = createClient(
         Deno.env.get("SUPABASE_URL")!,
@@ -77,8 +77,8 @@ serve(async (req) => {
       baseUrl = config.server_url;
       apiKey = config.token;
 
-      // Instance routing: prefer explicit instance_name, then template->setor routing
-      if (!resolvedInstanceName && template_id) {
+      // Instance routing for send_text: prefer explicit instance_name, then template->setor routing
+      if (action === "send_text" && !resolvedInstanceName && template_id) {
         const { data: templateData } = await serviceClient
           .from("message_templates")
           .select("setor_id")
@@ -98,7 +98,7 @@ serve(async (req) => {
         }
       }
     } else {
-      // Config actions require credentials from request (admin is setting them up)
+      // Config actions (create_instance, connect, etc.) require credentials from request
       if (!server_url || !api_key) {
         return new Response(JSON.stringify({ error: "server_url e api_key são obrigatórios" }), {
           status: 400,
