@@ -98,6 +98,10 @@ export default function ChatPage() {
               userName,
               numero: conversaAtual.numero_cliente,
               instanceName: conversaAtual.canal_instancia || undefined,
+            }, {
+              onSuccess: () => {
+                setTab("meus");
+              },
             });
           }}
           onEncerrar={() => {
