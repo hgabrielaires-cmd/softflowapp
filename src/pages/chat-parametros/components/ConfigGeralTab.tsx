@@ -6,11 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Save } from "lucide-react";
 import { useChatParametrosQueries } from "../useChatParametrosQueries";
 import { useChatParametrosForm } from "../useChatParametrosForm";
-import { DIAS_SEMANA, DISTRIBUICAO_TIPOS } from "../constants";
+import { DIAS_SEMANA, DISTRIBUICAO_TIPOS, DEFAULT_HORARIOS_POR_DIA } from "../constants";
+import type { HorariosPorDia } from "../types";
 
 export function ConfigGeralTab() {
   const { configQuery } = useChatParametrosQueries();
@@ -20,14 +20,13 @@ export function ConfigGeralTab() {
   const [form, setForm] = useState({
     id: "",
     ativo: true,
-    horario_inicio: "08:00",
-    horario_fim: "23:59",
-    dias_semana: [1, 2, 3, 4, 5, 6] as number[],
+    horarios_por_dia: DEFAULT_HORARIOS_POR_DIA as HorariosPorDia,
     mensagem_boas_vindas: "Olá! Bem-vindo(a) à Softplus Tecnologia! 😊",
     mensagem_fora_horario: "Olá! Nosso horário de atendimento é de {horario_inicio} às {horario_fim}. Deixe sua mensagem e retornaremos em breve!",
     mensagem_aguardando: "Aguarde um instante, nossa equipe já vai lhe atender. 🤗\n⏳ Espera estimada: 1 a 10 min.",
     mensagem_encerramento: "Obrigado pelo contato! Foi um prazer atendê-lo. 😊",
     mensagem_nps: "Como você avalia nosso atendimento?\n1 - Péssimo 😞\n2 - Ruim 😕\n3 - Regular 😐\n4 - Bom 😊\n5 - Excelente 🌟",
+    mensagem_plantao: "🚨 *Atenção: Estamos em regime de plantão.* Atendemos apenas casos emergenciais neste horário. Descreva sua situação e retornaremos o mais breve possível.",
     distribuicao_tipo: "manual",
     max_conversas_por_atendente: 10,
     tempo_espera_estimado: "1 a 10 min",
@@ -38,14 +37,13 @@ export function ConfigGeralTab() {
       setForm({
         id: config.id,
         ativo: config.ativo ?? true,
-        horario_inicio: config.horario_inicio ?? "08:00",
-        horario_fim: config.horario_fim ?? "23:59",
-        dias_semana: config.dias_semana ?? [1, 2, 3, 4, 5, 6],
+        horarios_por_dia: (config as any).horarios_por_dia ?? DEFAULT_HORARIOS_POR_DIA,
         mensagem_boas_vindas: config.mensagem_boas_vindas ?? "",
         mensagem_fora_horario: config.mensagem_fora_horario ?? "",
         mensagem_aguardando: config.mensagem_aguardando ?? "",
         mensagem_encerramento: config.mensagem_encerramento ?? "",
         mensagem_nps: config.mensagem_nps ?? "",
+        mensagem_plantao: (config as any).mensagem_plantao ?? "🚨 *Atenção: Estamos em regime de plantão.* Atendemos apenas casos emergenciais neste horário. Descreva sua situação e retornaremos o mais breve possível.",
         distribuicao_tipo: config.distribuicao_tipo ?? "manual",
         max_conversas_por_atendente: config.max_conversas_por_atendente ?? 10,
         tempo_espera_estimado: config.tempo_espera_estimado ?? "1 a 10 min",
@@ -53,12 +51,19 @@ export function ConfigGeralTab() {
     }
   }, [config]);
 
-  const toggleDia = (dia: number) => {
+  const updatePeriodo = (dia: string, periodo: "atendimento" | "plantao", field: string, value: any) => {
     setForm((prev) => ({
       ...prev,
-      dias_semana: prev.dias_semana.includes(dia)
-        ? prev.dias_semana.filter((d) => d !== dia)
-        : [...prev.dias_semana, dia].sort(),
+      horarios_por_dia: {
+        ...prev.horarios_por_dia,
+        [dia]: {
+          ...prev.horarios_por_dia[dia],
+          [periodo]: {
+            ...prev.horarios_por_dia[dia][periodo],
+            [field]: value,
+          },
+        },
+      },
     }));
   };
 
@@ -72,36 +77,102 @@ export function ConfigGeralTab() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Horário de Atendimento</CardTitle>
+          <CardTitle className="text-lg">Status do Chat</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           <div className="flex items-center gap-4">
             <Label className="w-20">Ativo</Label>
             <Switch checked={form.ativo} onCheckedChange={(v) => setForm((p) => ({ ...p, ativo: v }))} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Início</Label>
-              <Input type="time" value={form.horario_inicio} onChange={(e) => setForm((p) => ({ ...p, horario_inicio: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Fim</Label>
-              <Input type="time" value={form.horario_fim} onChange={(e) => setForm((p) => ({ ...p, horario_fim: e.target.value }))} />
-            </div>
-          </div>
-          <div>
-            <Label>Dias da semana</Label>
-            <div className="flex gap-3 mt-2 flex-wrap">
-              {DIAS_SEMANA.map((d) => (
-                <label key={d.value} className="flex items-center gap-1.5 text-sm">
-                  <Checkbox
-                    checked={form.dias_semana.includes(d.value)}
-                    onCheckedChange={() => toggleDia(d.value)}
-                  />
-                  {d.label}
-                </label>
-              ))}
-            </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Horários de Atendimento por Dia</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/50 border-b">
+                  <th className="text-left p-3 w-28 font-medium">Dia</th>
+                  <th className="text-left p-3 w-28 font-medium">Período</th>
+                  <th className="text-center p-3 w-16 font-medium">Ativo</th>
+                  <th className="text-left p-3 font-medium">Início</th>
+                  <th className="text-left p-3 font-medium">Fim</th>
+                </tr>
+              </thead>
+              <tbody>
+                {DIAS_SEMANA.map((d) => {
+                  const dia = form.horarios_por_dia[String(d.value)];
+                  if (!dia) return null;
+                  return (
+                    <tr key={d.value} className="border-b last:border-b-0">
+                      <td className="p-3 font-medium align-top" rowSpan={1}>
+                        <div className="flex flex-col gap-3">
+                          <span className="font-semibold text-foreground">{d.label}</span>
+                        </div>
+                      </td>
+                      <td colSpan={4} className="p-0">
+                        {/* Atendimento */}
+                        <div className="flex items-center gap-3 p-2 border-b border-dashed">
+                          <span className="w-28 flex items-center gap-1.5 text-xs font-medium">
+                            <span className="h-2.5 w-2.5 rounded-full bg-green-500 inline-block" />
+                            Atendimento
+                          </span>
+                          <Switch
+                            checked={dia.atendimento.ativo}
+                            onCheckedChange={(v) => updatePeriodo(String(d.value), "atendimento", "ativo", v)}
+                          />
+                          <Input
+                            type="time"
+                            className="w-28 h-8 text-xs"
+                            value={dia.atendimento.inicio}
+                            disabled={!dia.atendimento.ativo}
+                            onChange={(e) => updatePeriodo(String(d.value), "atendimento", "inicio", e.target.value)}
+                          />
+                          <span className="text-xs text-muted-foreground">às</span>
+                          <Input
+                            type="time"
+                            className="w-28 h-8 text-xs"
+                            value={dia.atendimento.fim}
+                            disabled={!dia.atendimento.ativo}
+                            onChange={(e) => updatePeriodo(String(d.value), "atendimento", "fim", e.target.value)}
+                          />
+                        </div>
+                        {/* Plantão */}
+                        <div className="flex items-center gap-3 p-2">
+                          <span className="w-28 flex items-center gap-1.5 text-xs font-medium">
+                            <span className="h-2.5 w-2.5 rounded-full bg-amber-500 inline-block" />
+                            Plantão
+                          </span>
+                          <Switch
+                            checked={dia.plantao.ativo}
+                            onCheckedChange={(v) => updatePeriodo(String(d.value), "plantao", "ativo", v)}
+                          />
+                          <Input
+                            type="time"
+                            className="w-28 h-8 text-xs"
+                            value={dia.plantao.inicio}
+                            disabled={!dia.plantao.ativo}
+                            onChange={(e) => updatePeriodo(String(d.value), "plantao", "inicio", e.target.value)}
+                          />
+                          <span className="text-xs text-muted-foreground">às</span>
+                          <Input
+                            type="time"
+                            className="w-28 h-8 text-xs"
+                            value={dia.plantao.fim}
+                            disabled={!dia.plantao.ativo}
+                            onChange={(e) => updatePeriodo(String(d.value), "plantao", "fim", e.target.value)}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
@@ -130,6 +201,10 @@ export function ConfigGeralTab() {
           <div>
             <Label>Mensagem NPS</Label>
             <Textarea rows={3} value={form.mensagem_nps} onChange={(e) => setForm((p) => ({ ...p, mensagem_nps: e.target.value }))} />
+          </div>
+          <div>
+            <Label>🚨 Mensagem de Plantão</Label>
+            <Textarea rows={3} value={form.mensagem_plantao} onChange={(e) => setForm((p) => ({ ...p, mensagem_plantao: e.target.value }))} />
           </div>
         </CardContent>
       </Card>

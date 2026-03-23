@@ -198,23 +198,57 @@ serve(async (req) => {
     }
 
     // ── New conversation ──
-    // Check business hours
+    // Check business hours (dual-period: atendimento + plantão)
     const agora = new Date();
     const brasilOffset = -3;
     const utcHours = agora.getUTCHours();
     const brasilHour = (utcHours + brasilOffset + 24) % 24;
     const brasilMinute = agora.getUTCMinutes();
     const currentTime = brasilHour * 60 + brasilMinute;
-    const diaSemana = ((agora.getUTCDay() + brasilOffset / 24 + 7) % 7);
+    // Calculate day-of-week in Brazil timezone
+    const brasilMs = agora.getTime() + brasilOffset * 3600000;
+    const brasilDate = new Date(brasilMs);
+    const diaSemana = brasilDate.getUTCDay(); // 0=Sun..6=Sat
 
-    let dentroHorario = true;
+    function timeToMin(t: string): number {
+      const [h, m] = (t || "00:00").split(":").map(Number);
+      return h * 60 + (m || 0);
+    }
+
+    let modo: "atendimento" | "plantao" | "fora" = "fora";
     if (config) {
-      const [hIni, mIni] = (config.horario_inicio || "08:00").split(":").map(Number);
-      const [hFim, mFim] = (config.horario_fim || "23:59").split(":").map(Number);
-      const inicio = hIni * 60 + mIni;
-      const fim = hFim * 60 + mFim;
-      const diasPermitidos = config.dias_semana || [1, 2, 3, 4, 5, 6];
-      dentroHorario = currentTime >= inicio && currentTime <= fim && diasPermitidos.includes(Math.round(diaSemana));
+      const horarios = (config as any).horarios_por_dia;
+      if (horarios && horarios[String(diaSemana)]) {
+        const dia = horarios[String(diaSemana)];
+        // Check atendimento first (higher priority)
+        if (dia.atendimento?.ativo && dia.atendimento.inicio && dia.atendimento.fim) {
+          const ini = timeToMin(dia.atendimento.inicio);
+          const fim = timeToMin(dia.atendimento.fim);
+          if (currentTime >= ini && currentTime < fim) {
+            modo = "atendimento";
+          }
+        }
+        // Then check plantão
+        if (modo === "fora" && dia.plantao?.ativo && dia.plantao.inicio && dia.plantao.fim) {
+          const ini = timeToMin(dia.plantao.inicio);
+          const fim = timeToMin(dia.plantao.fim);
+          if (currentTime >= ini && currentTime <= fim) {
+            modo = "plantao";
+          }
+        }
+      } else {
+        // Fallback to legacy fields
+        const [hIni, mIni] = (config.horario_inicio || "08:00").split(":").map(Number);
+        const [hFim, mFim] = (config.horario_fim || "23:59").split(":").map(Number);
+        const inicio = hIni * 60 + mIni;
+        const fim = hFim * 60 + mFim;
+        const diasPermitidos = config.dias_semana || [1, 2, 3, 4, 5, 6];
+        if (currentTime >= inicio && currentTime <= fim && diasPermitidos.includes(diaSemana)) {
+          modo = "atendimento";
+        }
+      }
+    } else {
+      modo = "atendimento"; // No config = always open
     }
 
     // Generate protocol
@@ -226,7 +260,7 @@ serve(async (req) => {
     const seq = ((count || 0) + 1).toString().padStart(3, "0");
     const protocolo = `#${hoje}${seq}`;
 
-    if (!dentroHorario) {
+    if (modo === "fora") {
       // Out of business hours
       const { data: novaConversa } = await supabase
         .from("chat_conversas")
@@ -269,7 +303,12 @@ serve(async (req) => {
       return ok({ success: true, action: "fora_horario" });
     }
 
-    // Within business hours - create conversation in bot mode
+    // Plantão prefix message (prepended to welcome)
+    const plantaoPrefix = modo === "plantao"
+      ? ((config as any)?.mensagem_plantao || "🚨 *Atenção: Estamos em regime de plantão.* Atendemos apenas casos emergenciais neste horário. Descreva sua situação e retornaremos o mais breve possível.") + "\n\n"
+      : "";
+
+    // Within business hours or plantão - create conversation in bot mode
     const { data: novaConversa } = await supabase
       .from("chat_conversas")
       .insert({
@@ -312,12 +351,13 @@ serve(async (req) => {
       // No bot flow configured - go straight to queue
       const msgBV = config?.mensagem_boas_vindas || "Olá! Bem-vindo(a)! 😊";
       const msgAg = config?.mensagem_aguardando || "Aguarde, nossa equipe já vai lhe atender. 🤗";
-      await sendWhatsApp(`${msgBV}\n\n${msgAg}`);
+      const textoFull = `${plantaoPrefix}${msgBV}\n\n${msgAg}`;
+      await sendWhatsApp(textoFull);
 
       await supabase.from("chat_mensagens").insert({
         conversa_id: novaConversa.id,
         tipo: "bot",
-        conteudo: `${msgBV}\n\n${msgAg}`,
+        conteudo: textoFull,
         remetente: "bot",
       });
 
@@ -337,7 +377,7 @@ serve(async (req) => {
     // Send welcome + first question
     const msgBV = config?.mensagem_boas_vindas || "Olá! Bem-vindo(a)! 😊";
     const primeiraPergunta = fluxo[0].pergunta;
-    let textoEnviar = `${msgBV}\n\n${primeiraPergunta}`;
+    let textoEnviar = `${plantaoPrefix}${msgBV}\n\n${primeiraPergunta}`;
 
     if (fluxo[0].tipo === "opcoes" && fluxo[0].opcoes) {
       const opcoes = fluxo[0].opcoes as Array<{ numero: number; texto: string }>;
