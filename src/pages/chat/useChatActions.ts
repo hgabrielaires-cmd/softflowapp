@@ -133,27 +133,45 @@ export function useChatActions() {
       userName,
       numero,
       instanceName,
-      mensagemEncerramento,
-      mensagemNps,
     }: {
       conversaId: string;
       userId: string;
       userName: string;
       numero: string;
       instanceName?: string;
-      mensagemEncerramento?: string;
-      mensagemNps?: string;
     }) => {
       const agora = new Date().toISOString();
       const { data: conv } = await supabase
         .from("chat_conversas")
-        .select("atendimento_iniciado_em")
+        .select("atendimento_iniciado_em, filial_id")
         .eq("id", conversaId)
         .single();
 
       const tempoAtend = conv?.atendimento_iniciado_em
         ? Math.round((Date.now() - new Date(conv.atendimento_iniciado_em).getTime()) / 1000)
         : null;
+
+      // Fetch config for messages (try filial-specific, then any)
+      let config: { mensagem_encerramento: string | null; mensagem_nps: string | null } | null = null;
+      if (conv?.filial_id) {
+        const { data } = await supabase
+          .from("chat_configuracoes")
+          .select("mensagem_encerramento, mensagem_nps")
+          .eq("filial_id", conv.filial_id)
+          .maybeSingle();
+        config = data;
+      }
+      if (!config) {
+        const { data } = await supabase
+          .from("chat_configuracoes")
+          .select("mensagem_encerramento, mensagem_nps")
+          .limit(1)
+          .maybeSingle();
+        config = data;
+      }
+
+      const msgEnc = config?.mensagem_encerramento || "Obrigado pelo contato! Foi um prazer atendê-lo. 😊";
+      const msgNps = config?.mensagem_nps || "De 1 a 5, como você avalia o atendimento que recebeu? Responda apenas com o número. ⭐";
 
       await supabase
         .from("chat_conversas")
@@ -173,30 +191,30 @@ export function useChatActions() {
         remetente: "sistema",
       });
 
-      // Send closure message
-      const msgEnc = mensagemEncerramento || "Obrigado pelo contato! Foi um prazer atendê-lo. 😊";
+      // Send closure message via WhatsApp
       await supabase.functions.invoke("evolution-api", {
         body: { action: "send_text", number: numero, text: msgEnc, instance_name: instanceName },
       });
 
-      // Send NPS after a brief delay (simulated)
-      if (mensagemNps) {
-        await supabase
-          .from("chat_conversas")
-          .update({ nps_enviado: true })
-          .eq("id", conversaId);
+      // Delay 3 seconds before NPS
+      await new Promise((r) => setTimeout(r, 3000));
 
-        await supabase.functions.invoke("evolution-api", {
-          body: { action: "send_text", number: numero, text: mensagemNps, instance_name: instanceName },
-        });
+      // Send NPS
+      await supabase
+        .from("chat_conversas")
+        .update({ nps_enviado: true })
+        .eq("id", conversaId);
 
-        await supabase.from("chat_mensagens").insert({
-          conversa_id: conversaId,
-          tipo: "bot",
-          conteudo: mensagemNps,
-          remetente: "bot",
-        });
-      }
+      await supabase.functions.invoke("evolution-api", {
+        body: { action: "send_text", number: numero, text: msgNps, instance_name: instanceName },
+      });
+
+      await supabase.from("chat_mensagens").insert({
+        conversa_id: conversaId,
+        tipo: "bot",
+        conteudo: msgNps,
+        remetente: "bot",
+      });
     },
     onSuccess: () => {
       toast.success("Conversa encerrada!");
