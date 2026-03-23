@@ -111,6 +111,20 @@ export default function ChatConversaList({
                       </Badge>
                     )}
                   </div>
+                  {(c.atendente as any)?.full_name && (
+                    <div className="flex items-center gap-1 mt-1">
+                      {(c.atendente as any)?.avatar_url ? (
+                        <img src={(c.atendente as any).avatar_url} alt="" className="w-4 h-4 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-medium text-primary">
+                          {((c.atendente as any).full_name || "?")[0].toUpperCase()}
+                        </div>
+                      )}
+                      <span className="text-[10px] text-muted-foreground truncate">
+                        {(c.atendente as any).full_name}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </button>
