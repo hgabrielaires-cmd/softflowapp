@@ -172,29 +172,35 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
                   <div className="space-y-1.5 pt-1">
                     <div className="flex gap-1">
                       <Input
-                        placeholder="Buscar por CNPJ..."
-                        value={cnpjBusca}
-                        onChange={(e) => setCnpjBusca(formatCnpj(e.target.value))}
+                        placeholder="Nome, apelido ou CNPJ..."
+                        value={termoBusca}
+                        onChange={(e) => setTermoBusca(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && buscarCliente()}
                         className="h-7 text-xs"
                       />
-                      <Button size="sm" className="h-7 px-2" onClick={buscarPorCnpj} disabled={buscando}>
+                      <Button size="sm" className="h-7 px-2" onClick={buscarCliente} disabled={buscando}>
                         <Search className="h-3 w-3" />
                       </Button>
                     </div>
 
-                    {buscaFeita && clienteEncontrado && (
-                      <div className="border rounded-md p-2 space-y-1 bg-muted/30">
-                        <p className="font-medium text-foreground">{clienteEncontrado.nome_fantasia}</p>
-                        {clienteEncontrado.razao_social && <p className="text-muted-foreground">{clienteEncontrado.razao_social}</p>}
-                        <p className="text-muted-foreground">CNPJ: {formatCnpj(clienteEncontrado.cnpj_cpf)}</p>
-                        <Button size="sm" className="h-6 text-xs w-full mt-1" onClick={() => vincularCliente(clienteEncontrado.id)}>
-                          Vincular este cliente
-                        </Button>
+                    {buscaFeita && clientesEncontrados.length > 0 && (
+                      <div className="space-y-1 max-h-40 overflow-y-auto">
+                        {clientesEncontrados.map((cli: any) => (
+                          <div key={cli.id} className="border rounded-md p-2 space-y-1 bg-muted/30">
+                            <p className="font-medium text-foreground">{cli.nome_fantasia}</p>
+                            {cli.apelido && <p className="text-muted-foreground">({cli.apelido})</p>}
+                            {cli.razao_social && <p className="text-muted-foreground">{cli.razao_social}</p>}
+                            <p className="text-muted-foreground">CNPJ: {formatCnpj(cli.cnpj_cpf)}</p>
+                            <Button size="sm" className="h-6 text-xs w-full mt-1" onClick={() => vincularCliente(cli)}>
+                              Vincular este cliente
+                            </Button>
+                          </div>
+                        ))}
                       </div>
                     )}
 
-                    {buscaFeita && !clienteEncontrado && !buscando && (
-                      <p className="text-muted-foreground text-center py-1">Nenhum cliente com este CNPJ.</p>
+                    {buscaFeita && clientesEncontrados.length === 0 && !buscando && (
+                      <p className="text-muted-foreground text-center py-1">Nenhum cliente encontrado.</p>
                     )}
                   </div>
                 </div>
