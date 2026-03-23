@@ -71,6 +71,7 @@ serve(async (req) => {
 
     // Extract text/media
     const msg = data.message || {};
+    console.log("[evolution-webhook] Tipos na mensagem:", Object.keys(msg).join(", "));
     let tipo = "texto";
     let conteudo = "";
     let mediaUrl = "";
@@ -101,16 +102,62 @@ serve(async (req) => {
       mediaTipo = msg.videoMessage.mimetype || "video/mp4";
       mediaUrl = msg.videoMessage.url || "";
       conteudo = msg.videoMessage.caption || "";
+    } else if (msg.stickerMessage) {
+      tipo = "imagem";
+      mediaTipo = msg.stickerMessage.mimetype || "image/webp";
+      mediaUrl = msg.stickerMessage.url || "";
     } else {
       // Unknown message type - save raw
       conteudo = JSON.stringify(msg).substring(0, 500);
     }
 
     // Service role client for DB operations
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
+      supabaseUrl,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // Download media from Evolution API and persist to Supabase Storage
+    async function salvarMidiaStorage(
+      origUrl: string,
+      conversaId: string,
+      fileName: string,
+      mimeType: string
+    ): Promise<string> {
+      try {
+        if (!origUrl) return "";
+        console.log("[evolution-webhook] Baixando mídia:", origUrl.substring(0, 120));
+        const response = await fetch(origUrl);
+        if (!response.ok) {
+          console.error("[evolution-webhook] Falha ao baixar mídia:", response.status);
+          return origUrl;
+        }
+        const buffer = await response.arrayBuffer();
+        const timestamp = Date.now();
+        const safeName = (fileName || "media").replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `${conversaId}/${timestamp}_${safeName}`;
+
+        const { error } = await supabase.storage
+          .from("chat-midias")
+          .upload(path, buffer, { contentType: mimeType, upsert: false });
+
+        if (error) {
+          console.error("[evolution-webhook] Erro upload storage:", error.message);
+          return origUrl;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from("chat-midias")
+          .getPublicUrl(path);
+
+        console.log("[evolution-webhook] Mídia salva no storage:", urlData.publicUrl.substring(0, 100));
+        return urlData.publicUrl;
+      } catch (e) {
+        console.error("[evolution-webhook] Erro salvarMidiaStorage:", e);
+        return origUrl;
+      }
+    }
 
     // Find active conversation for this number
     const { data: conversa } = await supabase
@@ -159,12 +206,19 @@ serve(async (req) => {
 
     if (conversa) {
       // ── Existing conversation ──
+      // Download and persist media if present
+      let finalMediaUrl = mediaUrl || null;
+      if (mediaUrl && tipo !== "texto") {
+        const ext = mediaNome || (mediaTipo ? `media.${mediaTipo.split("/")[1]?.split(";")[0] || "bin"}` : "media.bin");
+        finalMediaUrl = await salvarMidiaStorage(mediaUrl, conversa.id, ext, mediaTipo);
+      }
+
       // Save message
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversa.id,
         tipo,
         conteudo,
-        media_url: mediaUrl || null,
+        media_url: finalMediaUrl,
         media_tipo: mediaTipo || null,
         media_nome: mediaNome || null,
         remetente: "cliente",
@@ -276,11 +330,16 @@ serve(async (req) => {
         .single();
 
       if (novaConversa) {
+        let fmUrl = mediaUrl || null;
+        if (mediaUrl && tipo !== "texto") {
+          const ext = mediaNome || `media.${(mediaTipo || "application/octet-stream").split("/")[1]?.split(";")[0] || "bin"}`;
+          fmUrl = await salvarMidiaStorage(mediaUrl, novaConversa.id, ext, mediaTipo);
+        }
         await supabase.from("chat_mensagens").insert({
           conversa_id: novaConversa.id,
           tipo,
           conteudo,
-          media_url: mediaUrl || null,
+          media_url: fmUrl,
           media_tipo: mediaTipo || null,
           media_nome: mediaNome || null,
           remetente: "cliente",
@@ -328,12 +387,19 @@ serve(async (req) => {
       return ok({ error: "failed_to_create_conversation" });
     }
 
+    // Download media for new conversation
+    let newMediaUrl = mediaUrl || null;
+    if (mediaUrl && tipo !== "texto") {
+      const ext = mediaNome || `media.${(mediaTipo || "application/octet-stream").split("/")[1]?.split(";")[0] || "bin"}`;
+      newMediaUrl = await salvarMidiaStorage(mediaUrl, novaConversa.id, ext, mediaTipo);
+    }
+
     // Save original message
     await supabase.from("chat_mensagens").insert({
       conversa_id: novaConversa.id,
       tipo,
       conteudo,
-      media_url: mediaUrl || null,
+      media_url: newMediaUrl,
       media_tipo: mediaTipo || null,
       media_nome: mediaNome || null,
       remetente: "cliente",
