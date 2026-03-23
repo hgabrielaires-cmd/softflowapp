@@ -81,6 +81,8 @@ export function ConfigGeralTab() {
 
   const handleSave = () => salvarConfig.mutate(form);
 
+  const isNew = !config;
+
   if (configQuery.isLoading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
