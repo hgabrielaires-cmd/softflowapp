@@ -52,7 +52,11 @@ serve(async (req) => {
       return ok({ ignored: true, reason: "event_not_messages_upsert" });
     }
 
-    const data = body.data;
+    const rawData = body.data;
+    const data = rawData?.key
+      ? rawData
+      : rawData?.messages?.[0] || rawData?.data?.messages?.[0] || null;
+
     if (!data?.key || data.key.fromMe) {
       return ok({ ignored: true, reason: "from_me_or_no_key" });
     }
@@ -69,9 +73,45 @@ serve(async (req) => {
     const instancia = body.instance || "";
     const evolutionMessageId = data.key.id || "";
 
+    const unwrapMessage = (rawMessage: Record<string, any>) => {
+      let current = rawMessage || {};
+      let safety = 0;
+      while (safety < 10) {
+        safety += 1;
+        if (current?.ephemeralMessage?.message) {
+          current = current.ephemeralMessage.message;
+          continue;
+        }
+        if (current?.viewOnceMessage?.message) {
+          current = current.viewOnceMessage.message;
+          continue;
+        }
+        if (current?.viewOnceMessageV2?.message) {
+          current = current.viewOnceMessageV2.message;
+          continue;
+        }
+        if (current?.viewOnceMessageV2Extension?.message) {
+          current = current.viewOnceMessageV2Extension.message;
+          continue;
+        }
+        if (current?.documentWithCaptionMessage?.message) {
+          current = current.documentWithCaptionMessage.message;
+          continue;
+        }
+        if (current?.editedMessage?.message) {
+          current = current.editedMessage.message;
+          continue;
+        }
+        break;
+      }
+      return current || {};
+    };
+
     // Extract text/media
-    const msg = data.message || {};
-    console.log("[evolution-webhook] Tipos na mensagem:", Object.keys(msg).join(", "));
+    const msg = unwrapMessage(data.message || {});
+    console.log("[evolution-webhook] Tipo de mensagem:", Object.keys(msg));
+    console.log("[evolution-webhook] Payload mídia:", JSON.stringify(msg).substring(0, 500));
+
     let tipo = "texto";
     let conteudo = "";
     let mediaUrl = "";
@@ -87,13 +127,15 @@ serve(async (req) => {
       conteudo = msg.imageMessage.caption || "";
       mediaTipo = msg.imageMessage.mimetype || "image/jpeg";
       mediaUrl = msg.imageMessage.url || "";
+      mediaNome = msg.imageMessage.fileName || `imagem_${evolutionMessageId}.jpg`;
     } else if (msg.audioMessage) {
       tipo = "audio";
       mediaTipo = msg.audioMessage.mimetype || "audio/ogg";
       mediaUrl = msg.audioMessage.url || "";
+      mediaNome = `audio_${evolutionMessageId}.ogg`;
     } else if (msg.documentMessage) {
       tipo = "documento";
-      mediaNome = msg.documentMessage.fileName || "documento";
+      mediaNome = msg.documentMessage.fileName || msg.documentMessage.title || "documento";
       mediaTipo = msg.documentMessage.mimetype || "application/octet-stream";
       mediaUrl = msg.documentMessage.url || "";
       conteudo = msg.documentMessage.caption || "";
@@ -101,15 +143,26 @@ serve(async (req) => {
       tipo = "imagem";
       mediaTipo = msg.videoMessage.mimetype || "video/mp4";
       mediaUrl = msg.videoMessage.url || "";
+      mediaNome = msg.videoMessage.fileName || `video_${evolutionMessageId}.mp4`;
       conteudo = msg.videoMessage.caption || "";
     } else if (msg.stickerMessage) {
       tipo = "imagem";
       mediaTipo = msg.stickerMessage.mimetype || "image/webp";
       mediaUrl = msg.stickerMessage.url || "";
+      mediaNome = `sticker_${evolutionMessageId}.webp`;
     } else {
       // Unknown message type - save raw
       conteudo = JSON.stringify(msg).substring(0, 500);
     }
+
+    console.log("[evolution-webhook] Mensagem recebida:", {
+      numero,
+      tipo: Object.keys(msg),
+      temAudio: !!msg.audioMessage,
+      temImagem: !!msg.imageMessage,
+      temDocumento: !!msg.documentMessage,
+      conteudo: conteudo?.substring(0, 100),
+    });
 
     // Service role client for DB operations
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -127,20 +180,41 @@ serve(async (req) => {
     ): Promise<string> {
       try {
         if (!origUrl) return "";
-        console.log("[evolution-webhook] Baixando mídia:", origUrl.substring(0, 120));
-        const response = await fetch(origUrl);
-        if (!response.ok) {
-          console.error("[evolution-webhook] Falha ao baixar mídia:", response.status);
+
+        const safeName = (fileName || "media").replace(/[^a-zA-Z0-9._-]/g, "_");
+        const timestamp = Date.now();
+        const path = `${conversaId}/${timestamp}_${safeName}`;
+
+        const baseUrl = whatsappConfig?.server_url?.replace(/\/+$/, "") || "";
+        const mediaUrl = origUrl.startsWith("http")
+          ? origUrl
+          : `${baseUrl}${origUrl.startsWith("/") ? "" : "/"}${origUrl}`;
+
+        const authHeaders = whatsappConfig?.token
+          ? [
+              {},
+              { apikey: whatsappConfig.token },
+              { Authorization: `Bearer ${whatsappConfig.token}` },
+              { apikey: whatsappConfig.token, Authorization: `Bearer ${whatsappConfig.token}` },
+            ]
+          : [{}];
+
+        let response: Response | null = null;
+        for (const headers of authHeaders) {
+          response = await fetch(mediaUrl, { headers });
+          if (response.ok) break;
+        }
+
+        if (!response || !response.ok) {
+          console.error("[evolution-webhook] Falha ao baixar mídia:", response?.status || "sem_resposta");
           return origUrl;
         }
+
         const buffer = await response.arrayBuffer();
-        const timestamp = Date.now();
-        const safeName = (fileName || "media").replace(/[^a-zA-Z0-9._-]/g, "_");
-        const path = `${conversaId}/${timestamp}_${safeName}`;
 
         const { error } = await supabase.storage
           .from("chat-midias")
-          .upload(path, buffer, { contentType: mimeType, upsert: false });
+          .upload(path, buffer, { contentType: mimeType || "application/octet-stream", upsert: false });
 
         if (error) {
           console.error("[evolution-webhook] Erro upload storage:", error.message);
