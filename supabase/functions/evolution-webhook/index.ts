@@ -260,7 +260,7 @@ serve(async (req) => {
     const seq = ((count || 0) + 1).toString().padStart(3, "0");
     const protocolo = `#${hoje}${seq}`;
 
-    if (!dentroHorario) {
+    if (modo === "fora") {
       // Out of business hours
       const { data: novaConversa } = await supabase
         .from("chat_conversas")
@@ -303,7 +303,12 @@ serve(async (req) => {
       return ok({ success: true, action: "fora_horario" });
     }
 
-    // Within business hours - create conversation in bot mode
+    // Plantão prefix message (prepended to welcome)
+    const plantaoPrefix = modo === "plantao"
+      ? ((config as any)?.mensagem_plantao || "🚨 *Atenção: Estamos em regime de plantão.* Atendemos apenas casos emergenciais neste horário. Descreva sua situação e retornaremos o mais breve possível.") + "\n\n"
+      : "";
+
+    // Within business hours or plantão - create conversation in bot mode
     const { data: novaConversa } = await supabase
       .from("chat_conversas")
       .insert({
