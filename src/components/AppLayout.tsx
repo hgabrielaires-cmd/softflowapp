@@ -74,7 +74,6 @@ const navGroups: NavGroup[] = [
       { icon: <Calendar className="h-4 w-4" />, label: "Painel de Atendimento", to: "/fila-agendamento", permKey: "menu.painel_atendimento" },
       { icon: <Calendar className="h-4 w-4" />, label: "Agenda", to: "/agenda", permKey: "menu.agenda" },
       { icon: <Ticket className="h-4 w-4" />, label: "Tickets", to: "/tickets", permKey: "menu.tickets" },
-      { icon: <MessageSquare className="h-4 w-4" />, label: "Chat", to: "/chat", permKey: "menu.chat" },
     ],
   },
   {
@@ -1335,6 +1334,10 @@ export function AppLayout({ children }: AppLayoutProps) {
           </Button>
 
           <div className="flex-1" />
+
+          <Button variant="ghost" size="icon" className="h-8 w-8 relative" onClick={() => navigate("/chat")} title="Chat">
+            <MessageSquare className="h-4 w-4" />
+          </Button>
 
           <NotificationBell profile={profile} roles={roles} />
 
