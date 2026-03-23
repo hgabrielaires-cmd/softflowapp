@@ -102,6 +102,10 @@ serve(async (req) => {
       mediaTipo = msg.videoMessage.mimetype || "video/mp4";
       mediaUrl = msg.videoMessage.url || "";
       conteudo = msg.videoMessage.caption || "";
+    } else if (msg.stickerMessage) {
+      tipo = "imagem";
+      mediaTipo = msg.stickerMessage.mimetype || "image/webp";
+      mediaUrl = msg.stickerMessage.url || "";
     } else {
       // Unknown message type - save raw
       conteudo = JSON.stringify(msg).substring(0, 500);
