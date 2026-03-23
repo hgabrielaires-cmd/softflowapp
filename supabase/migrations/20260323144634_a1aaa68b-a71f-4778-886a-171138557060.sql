@@ -1,0 +1,1 @@
+ALTER TABLE public.webhook_events ADD COLUMN IF NOT EXISTS payload jsonb;
