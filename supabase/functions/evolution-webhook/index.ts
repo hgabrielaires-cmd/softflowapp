@@ -351,7 +351,8 @@ serve(async (req) => {
       // No bot flow configured - go straight to queue
       const msgBV = config?.mensagem_boas_vindas || "Olá! Bem-vindo(a)! 😊";
       const msgAg = config?.mensagem_aguardando || "Aguarde, nossa equipe já vai lhe atender. 🤗";
-      await sendWhatsApp(`${msgBV}\n\n${msgAg}`);
+      const textoFull = `${plantaoPrefix}${msgBV}\n\n${msgAg}`;
+      await sendWhatsApp(textoFull);
 
       await supabase.from("chat_mensagens").insert({
         conversa_id: novaConversa.id,
