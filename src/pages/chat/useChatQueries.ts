@@ -122,7 +122,7 @@ export function useChatHistorico(numero: string | null, conversaAtualId: string 
           setor:setores!chat_conversas_setor_id_fkey(nome)`)
         .eq("numero_cliente", numero)
         .order("created_at", { ascending: false })
-        .limit(6);
+        .limit(11);
 
       if (conversaAtualId) {
         q = q.neq("id", conversaAtualId);
@@ -130,7 +130,7 @@ export function useChatHistorico(numero: string | null, conversaAtualId: string 
 
       const { data, error } = await q;
       if (error) throw error;
-      return (data || []).slice(0, 5);
+      return (data || []).slice(0, 10);
     },
     enabled: !!numero,
   });
