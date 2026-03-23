@@ -251,6 +251,7 @@ export type Database = {
           filial_id: string | null
           horario_fim: string | null
           horario_inicio: string | null
+          horarios_por_dia: Json | null
           id: string
           max_conversas_por_atendente: number | null
           mensagem_aguardando: string | null
@@ -258,6 +259,7 @@ export type Database = {
           mensagem_encerramento: string | null
           mensagem_fora_horario: string | null
           mensagem_nps: string | null
+          mensagem_plantao: string | null
           tempo_espera_estimado: string | null
         }
         Insert: {
@@ -268,6 +270,7 @@ export type Database = {
           filial_id?: string | null
           horario_fim?: string | null
           horario_inicio?: string | null
+          horarios_por_dia?: Json | null
           id?: string
           max_conversas_por_atendente?: number | null
           mensagem_aguardando?: string | null
@@ -275,6 +278,7 @@ export type Database = {
           mensagem_encerramento?: string | null
           mensagem_fora_horario?: string | null
           mensagem_nps?: string | null
+          mensagem_plantao?: string | null
           tempo_espera_estimado?: string | null
         }
         Update: {
@@ -285,6 +289,7 @@ export type Database = {
           filial_id?: string | null
           horario_fim?: string | null
           horario_inicio?: string | null
+          horarios_por_dia?: Json | null
           id?: string
           max_conversas_por_atendente?: number | null
           mensagem_aguardando?: string | null
@@ -292,6 +297,7 @@ export type Database = {
           mensagem_encerramento?: string | null
           mensagem_fora_horario?: string | null
           mensagem_nps?: string | null
+          mensagem_plantao?: string | null
           tempo_espera_estimado?: string | null
         }
         Relationships: [
