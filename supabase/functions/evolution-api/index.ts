@@ -39,7 +39,7 @@ serve(async (req) => {
       });
     }
 
-    const { action, server_url, api_key, instance_name, number, text, template_id } = await req.json();
+    const { action, server_url, api_key, instance_name, number, text, template_id, mediatype, media, caption, fileName, webhook_url } = await req.json();
 
     // For send_text, read credentials from DB using service role (secure)
     // For config actions (create_instance, connect, etc.), accept from request body (admin setup)
@@ -267,6 +267,79 @@ serve(async (req) => {
 
         if (!res.ok) {
           return new Response(JSON.stringify({ error: "Erro ao enviar mensagem", details: result }), {
+            status: res.status,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        break;
+      }
+
+      case "send_media": {
+        if (!number) {
+          return new Response(JSON.stringify({ error: "number é obrigatório" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        // mediatype, media, caption, fileName already destructured from body
+        const name = resolvedInstanceName || instance_name || "Softflow_WhatsApp";
+        let formattedNumber = number.replace(/\D/g, "");
+        if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
+        if (!formattedNumber.startsWith("55")) formattedNumber = "55" + formattedNumber;
+
+        const endpoint = mediatype === "audio"
+          ? `${baseUrl}/message/sendWhatsAppAudio/${name}`
+          : `${baseUrl}/message/sendMedia/${name}`;
+
+        const mediaBody: any = {
+          number: formattedNumber,
+          mediatype: mediatype || "image",
+          media: media,
+        };
+        if (caption) mediaBody.caption = caption;
+        if (fileName) mediaBody.fileName = fileName;
+
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(mediaBody),
+        });
+        result = await res.json();
+        if (!res.ok) {
+          return new Response(JSON.stringify({ error: "Erro ao enviar mídia", details: result }), {
+            status: res.status,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        break;
+      }
+
+      case "configure_webhook": {
+        // webhook_url already destructured from body
+        if (!webhook_url) {
+          return new Response(JSON.stringify({ error: "webhook_url é obrigatório" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const name = instance_name || "Softflow_WhatsApp";
+        const res = await fetch(`${baseUrl}/webhook/set/${name}`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            url: webhook_url,
+            webhook_by_events: true,
+            webhook_base64: false,
+            events: [
+              "MESSAGES_UPSERT",
+              "MESSAGES_UPDATE",
+              "CONNECTION_UPDATE",
+            ],
+          }),
+        });
+        result = await res.json();
+        if (!res.ok) {
+          return new Response(JSON.stringify({ error: "Erro ao configurar webhook", details: result }), {
             status: res.status,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });

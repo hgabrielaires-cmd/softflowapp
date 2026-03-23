@@ -46,6 +46,7 @@ import HelpdeskParametros from "./pages/HelpdeskParametros";
 import TesteAsaas from "./pages/TesteAsaas";
 import AgendaCrm from "./pages/AgendaCrm";
 import DashboardCrm from "./pages/DashboardCrm";
+import Chat from "./pages/Chat";
 
 const queryClient = new QueryClient();
 
@@ -372,6 +373,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <TesteAsaas />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chat"
+              element={
+                <ProtectedRoute>
+                  <Chat />
                 </ProtectedRoute>
               }
             />
