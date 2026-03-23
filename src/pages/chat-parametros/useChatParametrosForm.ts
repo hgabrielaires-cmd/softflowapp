@@ -9,12 +9,13 @@ export function useChatParametrosForm() {
 
   const salvarConfig = useMutation({
     mutationFn: async (values: Record<string, any>) => {
-      const payload = { ...values, filial_id: filialPadraoId || null };
-      if (values.id) {
+      const { id, ...rest } = values;
+      const payload = { ...rest, filial_id: filialPadraoId || null };
+      if (id) {
         const { error } = await supabase
           .from("chat_configuracoes")
           .update(payload)
-          .eq("id", values.id);
+          .eq("id", id);
         if (error) throw error;
       } else {
         const { error } = await supabase
