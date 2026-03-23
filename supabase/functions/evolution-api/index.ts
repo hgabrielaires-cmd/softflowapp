@@ -42,7 +42,7 @@ serve(async (req) => {
     const { action, server_url, api_key, instance_name, number, text, template_id, mediatype, media, caption, fileName, webhook_url } = await req.json();
 
     // Actions that read credentials from DB vs from request body
-    const dbCredentialActions = ["send_text", "send_media", "configure_webhook"];
+    const dbCredentialActions = ["send_text", "send_media", "configure_webhook", "get_webhook"];
     let baseUrl: string;
     let apiKey: string;
     let resolvedInstanceName: string | undefined = instance_name;
@@ -349,6 +349,22 @@ serve(async (req) => {
         result = await res.json();
         if (!res.ok) {
           return new Response(JSON.stringify({ error: "Erro ao configurar webhook", details: result }), {
+            status: res.status,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        break;
+      }
+
+      case "get_webhook": {
+        const name = instance_name || "Softflow_WhatsApp";
+        const res = await fetch(`${baseUrl}/webhook/find/${name}`, {
+          method: "GET",
+          headers,
+        });
+        result = await res.json();
+        if (!res.ok) {
+          return new Response(JSON.stringify({ error: "Erro ao buscar webhook", details: result }), {
             status: res.status,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
