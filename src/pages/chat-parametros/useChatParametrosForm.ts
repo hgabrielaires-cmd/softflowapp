@@ -108,7 +108,7 @@ export function useChatParametrosForm() {
       const { data, error } = await supabase.functions.invoke("evolution-api", {
         body: {
           action: "configure_webhook",
-          instance: instancia,
+          instance_name: instancia,
           webhook_url: `${supabaseUrl}/functions/v1/evolution-webhook`,
         },
       });
