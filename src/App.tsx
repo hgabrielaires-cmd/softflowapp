@@ -83,10 +83,18 @@ const App = () => {
               }
             />
             <Route
-              path="/dashboard-atendimento"
+              path="/dashboard-tickets"
               element={
                 <ProtectedRoute>
                   <DashboardAtendimento />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard-atendimento"
+              element={
+                <ProtectedRoute>
+                  <DashboardChatAtendimento />
                 </ProtectedRoute>
               }
             />

@@ -54,7 +54,8 @@ const navGroups: NavGroup[] = [
     items: [
       { icon: <ShoppingCart className="h-4 w-4" />, label: "Dashboard Vendas", to: "/dashboard", permKey: "menu.dashboard_vendas" },
       { icon: <DollarSign className="h-4 w-4" />, label: "Dashboard Financeiro", to: "/dashboard-financeiro", permKey: "menu.dashboard_financeiro" },
-      { icon: <Headphones className="h-4 w-4" />, label: "Dashboard Atendimento", to: "/dashboard-atendimento", permKey: "menu.dashboard_atendimento" },
+      { icon: <MessageSquare className="h-4 w-4" />, label: "Dashboard Atendimento", to: "/dashboard-atendimento", permKey: "menu.dashboard_atendimento" },
+      { icon: <Ticket className="h-4 w-4" />, label: "Dashboard Tickets", to: "/dashboard-tickets", permKey: "menu.dashboard_tickets" },
       { icon: <UserCheck className="h-4 w-4" />, label: "Dashboard CRM", to: "/dashboard-crm", permKey: "menu.dashboard_crm" },
     ],
   },
