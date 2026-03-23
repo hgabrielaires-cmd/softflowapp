@@ -16,6 +16,7 @@ export function useChatActions() {
       texto,
       tipo = "texto",
       atendenteId,
+      userName,
       numero,
       instanceName,
     }: {
@@ -23,6 +24,7 @@ export function useChatActions() {
       texto: string;
       tipo?: string;
       atendenteId: string;
+      userName?: string;
       numero: string;
       instanceName?: string;
     }) => {
@@ -38,8 +40,9 @@ export function useChatActions() {
 
       // Send via WhatsApp if not internal note
       if (tipo !== "nota_interna") {
+        const textoWhatsApp = `*${userName || "Atendente"}* diz:\n${texto}`;
         const { error: sendError } = await supabase.functions.invoke("evolution-api", {
-          body: { action: "send_text", number: numero, text: texto, instance_name: instanceName },
+          body: { action: "send_text", number: numero, text: textoWhatsApp, instance_name: instanceName },
         });
         if (sendError) console.error("Erro ao enviar WhatsApp:", sendError);
       }
