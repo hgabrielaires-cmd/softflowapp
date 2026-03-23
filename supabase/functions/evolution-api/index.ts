@@ -328,6 +328,7 @@ serve(async (req) => {
           headers,
           body: JSON.stringify({
             webhook: {
+              enabled: true,
               url: webhook_url,
               webhook_by_events: true,
               webhook_base64: false,
