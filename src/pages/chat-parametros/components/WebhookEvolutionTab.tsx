@@ -61,8 +61,11 @@ export function WebhookEvolutionTab() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="bg-muted/50 rounded-lg p-4">
-            <p className="text-sm font-medium mb-1">URL do Webhook:</p>
+            <p className="text-sm font-medium mb-1">URL do Webhook (base):</p>
             <code className="text-xs break-all bg-background border rounded px-2 py-1 block">{webhookUrl}</code>
+            <p className="text-xs text-muted-foreground mt-2">
+              O token de autenticação é adicionado automaticamente ao configurar.
+            </p>
           </div>
 
           <p className="text-sm text-muted-foreground">
