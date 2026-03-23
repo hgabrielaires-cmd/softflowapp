@@ -39,7 +39,7 @@ serve(async (req) => {
       });
     }
 
-    const { action, server_url, api_key, instance_name, number, text, template_id } = await req.json();
+    const { action, server_url, api_key, instance_name, number, text, template_id, mediatype, media, caption, fileName, webhook_url } = await req.json();
 
     // For send_text, read credentials from DB using service role (secure)
     // For config actions (create_instance, connect, etc.), accept from request body (admin setup)
