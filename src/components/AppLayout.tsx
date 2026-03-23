@@ -450,6 +450,7 @@ function ChatHeaderButton() {
 }
 
 function NotificationBell({ profile, roles }: { profile: Profile | null; roles: AppRole[] }) {
+  const navigate = useNavigate();
   const [solicitacoes, setSolicitacoes] = useState<SolicitacaoDesconto[]>([]);
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
   const [lidasIds, setLidasIds] = useState<Set<string>>(new Set());
