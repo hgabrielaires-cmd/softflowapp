@@ -64,6 +64,7 @@ export default function ChatPage() {
 
         {/* Col 2 - Chat Window */}
         <ChatMessageArea
+          isLoading={actions.iniciarAtendimento.isPending}
           conversa={conversaAtual as ChatConversa | null}
           mensagens={mensagens as any[]}
           userId={user?.id || null}
