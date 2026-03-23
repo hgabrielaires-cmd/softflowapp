@@ -114,6 +114,11 @@ export default function ChatPage() {
               userName,
               numero: conversaAtual.numero_cliente,
               instanceName: conversaAtual.canal_instancia || undefined,
+            }, {
+              onSuccess: () => {
+                setSelectedConversa(null);
+                setTab("meus");
+              },
             });
           }}
           onTransferir={() => setShowTransferir(true)}
