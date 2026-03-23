@@ -71,6 +71,7 @@ serve(async (req) => {
 
     // Extract text/media
     const msg = data.message || {};
+    console.log("[evolution-webhook] Tipos na mensagem:", Object.keys(msg).join(", "));
     let tipo = "texto";
     let conteudo = "";
     let mediaUrl = "";
