@@ -11,11 +11,23 @@ import { useChatParametrosQueries } from "../useChatParametrosQueries";
 import { useChatParametrosForm } from "../useChatParametrosForm";
 import { DIAS_SEMANA, DISTRIBUICAO_TIPOS, DEFAULT_HORARIOS_POR_DIA } from "../constants";
 import type { HorariosPorDia } from "../types";
+import { useAuth } from "@/context/AuthContext";
+import { setPref } from "@/hooks/useNotificacaoChat";
 
 export function ConfigGeralTab() {
   const { configQuery } = useChatParametrosQueries();
   const { salvarConfig } = useChatParametrosForm();
   const config = configQuery.data;
+  const { user } = useAuth();
+  const userId = user?.id || "";
+
+  // Per-user notification prefs
+  const [notifSom, setNotifSom] = useState(() => {
+    try { const v = localStorage.getItem(`chat_notif_som_${userId}`); return v === null ? true : v === "true"; } catch { return true; }
+  });
+  const [notifBrowser, setNotifBrowser] = useState(() => {
+    try { const v = localStorage.getItem(`chat_notif_browser_${userId}`); return v === null ? true : v === "true"; } catch { return true; }
+  });
 
   const [form, setForm] = useState({
     id: "",
@@ -234,6 +246,27 @@ export function ConfigGeralTab() {
           <div>
             <Label>Tempo de espera estimado</Label>
             <Input value={form.tempo_espera_estimado} onChange={(e) => setForm((p) => ({ ...p, tempo_espera_estimado: e.target.value }))} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Notification Preferences (per-user, localStorage) */}
+      <Card>
+        <CardHeader><CardTitle className="text-lg">Notificações do Chat</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label>Som de notificação</Label>
+            <Switch
+              checked={notifSom}
+              onCheckedChange={(v) => { setNotifSom(v); setPref(userId, "som", v); }}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Notificação do navegador</Label>
+            <Switch
+              checked={notifBrowser}
+              onCheckedChange={(v) => { setNotifBrowser(v); setPref(userId, "browser", v); }}
+            />
           </div>
         </CardContent>
       </Card>

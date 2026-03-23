@@ -8,6 +8,7 @@ import TransferirDialog from "./TransferirDialog";
 import { useChatConversas, useChatMensagens } from "../useChatQueries";
 import { useChatActions } from "../useChatActions";
 import { ChatConversa } from "../types";
+import { useNotificacaoChat } from "@/hooks/useNotificacaoChat";
 
 export default function ChatPage() {
   const { user, profile } = useAuth();
@@ -19,6 +20,9 @@ export default function ChatPage() {
   const { data: conversas = [] } = useChatConversas(tab, user?.id, search);
   const { data: mensagens = [] } = useChatMensagens(selectedConversa?.id || null);
   const actions = useChatActions();
+
+  // Notifications
+  useNotificacaoChat({ userId: user?.id, conversaAbertaId: selectedConversa?.id || null });
 
   // Counts per tab
   const { data: filaConversas = [] } = useChatConversas("fila", user?.id, "");
