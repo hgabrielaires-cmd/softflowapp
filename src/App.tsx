@@ -47,6 +47,7 @@ import TesteAsaas from "./pages/TesteAsaas";
 import AgendaCrm from "./pages/AgendaCrm";
 import DashboardCrm from "./pages/DashboardCrm";
 import Chat from "./pages/Chat";
+import ChatParametros from "./pages/chat-parametros";
 
 const queryClient = new QueryClient();
 
@@ -381,6 +382,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <Chat />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chat-parametros"
+              element={
+                <ProtectedRoute>
+                  <ChatParametros />
                 </ProtectedRoute>
               }
             />
