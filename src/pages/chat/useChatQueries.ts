@@ -152,13 +152,14 @@ export function useAtendentes() {
   return useQuery({
     queryKey: ["atendentes-chat"],
     queryFn: async () => {
-      const result = await supabase
+      const { data, error } = await supabase
         .from("profiles")
-        .select("user_id, full_name, avatar_url")
-        .eq("ativo", true)
-        .order("full_name");
-      if (result.error) throw result.error;
-      return (result.data as unknown as Array<{ user_id: string; full_name: string | null; avatar_url: string | null }>) || [];
+        .select("user_id, full_name, avatar_url");
+      if (error) throw error;
+      const filtered = (data || [])
+        .filter((p: any) => p.ativo !== false)
+        .sort((a: any, b: any) => (a.full_name || "").localeCompare(b.full_name || ""));
+      return filtered as Array<{ user_id: string; full_name: string | null; avatar_url: string | null }>;
     },
   });
 }
