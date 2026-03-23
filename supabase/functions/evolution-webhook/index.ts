@@ -325,11 +325,16 @@ serve(async (req) => {
         .single();
 
       if (novaConversa) {
+        let fmUrl = mediaUrl || null;
+        if (mediaUrl && tipo !== "texto") {
+          const ext = mediaNome || `media.${(mediaTipo || "application/octet-stream").split("/")[1]?.split(";")[0] || "bin"}`;
+          fmUrl = await salvarMidiaStorage(mediaUrl, novaConversa.id, ext, mediaTipo);
+        }
         await supabase.from("chat_mensagens").insert({
           conversa_id: novaConversa.id,
           tipo,
           conteudo,
-          media_url: mediaUrl || null,
+          media_url: fmUrl,
           media_tipo: mediaTipo || null,
           media_nome: mediaNome || null,
           remetente: "cliente",
