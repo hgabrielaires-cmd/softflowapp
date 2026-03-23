@@ -198,6 +198,389 @@ export type Database = {
           },
         ]
       }
+      chat_bot_fluxo: {
+        Row: {
+          ativo: boolean | null
+          campo_destino: string | null
+          created_at: string | null
+          filial_id: string | null
+          id: string
+          opcoes: Json | null
+          ordem: number
+          pergunta: string
+          tipo: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          campo_destino?: string | null
+          created_at?: string | null
+          filial_id?: string | null
+          id?: string
+          opcoes?: Json | null
+          ordem: number
+          pergunta: string
+          tipo?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          campo_destino?: string | null
+          created_at?: string | null
+          filial_id?: string | null
+          id?: string
+          opcoes?: Json | null
+          ordem?: number
+          pergunta?: string
+          tipo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_bot_fluxo_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_configuracoes: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          dias_semana: number[] | null
+          distribuicao_tipo: string | null
+          filial_id: string | null
+          horario_fim: string | null
+          horario_inicio: string | null
+          id: string
+          max_conversas_por_atendente: number | null
+          mensagem_aguardando: string | null
+          mensagem_boas_vindas: string | null
+          mensagem_encerramento: string | null
+          mensagem_fora_horario: string | null
+          mensagem_nps: string | null
+          tempo_espera_estimado: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          dias_semana?: number[] | null
+          distribuicao_tipo?: string | null
+          filial_id?: string | null
+          horario_fim?: string | null
+          horario_inicio?: string | null
+          id?: string
+          max_conversas_por_atendente?: number | null
+          mensagem_aguardando?: string | null
+          mensagem_boas_vindas?: string | null
+          mensagem_encerramento?: string | null
+          mensagem_fora_horario?: string | null
+          mensagem_nps?: string | null
+          tempo_espera_estimado?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          dias_semana?: number[] | null
+          distribuicao_tipo?: string | null
+          filial_id?: string | null
+          horario_fim?: string | null
+          horario_inicio?: string | null
+          id?: string
+          max_conversas_por_atendente?: number | null
+          mensagem_aguardando?: string | null
+          mensagem_boas_vindas?: string | null
+          mensagem_encerramento?: string | null
+          mensagem_fora_horario?: string | null
+          mensagem_nps?: string | null
+          tempo_espera_estimado?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_configuracoes_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_conversas: {
+        Row: {
+          atendente_id: string | null
+          atendimento_iniciado_em: string | null
+          bot_estado: Json | null
+          canal: string | null
+          canal_instancia: string | null
+          cliente_id: string | null
+          contato_id: string | null
+          created_at: string | null
+          encerrado_em: string | null
+          filial_id: string | null
+          id: string
+          iniciado_em: string | null
+          nome_cliente: string | null
+          nps_comentario: string | null
+          nps_enviado: boolean | null
+          nps_nota: number | null
+          numero_cliente: string
+          protocolo: string | null
+          setor_id: string | null
+          status: string | null
+          tags: string[] | null
+          tempo_atendimento_segundos: number | null
+          tempo_espera_segundos: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          atendente_id?: string | null
+          atendimento_iniciado_em?: string | null
+          bot_estado?: Json | null
+          canal?: string | null
+          canal_instancia?: string | null
+          cliente_id?: string | null
+          contato_id?: string | null
+          created_at?: string | null
+          encerrado_em?: string | null
+          filial_id?: string | null
+          id?: string
+          iniciado_em?: string | null
+          nome_cliente?: string | null
+          nps_comentario?: string | null
+          nps_enviado?: boolean | null
+          nps_nota?: number | null
+          numero_cliente: string
+          protocolo?: string | null
+          setor_id?: string | null
+          status?: string | null
+          tags?: string[] | null
+          tempo_atendimento_segundos?: number | null
+          tempo_espera_segundos?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          atendente_id?: string | null
+          atendimento_iniciado_em?: string | null
+          bot_estado?: Json | null
+          canal?: string | null
+          canal_instancia?: string | null
+          cliente_id?: string | null
+          contato_id?: string | null
+          created_at?: string | null
+          encerrado_em?: string | null
+          filial_id?: string | null
+          id?: string
+          iniciado_em?: string | null
+          nome_cliente?: string | null
+          nps_comentario?: string | null
+          nps_enviado?: boolean | null
+          nps_nota?: number | null
+          numero_cliente?: string
+          protocolo?: string | null
+          setor_id?: string | null
+          status?: string | null
+          tags?: string[] | null
+          tempo_atendimento_segundos?: number | null
+          tempo_espera_segundos?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversas_atendente_id_fkey"
+            columns: ["atendente_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "chat_conversas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_conversas_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_conversas_setor_id_fkey"
+            columns: ["setor_id"]
+            isOneToOne: false
+            referencedRelation: "setores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_fila: {
+        Row: {
+          atribuido_a: string | null
+          conversa_id: string | null
+          created_at: string | null
+          filial_id: string | null
+          id: string
+          posicao: number | null
+          setor_id: string | null
+          status: string | null
+        }
+        Insert: {
+          atribuido_a?: string | null
+          conversa_id?: string | null
+          created_at?: string | null
+          filial_id?: string | null
+          id?: string
+          posicao?: number | null
+          setor_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          atribuido_a?: string | null
+          conversa_id?: string | null
+          created_at?: string | null
+          filial_id?: string | null
+          id?: string
+          posicao?: number | null
+          setor_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_fila_atribuido_a_fkey"
+            columns: ["atribuido_a"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "chat_fila_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_fila_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_fila_setor_id_fkey"
+            columns: ["setor_id"]
+            isOneToOne: false
+            referencedRelation: "setores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_mensagens: {
+        Row: {
+          atendente_id: string | null
+          conteudo: string | null
+          conversa_id: string | null
+          created_at: string | null
+          evolution_message_id: string | null
+          id: string
+          lida: boolean | null
+          media_nome: string | null
+          media_tipo: string | null
+          media_url: string | null
+          remetente: string | null
+          tipo: string | null
+        }
+        Insert: {
+          atendente_id?: string | null
+          conteudo?: string | null
+          conversa_id?: string | null
+          created_at?: string | null
+          evolution_message_id?: string | null
+          id?: string
+          lida?: boolean | null
+          media_nome?: string | null
+          media_tipo?: string | null
+          media_url?: string | null
+          remetente?: string | null
+          tipo?: string | null
+        }
+        Update: {
+          atendente_id?: string | null
+          conteudo?: string | null
+          conversa_id?: string | null
+          created_at?: string | null
+          evolution_message_id?: string | null
+          id?: string
+          lida?: boolean | null
+          media_nome?: string | null
+          media_tipo?: string | null
+          media_url?: string | null
+          remetente?: string | null
+          tipo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_mensagens_atendente_id_fkey"
+            columns: ["atendente_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "chat_mensagens_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_respostas_rapidas: {
+        Row: {
+          atalho: string
+          ativo: boolean | null
+          conteudo: string
+          created_at: string | null
+          filial_id: string | null
+          id: string
+          setor_id: string | null
+        }
+        Insert: {
+          atalho: string
+          ativo?: boolean | null
+          conteudo: string
+          created_at?: string | null
+          filial_id?: string | null
+          id?: string
+          setor_id?: string | null
+        }
+        Update: {
+          atalho?: string
+          ativo?: boolean | null
+          conteudo?: string
+          created_at?: string | null
+          filial_id?: string | null
+          id?: string
+          setor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_respostas_rapidas_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_respostas_rapidas_setor_id_fkey"
+            columns: ["setor_id"]
+            isOneToOne: false
+            referencedRelation: "setores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cliente_contatos: {
         Row: {
           ativo: boolean
