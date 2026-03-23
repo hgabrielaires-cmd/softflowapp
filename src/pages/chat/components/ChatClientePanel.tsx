@@ -57,9 +57,15 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
       if (isNumerico && limpo.length >= 11) {
         query = query.eq("cnpj_cpf", limpo);
       } else {
-        query = query.or(
-          `nome_fantasia.ilike.%${termo}%,razao_social.ilike.%${termo}%,apelido.ilike.%${termo}%,cnpj_cpf.ilike.%${limpo}%`
-        );
+        const filters = [
+          `nome_fantasia.ilike.%${termo}%`,
+          `razao_social.ilike.%${termo}%`,
+          `apelido.ilike.%${termo}%`,
+        ];
+        if (limpo.length >= 3) {
+          filters.push(`cnpj_cpf.ilike.%${limpo}%`);
+        }
+        query = query.or(filters.join(","));
       }
 
       const { data, error } = await query;
