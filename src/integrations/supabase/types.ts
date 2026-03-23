@@ -4973,6 +4973,7 @@ export type Database = {
           event_id: string
           id: string
           ip_address: string | null
+          payload: Json | null
           processed_at: string
           source: string
         }
@@ -4980,6 +4981,7 @@ export type Database = {
           event_id: string
           id?: string
           ip_address?: string | null
+          payload?: Json | null
           processed_at?: string
           source: string
         }
@@ -4987,6 +4989,7 @@ export type Database = {
           event_id?: string
           id?: string
           ip_address?: string | null
+          payload?: Json | null
           processed_at?: string
           source?: string
         }
