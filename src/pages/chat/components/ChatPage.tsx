@@ -55,7 +55,8 @@ export default function ChatPage() {
     <AppLayout>
       <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
         {/* Col 1 - Conversations List */}
-        <div className="w-[280px] flex-shrink-0">
+        <div className="w-[280px] flex-shrink-0 flex flex-col">
+          <div className="flex-1 min-h-0 overflow-hidden">
           <ChatConversaList
             conversas={conversas as ChatConversa[]}
             tab={tab}
@@ -66,10 +67,11 @@ export default function ChatPage() {
             onSelect={(c) => { setSelectedConversa(c); setView("chat"); }}
             counts={counts}
           />
+          </div>
           {/* Dashboard toggle */}
-          <div className="border-t border-r border-border p-2 bg-card">
+          <div className="border-t border-r border-border p-2 bg-card flex-shrink-0">
             <Button
-              variant={view === "dashboard" ? "secondary" : "ghost"}
+              variant={view === "dashboard" ? "default" : "ghost"}
               size="sm"
               className="w-full justify-start text-xs gap-2"
               onClick={() => setView(view === "dashboard" ? "chat" : "dashboard")}
