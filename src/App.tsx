@@ -384,6 +384,14 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/chat-parametros"
+              element={
+                <ProtectedRoute>
+                  <ChatParametros />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
