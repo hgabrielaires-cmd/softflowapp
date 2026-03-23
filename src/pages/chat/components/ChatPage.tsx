@@ -76,6 +76,7 @@ export default function ChatPage() {
               texto,
               tipo,
               atendenteId: user.id,
+              userName,
               numero: conversaAtual.numero_cliente,
               instanceName: conversaAtual.canal_instancia || undefined,
             });
