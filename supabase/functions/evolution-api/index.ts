@@ -322,6 +322,12 @@ serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
+        // Append EVOLUTION_WEBHOOK_TOKEN to the webhook URL so the webhook can validate calls
+        const webhookToken = Deno.env.get("EVOLUTION_WEBHOOK_TOKEN");
+        const finalWebhookUrl = webhookToken
+          ? `${webhook_url}?token=${webhookToken}`
+          : webhook_url;
+
         const name = instance_name || "Softflow_WhatsApp";
         const res = await fetch(`${baseUrl}/webhook/set/${name}`, {
           method: "POST",
@@ -329,7 +335,7 @@ serve(async (req) => {
           body: JSON.stringify({
             webhook: {
               enabled: true,
-              url: webhook_url,
+              url: finalWebhookUrl,
               webhook_by_events: true,
               webhook_base64: false,
               events: [
