@@ -238,6 +238,27 @@ export function ConfigGeralTab() {
         </CardContent>
       </Card>
 
+      {/* Notification Preferences (per-user, localStorage) */}
+      <Card>
+        <CardHeader><CardTitle className="text-lg">Notificações do Chat</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label>Som de notificação</Label>
+            <Switch
+              checked={notifSom}
+              onCheckedChange={(v) => { setNotifSom(v); setPref(userId, "som", v); }}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Notificação do navegador</Label>
+            <Switch
+              checked={notifBrowser}
+              onCheckedChange={(v) => { setNotifBrowser(v); setPref(userId, "browser", v); }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={salvarConfig.isPending}>
           {salvarConfig.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
