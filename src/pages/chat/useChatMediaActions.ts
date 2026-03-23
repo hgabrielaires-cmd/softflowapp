@@ -35,7 +35,8 @@ export function useChatMediaActions() {
     }) => {
       // 1. Upload to storage
       const timestamp = Date.now();
-      const path = `${conversaId}/${timestamp}_${file.name}`;
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `${conversaId}/${timestamp}_${safeName}`;
       const { error: uploadError } = await supabase.storage
         .from("chat-midias")
         .upload(path, file, { contentType: file.type });
