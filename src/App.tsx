@@ -33,6 +33,7 @@ import PainelAtendimento from "./pages/PainelAtendimento";
 import EtapasPainel from "./pages/EtapasPainel";
 import DashboardFinanceiro from "./pages/DashboardFinanceiro";
 import DashboardAtendimento from "./pages/DashboardAtendimento";
+import DashboardChatAtendimento from "./pages/DashboardChatAtendimento";
 import Segmentos from "./pages/Segmentos";
 import Setores from "./pages/Setores";
 import Automacoes from "./pages/Automacoes";
