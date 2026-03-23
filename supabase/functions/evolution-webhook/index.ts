@@ -377,7 +377,7 @@ serve(async (req) => {
     // Send welcome + first question
     const msgBV = config?.mensagem_boas_vindas || "Olá! Bem-vindo(a)! 😊";
     const primeiraPergunta = fluxo[0].pergunta;
-    let textoEnviar = `${msgBV}\n\n${primeiraPergunta}`;
+    let textoEnviar = `${plantaoPrefix}${msgBV}\n\n${primeiraPergunta}`;
 
     if (fluxo[0].tipo === "opcoes" && fluxo[0].opcoes) {
       const opcoes = fluxo[0].opcoes as Array<{ numero: number; texto: string }>;
