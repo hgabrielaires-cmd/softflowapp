@@ -11,11 +11,23 @@ import { useChatParametrosQueries } from "../useChatParametrosQueries";
 import { useChatParametrosForm } from "../useChatParametrosForm";
 import { DIAS_SEMANA, DISTRIBUICAO_TIPOS, DEFAULT_HORARIOS_POR_DIA } from "../constants";
 import type { HorariosPorDia } from "../types";
+import { useAuth } from "@/context/AuthContext";
+import { setPref } from "@/hooks/useNotificacaoChat";
 
 export function ConfigGeralTab() {
   const { configQuery } = useChatParametrosQueries();
   const { salvarConfig } = useChatParametrosForm();
   const config = configQuery.data;
+  const { user } = useAuth();
+  const userId = user?.id || "";
+
+  // Per-user notification prefs
+  const [notifSom, setNotifSom] = useState(() => {
+    try { const v = localStorage.getItem(`chat_notif_som_${userId}`); return v === null ? true : v === "true"; } catch { return true; }
+  });
+  const [notifBrowser, setNotifBrowser] = useState(() => {
+    try { const v = localStorage.getItem(`chat_notif_browser_${userId}`); return v === null ? true : v === "true"; } catch { return true; }
+  });
 
   const [form, setForm] = useState({
     id: "",
