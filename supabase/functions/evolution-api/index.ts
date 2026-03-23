@@ -356,6 +356,22 @@ serve(async (req) => {
         break;
       }
 
+      case "get_webhook": {
+        const name = instance_name || "Softflow_WhatsApp";
+        const res = await fetch(`${baseUrl}/webhook/find/${name}`, {
+          method: "GET",
+          headers,
+        });
+        result = await res.json();
+        if (!res.ok) {
+          return new Response(JSON.stringify({ error: "Erro ao buscar webhook", details: result }), {
+            status: res.status,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        break;
+      }
+
       default:
         return new Response(JSON.stringify({ error: "Ação inválida" }), {
           status: 400,
