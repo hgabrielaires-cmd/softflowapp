@@ -327,14 +327,16 @@ serve(async (req) => {
           method: "POST",
           headers,
           body: JSON.stringify({
-            url: webhook_url,
-            webhook_by_events: true,
-            webhook_base64: false,
-            events: [
-              "MESSAGES_UPSERT",
-              "MESSAGES_UPDATE",
-              "CONNECTION_UPDATE",
-            ],
+            webhook: {
+              url: webhook_url,
+              webhook_by_events: true,
+              webhook_base64: false,
+              events: [
+                "MESSAGES_UPSERT",
+                "MESSAGES_UPDATE",
+                "CONNECTION_UPDATE",
+              ],
+            },
           }),
         });
         result = await res.json();
