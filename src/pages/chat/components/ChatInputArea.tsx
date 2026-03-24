@@ -149,7 +149,7 @@ export default function ChatInputArea({
     }, 200);
 
     try {
-      onSendMedia(midiaPreview.file, texto.trim());
+      await onSendMedia(midiaPreview.file, texto.trim());
       clearInterval(progressInterval);
       setUploadProgress(100);
       await new Promise((r) => setTimeout(r, 400));
