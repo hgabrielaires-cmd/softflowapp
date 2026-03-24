@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { verificarTelefoneDuplicado, type ContatoDuplicado } from "@/lib/validarTelefoneContato";
+import { TelefoneDuplicadoAlerta } from "@/components/TelefoneDuplicadoAlerta";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
