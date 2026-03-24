@@ -436,6 +436,7 @@ export default function ChatInputArea({
           size="sm"
           className="h-7 text-xs gap-1"
           onClick={() => setModoNota(!modoNota)}
+          disabled={uploading}
         >
           <Lock className="h-3 w-3" /> Nota interna
         </Button>
