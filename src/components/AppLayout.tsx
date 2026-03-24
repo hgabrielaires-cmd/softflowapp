@@ -82,6 +82,7 @@ const navGroups: NavGroup[] = [
     groupIcon: <UserCheck className="h-4 w-4" />,
     items: [
       { icon: <UserCheck className="h-4 w-4" />, label: "Clientes", to: "/clientes", permKey: "menu.clientes" },
+      { icon: <Users className="h-4 w-4" />, label: "Contatos", to: "/contatos", permKey: "menu.clientes" },
       { icon: <BookOpen className="h-4 w-4" />, label: "Planos", to: "/planos", permKey: "menu.planos" },
       { icon: <Building2 className="h-4 w-4" />, label: "Fornecedores", to: "/fornecedores", permKey: "menu.fornecedores" },
       { icon: <Wrench className="h-4 w-4" />, label: "Catálogo de Serviços", to: "/servicos", permKey: "menu.servicos" },
