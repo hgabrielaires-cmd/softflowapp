@@ -305,17 +305,7 @@ serve(async (req) => {
         .update({ updated_at: new Date().toISOString() })
         .eq("id", conversa.id);
 
-      // Handle NPS response for recently closed conversations
-      if (conversa.nps_enviado && !conversa.nps_nota && conteudo) {
-        const nota = parseInt(conteudo.trim());
-        if (nota >= 1 && nota <= 5) {
-          await supabase
-            .from("chat_conversas")
-            .update({ nps_nota: nota, nps_comentario: conteudo })
-            .eq("id", conversa.id);
-          await sendWhatsApp("Obrigado pela sua avaliação! 🙏", conversa.canal_instancia);
-        }
-      }
+
 
       // If conversation is in bot mode, process bot flow
       if (conversa.status === "bot") {
