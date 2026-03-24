@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { UserPlus, Loader2, AlertCircle, MapPin, Users, Plus, Star, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { UF_LIST } from "../constants";
+import type { ClienteFormState, ClienteContatoInline } from "../types";
+import { verificarTelefoneDuplicado, type ContatoDuplicado } from "@/lib/validarTelefoneContato";
+import { TelefoneDuplicadoAlerta } from "@/components/TelefoneDuplicadoAlerta";
 import type { ClienteFormState, ClienteContatoInline } from "../types";
 
 interface Props {
