@@ -536,10 +536,9 @@ serve(async (req) => {
     }
 
     // Download media for new conversation
-    let newMediaUrl = mediaUrl || null;
-    if (mediaUrl && tipo !== "texto") {
-      const ext = mediaNome || `media.${(mediaTipo || "application/octet-stream").split("/")[1]?.split(";")[0] || "bin"}`;
-      newMediaUrl = await salvarMidiaStorage(mediaUrl, novaConversa.id, ext, mediaTipo);
+    let newMediaUrl: string | null = null;
+    if (tipo !== "texto") {
+      newMediaUrl = await baixarESalvarMidia(novaConversa.id, mediaNome, mediaTipo, data.key, data.message, instancia);
     }
 
     // Save original message
