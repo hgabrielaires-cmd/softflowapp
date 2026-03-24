@@ -139,12 +139,28 @@ export default function ChatInputArea({
     }
   }
 
-  function enviarComPreview() {
-    if (!midiaPreview) return;
-    onSendMedia(midiaPreview.file, texto.trim());
-    URL.revokeObjectURL(midiaPreview.url);
-    setMidiaPreview(null);
-    setTexto("");
+  async function enviarComPreview() {
+    if (!midiaPreview || uploading) return;
+    setUploading(true);
+    setUploadProgress(0);
+
+    const progressInterval = setInterval(() => {
+      setUploadProgress((p) => Math.min(p + 10, 90));
+    }, 200);
+
+    try {
+      onSendMedia(midiaPreview.file, texto.trim());
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      await new Promise((r) => setTimeout(r, 400));
+    } finally {
+      clearInterval(progressInterval);
+      URL.revokeObjectURL(midiaPreview.url);
+      setMidiaPreview(null);
+      setTexto("");
+      setUploading(false);
+      setUploadProgress(0);
+    }
   }
 
   // ── Audio recording ──
