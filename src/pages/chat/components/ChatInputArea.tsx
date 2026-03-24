@@ -45,6 +45,10 @@ export default function ChatInputArea({
     tipo: "imagem" | "video";
   } | null>(null);
 
+  // Upload state
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
   // Audio recording
   const [gravando, setGravando] = useState(false);
   const [tempoGravacao, setTempoGravacao] = useState(0);
