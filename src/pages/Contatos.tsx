@@ -116,13 +116,14 @@ export default function Contatos() {
       );
     }
 
-    // Deduplicate by normalized phone number — keep first occurrence per phone
+    // Deduplicate by name + phone — same person with same number appears once
     const seen = new Set<string>();
     const deduped: ContatoRow[] = [];
     for (const c of list) {
       const norm = normalizePhone(c.telefone);
-      if (norm && seen.has(norm)) continue;
-      if (norm) seen.add(norm);
+      const key = norm ? `${c.nome.toLowerCase().trim()}::${norm}` : c.id;
+      if (seen.has(key)) continue;
+      seen.add(key);
       deduped.push(c);
     }
 
