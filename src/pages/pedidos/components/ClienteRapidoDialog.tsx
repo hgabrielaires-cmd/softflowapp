@@ -83,6 +83,11 @@ export function ClienteRapidoDialog({
     setPhoneDuplicados([]);
   };
 
+  function handleSaveContato() {
+    if (phoneDuplicados.length > 0 && !phoneIgnorado) {
+      toast.error("Resolva o telefone duplicado antes de salvar o contato.");
+      return;
+    }
     if (!inlineContatoForm.nome.trim()) { toast.error("Nome do contato é obrigatório"); return; }
     if (!inlineContatoForm.email?.trim()) { toast.error("E-mail do contato é obrigatório"); return; }
     if (!inlineContatoForm.cargo?.trim()) { toast.error("Cargo do contato é obrigatório"); return; }
@@ -97,6 +102,8 @@ export function ClienteRapidoDialog({
     setShowContatoForm(false);
     setEditingContatoIdx(null);
     setInlineContatoForm({ nome: "", cargo: "", telefone: "", email: "", decisor: false, ativo: true });
+    setPhoneDuplicados([]);
+    setPhoneIgnorado(false);
   }
 
   return (
