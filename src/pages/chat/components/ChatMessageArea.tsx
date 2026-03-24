@@ -23,7 +23,7 @@ interface Props {
   userId: string | null;
   userName: string;
   onSend: (texto: string, tipo?: string) => void;
-  onSendMedia: (file: File, caption: string) => void;
+  onSendMedia: (file: File, caption: string) => Promise<void>;
   onIniciarAtendimento: () => void;
   onEncerrar: () => void;
   onTransferir: () => void;

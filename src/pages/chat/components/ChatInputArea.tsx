@@ -16,7 +16,7 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
 interface Props {
   onSend: (texto: string, tipo?: string) => void;
-  onSendMedia: (file: File, caption: string) => void;
+  onSendMedia: (file: File, caption: string) => Promise<void>;
   modoNota: boolean;
   setModoNota: (v: boolean) => void;
   userId: string | null;
@@ -149,7 +149,7 @@ export default function ChatInputArea({
     }, 200);
 
     try {
-      onSendMedia(midiaPreview.file, texto.trim());
+      await onSendMedia(midiaPreview.file, texto.trim());
       clearInterval(progressInterval);
       setUploadProgress(100);
       await new Promise((r) => setTimeout(r, 400));
