@@ -156,6 +156,14 @@ const App = () => {
               }
             />
             <Route
+              path="/contatos"
+              element={
+                <ProtectedRoute>
+                  <Contatos />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/planos"
               element={
                 <ProtectedRoute>
