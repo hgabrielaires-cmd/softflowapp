@@ -1244,13 +1244,18 @@ serve(async (req) => {
           for (const lembrete of lembretesPendentes) {
             const zStatus = zStatusMap[lembrete.contrato_id];
             const cStatus = contratoStatusMap[lembrete.contrato_id];
+            const zStatusNorm = (zStatus || "").toLowerCase();
+            const cStatusNorm = (cStatus || "").toLowerCase();
+
+            const contratoAssinado = zStatusNorm === "assinado" || zStatusNorm === "signed";
+            const contratoEncerradoNoSistema = cStatusNorm.includes("encerrado") || cStatusNorm.includes("cancelado");
 
             // Cancel reminders if contract is signed, cancelled, or closed
-            if (zStatus === "Assinado" || zStatus === "signed" || cStatus === "Encerrado" || cStatus === "Cancelado") {
+            if (contratoAssinado || contratoEncerradoNoSistema) {
               await supabase.from("contratos_vendedor_lembretes")
                 .update({ lembrete_24h_enviado: true, lembrete_24h_em: new Date().toISOString() })
                 .eq("id", lembrete.id);
-              console.log(`[LEMBRETE] Contrato ${lembrete.contrato_numero} ${cStatus || zStatus}, lembrete cancelado.`);
+              console.log(`[LEMBRETE] Contrato ${lembrete.contrato_numero} ${cStatus || zStatus || "inativo"}, lembrete cancelado.`);
               continue;
             }
 
