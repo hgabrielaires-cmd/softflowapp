@@ -116,7 +116,17 @@ export default function Contatos() {
       );
     }
 
-    return list;
+    // Deduplicate by normalized phone number — keep first occurrence per phone
+    const seen = new Set<string>();
+    const deduped: ContatoRow[] = [];
+    for (const c of list) {
+      const norm = normalizePhone(c.telefone);
+      if (norm && seen.has(norm)) continue;
+      if (norm) seen.add(norm);
+      deduped.push(c);
+    }
+
+    return deduped;
   }, [contatos, isGlobal, allowedFilialIds, filtroFilialId, filtroStatus, search]);
 
   useEffect(() => { setCurrentPage(1); }, [search, filtroFilialId, filtroStatus]);
