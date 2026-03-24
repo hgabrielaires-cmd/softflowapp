@@ -366,11 +366,11 @@ export default function ChatInputArea({
               <span className="font-medium truncate max-w-[200px]">{midiaPreview.file.name}</span>
               <span>({formatFileSize(midiaPreview.file.size)})</span>
             </div>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelarPreview}>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelarPreview} disabled={uploading}>
               <X className="h-3.5 w-3.5" />
             </Button>
           </div>
-          <div className="flex justify-center">
+          <div className="flex justify-center relative">
             {midiaPreview.tipo === "imagem" ? (
               <img
                 src={midiaPreview.url}
@@ -380,11 +380,31 @@ export default function ChatInputArea({
             ) : (
               <video
                 src={midiaPreview.url}
-                controls
+                controls={!uploading}
                 className="max-h-[200px] max-w-full rounded-md"
               />
             )}
+            {uploading && (
+              <div className="absolute inset-0 bg-background/60 rounded-md flex flex-col items-center justify-center gap-2">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="text-sm font-medium text-foreground">Enviando...</span>
+              </div>
+            )}
           </div>
+          {uploading && (
+            <div className="mt-2">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                <span>📤 Enviando arquivo...</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-200"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
