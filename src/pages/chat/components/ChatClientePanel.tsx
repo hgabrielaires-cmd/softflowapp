@@ -189,6 +189,8 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
         .eq("id", conversa.id);
       if (error) throw error;
 
+      await garantirContato(emp.empresa_id);
+
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversa.id,
         tipo: "sistema",
