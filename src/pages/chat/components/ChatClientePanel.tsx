@@ -73,16 +73,18 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
         .limit(10);
 
       if (!contatos || contatos.length === 0) {
-        // Try last closed conversation for this number
-        const { data: lastConv } = await supabase
+        // Try last closed conversation for this number (flexible match)
+        const { data: lastConvs } = await supabase
           .from("chat_conversas")
-          .select("cliente_id, clientes:clientes!chat_conversas_cliente_id_fkey(id, nome_fantasia, cnpj_cpf)")
-          .eq("numero_cliente", conversa.numero_cliente)
+          .select("cliente_id, numero_cliente, clientes:clientes!chat_conversas_cliente_id_fkey(id, nome_fantasia, cnpj_cpf)")
           .eq("status", "encerrado")
           .not("cliente_id", "is", null)
+          .ilike("numero_cliente", `%${ultimos8}%`)
+          .neq("id", conversa.id)
           .order("encerrado_em", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
+
+        const lastConv = lastConvs?.[0] || null;
 
         if (lastConv?.cliente_id && lastConv.clientes) {
           // Auto-link from previous conversation
