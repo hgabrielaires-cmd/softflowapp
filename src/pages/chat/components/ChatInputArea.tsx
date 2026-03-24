@@ -225,7 +225,7 @@ export default function ChatInputArea({
           criado_por: userId,
           metadata: { link: "/chat", conversa_id: conversaId },
         }));
-        await supabase.from("notificacoes").insert(notifs).catch(() => {});
+        await supabase.from("notificacoes").insert(notifs as any);
       }
     }
 
