@@ -12,7 +12,6 @@ import { UF_LIST } from "../constants";
 import type { ClienteFormState, ClienteContatoInline } from "../types";
 import { verificarTelefoneDuplicado, type ContatoDuplicado } from "@/lib/validarTelefoneContato";
 import { TelefoneDuplicadoAlerta } from "@/components/TelefoneDuplicadoAlerta";
-import type { ClienteFormState, ClienteContatoInline } from "../types";
 
 interface Props {
   open: boolean;
