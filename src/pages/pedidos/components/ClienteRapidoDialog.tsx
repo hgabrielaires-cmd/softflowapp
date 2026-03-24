@@ -306,8 +306,17 @@ export function ClienteRapidoDialog({
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Telefone</Label>
-                      <Input className="h-8 text-sm" value={inlineContatoForm.telefone} onChange={(e) => setInlineContatoForm((f) => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
+                      <Input className="h-8 text-sm" value={inlineContatoForm.telefone} onChange={(e) => setInlineContatoForm((f) => ({ ...f, telefone: e.target.value }))} onBlur={() => handlePhoneBlur(inlineContatoForm.telefone)} placeholder="(00) 00000-0000" />
                     </div>
+                    {phoneDuplicados.length > 0 && !phoneIgnorado && (
+                      <div className="col-span-2">
+                        <TelefoneDuplicadoAlerta
+                          contatos={phoneDuplicados}
+                          onUsar={handleUsarContatoDup}
+                          onIgnorar={() => setPhoneIgnorado(true)}
+                        />
+                      </div>
+                    )}
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs">E-mail *</Label>
                       <Input className="h-8 text-sm" type="email" value={inlineContatoForm.email} onChange={(e) => setInlineContatoForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@empresa.com" />
