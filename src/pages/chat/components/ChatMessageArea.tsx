@@ -33,10 +33,8 @@ interface Props {
 export default function ChatMessageArea({
   conversa, mensagens, userId, userName,
   onSend, onSendMedia, onIniciarAtendimento, onEncerrar, onTransferir, isLoading,
-}: Props) {
-  const [texto, setTexto] = useState("");
+} : Props) {
   const [modoNota, setModoNota] = useState(false);
-  const [modoMidia, setModoMidia] = useState(false);
   const [imagemFull, setImagemFull] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
