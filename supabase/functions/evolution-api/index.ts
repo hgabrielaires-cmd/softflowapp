@@ -287,17 +287,27 @@ serve(async (req) => {
         if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
         if (!formattedNumber.startsWith("55")) formattedNumber = "55" + formattedNumber;
 
-        const endpoint = mediatype === "audio"
+        const isAudio = mediatype === "audio";
+        const endpoint = isAudio
           ? `${baseUrl}/message/sendWhatsAppAudio/${name}`
           : `${baseUrl}/message/sendMedia/${name}`;
 
-        const mediaBody: any = {
-          number: formattedNumber,
-          mediatype: mediatype || "image",
-          media: media,
-        };
-        if (caption) mediaBody.caption = caption;
-        if (fileName) mediaBody.fileName = fileName;
+        let mediaBody: any;
+        if (isAudio) {
+          // sendWhatsAppAudio expects { number, audio }
+          mediaBody = {
+            number: formattedNumber,
+            audio: media,
+          };
+        } else {
+          mediaBody = {
+            number: formattedNumber,
+            mediatype: mediatype || "image",
+            media: media,
+          };
+          if (caption) mediaBody.caption = caption;
+          if (fileName) mediaBody.fileName = fileName;
+        }
 
         const res = await fetch(endpoint, {
           method: "POST",
