@@ -81,9 +81,9 @@ export default function ChatPage() {
               instanceName: conversaAtual.canal_instancia || undefined,
             });
           }}
-          onSendMedia={(file, caption) => {
+          onSendMedia={async (file, caption) => {
             if (!conversaAtual || !user?.id) return;
-            mediaActions.enviarMidia.mutate({
+            await mediaActions.enviarMidia.mutateAsync({
               conversaId: conversaAtual.id,
               file,
               caption,
