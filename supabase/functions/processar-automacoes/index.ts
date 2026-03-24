@@ -1288,9 +1288,12 @@ serve(async (req) => {
                 const text = template.conteudo
                   .replace(/\{vendedor\.nome\}/g, vendedorProfile.full_name || "Vendedor")
                   .replace(/\{cliente\.nome_fantasia\}/g, lembrete.cliente_nome)
+                  .replace(/\{cliente\.razao_social\}/g, lembrete.cliente_nome)
                   .replace(/\{contrato\.numero\}/g, lembrete.contrato_numero)
                   .replace(/\{decisor\.nome\}/g, lembrete.decisor_nome)
+                  .replace(/\{contato\.nome\}/g, lembrete.decisor_nome)
                   .replace(/\{contrato\.sign_url\}/g, lembrete.sign_url || "Link indisponível")
+                  .replace(/\{link_assinatura\}/g, lembrete.sign_url || "Link indisponível")
                   .replace(/\{saudacao\}/g, getSaudacao());
 
                 let formattedNumber = vendedorProfile.telefone.replace(/\D/g, "");
