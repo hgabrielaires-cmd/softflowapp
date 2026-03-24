@@ -142,11 +142,12 @@ serve(async (req) => {
       mediaUrl = msg.documentMessage.url || "";
       conteudo = msg.documentMessage.caption || "";
     } else if (msg.videoMessage) {
-      tipo = "imagem";
+      tipo = "video";
       mediaTipo = msg.videoMessage.mimetype || "video/mp4";
       mediaUrl = msg.videoMessage.url || "";
       mediaNome = msg.videoMessage.fileName || `video_${evolutionMessageId}.mp4`;
       conteudo = msg.videoMessage.caption || "";
+      console.log("[video] Payload:", JSON.stringify(msg.videoMessage).slice(0, 300));
     } else if (msg.stickerMessage) {
       tipo = "imagem";
       mediaTipo = msg.stickerMessage.mimetype || "image/webp";

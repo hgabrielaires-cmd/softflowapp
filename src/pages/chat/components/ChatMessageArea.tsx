@@ -185,6 +185,12 @@ export default function ChatMessageArea({
                 {msg.tipo === "audio" && msg.media_url && (
                   <audio controls src={msg.media_url} className="max-w-full mb-1" />
                 )}
+                {msg.tipo === "video" && msg.media_url && (
+                  <video controls className="rounded-lg max-w-full mb-1" style={{ maxHeight: "300px" }}>
+                    <source src={msg.media_url} type={msg.media_tipo || "video/mp4"} />
+                    Seu navegador não suporta vídeo.
+                  </video>
+                )}
                 {msg.tipo === "documento" && msg.media_url && (
                   <a href={msg.media_url} target="_blank" rel="noreferrer"
                     className="flex items-center gap-2 text-xs mb-1 p-2 rounded bg-background/10 hover:bg-background/20 transition-colors">
