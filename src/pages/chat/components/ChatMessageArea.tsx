@@ -1,14 +1,12 @@
 import { useRef, useEffect, useState } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Send, Paperclip, Lock, MessageSquare, Download, FileText, FileSpreadsheet, File as FileIcon } from "lucide-react";
+import { Send, Lock, MessageSquare, Download, FileText, FileSpreadsheet, File as FileIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ChatConversa, ChatMensagem, STATUS_COLORS, STATUS_LABELS, ChatStatus } from "../types";
 import { formatarTelefone } from "../helpers";
 import { format } from "date-fns";
-import ChatMediaUpload from "./ChatMediaUpload";
+import ChatInputArea from "./ChatInputArea";
 
 function getDocIcon(nome: string | null) {
   if (!nome) return <FileIcon className="h-4 w-4" />;
@@ -35,10 +33,8 @@ interface Props {
 export default function ChatMessageArea({
   conversa, mensagens, userId, userName,
   onSend, onSendMedia, onIniciarAtendimento, onEncerrar, onTransferir, isLoading,
-}: Props) {
-  const [texto, setTexto] = useState("");
+} : Props) {
   const [modoNota, setModoNota] = useState(false);
-  const [modoMidia, setModoMidia] = useState(false);
   const [imagemFull, setImagemFull] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -62,14 +58,6 @@ export default function ChatMessageArea({
     conversa.status === "em_atendimento" && conversa.atendente_id === userId;
   const podeIniciar =
     conversa.status === "aguardando" || conversa.status === "bot";
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!texto.trim()) return;
-    onSend(texto.trim(), modoNota ? "nota_interna" : "texto");
-    setTexto("");
-    setModoNota(false);
-  }
 
   return (
     <div className="flex-1 flex flex-col bg-background min-w-0">
@@ -227,56 +215,27 @@ export default function ChatMessageArea({
         </div>
       )}
 
-      {/* Media upload */}
-      {modoMidia && podeComentar && (
-        <ChatMediaUpload
-          onConfirm={(file, caption) => {
-            onSendMedia(file, caption);
-            setModoMidia(false);
-          }}
-          onCancel={() => setModoMidia(false)}
-        />
-      )}
-
       {/* Input */}
-      {!modoMidia && (podeComentar || podeIniciar) && conversa.status !== "encerrado" && (
-        <div className="border-t border-border p-3 bg-card">
+      {(podeComentar || podeIniciar) && conversa.status !== "encerrado" && (
+        <div>
           {!podeComentar && podeIniciar ? (
-            <p className="text-sm text-center text-muted-foreground">
-              Inicie o atendimento para responder
-            </p>
+            <div className="border-t border-border p-3 bg-card">
+              <p className="text-sm text-center text-muted-foreground">
+                Inicie o atendimento para responder
+              </p>
+            </div>
           ) : (
-            <>
-              <div className="flex items-center gap-2 mb-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs gap-1"
-                  onClick={() => setModoMidia(true)}
-                >
-                  <Paperclip className="h-3 w-3" /> Mídia
-                </Button>
-                <Button
-                  variant={modoNota ? "secondary" : "ghost"}
-                  size="sm"
-                  className="h-7 text-xs gap-1"
-                  onClick={() => setModoNota(!modoNota)}
-                >
-                  <Lock className="h-3 w-3" /> Nota interna
-                </Button>
-              </div>
-              <form onSubmit={handleSubmit} className="flex items-center gap-2">
-                <Input
-                  placeholder={modoNota ? "Nota interna (não enviada ao cliente)..." : "Digite sua mensagem..."}
-                  value={texto}
-                  onChange={(e) => setTexto(e.target.value)}
-                  className={cn("flex-1", modoNota && "border-yellow-400 bg-yellow-50")}
-                />
-                <Button type="submit" size="icon" disabled={!texto.trim()}>
-                  <Send className="h-4 w-4" />
-                </Button>
-              </form>
-            </>
+            <ChatInputArea
+              onSend={onSend}
+              onSendMedia={onSendMedia}
+              modoNota={modoNota}
+              setModoNota={setModoNota}
+              userId={userId}
+              userName={userName}
+              conversaId={conversa.id}
+              protocolo={conversa.protocolo}
+              nomeCliente={conversa.nome_cliente}
+            />
           )}
         </div>
       )}
