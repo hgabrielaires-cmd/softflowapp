@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { verificarTelefoneDuplicado, type ContatoDuplicado } from "@/lib/validarTelefoneContato";
+import { TelefoneDuplicadoAlerta } from "@/components/TelefoneDuplicadoAlerta";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,6 +58,35 @@ export function OportunidadeFormDialog({
   const [camposValues, setCamposValues] = useState<Record<string, string>>({});
   const [segmentoPopoverOpen, setSegmentoPopoverOpen] = useState(false);
   const [contatos, setContatos] = useState<ContatoLocal[]>([emptyContato()]);
+  const [phoneDuplicados, setPhoneDuplicados] = useState<Record<number, ContatoDuplicado[]>>({});
+  const [phoneIgnorado, setPhoneIgnorado] = useState<Record<number, boolean>>({});
+
+  const handlePhoneBlur = useCallback(async (idx: number, telefone: string) => {
+    const limpo = telefone.replace(/\D/g, "");
+    if (limpo.length < 10) { setPhoneDuplicados(p => { const n = { ...p }; delete n[idx]; return n; }); return; }
+    const { existe, contatos: found } = await verificarTelefoneDuplicado(telefone);
+    if (existe) {
+      setPhoneDuplicados(p => ({ ...p, [idx]: found }));
+      setPhoneIgnorado(p => ({ ...p, [idx]: false }));
+    } else {
+      setPhoneDuplicados(p => { const n = { ...p }; delete n[idx]; return n; });
+    }
+  }, []);
+
+  const handleUsarContato = (idx: number, dup: ContatoDuplicado) => {
+    updateContato(idx, "nome", dup.nome);
+    updateContato(idx, "telefone", dup.telefone.replace(/\D/g, ""));
+    if (dup.email) updateContato(idx, "email", dup.email);
+    setPhoneDuplicados(p => { const n = { ...p }; delete n[idx]; return n; });
+  };
+
+  const handleIgnorarDuplicado = (idx: number) => {
+    setPhoneIgnorado(p => ({ ...p, [idx]: true }));
+  };
+
+  const hasUnresolvedDuplicados = Object.entries(phoneDuplicados).some(
+    ([idx, dups]) => dups.length > 0 && !phoneIgnorado[Number(idx)]
+  );
 
   const activeCampos = camposPersonalizados.filter(
     c => c.ativo && !CAMPOS_EXCLUIDOS.includes(c.nome.toLowerCase())
@@ -103,6 +134,8 @@ export function OportunidadeFormDialog({
         setCamposValues({});
         setContatos([emptyContato()]);
         setTried(false);
+        setPhoneDuplicados({});
+        setPhoneIgnorado({});
       }
     }
   }, [open, oportunidade, etapaIdInicial, etapas]);
@@ -129,6 +162,10 @@ export function OportunidadeFormDialog({
 
   const handleSave = () => {
     setTried(true);
+    if (hasUnresolvedDuplicados) {
+      toast.error("Resolva os telefones duplicados antes de salvar.");
+      return;
+    }
     if (hasErrors) {
       toast.error("Preencha todos os campos obrigatórios antes de salvar.");
       return;
@@ -212,11 +249,19 @@ export function OportunidadeFormDialog({
                     <Input
                       value={applyPhoneMask(contato.telefone)}
                       onChange={(e) => updateContato(idx, "telefone", e.target.value.replace(/\D/g, ""))}
+                      onBlur={() => handlePhoneBlur(idx, contato.telefone)}
                       placeholder="(00) 00000-0000"
                       className="h-8 text-xs"
                     />
                   </div>
                 </div>
+                {phoneDuplicados[idx] && phoneDuplicados[idx].length > 0 && !phoneIgnorado[idx] && (
+                  <TelefoneDuplicadoAlerta
+                    contatos={phoneDuplicados[idx]}
+                    onUsar={(dup) => handleUsarContato(idx, dup)}
+                    onIgnorar={() => handleIgnorarDuplicado(idx)}
+                  />
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <Label className="text-xs">Cargo</Label>

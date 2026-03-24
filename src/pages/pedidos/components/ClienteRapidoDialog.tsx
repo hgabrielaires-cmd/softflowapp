@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import { UserPlus, Loader2, AlertCircle, MapPin, Users, Plus, Star, Pencil, Tras
 import { toast } from "sonner";
 import { UF_LIST } from "../constants";
 import type { ClienteFormState, ClienteContatoInline } from "../types";
+import { verificarTelefoneDuplicado, type ContatoDuplicado } from "@/lib/validarTelefoneContato";
+import { TelefoneDuplicadoAlerta } from "@/components/TelefoneDuplicadoAlerta";
 
 interface Props {
   open: boolean;
@@ -56,8 +58,36 @@ export function ClienteRapidoDialog({
   const [inlineContatoForm, setInlineContatoForm] = useState<ClienteContatoInline>({
     nome: "", cargo: "", telefone: "", email: "", decisor: false, ativo: true,
   });
+  const [phoneDuplicados, setPhoneDuplicados] = useState<ContatoDuplicado[]>([]);
+  const [phoneIgnorado, setPhoneIgnorado] = useState(false);
+
+  const handlePhoneBlur = useCallback(async (telefone: string) => {
+    const limpo = telefone.replace(/\D/g, "");
+    if (limpo.length < 10) { setPhoneDuplicados([]); return; }
+    const { existe, contatos: found } = await verificarTelefoneDuplicado(telefone);
+    if (existe) {
+      setPhoneDuplicados(found);
+      setPhoneIgnorado(false);
+    } else {
+      setPhoneDuplicados([]);
+    }
+  }, []);
+
+  const handleUsarContatoDup = (dup: ContatoDuplicado) => {
+    setInlineContatoForm(f => ({
+      ...f,
+      nome: dup.nome,
+      telefone: dup.telefone,
+      email: dup.email || f.email,
+    }));
+    setPhoneDuplicados([]);
+  };
 
   function handleSaveContato() {
+    if (phoneDuplicados.length > 0 && !phoneIgnorado) {
+      toast.error("Resolva o telefone duplicado antes de salvar o contato.");
+      return;
+    }
     if (!inlineContatoForm.nome.trim()) { toast.error("Nome do contato é obrigatório"); return; }
     if (!inlineContatoForm.email?.trim()) { toast.error("E-mail do contato é obrigatório"); return; }
     if (!inlineContatoForm.cargo?.trim()) { toast.error("Cargo do contato é obrigatório"); return; }
@@ -72,6 +102,8 @@ export function ClienteRapidoDialog({
     setShowContatoForm(false);
     setEditingContatoIdx(null);
     setInlineContatoForm({ nome: "", cargo: "", telefone: "", email: "", decisor: false, ativo: true });
+    setPhoneDuplicados([]);
+    setPhoneIgnorado(false);
   }
 
   return (
@@ -274,8 +306,17 @@ export function ClienteRapidoDialog({
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Telefone</Label>
-                      <Input className="h-8 text-sm" value={inlineContatoForm.telefone} onChange={(e) => setInlineContatoForm((f) => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
+                      <Input className="h-8 text-sm" value={inlineContatoForm.telefone} onChange={(e) => setInlineContatoForm((f) => ({ ...f, telefone: e.target.value }))} onBlur={() => handlePhoneBlur(inlineContatoForm.telefone)} placeholder="(00) 00000-0000" />
                     </div>
+                    {phoneDuplicados.length > 0 && !phoneIgnorado && (
+                      <div className="col-span-2">
+                        <TelefoneDuplicadoAlerta
+                          contatos={phoneDuplicados}
+                          onUsar={handleUsarContatoDup}
+                          onIgnorar={() => setPhoneIgnorado(true)}
+                        />
+                      </div>
+                    )}
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs">E-mail *</Label>
                       <Input className="h-8 text-sm" type="email" value={inlineContatoForm.email} onChange={(e) => setInlineContatoForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@empresa.com" />
