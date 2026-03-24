@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ExternalLink, Plus, Phone, Building2, Clock, Search, X, Star, User } from "lucide-react";
+import { ExternalLink, Plus, Phone, Building2, Clock, Search, X, Star, User, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChatConversa, STATUS_LABELS, ChatStatus } from "../types";
 import { formatarTelefone, tempoRelativo } from "../helpers";
@@ -20,6 +20,15 @@ interface Props {
   onSelectHistorico?: (id: string) => void;
 }
 
+interface EmpresaContato {
+  contato_id: string;
+  contato_nome: string;
+  contato_telefone: string;
+  empresa_id: string;
+  empresa_nome: string;
+  empresa_cnpj: string;
+}
+
 export default function ChatClientePanel({ conversa, onSelectHistorico }: Props) {
   const qc = useQueryClient();
   const [termoBusca, setTermoBusca] = useState("");
@@ -29,10 +38,138 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
   const [drawerAberto, setDrawerAberto] = useState(false);
   const [historicoSelecionado, setHistoricoSelecionado] = useState<any>(null);
 
+  // Auto-link state
+  const [empresasDetectadas, setEmpresasDetectadas] = useState<EmpresaContato[]>([]);
+  const [autoLinkFeito, setAutoLinkFeito] = useState(false);
+  const [autoLinkMsg, setAutoLinkMsg] = useState<string | null>(null);
+
   const { data: historico } = useChatHistorico(
     conversa?.numero_cliente || null,
     conversa?.id || null
   );
+
+  // Auto-detect company by phone number
+  useEffect(() => {
+    if (!conversa?.id || !conversa.numero_cliente) return;
+    // If already linked, skip
+    if (conversa.cliente_id) {
+      setEmpresasDetectadas([]);
+      setAutoLinkFeito(false);
+      setAutoLinkMsg(null);
+      return;
+    }
+
+    const detectar = async () => {
+      const limpo = conversa.numero_cliente.replace(/\D/g, "");
+      if (limpo.length < 8) return;
+      const ultimos8 = limpo.slice(-8);
+
+      // Search contacts by phone
+      const { data: contatos } = await supabase
+        .from("cliente_contatos")
+        .select("id, nome, telefone, cliente_id, clientes(id, nome_fantasia, cnpj_cpf)")
+        .ilike("telefone", `%${ultimos8}%`)
+        .eq("ativo", true)
+        .limit(10);
+
+      if (!contatos || contatos.length === 0) {
+        // Try last closed conversation for this number
+        const { data: lastConv } = await supabase
+          .from("chat_conversas")
+          .select("cliente_id, clientes:clientes!chat_conversas_cliente_id_fkey(id, nome_fantasia, cnpj_cpf)")
+          .eq("numero_cliente", conversa.numero_cliente)
+          .eq("status", "encerrado")
+          .not("cliente_id", "is", null)
+          .order("encerrado_em", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (lastConv?.cliente_id && lastConv.clientes) {
+          // Auto-link from previous conversation
+          await vincularClienteAuto(lastConv.cliente_id, (lastConv.clientes as any).nome_fantasia, true);
+        }
+        setEmpresasDetectadas([]);
+        return;
+      }
+
+      // Build unique companies list
+      const empresasMap = new Map<string, EmpresaContato>();
+      for (const c of contatos) {
+        const cli = c.clientes as any;
+        if (cli?.id && !empresasMap.has(cli.id)) {
+          empresasMap.set(cli.id, {
+            contato_id: c.id,
+            contato_nome: c.nome,
+            contato_telefone: c.telefone || "",
+            empresa_id: cli.id,
+            empresa_nome: cli.nome_fantasia,
+            empresa_cnpj: cli.cnpj_cpf,
+          });
+        }
+      }
+
+      const empresas = Array.from(empresasMap.values());
+
+      if (empresas.length === 1) {
+        // Single company → auto-link
+        await vincularClienteAuto(empresas[0].empresa_id, empresas[0].empresa_nome, false);
+        setEmpresasDetectadas([]);
+      } else if (empresas.length > 1) {
+        // Multiple companies → show selector
+        setEmpresasDetectadas(empresas);
+      }
+    };
+
+    detectar();
+  }, [conversa?.id, conversa?.numero_cliente, conversa?.cliente_id]);
+
+  async function vincularClienteAuto(clienteId: string, nomeEmpresa: string, fromHistory: boolean) {
+    if (!conversa) return;
+    try {
+      const { error } = await supabase
+        .from("chat_conversas")
+        .update({ cliente_id: clienteId })
+        .eq("id", conversa.id);
+      if (error) throw error;
+
+      await supabase.from("chat_mensagens").insert({
+        conversa_id: conversa.id,
+        tipo: "sistema",
+        conteudo: `Cliente vinculado automaticamente: ${nomeEmpresa}`,
+        remetente: "sistema",
+      });
+
+      setAutoLinkFeito(true);
+      setAutoLinkMsg(`Vinculado automaticamente${fromHistory ? " (histórico)" : ""}`);
+      qc.invalidateQueries({ queryKey: ["chat-conversas"] });
+    } catch {
+      // silent
+    }
+  }
+
+  async function selecionarEmpresa(emp: EmpresaContato) {
+    if (!conversa) return;
+    try {
+      const { error } = await supabase
+        .from("chat_conversas")
+        .update({ cliente_id: emp.empresa_id })
+        .eq("id", conversa.id);
+      if (error) throw error;
+
+      await supabase.from("chat_mensagens").insert({
+        conversa_id: conversa.id,
+        tipo: "sistema",
+        conteudo: `Cliente vinculado: ${emp.empresa_nome}`,
+        remetente: "sistema",
+      });
+
+      toast.success("Empresa vinculada!");
+      setEmpresasDetectadas([]);
+      qc.invalidateQueries({ queryKey: ["chat-conversas"] });
+    } catch (e: any) {
+      toast.error("Erro: " + e.message);
+    }
+  }
 
   if (!conversa) return null;
 
@@ -119,6 +256,8 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
       });
 
       toast.success("Cliente desvinculado!");
+      setAutoLinkFeito(false);
+      setAutoLinkMsg(null);
       qc.invalidateQueries({ queryKey: ["chat-conversas"] });
     } catch (e: any) {
       toast.error("Erro: " + e.message);
@@ -148,6 +287,12 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
                   <p className="font-medium text-sm text-foreground">{cliente.nome_fantasia}</p>
                   {cliente.razao_social && <p className="text-muted-foreground">{cliente.razao_social}</p>}
                   <p className="text-muted-foreground">CNPJ: {formatCnpj(cliente.cnpj_cpf)}</p>
+                  {autoLinkMsg && (
+                    <div className="flex items-center gap-1 text-green-600">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span className="text-[10px]">{autoLinkMsg}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 mt-1">
                     <a href={`/clientes`} className="text-primary hover:underline flex items-center gap-1">
                       Ver cadastro <ExternalLink className="h-3 w-3" />
@@ -172,43 +317,70 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
                   {conversa.nome_cliente && (
                     <p className="font-medium">{conversa.nome_cliente}</p>
                   )}
-                  <p className="text-muted-foreground">Cliente não vinculado</p>
 
-                  {/* CNPJ Search */}
-                  <div className="space-y-1.5 pt-1">
-                    <div className="flex gap-1">
-                      <Input
-                        placeholder="Nome, apelido ou CNPJ..."
-                        value={termoBusca}
-                        onChange={(e) => setTermoBusca(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && buscarCliente()}
-                        className="h-7 text-xs"
-                      />
-                      <Button size="sm" className="h-7 px-2" onClick={buscarCliente} disabled={buscando}>
-                        <Search className="h-3 w-3" />
-                      </Button>
-                    </div>
-
-                    {buscaFeita && clientesEncontrados.length > 0 && (
+                  {/* Multiple companies detected */}
+                  {empresasDetectadas.length > 1 && (
+                    <div className="space-y-1.5 pt-1">
+                      <p className="text-muted-foreground font-medium">
+                        Este contato possui múltiplas empresas. Selecione:
+                      </p>
                       <div className="space-y-1 max-h-40 overflow-y-auto">
-                        {clientesEncontrados.map((cli: any) => (
-                          <div key={cli.id} className="border rounded-md p-2 space-y-1 bg-muted/30">
-                            <p className="font-medium text-foreground">{cli.nome_fantasia}</p>
-                            {cli.apelido && <p className="text-muted-foreground">({cli.apelido})</p>}
-                            {cli.razao_social && <p className="text-muted-foreground">{cli.razao_social}</p>}
-                            <p className="text-muted-foreground">CNPJ: {formatCnpj(cli.cnpj_cpf)}</p>
-                            <Button size="sm" className="h-6 text-xs w-full mt-1" onClick={() => vincularCliente(cli)}>
-                              Vincular este cliente
+                        {empresasDetectadas.map((emp) => (
+                          <div key={emp.empresa_id} className="border rounded-md p-2 bg-muted/30 flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-foreground truncate">{emp.empresa_nome}</p>
+                              <p className="text-muted-foreground">{formatCnpj(emp.empresa_cnpj)}</p>
+                            </div>
+                            <Button size="sm" className="h-6 text-xs shrink-0" onClick={() => selecionarEmpresa(emp)}>
+                              Selecionar
                             </Button>
                           </div>
                         ))}
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {buscaFeita && clientesEncontrados.length === 0 && !buscando && (
-                      <p className="text-muted-foreground text-center py-1">Nenhum cliente encontrado.</p>
-                    )}
-                  </div>
+                  {empresasDetectadas.length === 0 && (
+                    <>
+                      <p className="text-muted-foreground">Cliente não vinculado</p>
+                      {/* CNPJ Search */}
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex gap-1">
+                          <Input
+                            placeholder="Nome, apelido ou CNPJ..."
+                            value={termoBusca}
+                            onChange={(e) => setTermoBusca(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && buscarCliente()}
+                            className="h-7 text-xs"
+                          />
+                          <Button size="sm" className="h-7 px-2" onClick={buscarCliente} disabled={buscando}>
+                            <Search className="h-3 w-3" />
+                          </Button>
+                        </div>
+
+                        {buscaFeita && clientesEncontrados.length > 0 && (
+                          <div className="space-y-1 max-h-40 overflow-y-auto">
+                            {clientesEncontrados.map((cli: any) => (
+                              <div key={cli.id} className="border rounded-md p-2 space-y-1 bg-muted/30">
+                                <p className="font-medium text-foreground">{cli.nome_fantasia}</p>
+                                {cli.apelido && <p className="text-muted-foreground">({cli.apelido})</p>}
+                                {cli.razao_social && <p className="text-muted-foreground">{cli.razao_social}</p>}
+                                <p className="text-muted-foreground">CNPJ: {formatCnpj(cli.cnpj_cpf)}</p>
+                                <Button size="sm" className="h-6 text-xs w-full mt-1" onClick={() => vincularCliente(cli)}>
+                                  Vincular este cliente
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {buscaFeita && clientesEncontrados.length === 0 && !buscando && (
+                          <p className="text-muted-foreground text-center py-1">Nenhum cliente encontrado.</p>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -298,6 +470,9 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
                           <Star key={i} className={cn("h-2.5 w-2.5", i < h.nps_nota ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground/30")} />
                         ))}
                       </div>
+                    )}
+                    {h.titulo_atendimento && (
+                      <p className="text-muted-foreground italic mt-0.5 truncate">"{h.titulo_atendimento}"</p>
                     )}
                     <span className="text-muted-foreground">
                       {tempoRelativo(h.created_at)}
