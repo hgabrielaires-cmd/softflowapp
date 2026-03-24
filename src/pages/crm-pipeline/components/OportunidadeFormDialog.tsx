@@ -58,6 +58,35 @@ export function OportunidadeFormDialog({
   const [camposValues, setCamposValues] = useState<Record<string, string>>({});
   const [segmentoPopoverOpen, setSegmentoPopoverOpen] = useState(false);
   const [contatos, setContatos] = useState<ContatoLocal[]>([emptyContato()]);
+  const [phoneDuplicados, setPhoneDuplicados] = useState<Record<number, ContatoDuplicado[]>>({});
+  const [phoneIgnorado, setPhoneIgnorado] = useState<Record<number, boolean>>({});
+
+  const handlePhoneBlur = useCallback(async (idx: number, telefone: string) => {
+    const limpo = telefone.replace(/\D/g, "");
+    if (limpo.length < 10) { setPhoneDuplicados(p => { const n = { ...p }; delete n[idx]; return n; }); return; }
+    const { existe, contatos: found } = await verificarTelefoneDuplicado(telefone);
+    if (existe) {
+      setPhoneDuplicados(p => ({ ...p, [idx]: found }));
+      setPhoneIgnorado(p => ({ ...p, [idx]: false }));
+    } else {
+      setPhoneDuplicados(p => { const n = { ...p }; delete n[idx]; return n; });
+    }
+  }, []);
+
+  const handleUsarContato = (idx: number, dup: ContatoDuplicado) => {
+    updateContato(idx, "nome", dup.nome);
+    updateContato(idx, "telefone", dup.telefone.replace(/\D/g, ""));
+    if (dup.email) updateContato(idx, "email", dup.email);
+    setPhoneDuplicados(p => { const n = { ...p }; delete n[idx]; return n; });
+  };
+
+  const handleIgnorarDuplicado = (idx: number) => {
+    setPhoneIgnorado(p => ({ ...p, [idx]: true }));
+  };
+
+  const hasUnresolvedDuplicados = Object.entries(phoneDuplicados).some(
+    ([idx, dups]) => dups.length > 0 && !phoneIgnorado[Number(idx)]
+  );
 
   const activeCampos = camposPersonalizados.filter(
     c => c.ativo && !CAMPOS_EXCLUIDOS.includes(c.nome.toLowerCase())
