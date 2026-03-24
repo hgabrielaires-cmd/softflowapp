@@ -1215,12 +1215,22 @@ serve(async (req) => {
 
         if (lembretesPendentes && lembretesPendentes.length > 0) {
           const contratoIds = lembretesPendentes.map((l: any) => l.contrato_id);
+
+          // Check ZapSign status
           const { data: zapsignRecords } = await supabase
             .from("contratos_zapsign")
             .select("contrato_id, status")
             .in("contrato_id", contratoIds);
           const zStatusMap: Record<string, string> = {};
           (zapsignRecords || []).forEach((z: any) => { zStatusMap[z.contrato_id] = z.status; });
+
+          // Check contract status in the system (cancel reminders for Encerrado/Cancelado)
+          const { data: contratosStatus } = await supabase
+            .from("contratos")
+            .select("id, status")
+            .in("id", contratoIds);
+          const contratoStatusMap: Record<string, string> = {};
+          (contratosStatus || []).forEach((c: any) => { contratoStatusMap[c.id] = c.status; });
 
           // Get existing logs for level tracking
           const relevantAutoIds = contratoAssinaturaAutos.map((a: any) => a.id);
@@ -1233,11 +1243,14 @@ serve(async (req) => {
 
           for (const lembrete of lembretesPendentes) {
             const zStatus = zStatusMap[lembrete.contrato_id];
-            if (zStatus === "Assinado" || zStatus === "signed") {
+            const cStatus = contratoStatusMap[lembrete.contrato_id];
+
+            // Cancel reminders if contract is signed, cancelled, or closed
+            if (zStatus === "Assinado" || zStatus === "signed" || cStatus === "Encerrado" || cStatus === "Cancelado") {
               await supabase.from("contratos_vendedor_lembretes")
                 .update({ lembrete_24h_enviado: true, lembrete_24h_em: new Date().toISOString() })
                 .eq("id", lembrete.id);
-              console.log(`[LEMBRETE] Contrato ${lembrete.contrato_numero} assinado, lembrete cancelado.`);
+              console.log(`[LEMBRETE] Contrato ${lembrete.contrato_numero} ${cStatus || zStatus}, lembrete cancelado.`);
               continue;
             }
 
