@@ -59,14 +59,6 @@ export default function ChatMessageArea({
   const podeIniciar =
     conversa.status === "aguardando" || conversa.status === "bot";
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!texto.trim()) return;
-    onSend(texto.trim(), modoNota ? "nota_interna" : "texto");
-    setTexto("");
-    setModoNota(false);
-  }
-
   return (
     <div className="flex-1 flex flex-col bg-background min-w-0">
       {/* Header */}
