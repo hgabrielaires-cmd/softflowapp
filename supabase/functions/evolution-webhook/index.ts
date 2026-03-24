@@ -173,65 +173,86 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Download media from Evolution API and persist to Supabase Storage
-    async function salvarMidiaStorage(
-      origUrl: string,
+    // Download media via Evolution API getBase64FromMediaMessage and persist to Storage
+    async function baixarESalvarMidia(
       conversaId: string,
       fileName: string,
-      mimeType: string
-    ): Promise<string> {
+      mimeType: string,
+      messageKey: any,
+      messageObj: any,
+      instanceName: string
+    ): Promise<string | null> {
       try {
-        if (!origUrl) return "";
+        const baseUrl = whatsappConfig?.server_url?.replace(/\/+$/, "") || "";
+        const apiKey = whatsappConfig?.token || "";
+        if (!baseUrl || !apiKey) {
+          console.error("[media] Sem credenciais Evolution API");
+          return null;
+        }
 
-        const safeName = (fileName || "media").replace(/[^a-zA-Z0-9._-]/g, "_");
+        const res = await fetch(
+          `${baseUrl}/chat/getBase64FromMediaMessage/${instanceName}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: apiKey,
+            },
+            body: JSON.stringify({
+              message: {
+                key: messageKey,
+                message: messageObj,
+              },
+            }),
+          }
+        );
+
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error("[media] Evolution getBase64 erro:", res.status, errText.substring(0, 300));
+          return null;
+        }
+
+        const json = await res.json();
+        if (!json.base64) {
+          console.error("[media] Sem base64 na resposta:", JSON.stringify(json).substring(0, 200));
+          return null;
+        }
+
+        // Decode base64
+        const binaryString = atob(json.base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        const resolvedMime = json.mimetype || mimeType || "application/octet-stream";
+        const ext = resolvedMime.split(";")[0].split("/")[1] || "bin";
+        const safeName = (fileName || `media.${ext}`).replace(/[^a-zA-Z0-9._-]/g, "_");
         const timestamp = Date.now();
         const path = `${conversaId}/${timestamp}_${safeName}`;
 
-        const baseUrl = whatsappConfig?.server_url?.replace(/\/+$/, "") || "";
-        const mediaUrl = origUrl.startsWith("http")
-          ? origUrl
-          : `${baseUrl}${origUrl.startsWith("/") ? "" : "/"}${origUrl}`;
-
-        const authHeaders = whatsappConfig?.token
-          ? [
-              {},
-              { apikey: whatsappConfig.token },
-              { Authorization: `Bearer ${whatsappConfig.token}` },
-              { apikey: whatsappConfig.token, Authorization: `Bearer ${whatsappConfig.token}` },
-            ]
-          : [{}];
-
-        let response: Response | null = null;
-        for (const headers of authHeaders) {
-          response = await fetch(mediaUrl, { headers });
-          if (response.ok) break;
-        }
-
-        if (!response || !response.ok) {
-          console.error("[evolution-webhook] Falha ao baixar mídia:", response?.status || "sem_resposta");
-          return origUrl;
-        }
-
-        const buffer = await response.arrayBuffer();
-
         const { error } = await supabase.storage
           .from("chat-midias")
-          .upload(path, buffer, { contentType: mimeType || "application/octet-stream", upsert: false });
+          .upload(path, bytes.buffer, {
+            contentType: resolvedMime,
+            upsert: false,
+          });
 
         if (error) {
-          console.error("[evolution-webhook] Erro upload storage:", error.message);
-          return origUrl;
+          console.error("[media] Storage upload erro:", error.message);
+          return null;
         }
 
         const { data: urlData } = supabase.storage
           .from("chat-midias")
           .getPublicUrl(path);
 
-        console.log("[evolution-webhook] Mídia salva no storage:", urlData.publicUrl.substring(0, 100));
+        console.log("[media] ✅ Salvo:", urlData.publicUrl.substring(0, 120));
         return urlData.publicUrl;
-      } catch (e) {
-        console.error("[evolution-webhook] Erro salvarMidiaStorage:", e);
-        return origUrl;
+      } catch (err) {
+        console.error("[media] Exceção:", err);
+        return null;
       }
     }
 
@@ -283,10 +304,9 @@ serve(async (req) => {
     if (conversa) {
       // ── Existing conversation ──
       // Download and persist media if present
-      let finalMediaUrl = mediaUrl || null;
-      if (mediaUrl && tipo !== "texto") {
-        const ext = mediaNome || (mediaTipo ? `media.${mediaTipo.split("/")[1]?.split(";")[0] || "bin"}` : "media.bin");
-        finalMediaUrl = await salvarMidiaStorage(mediaUrl, conversa.id, ext, mediaTipo);
+      let finalMediaUrl: string | null = null;
+      if (tipo !== "texto") {
+        finalMediaUrl = await baixarESalvarMidia(conversa.id, mediaNome, mediaTipo, data.key, data.message, instancia);
       }
 
       // Save message
@@ -459,10 +479,9 @@ serve(async (req) => {
         .single();
 
       if (novaConversa) {
-        let fmUrl = mediaUrl || null;
-        if (mediaUrl && tipo !== "texto") {
-          const ext = mediaNome || `media.${(mediaTipo || "application/octet-stream").split("/")[1]?.split(";")[0] || "bin"}`;
-          fmUrl = await salvarMidiaStorage(mediaUrl, novaConversa.id, ext, mediaTipo);
+        let fmUrl: string | null = null;
+        if (tipo !== "texto") {
+          fmUrl = await baixarESalvarMidia(novaConversa.id, mediaNome, mediaTipo, data.key, data.message, instancia);
         }
         await supabase.from("chat_mensagens").insert({
           conversa_id: novaConversa.id,
@@ -517,10 +536,9 @@ serve(async (req) => {
     }
 
     // Download media for new conversation
-    let newMediaUrl = mediaUrl || null;
-    if (mediaUrl && tipo !== "texto") {
-      const ext = mediaNome || `media.${(mediaTipo || "application/octet-stream").split("/")[1]?.split(";")[0] || "bin"}`;
-      newMediaUrl = await salvarMidiaStorage(mediaUrl, novaConversa.id, ext, mediaTipo);
+    let newMediaUrl: string | null = null;
+    if (tipo !== "texto") {
+      newMediaUrl = await baixarESalvarMidia(novaConversa.id, mediaNome, mediaTipo, data.key, data.message, instancia);
     }
 
     // Save original message
