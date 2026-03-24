@@ -448,6 +448,7 @@ export default function ChatInputArea({
           size="icon"
           className="h-7 w-7"
           onClick={iniciarGravacao}
+          disabled={uploading}
           title="Gravar áudio"
         >
           <Mic className="h-4 w-4" />
