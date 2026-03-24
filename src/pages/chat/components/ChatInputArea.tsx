@@ -502,10 +502,14 @@ export default function ChatInputArea({
           <Button
             size="icon"
             className="h-9 w-9 flex-shrink-0"
-            disabled={midiaPreview ? false : !texto.trim()}
+            disabled={uploading || (midiaPreview ? false : !texto.trim())}
             onClick={midiaPreview ? enviarComPreview : handleSubmit}
           >
-            <Send className="h-4 w-4" />
+            {uploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>
