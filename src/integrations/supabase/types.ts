@@ -335,6 +335,7 @@ export type Database = {
           tags: string[] | null
           tempo_atendimento_segundos: number | null
           tempo_espera_segundos: number | null
+          titulo_atendimento: string | null
           updated_at: string | null
         }
         Insert: {
@@ -361,6 +362,7 @@ export type Database = {
           tags?: string[] | null
           tempo_atendimento_segundos?: number | null
           tempo_espera_segundos?: number | null
+          titulo_atendimento?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -387,6 +389,7 @@ export type Database = {
           tags?: string[] | null
           tempo_atendimento_segundos?: number | null
           tempo_espera_segundos?: number | null
+          titulo_atendimento?: string | null
           updated_at?: string | null
         }
         Relationships: [

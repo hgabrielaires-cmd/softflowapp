@@ -136,12 +136,16 @@ export function useChatActions() {
       userName,
       numero,
       instanceName,
+      clienteId,
+      tituloAtendimento,
     }: {
       conversaId: string;
       userId: string;
       userName: string;
       numero: string;
       instanceName?: string;
+      clienteId?: string;
+      tituloAtendimento?: string;
     }) => {
       const agora = new Date().toISOString();
       const { data: conv } = await supabase
@@ -176,14 +180,18 @@ export function useChatActions() {
       const msgEnc = config?.mensagem_encerramento || "Obrigado pelo contato! Foi um prazer atendê-lo. 😊";
       const msgNps = config?.mensagem_nps || "Como você avalia nosso atendimento?\n1 - Péssimo 😞\n2 - Ruim 😕\n3 - Regular 😐\n4 - Bom 😊\n5 - Excelente 🌟";
 
+      const updatePayload: any = {
+        status: "encerrado",
+        encerrado_em: agora,
+        tempo_atendimento_segundos: tempoAtend,
+        updated_at: agora,
+      };
+      if (clienteId) updatePayload.cliente_id = clienteId;
+      if (tituloAtendimento) updatePayload.titulo_atendimento = tituloAtendimento;
+
       await supabase
         .from("chat_conversas")
-        .update({
-          status: "encerrado",
-          encerrado_em: agora,
-          tempo_atendimento_segundos: tempoAtend,
-          updated_at: agora,
-        })
+        .update(updatePayload)
         .eq("id", conversaId);
 
       // System message

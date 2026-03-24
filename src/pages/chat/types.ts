@@ -21,6 +21,7 @@ export interface ChatConversa {
   nps_enviado: boolean | null;
   nps_nota: number | null;
   nps_comentario: string | null;
+  titulo_atendimento: string | null;
   created_at: string | null;
   updated_at: string | null;
   // Joined fields
