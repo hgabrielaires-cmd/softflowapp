@@ -479,10 +479,9 @@ serve(async (req) => {
         .single();
 
       if (novaConversa) {
-        let fmUrl = mediaUrl || null;
-        if (mediaUrl && tipo !== "texto") {
-          const ext = mediaNome || `media.${(mediaTipo || "application/octet-stream").split("/")[1]?.split(";")[0] || "bin"}`;
-          fmUrl = await salvarMidiaStorage(mediaUrl, novaConversa.id, ext, mediaTipo);
+        let fmUrl: string | null = null;
+        if (tipo !== "texto") {
+          fmUrl = await baixarESalvarMidia(novaConversa.id, mediaNome, mediaTipo, data.key, data.message, instancia);
         }
         await supabase.from("chat_mensagens").insert({
           conversa_id: novaConversa.id,
