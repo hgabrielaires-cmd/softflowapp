@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Send, Paperclip, Lock, Mic, X, Image, Video, FileText,
-  ChevronDown, Square, Play,
+  ChevronDown, Square, Play, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
