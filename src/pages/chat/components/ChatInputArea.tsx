@@ -412,7 +412,7 @@ export default function ChatInputArea({
       <div className="flex items-center gap-2 mb-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" disabled={uploading}>
               <Paperclip className="h-3 w-3" />
               Mídia
               <ChevronDown className="h-3 w-3" />
