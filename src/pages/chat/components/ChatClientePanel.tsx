@@ -125,6 +125,34 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     detectar();
   }, [conversa?.id, conversa?.numero_cliente, conversa?.cliente_id]);
 
+  /** Garante que existe um registro em cliente_contatos para este número/empresa */
+  async function garantirContato(clienteId: string) {
+    if (!conversa) return;
+    const telefone = conversa.numero_cliente?.replace(/\D/g, "") || "";
+    if (telefone.length < 8) return;
+    const ultimos8 = telefone.slice(-8);
+
+    // Check if contact already exists for this client + phone
+    const { data: existing } = await supabase
+      .from("cliente_contatos")
+      .select("id")
+      .eq("cliente_id", clienteId)
+      .ilike("telefone", `%${ultimos8}%`)
+      .eq("ativo", true)
+      .limit(1);
+
+    if (existing && existing.length > 0) return; // already exists
+
+    // Create contact record
+    await supabase.from("cliente_contatos").insert({
+      cliente_id: clienteId,
+      nome: conversa.nome_cliente || "Contato via Chat",
+      telefone: conversa.numero_cliente,
+      decisor: false,
+      ativo: true,
+    });
+  }
+
   async function vincularClienteAuto(clienteId: string, nomeEmpresa: string, fromHistory: boolean) {
     if (!conversa) return;
     try {
@@ -133,6 +161,9 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
         .update({ cliente_id: clienteId })
         .eq("id", conversa.id);
       if (error) throw error;
+
+      // Ensure contact record exists
+      await garantirContato(clienteId);
 
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversa.id,
@@ -157,6 +188,8 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
         .update({ cliente_id: emp.empresa_id })
         .eq("id", conversa.id);
       if (error) throw error;
+
+      await garantirContato(emp.empresa_id);
 
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversa.id,
@@ -224,6 +257,8 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
         .update({ cliente_id: cli.id })
         .eq("id", conversa!.id);
       if (error) throw error;
+
+      await garantirContato(cli.id);
 
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversa!.id,
