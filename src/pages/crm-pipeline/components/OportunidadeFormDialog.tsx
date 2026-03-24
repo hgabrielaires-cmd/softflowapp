@@ -249,11 +249,19 @@ export function OportunidadeFormDialog({
                     <Input
                       value={applyPhoneMask(contato.telefone)}
                       onChange={(e) => updateContato(idx, "telefone", e.target.value.replace(/\D/g, ""))}
+                      onBlur={() => handlePhoneBlur(idx, contato.telefone)}
                       placeholder="(00) 00000-0000"
                       className="h-8 text-xs"
                     />
                   </div>
                 </div>
+                {phoneDuplicados[idx] && phoneDuplicados[idx].length > 0 && !phoneIgnorado[idx] && (
+                  <TelefoneDuplicadoAlerta
+                    contatos={phoneDuplicados[idx]}
+                    onUsar={(dup) => handleUsarContato(idx, dup)}
+                    onIgnorar={() => handleIgnorarDuplicado(idx)}
+                  />
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <Label className="text-xs">Cargo</Label>
