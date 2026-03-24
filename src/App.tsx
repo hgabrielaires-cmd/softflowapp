@@ -14,7 +14,7 @@ import Filiais from "./pages/Filiais";
 import Financeiro from "./pages/Financeiro";
 import { ComingSoon } from "./components/ComingSoon";
 import Clientes from "./pages/Clientes";
-import Contatos from "./pages/Contatos";
+import Contatos from "@/pages/Contatos";
 import Planos from "./pages/Planos";
 import Pedidos from "./pages/Pedidos";
 import Contratos from "./pages/Contratos";
