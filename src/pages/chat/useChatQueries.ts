@@ -117,7 +117,7 @@ export function useChatHistorico(numero: string | null, conversaAtualId: string 
       let q = supabase
         .from("chat_conversas")
         .select(`id, protocolo, status, created_at, encerrado_em, nome_cliente,
-          nps_nota, tempo_atendimento_segundos, setor_id,
+          nps_nota, tempo_atendimento_segundos, setor_id, titulo_atendimento,
           atendente:profiles!chat_conversas_atendente_id_fkey(full_name),
           setor:setores!chat_conversas_setor_id_fkey(nome)`)
         .eq("numero_cliente", numero)
