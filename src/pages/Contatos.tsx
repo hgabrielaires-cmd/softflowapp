@@ -187,7 +187,7 @@ export default function Contatos() {
                         <div className="flex items-center gap-1.5">
                           <span className="font-medium text-foreground">{c.nome}</span>
                           {c.decisor && (
-                            <Star className="h-3 w-3 text-primary fill-primary" title="Decisor" />
+                            <Star className="h-3 w-3 text-primary fill-primary" />
                           )}
                         </div>
                       </TableCell>
