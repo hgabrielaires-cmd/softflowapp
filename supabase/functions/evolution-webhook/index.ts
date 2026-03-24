@@ -304,10 +304,9 @@ serve(async (req) => {
     if (conversa) {
       // ── Existing conversation ──
       // Download and persist media if present
-      let finalMediaUrl = mediaUrl || null;
-      if (mediaUrl && tipo !== "texto") {
-        const ext = mediaNome || (mediaTipo ? `media.${mediaTipo.split("/")[1]?.split(";")[0] || "bin"}` : "media.bin");
-        finalMediaUrl = await salvarMidiaStorage(mediaUrl, conversa.id, ext, mediaTipo);
+      let finalMediaUrl: string | null = null;
+      if (tipo !== "texto") {
+        finalMediaUrl = await baixarESalvarMidia(conversa.id, mediaNome, mediaTipo, data.key, data.message, instancia);
       }
 
       // Save message
