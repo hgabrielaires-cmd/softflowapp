@@ -136,12 +136,16 @@ export function useChatActions() {
       userName,
       numero,
       instanceName,
+      clienteId,
+      tituloAtendimento,
     }: {
       conversaId: string;
       userId: string;
       userName: string;
       numero: string;
       instanceName?: string;
+      clienteId?: string;
+      tituloAtendimento?: string;
     }) => {
       const agora = new Date().toISOString();
       const { data: conv } = await supabase
