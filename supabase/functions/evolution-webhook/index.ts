@@ -44,7 +44,9 @@ serve(async (req) => {
       return ok({ error: "method_not_allowed" });
     }
 
-    const body = await req.json();
+    const bodyText = await req.text();
+    console.log("[DEBUG] Body completo:", bodyText.substring(0, 3000));
+    const body = JSON.parse(bodyText);
     console.log("[evolution-webhook] Evento recebido:", body.event, "Instância:", body.instance);
 
     // Only process incoming messages
