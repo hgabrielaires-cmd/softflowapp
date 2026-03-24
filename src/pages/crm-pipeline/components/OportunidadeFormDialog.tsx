@@ -134,6 +134,8 @@ export function OportunidadeFormDialog({
         setCamposValues({});
         setContatos([emptyContato()]);
         setTried(false);
+        setPhoneDuplicados({});
+        setPhoneIgnorado({});
       }
     }
   }, [open, oportunidade, etapaIdInicial, etapas]);
