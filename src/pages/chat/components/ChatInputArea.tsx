@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Send, Paperclip, Lock, Mic, X, Image, Video, FileText,
-  ChevronDown, Square,
+  ChevronDown, Square, Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -26,11 +26,24 @@ interface Props {
   nomeCliente: string | null;
 }
 
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
 export default function ChatInputArea({
   onSend, onSendMedia, modoNota, setModoNota,
   userId, userName, conversaId, protocolo, nomeCliente,
 }: Props) {
   const [texto, setTexto] = useState("");
+
+  // Media preview
+  const [midiaPreview, setMidiaPreview] = useState<{
+    file: File;
+    url: string;
+    tipo: "imagem" | "video";
+  } | null>(null);
 
   // Audio recording
   const [gravando, setGravando] = useState(false);
@@ -77,12 +90,17 @@ export default function ChatInputArea({
     return () => { if (audioUrl) URL.revokeObjectURL(audioUrl); };
   }, [audioUrl]);
 
+  // Cleanup media preview URL
+  useEffect(() => {
+    return () => { if (midiaPreview) URL.revokeObjectURL(midiaPreview.url); };
+  }, [midiaPreview]);
+
   const filteredAtendentes = atendentes.filter((a) =>
     a.full_name?.toLowerCase().includes(mentionSearch.toLowerCase())
   ).slice(0, 6);
 
   // ── File handling ──
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>, previewType?: "imagem" | "video") {
     const f = e.target.files?.[0];
     if (!f) return;
     if (f.size > MAX_FILE_SIZE) {
@@ -90,8 +108,39 @@ export default function ChatInputArea({
       e.target.value = "";
       return;
     }
+
+    // For images/videos, show preview instead of sending immediately
+    if (previewType) {
+      // Clean up previous preview
+      if (midiaPreview) URL.revokeObjectURL(midiaPreview.url);
+      setMidiaPreview({
+        file: f,
+        url: URL.createObjectURL(f),
+        tipo: previewType,
+      });
+      e.target.value = "";
+      return;
+    }
+
+    // For documents, send immediately (no preview)
     onSendMedia(f, "");
     e.target.value = "";
+  }
+
+  function cancelarPreview() {
+    if (midiaPreview) {
+      URL.revokeObjectURL(midiaPreview.url);
+      setMidiaPreview(null);
+      setTexto("");
+    }
+  }
+
+  function enviarComPreview() {
+    if (!midiaPreview) return;
+    onSendMedia(midiaPreview.file, texto.trim());
+    URL.revokeObjectURL(midiaPreview.url);
+    setMidiaPreview(null);
+    setTexto("");
   }
 
   // ── Audio recording ──
@@ -191,7 +240,11 @@ export default function ChatInputArea({
     }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      if (midiaPreview) {
+        enviarComPreview();
+      } else {
+        handleSubmit();
+      }
     }
   }
 
@@ -276,9 +329,44 @@ export default function ChatInputArea({
   return (
     <div className="border-t border-border p-3 bg-card">
       {/* Hidden file inputs */}
-      <input ref={imageInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
-      <input ref={videoInputRef} type="file" className="hidden" accept="video/*" onChange={handleFileSelect} />
-      <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" onChange={handleFileSelect} />
+      <input ref={imageInputRef} type="file" className="hidden" accept="image/*" onChange={(e) => handleFileSelect(e, "imagem")} />
+      <input ref={videoInputRef} type="file" className="hidden" accept="video/*" onChange={(e) => handleFileSelect(e, "video")} />
+      <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" onChange={(e) => handleFileSelect(e)} />
+
+      {/* Media preview */}
+      {midiaPreview && (
+        <div className="mb-2 rounded-lg border border-border bg-muted/50 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {midiaPreview.tipo === "imagem" ? (
+                <Image className="h-3.5 w-3.5" />
+              ) : (
+                <Video className="h-3.5 w-3.5" />
+              )}
+              <span className="font-medium truncate max-w-[200px]">{midiaPreview.file.name}</span>
+              <span>({formatFileSize(midiaPreview.file.size)})</span>
+            </div>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelarPreview}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div className="flex justify-center">
+            {midiaPreview.tipo === "imagem" ? (
+              <img
+                src={midiaPreview.url}
+                alt="Preview"
+                className="max-h-[200px] max-w-full rounded-md object-contain"
+              />
+            ) : (
+              <video
+                src={midiaPreview.url}
+                controls
+                className="max-h-[200px] max-w-full rounded-md"
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 mb-2">
@@ -352,7 +440,13 @@ export default function ChatInputArea({
         <div className="flex items-end gap-2">
           <Textarea
             ref={textareaRef}
-            placeholder={modoNota ? "Nota interna (não enviada ao cliente)... Use @ para mencionar" : "Digite sua mensagem..."}
+            placeholder={
+              midiaPreview
+                ? "Adicionar legenda... (opcional)"
+                : modoNota
+                  ? "Nota interna (não enviada ao cliente)... Use @ para mencionar"
+                  : "Digite sua mensagem..."
+            }
             value={texto}
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
@@ -365,8 +459,8 @@ export default function ChatInputArea({
           <Button
             size="icon"
             className="h-9 w-9 flex-shrink-0"
-            disabled={!texto.trim()}
-            onClick={handleSubmit}
+            disabled={midiaPreview ? false : !texto.trim()}
+            onClick={midiaPreview ? enviarComPreview : handleSubmit}
           >
             <Send className="h-4 w-4" />
           </Button>
