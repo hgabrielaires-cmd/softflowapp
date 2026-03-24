@@ -492,6 +492,7 @@ export default function ChatInputArea({
             value={texto}
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
+            disabled={uploading}
             className={cn(
               "flex-1 min-h-[40px] max-h-[120px] resize-none text-sm",
               modoNota && "border-yellow-400 bg-yellow-50"
