@@ -58,8 +58,31 @@ export function ClienteRapidoDialog({
   const [inlineContatoForm, setInlineContatoForm] = useState<ClienteContatoInline>({
     nome: "", cargo: "", telefone: "", email: "", decisor: false, ativo: true,
   });
+  const [phoneDuplicados, setPhoneDuplicados] = useState<ContatoDuplicado[]>([]);
+  const [phoneIgnorado, setPhoneIgnorado] = useState(false);
 
-  function handleSaveContato() {
+  const handlePhoneBlur = useCallback(async (telefone: string) => {
+    const limpo = telefone.replace(/\D/g, "");
+    if (limpo.length < 10) { setPhoneDuplicados([]); return; }
+    const { existe, contatos: found } = await verificarTelefoneDuplicado(telefone);
+    if (existe) {
+      setPhoneDuplicados(found);
+      setPhoneIgnorado(false);
+    } else {
+      setPhoneDuplicados([]);
+    }
+  }, []);
+
+  const handleUsarContatoDup = (dup: ContatoDuplicado) => {
+    setInlineContatoForm(f => ({
+      ...f,
+      nome: dup.nome,
+      telefone: dup.telefone,
+      email: dup.email || f.email,
+    }));
+    setPhoneDuplicados([]);
+  };
+
     if (!inlineContatoForm.nome.trim()) { toast.error("Nome do contato é obrigatório"); return; }
     if (!inlineContatoForm.email?.trim()) { toast.error("E-mail do contato é obrigatório"); return; }
     if (!inlineContatoForm.cargo?.trim()) { toast.error("Cargo do contato é obrigatório"); return; }
