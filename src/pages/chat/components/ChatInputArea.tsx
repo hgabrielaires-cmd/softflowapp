@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Send, Paperclip, Lock, Mic, X, Image, Video, FileText,
-  ChevronDown, Square, Play,
+  ChevronDown, Square, Play, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -44,6 +44,10 @@ export default function ChatInputArea({
     url: string;
     tipo: "imagem" | "video";
   } | null>(null);
+
+  // Upload state
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Audio recording
   const [gravando, setGravando] = useState(false);
@@ -135,12 +139,28 @@ export default function ChatInputArea({
     }
   }
 
-  function enviarComPreview() {
-    if (!midiaPreview) return;
-    onSendMedia(midiaPreview.file, texto.trim());
-    URL.revokeObjectURL(midiaPreview.url);
-    setMidiaPreview(null);
-    setTexto("");
+  async function enviarComPreview() {
+    if (!midiaPreview || uploading) return;
+    setUploading(true);
+    setUploadProgress(0);
+
+    const progressInterval = setInterval(() => {
+      setUploadProgress((p) => Math.min(p + 10, 90));
+    }, 200);
+
+    try {
+      onSendMedia(midiaPreview.file, texto.trim());
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      await new Promise((r) => setTimeout(r, 400));
+    } finally {
+      clearInterval(progressInterval);
+      URL.revokeObjectURL(midiaPreview.url);
+      setMidiaPreview(null);
+      setTexto("");
+      setUploading(false);
+      setUploadProgress(0);
+    }
   }
 
   // ── Audio recording ──
@@ -346,11 +366,11 @@ export default function ChatInputArea({
               <span className="font-medium truncate max-w-[200px]">{midiaPreview.file.name}</span>
               <span>({formatFileSize(midiaPreview.file.size)})</span>
             </div>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelarPreview}>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelarPreview} disabled={uploading}>
               <X className="h-3.5 w-3.5" />
             </Button>
           </div>
-          <div className="flex justify-center">
+          <div className="flex justify-center relative">
             {midiaPreview.tipo === "imagem" ? (
               <img
                 src={midiaPreview.url}
@@ -360,11 +380,31 @@ export default function ChatInputArea({
             ) : (
               <video
                 src={midiaPreview.url}
-                controls
+                controls={!uploading}
                 className="max-h-[200px] max-w-full rounded-md"
               />
             )}
+            {uploading && (
+              <div className="absolute inset-0 bg-background/60 rounded-md flex flex-col items-center justify-center gap-2">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="text-sm font-medium text-foreground">Enviando...</span>
+              </div>
+            )}
           </div>
+          {uploading && (
+            <div className="mt-2">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                <span>📤 Enviando arquivo...</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-200"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -372,7 +412,7 @@ export default function ChatInputArea({
       <div className="flex items-center gap-2 mb-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" disabled={uploading}>
               <Paperclip className="h-3 w-3" />
               Mídia
               <ChevronDown className="h-3 w-3" />
@@ -396,6 +436,7 @@ export default function ChatInputArea({
           size="sm"
           className="h-7 text-xs gap-1"
           onClick={() => setModoNota(!modoNota)}
+          disabled={uploading}
         >
           <Lock className="h-3 w-3" /> Nota interna
         </Button>
@@ -407,6 +448,7 @@ export default function ChatInputArea({
           size="icon"
           className="h-7 w-7"
           onClick={iniciarGravacao}
+          disabled={uploading}
           title="Gravar áudio"
         >
           <Mic className="h-4 w-4" />
@@ -450,6 +492,7 @@ export default function ChatInputArea({
             value={texto}
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
+            disabled={uploading}
             className={cn(
               "flex-1 min-h-[40px] max-h-[120px] resize-none text-sm",
               modoNota && "border-yellow-400 bg-yellow-50"
@@ -459,10 +502,14 @@ export default function ChatInputArea({
           <Button
             size="icon"
             className="h-9 w-9 flex-shrink-0"
-            disabled={midiaPreview ? false : !texto.trim()}
+            disabled={uploading || (midiaPreview ? false : !texto.trim())}
             onClick={midiaPreview ? enviarComPreview : handleSubmit}
           >
-            <Send className="h-4 w-4" />
+            {uploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>
