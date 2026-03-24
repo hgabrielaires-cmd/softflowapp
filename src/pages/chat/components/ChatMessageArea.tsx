@@ -1,14 +1,12 @@
 import { useRef, useEffect, useState } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Send, Paperclip, Lock, MessageSquare, Download, FileText, FileSpreadsheet, File as FileIcon } from "lucide-react";
+import { Send, Lock, MessageSquare, Download, FileText, FileSpreadsheet, File as FileIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ChatConversa, ChatMensagem, STATUS_COLORS, STATUS_LABELS, ChatStatus } from "../types";
 import { formatarTelefone } from "../helpers";
 import { format } from "date-fns";
-import ChatMediaUpload from "./ChatMediaUpload";
+import ChatInputArea from "./ChatInputArea";
 
 function getDocIcon(nome: string | null) {
   if (!nome) return <FileIcon className="h-4 w-4" />;
