@@ -11,8 +11,11 @@ import {
 } from "@/components/ui/table";
 import { TablePagination } from "@/components/TablePagination";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
-import { Search, Phone, Mail, Star, Building2, Users } from "lucide-react";
+import { Search, Phone, Mail, Star, Building2, Users, Link2 } from "lucide-react";
 import { formatPhoneDisplay } from "@/lib/utils";
+import {
+  Tooltip, TooltipContent, TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ContatoRow {
   id: string;
@@ -28,6 +31,12 @@ interface ContatoRow {
     nome_fantasia: string;
     filial_id: string | null;
   } | null;
+}
+
+/** Remove tudo que não é dígito para comparação */
+function normalizePhone(phone: string | null): string {
+  if (!phone) return "";
+  return phone.replace(/\D/g, "");
 }
 
 const ITEMS_PER_PAGE = 20;
@@ -61,6 +70,21 @@ export default function Contatos() {
   }
 
   const allowedFilialIds = filiaisDoUsuario.map((f) => f.id);
+
+  // Mapa de telefone normalizado → lista de clientes vinculados (todos os contatos, sem filtro)
+  const phoneClientsMap = useMemo(() => {
+    const map: Record<string, { cliente_id: string; nome_fantasia: string }[]> = {};
+    for (const c of contatos) {
+      const norm = normalizePhone(c.telefone);
+      if (!norm || !c.clientes) continue;
+      if (!map[norm]) map[norm] = [];
+      // Evitar duplicatas de cliente
+      if (!map[norm].some((x) => x.cliente_id === c.cliente_id)) {
+        map[norm].push({ cliente_id: c.cliente_id, nome_fantasia: c.clientes.nome_fantasia });
+      }
+    }
+    return map;
+  }, [contatos]);
 
   const filtered = useMemo(() => {
     let list = contatos;
@@ -160,7 +184,7 @@ export default function Contatos() {
                 <TableHead>Cargo</TableHead>
                 <TableHead>Telefone</TableHead>
                 <TableHead>E-mail</TableHead>
-                <TableHead>Cliente</TableHead>
+                <TableHead>Empresas vinculadas</TableHead>
                 <TableHead>Filial</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
@@ -181,49 +205,99 @@ export default function Contatos() {
               ) : (
                 filtered
                   .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
-                  .map((c) => (
-                    <TableRow key={c.id} className={!c.ativo ? "opacity-50" : ""}>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-foreground">{c.nome}</span>
-                          {c.decisor && (
-                            <Star className="h-3 w-3 text-primary fill-primary" />
+                  .map((c) => {
+                    const norm = normalizePhone(c.telefone);
+                    const linkedClients = norm ? (phoneClientsMap[norm] || []) : [];
+                    const hasMultiple = linkedClients.length > 1;
+
+                    return (
+                      <TableRow key={c.id} className={!c.ativo ? "opacity-50" : ""}>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-foreground">{c.nome}</span>
+                            {c.decisor && (
+                              <Star className="h-3 w-3 text-primary fill-primary" />
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{c.cargo || "—"}</TableCell>
+                        <TableCell>
+                          {c.telefone ? (
+                            <span className="text-sm flex items-center gap-1 text-muted-foreground">
+                              <Phone className="h-3 w-3" />
+                              {formatPhoneDisplay(c.telefone)}
+                              {hasMultiple && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="ml-1 text-[10px] px-1.5 py-0 gap-0.5 border-primary/30 text-primary cursor-help">
+                                      <Link2 className="h-2.5 w-2.5" />
+                                      {linkedClients.length}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="bottom" className="max-w-xs">
+                                    <p className="text-xs font-semibold mb-1">Empresas com este número:</p>
+                                    <ul className="text-xs space-y-0.5">
+                                      {linkedClients.map((lc) => (
+                                        <li key={lc.cliente_id} className="flex items-center gap-1">
+                                          <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
+                                          {lc.nome_fantasia}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </span>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {c.email ? (
+                            <span className="text-sm flex items-center gap-1 text-muted-foreground">
+                              <Mail className="h-3 w-3" />
+                              {c.email}
+                            </span>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {linkedClients.length > 0 ? (
+                            <div className="space-y-0.5">
+                              {linkedClients.map((lc) => (
+                                <div
+                                  key={lc.cliente_id}
+                                  className={`text-sm flex items-center gap-1 ${
+                                    lc.cliente_id === c.cliente_id
+                                      ? "font-medium text-foreground"
+                                      : "text-muted-foreground"
+                                  }`}
+                                >
+                                  <Building2 className="h-3 w-3 shrink-0" />
+                                  {lc.nome_fantasia}
+                                  {lc.cliente_id === c.cliente_id && (
+                                    <span className="text-[10px] text-muted-foreground">(atual)</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              {c.clientes?.nome_fantasia || "—"}
+                            </span>
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{c.cargo || "—"}</TableCell>
-                      <TableCell>
-                        {c.telefone ? (
-                          <span className="text-sm flex items-center gap-1 text-muted-foreground">
-                            <Phone className="h-3 w-3" />
-                            {formatPhoneDisplay(c.telefone)}
+                        </TableCell>
+                        <TableCell>
+                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Building2 className="h-3 w-3" />
+                            {filialNome(c.clientes?.filial_id || null)}
                           </span>
-                        ) : "—"}
-                      </TableCell>
-                      <TableCell>
-                        {c.email ? (
-                          <span className="text-sm flex items-center gap-1 text-muted-foreground">
-                            <Mail className="h-3 w-3" />
-                            {c.email}
-                          </span>
-                        ) : "—"}
-                      </TableCell>
-                      <TableCell className="text-sm font-medium">
-                        {c.clientes?.nome_fantasia || "—"}
-                      </TableCell>
-                      <TableCell>
-                        <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Building2 className="h-3 w-3" />
-                          {filialNome(c.clientes?.filial_id || null)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={c.ativo ? "default" : "secondary"}>
-                          {c.ativo ? "Ativo" : "Inativo"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={c.ativo ? "default" : "secondary"}>
+                            {c.ativo ? "Ativo" : "Inativo"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
               )}
             </TableBody>
           </Table>
