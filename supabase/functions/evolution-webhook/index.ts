@@ -325,6 +325,69 @@ serve(async (req) => {
       return ok({ success: true, conversa_id: conversa.id, action: "message_added" });
     }
 
+    // ── Check for recently closed conversation awaiting NPS ──
+    const { data: conversaNps } = await supabase
+      .from("chat_conversas")
+      .select("id, nps_enviado, nps_nota, canal_instancia")
+      .eq("numero_cliente", numero)
+      .eq("status", "encerrado")
+      .eq("nps_enviado", true)
+      .is("nps_nota", null)
+      .gte("encerrado_em", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .order("encerrado_em", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (conversaNps) {
+      // Save the client's message in the closed conversation
+      await supabase.from("chat_mensagens").insert({
+        conversa_id: conversaNps.id,
+        tipo,
+        conteudo,
+        media_url: mediaUrl || null,
+        media_tipo: mediaTipo || null,
+        media_nome: mediaNome || null,
+        remetente: "cliente",
+        evolution_message_id: evolutionMessageId,
+      });
+
+      const nota = parseInt((conteudo || "").trim()[0]);
+      if (nota >= 1 && nota <= 5) {
+        // Valid NPS score
+        await supabase
+          .from("chat_conversas")
+          .update({ nps_nota: nota, nps_comentario: conteudo.trim() })
+          .eq("id", conversaNps.id);
+
+        const agradecimento = "Obrigado pela sua avaliação! Sua opinião é muito importante para nós. 🙏😊";
+        await sendWhatsApp(agradecimento, conversaNps.canal_instancia || undefined);
+
+        await supabase.from("chat_mensagens").insert({
+          conversa_id: conversaNps.id,
+          tipo: "bot",
+          conteudo: agradecimento,
+          remetente: "bot",
+        });
+
+        console.log(`[evolution-webhook] NPS registrado: nota ${nota} para conversa ${conversaNps.id}`);
+        return ok({ success: true, conversa_id: conversaNps.id, action: "nps_registrado" });
+      } else {
+        // Invalid NPS response - ask again
+        const reenvio = "Por favor, responda apenas com o número de 1 a 5. 😊";
+        await sendWhatsApp(reenvio, conversaNps.canal_instancia || undefined);
+
+        await supabase.from("chat_mensagens").insert({
+          conversa_id: conversaNps.id,
+          tipo: "bot",
+          conteudo: reenvio,
+          remetente: "bot",
+        });
+
+        console.log(`[evolution-webhook] NPS inválido, reenvio para conversa ${conversaNps.id}`);
+        return ok({ success: true, conversa_id: conversaNps.id, action: "nps_reenvio" });
+      }
+    }
+
     // ── New conversation ──
     // Check business hours (dual-period: atendimento + plantão)
     const agora = new Date();
