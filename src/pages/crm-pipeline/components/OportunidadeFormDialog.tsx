@@ -162,6 +162,10 @@ export function OportunidadeFormDialog({
 
   const handleSave = () => {
     setTried(true);
+    if (hasUnresolvedDuplicados) {
+      toast.error("Resolva os telefones duplicados antes de salvar.");
+      return;
+    }
     if (hasErrors) {
       toast.error("Preencha todos os campos obrigatórios antes de salvar.");
       return;
