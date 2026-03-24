@@ -56,8 +56,8 @@ export default function ChatInputArea({
 
   // Load atendentes for mentions
   useEffect(() => {
-    supabase.from("profiles").select("user_id, full_name").eq("ativo", true)
-      .then(({ data }) => { if (data) setAtendentes(data as any); });
+    supabase.from("profiles").select("user_id, full_name").eq("ativo" as any, true)
+      .then(({ data }: any) => { if (data) setAtendentes(data); });
   }, []);
 
   // Timer for recording
