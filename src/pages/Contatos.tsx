@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -11,11 +12,12 @@ import {
 } from "@/components/ui/table";
 import { TablePagination } from "@/components/TablePagination";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
-import { Search, Phone, Mail, Star, Building2, Users, Link2 } from "lucide-react";
-import { formatPhoneDisplay } from "@/lib/utils";
+import { Search, Phone, Mail, Star, Building2, Users, Link2, Pencil } from "lucide-react";
+import { formatPhoneDisplay, normalizeBRPhone } from "@/lib/utils";
 import {
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { EditContatoDialog } from "@/pages/contatos/EditContatoDialog";
 
 interface ContatoRow {
   id: string;
@@ -32,9 +34,7 @@ interface ContatoRow {
     filial_id: string | null;
   } | null;
 }
-import { normalizeBRPhone } from "@/lib/utils";
 
-/** Remove tudo que não é dígito para comparação */
 function normalizePhone(phone: string | null): string {
   return normalizeBRPhone(phone);
 }
@@ -45,11 +45,17 @@ export default function Contatos() {
   const { filiaisDoUsuario, isGlobal } = useUserFiliais();
   const [contatos, setContatos] = useState<ContatoRow[]>([]);
   const [filiais, setFiliais] = useState<{ id: string; nome: string }[]>([]);
+  const [clientesList, setClientesList] = useState<{ id: string; nome_fantasia: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filtroFilialId, setFiltroFilialId] = useState("__todas__");
   const [filtroStatus, setFiltroStatus] = useState<"todos" | "ativos" | "inativos">("ativos");
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Edit dialog state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editContato, setEditContato] = useState<ContatoRow | null>(null);
+  const [editAllRows, setEditAllRows] = useState<ContatoRow[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -57,28 +63,28 @@ export default function Contatos() {
 
   async function fetchData() {
     setLoading(true);
-    const [{ data: c }, { data: f }] = await Promise.all([
+    const [{ data: c }, { data: f }, { data: cl }] = await Promise.all([
       supabase
         .from("cliente_contatos")
         .select("id, cliente_id, nome, cargo, telefone, email, decisor, ativo, created_at, clientes(nome_fantasia, filial_id)")
         .order("nome"),
       supabase.from("filiais").select("id, nome").order("nome"),
+      supabase.from("clientes").select("id, nome_fantasia").eq("ativo", true).order("nome_fantasia"),
     ]);
     setContatos((c || []) as ContatoRow[]);
     setFiliais(f || []);
+    setClientesList(cl || []);
     setLoading(false);
   }
 
   const allowedFilialIds = filiaisDoUsuario.map((f) => f.id);
 
-  // Mapa de telefone normalizado → lista de clientes vinculados (todos os contatos, sem filtro)
   const phoneClientsMap = useMemo(() => {
     const map: Record<string, { cliente_id: string; nome_fantasia: string }[]> = {};
     for (const c of contatos) {
       const norm = normalizePhone(c.telefone);
       if (!norm || !c.clientes) continue;
       if (!map[norm]) map[norm] = [];
-      // Evitar duplicatas de cliente
       if (!map[norm].some((x) => x.cliente_id === c.cliente_id)) {
         map[norm].push({ cliente_id: c.cliente_id, nome_fantasia: c.clientes.nome_fantasia });
       }
@@ -89,21 +95,17 @@ export default function Contatos() {
   const filtered = useMemo(() => {
     let list = contatos;
 
-    // Filial access
     if (!isGlobal) {
       list = list.filter((c) => c.clientes?.filial_id && allowedFilialIds.includes(c.clientes.filial_id));
     }
 
-    // Filial filter
     if (filtroFilialId !== "__todas__") {
       list = list.filter((c) => c.clientes?.filial_id === filtroFilialId);
     }
 
-    // Status filter
     if (filtroStatus === "ativos") list = list.filter((c) => c.ativo);
     else if (filtroStatus === "inativos") list = list.filter((c) => !c.ativo);
 
-    // Search
     const term = search.toLowerCase().trim();
     const termDigits = term.replace(/\D/g, "");
     if (term) {
@@ -118,7 +120,6 @@ export default function Contatos() {
       );
     }
 
-    // Deduplicate by name + phone — same person with same number appears once
     const seen = new Set<string>();
     const deduped: ContatoRow[] = [];
     for (const c of list) {
@@ -136,6 +137,17 @@ export default function Contatos() {
 
   const filialNome = (id: string | null) => filiais.find((f) => f.id === id)?.nome || "—";
 
+  function handleEdit(c: ContatoRow) {
+    const norm = normalizePhone(c.telefone);
+    // Find all rows sharing same name+phone
+    const allRows = norm
+      ? contatos.filter((r) => normalizePhone(r.telefone) === norm && r.nome.toLowerCase().trim() === c.nome.toLowerCase().trim())
+      : contatos.filter((r) => r.id === c.id);
+    setEditContato(c);
+    setEditAllRows(allRows);
+    setEditOpen(true);
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -148,7 +160,6 @@ export default function Contatos() {
           </p>
         </div>
 
-        {/* Filters */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="relative max-w-sm flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -188,7 +199,6 @@ export default function Contatos() {
           </Select>
         </div>
 
-        {/* Table */}
         <div className="rounded-lg border border-border bg-card overflow-hidden">
           <Table>
             <TableHeader>
@@ -200,18 +210,19 @@ export default function Contatos() {
                 <TableHead>Empresas vinculadas</TableHead>
                 <TableHead>Filial</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
                     Nenhum contato encontrado
                   </TableCell>
                 </TableRow>
@@ -308,6 +319,16 @@ export default function Contatos() {
                             {c.ativo ? "Ativo" : "Inativo"}
                           </Badge>
                         </TableCell>
+                        <TableCell>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(c)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Editar contato</TooltipContent>
+                          </Tooltip>
+                        </TableCell>
                       </TableRow>
                     );
                   })
@@ -323,6 +344,15 @@ export default function Contatos() {
           />
         </div>
       </div>
+
+      <EditContatoDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        contato={editContato}
+        allRows={editAllRows}
+        clientesList={clientesList}
+        onSaved={fetchData}
+      />
     </AppLayout>
   );
 }
