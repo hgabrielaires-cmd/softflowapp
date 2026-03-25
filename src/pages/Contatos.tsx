@@ -32,10 +32,12 @@ interface ContatoRow {
     filial_id: string | null;
   } | null;
 }
+import { normalizeBRPhone } from "@/lib/utils";
 
 /** Remove tudo que não é dígito para comparação */
 function normalizePhone(phone: string | null): string {
-  if (!phone) return "";
+  return normalizeBRPhone(phone);
+}
   return phone.replace(/\D/g, "");
 }
 
