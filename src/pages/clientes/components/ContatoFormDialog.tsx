@@ -10,9 +10,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import type { ClienteContato, ContatoFormState } from "@/pages/clientes/types";
 import { applyPhoneMask } from "@/lib/utils";
+import { useCargos } from "@/hooks/useCargos";
 
 interface ContatoFormDialogProps {
   open: boolean;
