@@ -356,7 +356,12 @@ export function GanhoClienteDrawer({ open, onOpenChange, oportunidadeId, oportun
                   <p className="text-xs font-medium">{editingIdx !== null ? "Editar contato" : "Novo contato"}</p>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="col-span-2"><Label className="text-xs">Nome *</Label><Input className="h-8 text-sm" value={inlineForm.nome} onChange={e => setInlineForm(f => ({ ...f, nome: e.target.value }))} /></div>
-                    <div><Label className="text-xs">Cargo *</Label><Input className="h-8 text-sm" value={inlineForm.cargo} onChange={e => setInlineForm(f => ({ ...f, cargo: e.target.value }))} /></div>
+                    <div><Label className="text-xs">Cargo *</Label>
+                      <Select value={inlineForm.cargo} onValueChange={v => setInlineForm(f => ({ ...f, cargo: v }))}>
+                        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>{(cargos || []).map(c => (<SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>))}</SelectContent>
+                      </Select>
+                    </div>
                     <div><Label className="text-xs">Telefone</Label><Input className="h-8 text-sm" value={applyPhoneMask(inlineForm.telefone)} onChange={e => setInlineForm(f => ({ ...f, telefone: e.target.value.replace(/\D/g, "") }))} /></div>
                     <div className="col-span-2"><Label className="text-xs">E-mail *</Label><Input className="h-8 text-sm" type="email" value={inlineForm.email} onChange={e => setInlineForm(f => ({ ...f, email: e.target.value }))} /></div>
                     <div className="col-span-2 flex items-center gap-3">

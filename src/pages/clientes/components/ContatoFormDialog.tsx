@@ -41,6 +41,8 @@ export function ContatoFormDialog({
   onSave,
   saving,
 }: ContatoFormDialogProps) {
+  const { data: cargos } = useCargos();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -54,7 +56,16 @@ export function ContatoFormDialog({
           </div>
           <div className="col-span-2 space-y-1.5">
             <Label>Cargo</Label>
-            <Input value={form.cargo} onChange={(e) => onFormChange((f) => ({ ...f, cargo: e.target.value }))} placeholder="Ex: Proprietário, Gerente..." />
+            <Select value={form.cargo} onValueChange={(v) => onFormChange((f) => ({ ...f, cargo: v }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o cargo" />
+              </SelectTrigger>
+              <SelectContent>
+                {(cargos || []).map((c) => (
+                  <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label>Telefone</Label>

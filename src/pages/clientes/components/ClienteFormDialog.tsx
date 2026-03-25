@@ -359,7 +359,16 @@ export function ClienteFormDialog({
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Cargo *</Label>
-                    <Input className="h-8 text-sm" value={inlineContatoForm.cargo} onChange={(e) => setInlineContatoForm((prev) => ({ ...prev, cargo: e.target.value }))} placeholder="Cargo / função" />
+                    <Select value={inlineContatoForm.cargo} onValueChange={(v) => setInlineContatoForm((prev) => ({ ...prev, cargo: v }))}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(cargos || []).map((c) => (
+                          <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Telefone</Label>
