@@ -195,9 +195,9 @@ export function GanhoClienteDrawer({ open, onOpenChange, oportunidadeId, oportun
       if (error) { toast.error("Erro: " + error.message); setSaving(false); return; }
       for (const ct of contatos) {
         if (ct._id) {
-          await supabase.from("cliente_contatos").update({ nome: ct.nome, cargo: ct.cargo || null, telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo }).eq("id", ct._id);
+          await supabase.from("cliente_contatos").update({ nome: ct.nome, cargo: ct.cargo || null, telefone: normalizeBRPhone(ct.telefone) || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo }).eq("id", ct._id);
         } else {
-          await supabase.from("cliente_contatos").insert({ cliente_id: editingClienteId, nome: ct.nome, cargo: ct.cargo || null, telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo });
+          await supabase.from("cliente_contatos").insert({ cliente_id: editingClienteId, nome: ct.nome, cargo: ct.cargo || null, telefone: normalizeBRPhone(ct.telefone) || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo });
         }
       }
     } else {
