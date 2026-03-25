@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { applyPhoneMask, normalizeBRPhone } from "@/lib/utils";
+import { useCargos } from "@/hooks/useCargos";
 
 const UF_LIST = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
