@@ -224,7 +224,14 @@ serve(async (req) => {
         }
         const name = resolvedInstanceName || instance_name || "Softflow_WhatsApp";
         let formattedNumber = number.replace(/\D/g, "");
-        if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
+        // Normalize BR phone: remove 55, ensure 9-digit mobile
+        if (formattedNumber.length >= 12 && formattedNumber.startsWith("55")) {
+          formattedNumber = formattedNumber.slice(2);
+        }
+        if (formattedNumber.length === 10) {
+          formattedNumber = formattedNumber.slice(0, 2) + "9" + formattedNumber.slice(2);
+        }
+        if (formattedNumber.startsWith("0")) formattedNumber = formattedNumber.substring(1);
         if (!formattedNumber.startsWith("55")) formattedNumber = "55" + formattedNumber;
 
         if (!/^\d{10,15}$/.test(formattedNumber)) {
