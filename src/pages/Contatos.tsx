@@ -105,13 +105,15 @@ export default function Contatos() {
 
     // Search
     const term = search.toLowerCase().trim();
+    const termDigits = term.replace(/\D/g, "");
     if (term) {
       list = list.filter(
         (c) =>
           c.nome.toLowerCase().includes(term) ||
           (c.cargo || "").toLowerCase().includes(term) ||
           (c.email || "").toLowerCase().includes(term) ||
-          (c.telefone || "").includes(term) ||
+          (termDigits.length >= 4 && normalizePhone(c.telefone).includes(termDigits)) ||
+          (!termDigits.length && (c.telefone || "").includes(term)) ||
           (c.clientes?.nome_fantasia || "").toLowerCase().includes(term)
       );
     }
