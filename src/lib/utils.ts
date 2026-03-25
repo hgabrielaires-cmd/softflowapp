@@ -6,6 +6,29 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Normaliza telefones brasileiros para o formato correto com 9 dígitos.
+ * - Remove tudo que não é número
+ * - Remove código de país 55 se presente
+ * - Se 10 dígitos (DDD + 8), insere "9" após o DDD
+ * - Se 11 dígitos (DDD + 9 + 8), mantém
+ * - Retorna apenas dígitos
+ */
+export function normalizeBRPhone(phone: string | null | undefined): string {
+  if (!phone) return "";
+  let digits = phone.replace(/\D/g, "");
+  if (!digits) return "";
+  // Remove country code 55
+  if (digits.length >= 12 && digits.startsWith("55")) {
+    digits = digits.slice(2);
+  }
+  // 10 digits = DDD(2) + number(8) → insert 9 after DDD
+  if (digits.length === 10) {
+    digits = digits.slice(0, 2) + "9" + digits.slice(2);
+  }
+  return digits;
+}
+
+/**
  * Formats a phone number for display: (DD) 99999-9999 or (DD) 9999-9999
  * Only strips non-digits for formatting; returns original if too short.
  * Does NOT alter the stored value — use for display only.

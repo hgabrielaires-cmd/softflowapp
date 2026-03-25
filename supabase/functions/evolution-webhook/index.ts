@@ -69,8 +69,18 @@ serve(async (req) => {
       return ok({ ignored: true, reason: "group_message" });
     }
 
+    // Normalize BR phone: remove country code, ensure 9-digit mobile
+    function normalizeBRPhone(phone: string): string {
+      let digits = phone.replace(/\D/g, "");
+      if (!digits) return "";
+      if (digits.length >= 12 && digits.startsWith("55")) digits = digits.slice(2);
+      if (digits.length === 10) digits = digits.slice(0, 2) + "9" + digits.slice(2);
+      return digits;
+    }
+
     // Extract message data
-    const numero = remoteJid.replace("@s.whatsapp.net", "");
+    const numeroRaw = remoteJid.replace("@s.whatsapp.net", "");
+    const numero = normalizeBRPhone(numeroRaw);
     const nome = data.pushName || "";
     const instancia = body.instance || "";
     const evolutionMessageId = data.key.id || "";

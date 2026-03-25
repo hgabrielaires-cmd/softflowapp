@@ -143,11 +143,11 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
 
     if (existing && existing.length > 0) return; // already exists
 
-    // Create contact record
+    // Create contact record with normalized phone
     await supabase.from("cliente_contatos").insert({
       cliente_id: clienteId,
       nome: conversa.nome_cliente || "Contato via Chat",
-      telefone: conversa.numero_cliente,
+      telefone: normalizeBRPhone(conversa.numero_cliente),
       decisor: false,
       ativo: true,
     });
