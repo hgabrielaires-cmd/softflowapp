@@ -24,6 +24,7 @@ import { UF_LIST, emptyContatoForm } from "@/pages/clientes/constants";
 import type { ClienteFormState, ContatoFormState } from "@/pages/clientes/types";
 import { applyPhoneMask } from "@/lib/utils";
 import type { InlineContato } from "@/pages/clientes/useClienteForm";
+import { useCargos } from "@/hooks/useCargos";
 
 interface ClienteFormDialogProps {
   open: boolean;
@@ -86,6 +87,8 @@ export function ClienteFormDialog({
   inlineContatoForm,
   setInlineContatoForm,
 }: ClienteFormDialogProps) {
+  const { data: cargos } = useCargos();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -359,7 +362,16 @@ export function ClienteFormDialog({
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Cargo *</Label>
-                    <Input className="h-8 text-sm" value={inlineContatoForm.cargo} onChange={(e) => setInlineContatoForm((prev) => ({ ...prev, cargo: e.target.value }))} placeholder="Cargo / função" />
+                    <Select value={inlineContatoForm.cargo} onValueChange={(v) => setInlineContatoForm((prev) => ({ ...prev, cargo: v }))}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(cargos || []).map((c) => (
+                          <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Telefone</Label>
