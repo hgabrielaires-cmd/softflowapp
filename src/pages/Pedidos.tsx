@@ -885,7 +885,7 @@ export default function Pedidos() {
     for (const ct of clienteContatos) {
       await supabase.from("cliente_contatos").insert({
         cliente_id: data.id, nome: ct.nome, cargo: ct.cargo || null,
-        telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
+        telefone: normalizeBRPhone(ct.telefone) || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
       });
     }
     // Recarregar dados (inclui clientes) e selecionar o novo

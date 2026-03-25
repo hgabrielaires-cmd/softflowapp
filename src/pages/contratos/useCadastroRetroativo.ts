@@ -295,7 +295,7 @@ export function useCadastroRetroativo({ profileFilialId, loadData }: UseCadastro
     }).select("id, nome_fantasia, filial_id, cnpj_cpf, razao_social").single();
     if (error) { toast.error("Erro ao cadastrar cliente: " + error.message); setRetroSavingCliente(false); return; }
     for (const ct of retroClienteContatos) {
-      await supabase.from("cliente_contatos").insert({ cliente_id: data.id, nome: ct.nome, cargo: ct.cargo || null, telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo });
+      await supabase.from("cliente_contatos").insert({ cliente_id: data.id, nome: ct.nome, cargo: ct.cargo || null, telefone: normalizeBRPhone(ct.telefone) || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo });
     }
     setRetroClientes(prev => [...prev, data as any].sort((a, b) => a.nome_fantasia.localeCompare(b.nome_fantasia)));
     setRetroForm(f => ({ ...f, cliente_id: data.id }));
