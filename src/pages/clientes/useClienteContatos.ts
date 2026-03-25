@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { normalizeBRPhone } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Cliente } from "@/lib/supabase-types";
 import { toast } from "sonner";
