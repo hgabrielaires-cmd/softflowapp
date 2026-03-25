@@ -60,6 +60,7 @@ export function GanhoClienteDrawer({ open, onOpenChange, oportunidadeId, oportun
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [cepError, setCepError] = useState("");
   const [cnpjError, setCnpjError] = useState("");
+  const { data: cargos } = useCargos();
 
   // Pre-fill from oportunidade on open
   useEffect(() => {
