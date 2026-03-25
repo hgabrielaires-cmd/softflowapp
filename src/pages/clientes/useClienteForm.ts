@@ -254,7 +254,7 @@ export function useClienteForm({
       for (const ct of formContatos) {
         if (ct._id) {
           await supabase.from("cliente_contatos").update({
-            nome: ct.nome, cargo: ct.cargo || null, telefone: ct.telefone || null,
+            nome: ct.nome, cargo: ct.cargo || null, telefone: normalizeBRPhone(ct.telefone) || null,
             email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
           }).eq("id", ct._id);
         } else {
