@@ -260,7 +260,7 @@ export function useClienteForm({
         } else {
           await supabase.from("cliente_contatos").insert({
             cliente_id: editing.id, nome: ct.nome, cargo: ct.cargo || null,
-            telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
+            telefone: normalizeBRPhone(ct.telefone) || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
           });
         }
       }
