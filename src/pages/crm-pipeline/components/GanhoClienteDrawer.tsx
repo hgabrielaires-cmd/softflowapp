@@ -12,7 +12,7 @@ import { Plus, Pencil, Loader2, MapPin, AlertCircle, Users, Star, Trash2, Info }
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
-import { applyPhoneMask } from "@/lib/utils";
+import { applyPhoneMask, normalizeBRPhone } from "@/lib/utils";
 
 const UF_LIST = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { normalizeBRPhone } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { dispararAutomacaoPedidoStatus } from "@/lib/automacoes";
 import { retomarOportunidadePorPedido } from "@/lib/retomarOportunidadeCrm";

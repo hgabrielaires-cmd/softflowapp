@@ -66,7 +66,7 @@ export function useClienteContatos({ fetchContatos }: UseClienteContatosParams) 
       cliente_id: clienteContatos.id,
       nome: contatoForm.nome.trim(),
       cargo: contatoForm.cargo.trim() || null,
-      telefone: contatoForm.telefone.trim() || null,
+      telefone: normalizeBRPhone(contatoForm.telefone) || null,
       email: contatoForm.email.trim() || null,
       decisor: contatoForm.decisor,
       ativo: contatoForm.ativo,
