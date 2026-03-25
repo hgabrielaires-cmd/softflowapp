@@ -24,6 +24,7 @@ import { UF_LIST, emptyContatoForm } from "@/pages/clientes/constants";
 import type { ClienteFormState, ContatoFormState } from "@/pages/clientes/types";
 import { applyPhoneMask } from "@/lib/utils";
 import type { InlineContato } from "@/pages/clientes/useClienteForm";
+import { useCargos } from "@/hooks/useCargos";
 
 interface ClienteFormDialogProps {
   open: boolean;
