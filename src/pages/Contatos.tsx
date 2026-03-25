@@ -235,7 +235,7 @@ export default function Contatos() {
                     const hasMultiple = linkedClients.length > 1;
 
                     return (
-                      <TableRow key={c.id} className={!c.ativo ? "opacity-50" : ""}>
+                      <TableRow key={c.id} className={`${!c.ativo ? "opacity-50" : ""} cursor-pointer hover:bg-muted/50`} onClick={() => handleEdit(c)}>
                         <TableCell>
                           <div className="flex items-center gap-1.5">
                             <span className="font-medium text-foreground">{c.nome}</span>
