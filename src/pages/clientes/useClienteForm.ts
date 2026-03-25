@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { normalizeBRPhone } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Cliente } from "@/lib/supabase-types";
 import { toast } from "sonner";
@@ -254,13 +255,13 @@ export function useClienteForm({
       for (const ct of formContatos) {
         if (ct._id) {
           await supabase.from("cliente_contatos").update({
-            nome: ct.nome, cargo: ct.cargo || null, telefone: ct.telefone || null,
+            nome: ct.nome, cargo: ct.cargo || null, telefone: normalizeBRPhone(ct.telefone) || null,
             email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
           }).eq("id", ct._id);
         } else {
           await supabase.from("cliente_contatos").insert({
             cliente_id: editing.id, nome: ct.nome, cargo: ct.cargo || null,
-            telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
+            telefone: normalizeBRPhone(ct.telefone) || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
           });
         }
       }
@@ -272,7 +273,7 @@ export function useClienteForm({
       for (const ct of formContatos) {
         await supabase.from("cliente_contatos").insert({
           cliente_id: newCliente.id, nome: ct.nome, cargo: ct.cargo || null,
-          telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
+          telefone: normalizeBRPhone(ct.telefone) || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo,
         });
       }
       toast.success("Cliente cadastrado com sucesso");

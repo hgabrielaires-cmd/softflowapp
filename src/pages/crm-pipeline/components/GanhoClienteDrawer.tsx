@@ -12,7 +12,7 @@ import { Plus, Pencil, Loader2, MapPin, AlertCircle, Users, Star, Trash2, Info }
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
-import { applyPhoneMask } from "@/lib/utils";
+import { applyPhoneMask, normalizeBRPhone } from "@/lib/utils";
 
 const UF_LIST = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
@@ -195,9 +195,9 @@ export function GanhoClienteDrawer({ open, onOpenChange, oportunidadeId, oportun
       if (error) { toast.error("Erro: " + error.message); setSaving(false); return; }
       for (const ct of contatos) {
         if (ct._id) {
-          await supabase.from("cliente_contatos").update({ nome: ct.nome, cargo: ct.cargo || null, telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo }).eq("id", ct._id);
+          await supabase.from("cliente_contatos").update({ nome: ct.nome, cargo: ct.cargo || null, telefone: normalizeBRPhone(ct.telefone) || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo }).eq("id", ct._id);
         } else {
-          await supabase.from("cliente_contatos").insert({ cliente_id: editingClienteId, nome: ct.nome, cargo: ct.cargo || null, telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo });
+          await supabase.from("cliente_contatos").insert({ cliente_id: editingClienteId, nome: ct.nome, cargo: ct.cargo || null, telefone: normalizeBRPhone(ct.telefone) || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo });
         }
       }
     } else {
@@ -206,7 +206,7 @@ export function GanhoClienteDrawer({ open, onOpenChange, oportunidadeId, oportun
       if (error || !newCliente) { toast.error("Erro: " + (error?.message || "")); setSaving(false); return; }
       clienteId = newCliente.id;
       for (const ct of contatos) {
-        await supabase.from("cliente_contatos").insert({ cliente_id: newCliente.id, nome: ct.nome, cargo: ct.cargo || null, telefone: ct.telefone || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo });
+        await supabase.from("cliente_contatos").insert({ cliente_id: newCliente.id, nome: ct.nome, cargo: ct.cargo || null, telefone: normalizeBRPhone(ct.telefone) || null, email: ct.email || null, decisor: ct.decisor, ativo: ct.ativo });
       }
     }
     setSaving(false);

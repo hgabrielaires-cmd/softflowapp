@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { normalizeBRPhone } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Cliente } from "@/lib/supabase-types";
 import { toast } from "sonner";
@@ -65,7 +66,7 @@ export function useClienteContatos({ fetchContatos }: UseClienteContatosParams) 
       cliente_id: clienteContatos.id,
       nome: contatoForm.nome.trim(),
       cargo: contatoForm.cargo.trim() || null,
-      telefone: contatoForm.telefone.trim() || null,
+      telefone: normalizeBRPhone(contatoForm.telefone) || null,
       email: contatoForm.email.trim() || null,
       decisor: contatoForm.decisor,
       ativo: contatoForm.ativo,

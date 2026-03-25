@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ExternalLink, Plus, Phone, Building2, Clock, Search, X, Star, User, CheckCircle2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, normalizeBRPhone } from "@/lib/utils";
 import { ChatConversa, STATUS_LABELS, ChatStatus } from "../types";
 import { formatarTelefone, tempoRelativo } from "../helpers";
 import { useChatHistorico } from "../useChatQueries";
@@ -143,11 +143,11 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
 
     if (existing && existing.length > 0) return; // already exists
 
-    // Create contact record
+    // Create contact record with normalized phone
     await supabase.from("cliente_contatos").insert({
       cliente_id: clienteId,
       nome: conversa.nome_cliente || "Contato via Chat",
-      telefone: conversa.numero_cliente,
+      telefone: normalizeBRPhone(conversa.numero_cliente),
       decisor: false,
       ativo: true,
     });
