@@ -38,8 +38,6 @@ import { normalizeBRPhone } from "@/lib/utils";
 function normalizePhone(phone: string | null): string {
   return normalizeBRPhone(phone);
 }
-  return phone.replace(/\D/g, "");
-}
 
 const ITEMS_PER_PAGE = 20;
 
