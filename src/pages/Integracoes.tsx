@@ -1175,6 +1175,13 @@ export default function Integracoes() {
         onOpenChange={(v) => { setAsaasDialogOpen(v); if (!v) loadConfigs(); }}
       />
 
+      {/* R2 Dialog */}
+      <R2ConfigDialog
+        open={r2DialogOpen}
+        onOpenChange={(v) => { setR2DialogOpen(v); if (!v) loadConfigs(); }}
+        initialConfig={r2Config}
+      />
+
       {/* Generic Dialog */}
       {selectedDef && (
         <ConfigDialog
