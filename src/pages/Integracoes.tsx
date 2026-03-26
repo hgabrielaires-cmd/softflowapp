@@ -1043,15 +1043,20 @@ export default function Integracoes() {
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [asaasDialogOpen, setAsaasDialogOpen] = useState(false);
 
+  const [r2DialogOpen, setR2DialogOpen] = useState(false);
+  const [r2Config, setR2Config] = useState<any>(null);
+
   async function loadConfigs() {
-    const [{ data, error }, { data: asaasData }] = await Promise.all([
+    const [{ data, error }, { data: asaasData }, { data: r2Data }] = await Promise.all([
       supabase.from("integracoes_config").select("*"),
       supabase.from("asaas_config").select("*"),
+      supabase.from("r2_config").select("*").limit(1),
     ]);
     if (!error && data) {
       setConfigs(data as IntegrationConfig[]);
     }
     setAsaasConfigs(asaasData || []);
+    setR2Config((r2Data && r2Data.length > 0) ? r2Data[0] : null);
     setLoading(false);
   }
 
