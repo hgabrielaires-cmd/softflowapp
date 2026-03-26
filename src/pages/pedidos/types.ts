@@ -122,8 +122,8 @@ export interface FormState {
 export interface DraftComentario {
   texto: string;
   prioridade: string;
-  arquivo: File | null;
-  arquivo_nome: string | null;
+  arquivos: File[];
+  arquivos_nomes: string[];
 }
 
 export interface ClienteFormState {
