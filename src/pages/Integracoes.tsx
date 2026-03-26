@@ -1148,6 +1148,8 @@ export default function Integracoes() {
                     setWhatsappDialogOpen(true);
                   } else if (def.key === "asaas") {
                     setAsaasDialogOpen(true);
+                  } else if (def.key === "r2") {
+                    setR2DialogOpen(true);
                   } else {
                     setSelectedDef(def);
                     setDialogOpen(true);
