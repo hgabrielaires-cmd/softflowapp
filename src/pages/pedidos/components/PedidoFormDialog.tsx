@@ -1041,10 +1041,14 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                         </div>
                       </div>
                       <p className="text-xs whitespace-pre-wrap">{dc.texto}</p>
-                      {dc.arquivo_nome && (
-                        <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
-                          <Paperclip className="h-3 w-3" /> {dc.arquivo_nome}
-                        </span>
+                      {dc.arquivos_nomes.length > 0 && (
+                        <div className="space-y-0.5">
+                          {dc.arquivos_nomes.map((nome, fi) => (
+                            <span key={fi} className="inline-flex items-center gap-1 text-[10px] text-muted-foreground mr-2">
+                              <Paperclip className="h-3 w-3" /> {nome}
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
                   );
