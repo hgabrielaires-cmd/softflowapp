@@ -74,6 +74,12 @@ const navGroups: NavGroup[] = [
     items: [
       { icon: <Calendar className="h-4 w-4" />, label: "Painel de Atendimento", to: "/fila-agendamento", permKey: "menu.painel_atendimento" },
       { icon: <Calendar className="h-4 w-4" />, label: "Agenda", to: "/agenda", permKey: "menu.agenda" },
+    ],
+  },
+  {
+    groupLabel: "Helpdesk",
+    groupIcon: <Ticket className="h-4 w-4" />,
+    items: [
       { icon: <Ticket className="h-4 w-4" />, label: "Tickets", to: "/tickets", permKey: "menu.tickets" },
     ],
   },
