@@ -4721,6 +4721,42 @@ export type Database = {
         }
         Relationships: []
       }
+      r2_config: {
+        Row: {
+          access_key_id: string | null
+          ativo: boolean | null
+          bucket_name: string | null
+          created_at: string | null
+          endpoint: string | null
+          id: string
+          public_url: string | null
+          secret_access_key: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          access_key_id?: string | null
+          ativo?: boolean | null
+          bucket_name?: string | null
+          created_at?: string | null
+          endpoint?: string | null
+          id?: string
+          public_url?: string | null
+          secret_access_key?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          access_key_id?: string | null
+          ativo?: boolean | null
+          bucket_name?: string | null
+          created_at?: string | null
+          endpoint?: string | null
+          id?: string
+          public_url?: string | null
+          secret_access_key?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       role_permissions: {
         Row: {
           ativo: boolean
