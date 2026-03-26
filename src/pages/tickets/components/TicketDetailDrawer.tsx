@@ -222,6 +222,14 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
               </TabsList>
 
               <TabsContent value="descricao" className="space-y-4 mt-0">
+                {/* Título */}
+                <div>
+                  <h4 className="text-sm font-semibold mb-1">Título</h4>
+                  <div className="text-sm bg-muted/30 rounded-lg p-3">
+                    {ticket.titulo || "Sem título"}
+                  </div>
+                </div>
+
                 {/* Description */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
