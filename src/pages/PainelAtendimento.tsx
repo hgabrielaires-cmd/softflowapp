@@ -695,9 +695,6 @@ export default function PainelAtendimento() {
                                 {statusAtiv === "em_andamento" && (
                                   <Badge className="text-[9px] px-1.5 py-0 bg-emerald-500 text-white border-emerald-500">Em andamento</Badge>
                                 )}
-                                {statusAtiv === "em_andamento" && (
-                                  <Badge className="text-[9px] px-1.5 py-0 bg-emerald-500 text-white border-emerald-500">Em andamento</Badge>
-                                )}
                                 {statusAtiv === "em_andamento" && atividade.horas_estimadas > 0 && execAtiv?.iniciado_em && (() => {
                                   const horasDecorridas = (Date.now() - new Date(execAtiv.iniciado_em).getTime()) / (1000 * 60 * 60);
                                   if (horasDecorridas <= atividade.horas_estimadas) return null;
