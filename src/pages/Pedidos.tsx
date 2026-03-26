@@ -146,60 +146,82 @@ export default function Pedidos() {
   const [openComentarioDialog, setOpenComentarioDialog] = useState(false);
   const [draftTexto, setDraftTexto] = useState("");
   const [draftPrioridade, setDraftPrioridade] = useState("normal");
-  const [draftArquivo, setDraftArquivo] = useState<File | null>(null);
+  const [draftArquivos, setDraftArquivos] = useState<File[]>([]);
   const draftFileRef = useRef<HTMLInputElement>(null);
   const [editingDraftIdx, setEditingDraftIdx] = useState<number | null>(null);
 
 
   function handleAddDraftComentario() {
     if (!draftTexto.trim()) { toast.error("Digite um comentário."); return; }
+    const newDraft: DraftComentario = {
+      texto: draftTexto.trim(),
+      prioridade: draftPrioridade,
+      arquivos: draftArquivos,
+      arquivos_nomes: draftArquivos.map(f => f.name),
+    };
     if (editingDraftIdx !== null) {
-      setDraftComentarios(prev => prev.map((c, i) => i === editingDraftIdx ? { texto: draftTexto.trim(), prioridade: draftPrioridade, arquivo: draftArquivo, arquivo_nome: draftArquivo?.name || null } : c));
+      setDraftComentarios(prev => prev.map((c, i) => i === editingDraftIdx ? newDraft : c));
     } else {
-      setDraftComentarios(prev => [...prev, { texto: draftTexto.trim(), prioridade: draftPrioridade, arquivo: draftArquivo, arquivo_nome: draftArquivo?.name || null }]);
+      setDraftComentarios(prev => [...prev, newDraft]);
     }
     setDraftTexto("");
     setDraftPrioridade("normal");
-    setDraftArquivo(null);
+    setDraftArquivos([]);
     setEditingDraftIdx(null);
     if (draftFileRef.current) draftFileRef.current.value = "";
     setOpenComentarioDialog(false);
   }
 
-  function handleDraftFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > MAX_FILE_SIZE_DRAFT) {
-      toast.error("Arquivo excede o limite de 11 MB.");
-      e.target.value = "";
-      return;
-    }
-    setDraftArquivo(file);
-  }
-
   async function salvarDraftComentarios(pedidoId: string) {
     if (!user || draftComentarios.length === 0) return;
     for (const draft of draftComentarios) {
-      let anexo_url: string | null = null;
-      let anexo_nome: string | null = null;
-      if (draft.arquivo) {
-        const ext = draft.arquivo.name.split(".").pop();
-        const path = `${pedidoId}/${crypto.randomUUID()}.${ext}`;
-        const { error: uploadErr } = await supabase.storage.from("pedido-anexos").upload(path, draft.arquivo);
-        if (!uploadErr) {
-          const { data: signedData } = await supabase.storage.from("pedido-anexos").createSignedUrl(path, 60 * 60 * 24 * 365);
-          anexo_url = signedData?.signedUrl || null;
-          anexo_nome = draft.arquivo.name;
+      // Upload all files and collect URLs
+      const anexoUrls: string[] = [];
+      const anexoNomes: string[] = [];
+      for (const arquivo of draft.arquivos) {
+        try {
+          const arquivo_base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve((reader.result as string).split(",")[1]);
+            reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
+            reader.readAsDataURL(arquivo);
+          });
+          const { data: r2Data, error: r2Error } = await supabase.functions.invoke("r2-upload", {
+            body: { arquivo_base64, nome_arquivo: arquivo.name, mime_type: arquivo.type, pasta: "pedidos" },
+          });
+          if (!r2Error && r2Data?.sucesso) {
+            anexoUrls.push(r2Data.url);
+            anexoNomes.push(arquivo.name);
+          }
+        } catch (err) {
+          console.error("Erro upload anexo draft:", err);
         }
       }
+
+      // First comment gets first attachment, then create extra comments for remaining
+      const firstUrl = anexoUrls.length > 0 ? anexoUrls[0] : null;
+      const firstName = anexoNomes.length > 0 ? anexoNomes[0] : null;
+
       await supabase.from("pedido_comentarios").insert({
         pedido_id: pedidoId,
         user_id: user.id,
         texto: draft.texto,
         prioridade: draft.prioridade,
-        anexo_url,
-        anexo_nome,
+        anexo_url: firstUrl,
+        anexo_nome: firstName,
       });
+
+      // Insert additional comments for remaining attachments
+      for (let i = 1; i < anexoUrls.length; i++) {
+        await supabase.from("pedido_comentarios").insert({
+          pedido_id: pedidoId,
+          user_id: user.id,
+          texto: `📎 Anexo adicional`,
+          prioridade: draft.prioridade,
+          anexo_url: anexoUrls[i],
+          anexo_nome: anexoNomes[i],
+        });
+      }
 
       // Extract @mentions and create notifications
       const mentionRegex = /@([\w\u00C0-\u024F]+)/g;
@@ -1324,7 +1346,7 @@ export default function Pedidos() {
         setEditingDraftIdx={setEditingDraftIdx}
         setDraftTexto={setDraftTexto}
         setDraftPrioridade={setDraftPrioridade}
-        setDraftArquivo={setDraftArquivo}
+        setDraftArquivos={setDraftArquivos}
         clientes={clientes}
       />
 
@@ -1336,12 +1358,11 @@ export default function Pedidos() {
         setTexto={setDraftTexto}
         prioridade={draftPrioridade}
         setPrioridade={setDraftPrioridade}
-        arquivo={draftArquivo}
-        setArquivo={setDraftArquivo}
+        arquivos={draftArquivos}
+        setArquivos={setDraftArquivos}
         fileRef={draftFileRef}
         isEditing={editingDraftIdx !== null}
         onSave={handleAddDraftComentario}
-        onFileChange={handleDraftFileChange}
         users={allMentionUsers}
       />
       <ClienteRapidoDialog

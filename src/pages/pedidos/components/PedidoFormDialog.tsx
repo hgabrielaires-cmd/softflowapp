@@ -141,7 +141,7 @@ export interface PedidoFormDialogProps {
   setEditingDraftIdx: (v: number | null) => void;
   setDraftTexto: (v: string) => void;
   setDraftPrioridade: (v: string) => void;
-  setDraftArquivo: (v: File | null) => void;
+  setDraftArquivos: (v: File[]) => void;
 
   // Data for lists
   clientes: Cliente[];
@@ -178,7 +178,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
     filialParametros,
     draftComentarios, setDraftComentarios,
     setOpenComentarioDialog, setEditingDraftIdx,
-    setDraftTexto, setDraftPrioridade, setDraftArquivo,
+    setDraftTexto, setDraftPrioridade, setDraftArquivos,
     clientes,
   } = props;
 
@@ -996,7 +996,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                   setEditingDraftIdx(null);
                   setDraftTexto("");
                   setDraftPrioridade("normal");
-                  setDraftArquivo(null);
+                  setDraftArquivos([]);
                   setOpenComentarioDialog(true);
                 }}
               >
@@ -1022,7 +1022,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                               setEditingDraftIdx(idx);
                               setDraftTexto(dc.texto);
                               setDraftPrioridade(dc.prioridade);
-                              setDraftArquivo(dc.arquivo);
+                              setDraftArquivos(dc.arquivos);
                               setOpenComentarioDialog(true);
                             }}
                           >
@@ -1041,10 +1041,14 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                         </div>
                       </div>
                       <p className="text-xs whitespace-pre-wrap">{dc.texto}</p>
-                      {dc.arquivo_nome && (
-                        <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
-                          <Paperclip className="h-3 w-3" /> {dc.arquivo_nome}
-                        </span>
+                      {dc.arquivos_nomes.length > 0 && (
+                        <div className="space-y-0.5">
+                          {dc.arquivos_nomes.map((nome, fi) => (
+                            <span key={fi} className="inline-flex items-center gap-1 text-[10px] text-muted-foreground mr-2">
+                              <Paperclip className="h-3 w-3" /> {nome}
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
                   );
