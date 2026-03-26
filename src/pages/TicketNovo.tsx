@@ -250,9 +250,9 @@ export default function TicketNovo() {
 
         {/* Body: two columns */}
         <div className="flex-1 overflow-y-auto">
-          <div className="flex gap-4 p-4 min-h-full">
+          <div className="flex flex-col lg:flex-row gap-4 p-4 min-h-full">
             {/* Left 60% */}
-            <div className="flex-1 basis-[60%] space-y-4">
+            <div className="flex-1 lg:basis-[60%] space-y-4">
               {/* Row 1: Nº + Modo */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -524,7 +524,7 @@ export default function TicketNovo() {
             </div>
 
             {/* Right 40% */}
-            <div className="basis-[40%] space-y-4">
+            <div className="w-full lg:basis-[40%] space-y-4">
               {/* Vinculações */}
               <Card>
                 <CardHeader className="py-3 px-4">
