@@ -33,11 +33,13 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Maximize2, X, Building2, FileText, Headphones, Calendar as CalendarIcon,
   User, Plus, Link2, Paperclip, Download, Edit2, MessageSquare,
   ChevronDown, Phone, Mail, Star, CalendarDays, Clock, Trash2,
-  Play, PauseCircle, CheckCircle,
+  Play, PauseCircle, CheckCircle, Upload, Loader2,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { format, isSameDay } from "date-fns";
