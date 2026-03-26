@@ -794,11 +794,33 @@ Deno.serve(async (req) => {
         );
       }
 
+      const contentType = pdfResponse.headers.get("content-type") || "";
+      if (!contentType.includes("pdf")) {
+        const bodyText = await pdfResponse.text();
+        console.error("Browserless retornou content-type inesperado:", contentType, bodyText.substring(0, 500));
+        return new Response(
+          JSON.stringify({ error: `Browserless não retornou PDF. Content-Type: ${contentType}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const pdfBuffer = await pdfResponse.arrayBuffer();
       const pdfBytes = new Uint8Array(pdfBuffer);
+      console.log("PDF gerado com sucesso, tamanho:", pdfBytes.length, "bytes");
+
+      if (pdfBytes.length < 100) {
+        console.error("PDF gerado é muito pequeno:", pdfBytes.length);
+        return new Response(
+          JSON.stringify({ error: "PDF gerado está vazio ou corrompido" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const outputPath = `${contrato_id}.pdf`;
 
-      // Upload para storage
+      // Remover arquivo existente antes do upload (evita "Bad Request" em upsert)
+      await supabase.storage.from("contratos-pdf").remove([outputPath]);
+
       const { error: uploadError } = await supabase.storage
         .from("contratos-pdf")
         .upload(outputPath, pdfBytes, {
@@ -807,6 +829,7 @@ Deno.serve(async (req) => {
         });
 
       if (uploadError) {
+        console.error("Storage upload error:", JSON.stringify(uploadError));
         return new Response(
           JSON.stringify({ error: "Erro ao salvar PDF: " + uploadError.message }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
