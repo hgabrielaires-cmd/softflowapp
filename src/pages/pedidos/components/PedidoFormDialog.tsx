@@ -178,7 +178,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
     filialParametros,
     draftComentarios, setDraftComentarios,
     setOpenComentarioDialog, setEditingDraftIdx,
-    setDraftTexto, setDraftPrioridade, setDraftArquivo,
+    setDraftTexto, setDraftPrioridade, setDraftArquivos,
     clientes,
   } = props;
 
