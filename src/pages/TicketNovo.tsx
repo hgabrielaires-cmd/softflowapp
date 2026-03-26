@@ -524,7 +524,7 @@ export default function TicketNovo() {
             </div>
 
             {/* Right 40% */}
-            <div className="basis-[40%] space-y-4">
+            <div className="w-full lg:basis-[40%] space-y-4">
               {/* Vinculações */}
               <Card>
                 <CardHeader className="py-3 px-4">
