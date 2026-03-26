@@ -1022,7 +1022,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                               setEditingDraftIdx(idx);
                               setDraftTexto(dc.texto);
                               setDraftPrioridade(dc.prioridade);
-                              setDraftArquivo(dc.arquivo);
+                              setDraftArquivos(dc.arquivos);
                               setOpenComentarioDialog(true);
                             }}
                           >
