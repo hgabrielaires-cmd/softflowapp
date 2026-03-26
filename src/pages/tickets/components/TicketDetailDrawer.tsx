@@ -90,7 +90,6 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   const [showResolucaoDialog, setShowResolucaoDialog] = useState(false);
   const [resolucaoText, setResolucaoText] = useState("");
   const [uploadingAnexo, setUploadingAnexo] = useState(false);
-  const anexoFileRef = useState<HTMLInputElement | null>(null);
 
   const mentionUsers = profiles.map((p) => ({ id: p.user_id, user_id: p.user_id, full_name: p.full_name }));
 
