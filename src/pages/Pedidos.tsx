@@ -175,25 +175,40 @@ export default function Pedidos() {
   async function salvarDraftComentarios(pedidoId: string) {
     if (!user || draftComentarios.length === 0) return;
     for (const draft of draftComentarios) {
-      let anexo_url: string | null = null;
-      let anexo_nome: string | null = null;
-      if (draft.arquivo) {
-        const ext = draft.arquivo.name.split(".").pop();
-        const path = `${pedidoId}/${crypto.randomUUID()}.${ext}`;
-        const { error: uploadErr } = await supabase.storage.from("pedido-anexos").upload(path, draft.arquivo);
-        if (!uploadErr) {
-          const { data: signedData } = await supabase.storage.from("pedido-anexos").createSignedUrl(path, 60 * 60 * 24 * 365);
-          anexo_url = signedData?.signedUrl || null;
-          anexo_nome = draft.arquivo.name;
+      // Upload all files and collect URLs
+      const anexoUrls: string[] = [];
+      const anexoNomes: string[] = [];
+      for (const arquivo of draft.arquivos) {
+        try {
+          const arquivo_base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve((reader.result as string).split(",")[1]);
+            reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
+            reader.readAsDataURL(arquivo);
+          });
+          const { data: r2Data, error: r2Error } = await supabase.functions.invoke("r2-upload", {
+            body: { arquivo_base64, nome_arquivo: arquivo.name, mime_type: arquivo.type, pasta: "pedidos" },
+          });
+          if (!r2Error && r2Data?.sucesso) {
+            anexoUrls.push(r2Data.url);
+            anexoNomes.push(arquivo.name);
+          }
+        } catch (err) {
+          console.error("Erro upload anexo draft:", err);
         }
       }
+
+      // First comment gets first attachment, then create extra comments for remaining
+      const firstUrl = anexoUrls.length > 0 ? anexoUrls[0] : null;
+      const firstName = anexoNomes.length > 0 ? anexoNomes[0] : null;
+
       await supabase.from("pedido_comentarios").insert({
         pedido_id: pedidoId,
         user_id: user.id,
         texto: draft.texto,
         prioridade: draft.prioridade,
-        anexo_url,
-        anexo_nome,
+        anexo_url: firstUrl,
+        anexo_nome: firstName,
       });
 
       // Extract @mentions and create notifications
