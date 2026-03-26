@@ -146,35 +146,30 @@ export default function Pedidos() {
   const [openComentarioDialog, setOpenComentarioDialog] = useState(false);
   const [draftTexto, setDraftTexto] = useState("");
   const [draftPrioridade, setDraftPrioridade] = useState("normal");
-  const [draftArquivo, setDraftArquivo] = useState<File | null>(null);
+  const [draftArquivos, setDraftArquivos] = useState<File[]>([]);
   const draftFileRef = useRef<HTMLInputElement>(null);
   const [editingDraftIdx, setEditingDraftIdx] = useState<number | null>(null);
 
 
   function handleAddDraftComentario() {
     if (!draftTexto.trim()) { toast.error("Digite um comentário."); return; }
+    const newDraft: DraftComentario = {
+      texto: draftTexto.trim(),
+      prioridade: draftPrioridade,
+      arquivos: draftArquivos,
+      arquivos_nomes: draftArquivos.map(f => f.name),
+    };
     if (editingDraftIdx !== null) {
-      setDraftComentarios(prev => prev.map((c, i) => i === editingDraftIdx ? { texto: draftTexto.trim(), prioridade: draftPrioridade, arquivo: draftArquivo, arquivo_nome: draftArquivo?.name || null } : c));
+      setDraftComentarios(prev => prev.map((c, i) => i === editingDraftIdx ? newDraft : c));
     } else {
-      setDraftComentarios(prev => [...prev, { texto: draftTexto.trim(), prioridade: draftPrioridade, arquivo: draftArquivo, arquivo_nome: draftArquivo?.name || null }]);
+      setDraftComentarios(prev => [...prev, newDraft]);
     }
     setDraftTexto("");
     setDraftPrioridade("normal");
-    setDraftArquivo(null);
+    setDraftArquivos([]);
     setEditingDraftIdx(null);
     if (draftFileRef.current) draftFileRef.current.value = "";
     setOpenComentarioDialog(false);
-  }
-
-  function handleDraftFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > MAX_FILE_SIZE_DRAFT) {
-      toast.error("Arquivo excede o limite de 11 MB.");
-      e.target.value = "";
-      return;
-    }
-    setDraftArquivo(file);
   }
 
   async function salvarDraftComentarios(pedidoId: string) {
