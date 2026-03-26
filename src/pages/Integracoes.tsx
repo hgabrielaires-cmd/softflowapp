@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Clock, ExternalLink, Eye, EyeOff, Loader2, QrCode, Wifi, WifiOff, RefreshCw, Plus, Trash2, Building2 } from "lucide-react";
+import { CheckCircle2, Clock, ExternalLink, Eye, EyeOff, Loader2, QrCode, Wifi, WifiOff, RefreshCw, Plus, Trash2, Building2, Cloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -105,6 +105,22 @@ const integrationDefs: IntegrationDef[] = [
       "Token individual por filial (CNPJ)",
       "Modo sandbox e produção",
       "Webhooks para atualização de status",
+    ],
+  },
+  {
+    key: "r2",
+    icon: <Cloud className="h-16 w-16" />,
+    hasLogo: false,
+    title: "Cloudflare R2",
+    description: "Armazenamento de arquivos e documentos",
+    accentColor: "bg-orange-500",
+    tokenLabel: "",
+    tokenPlaceholder: "",
+    details: [
+      "Armazenamento de anexos de tickets",
+      "Documentos e cardápios de clientes",
+      "Links diretos para download pelo usuário",
+      "10GB gratuitos por mês",
     ],
   },
 ];
@@ -1016,6 +1032,189 @@ function AsaasConfigDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   );
 }
 
+// ── R2 Config Dialog ──
+
+interface R2ConfigDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initialConfig: any;
+}
+
+function R2ConfigDialog({ open, onOpenChange, initialConfig }: R2ConfigDialogProps) {
+  const [ativo, setAtivo] = useState(false);
+  const [endpoint, setEndpoint] = useState("");
+  const [accessKeyId, setAccessKeyId] = useState("");
+  const [secretAccessKey, setSecretAccessKey] = useState("");
+  const [bucketName, setBucketName] = useState("");
+  const [publicUrl, setPublicUrl] = useState("");
+  const [showAccessKey, setShowAccessKey] = useState(false);
+  const [showSecretKey, setShowSecretKey] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [existingId, setExistingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialConfig) {
+      setAtivo(initialConfig.ativo ?? false);
+      setEndpoint(initialConfig.endpoint || "");
+      setAccessKeyId(initialConfig.access_key_id || "");
+      setSecretAccessKey(initialConfig.secret_access_key || "");
+      setBucketName(initialConfig.bucket_name || "");
+      setPublicUrl(initialConfig.public_url || "");
+      setExistingId(initialConfig.id || null);
+    } else {
+      setAtivo(false);
+      setEndpoint("");
+      setAccessKeyId("");
+      setSecretAccessKey("");
+      setBucketName("");
+      setPublicUrl("");
+      setExistingId(null);
+    }
+    setShowAccessKey(false);
+    setShowSecretKey(false);
+  }, [initialConfig, open]);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const payload = {
+        ativo,
+        endpoint: endpoint.trim() || null,
+        access_key_id: accessKeyId.trim() || null,
+        secret_access_key: secretAccessKey.trim() || null,
+        bucket_name: bucketName.trim() || null,
+        public_url: publicUrl.trim() || null,
+      };
+      if (existingId) {
+        const { error } = await supabase.from("r2_config").update(payload).eq("id", existingId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("r2_config").insert(payload);
+        if (error) throw error;
+      }
+      toast.success("Configuração do Cloudflare R2 salva!");
+      onOpenChange(false);
+    } catch (err: any) {
+      toast.error("Erro ao salvar: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-orange-500 flex items-center justify-center">
+              <Cloud className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <DialogTitle>Cloudflare R2</DialogTitle>
+              <DialogDescription>Armazenamento de arquivos e documentos</DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-5 py-4">
+          {/* Toggle ativo */}
+          <div className="flex items-center justify-between rounded-lg border border-border p-4">
+            <div>
+              <Label className="text-sm font-medium">Integração ativa</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {ativo ? "O armazenamento R2 está habilitado" : "O armazenamento R2 está desabilitado"}
+              </p>
+            </div>
+            <Switch checked={ativo} onCheckedChange={setAtivo} />
+          </div>
+
+          {/* Endpoint */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Endpoint S3</Label>
+            <Input
+              value={endpoint}
+              onChange={(e) => setEndpoint(e.target.value)}
+              placeholder="https://xxx.r2.cloudflarestorage.com"
+            />
+            <p className="text-xs text-muted-foreground">URL S3 do bucket Cloudflare R2</p>
+          </div>
+
+          {/* Access Key ID */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Access Key ID</Label>
+            <div className="relative">
+              <Input
+                type={showAccessKey ? "text" : "password"}
+                value={accessKeyId}
+                onChange={(e) => setAccessKeyId(e.target.value)}
+                placeholder="Access Key ID"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowAccessKey(!showAccessKey)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showAccessKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Secret Access Key */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Secret Access Key</Label>
+            <div className="relative">
+              <Input
+                type={showSecretKey ? "text" : "password"}
+                value={secretAccessKey}
+                onChange={(e) => setSecretAccessKey(e.target.value)}
+                placeholder="Secret Access Key"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowSecretKey(!showSecretKey)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showSecretKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Bucket Name */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Bucket Name</Label>
+            <Input
+              value={bucketName}
+              onChange={(e) => setBucketName(e.target.value)}
+              placeholder="softflow-arquivos"
+            />
+          </div>
+
+          {/* Public URL */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">URL Pública</Label>
+            <Input
+              value={publicUrl}
+              onChange={(e) => setPublicUrl(e.target.value)}
+              placeholder="https://pub-xxx.r2.dev"
+            />
+            <p className="text-xs text-muted-foreground">URL pública para acesso direto aos arquivos</p>
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+            Salvar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Page ──
 
 export default function Integracoes() {
@@ -1027,15 +1226,20 @@ export default function Integracoes() {
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [asaasDialogOpen, setAsaasDialogOpen] = useState(false);
 
+  const [r2DialogOpen, setR2DialogOpen] = useState(false);
+  const [r2Config, setR2Config] = useState<any>(null);
+
   async function loadConfigs() {
-    const [{ data, error }, { data: asaasData }] = await Promise.all([
+    const [{ data, error }, { data: asaasData }, { data: r2Data }] = await Promise.all([
       supabase.from("integracoes_config").select("*"),
       supabase.from("asaas_config").select("*"),
+      supabase.from("r2_config").select("*").limit(1),
     ]);
     if (!error && data) {
       setConfigs(data as IntegrationConfig[]);
     }
     setAsaasConfigs(asaasData || []);
+    setR2Config((r2Data && r2Data.length > 0) ? r2Data[0] : null);
     setLoading(false);
   }
 
@@ -1052,6 +1256,18 @@ export default function Integracoes() {
           id: "asaas",
           nome: "asaas",
           ativo: hasActive,
+          token: "configured",
+          server_url: null,
+        } as IntegrationConfig;
+      }
+      return null;
+    }
+    if (key === "r2") {
+      if (r2Config) {
+        return {
+          id: "r2",
+          nome: "r2",
+          ativo: r2Config.ativo === true,
           token: "configured",
           server_url: null,
         } as IntegrationConfig;
@@ -1115,6 +1331,8 @@ export default function Integracoes() {
                     setWhatsappDialogOpen(true);
                   } else if (def.key === "asaas") {
                     setAsaasDialogOpen(true);
+                  } else if (def.key === "r2") {
+                    setR2DialogOpen(true);
                   } else {
                     setSelectedDef(def);
                     setDialogOpen(true);
@@ -1138,6 +1356,13 @@ export default function Integracoes() {
       <AsaasConfigDialog
         open={asaasDialogOpen}
         onOpenChange={(v) => { setAsaasDialogOpen(v); if (!v) loadConfigs(); }}
+      />
+
+      {/* R2 Dialog */}
+      <R2ConfigDialog
+        open={r2DialogOpen}
+        onOpenChange={(v) => { setR2DialogOpen(v); if (!v) loadConfigs(); }}
+        initialConfig={r2Config}
       />
 
       {/* Generic Dialog */}
