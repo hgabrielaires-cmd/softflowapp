@@ -274,29 +274,24 @@ export function useClienteForm({
     }
     setSaving(true);
 
-    // ── Verificação de CNPJ duplicado ──────────────────────────────────
-    if (!editing) {
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("permitir_cnpj_duplicado")
-        .eq("user_id", profile?.user_id || "")
-        .maybeSingle();
+    // ── Verificação de CNPJ duplicado (sempre bloqueia) ───────────────
+    {
+      const cnpjLimpo = form.cnpj_cpf.trim();
+      let query = supabase
+        .from("clientes")
+        .select("id, nome_fantasia")
+        .eq("cnpj_cpf", cnpjLimpo);
 
-      const podeduplicar = isAdmin || (profileData as any)?.permitir_cnpj_duplicado === true;
+      if (editing) {
+        query = query.neq("id", editing.id);
+      }
 
-      if (!podeduplicar) {
-        const cnpjLimpo = form.cnpj_cpf.trim();
-        const { data: existente } = await supabase
-          .from("clientes")
-          .select("id, nome_fantasia")
-          .eq("cnpj_cpf", cnpjLimpo)
-          .maybeSingle();
+      const { data: existente } = await query.maybeSingle();
 
-        if (existente) {
-          toast.error(`CNPJ/CPF já cadastrado para o cliente "${existente.nome_fantasia}". Para cadastrar com CNPJ duplicado, solicite permissão ao administrador.`);
-          setSaving(false);
-          return;
-        }
+      if (existente) {
+        toast.error(`CNPJ/CPF já cadastrado para o cliente "${existente.nome_fantasia}".`);
+        setSaving(false);
+        return;
       }
     }
 
