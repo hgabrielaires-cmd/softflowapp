@@ -179,20 +179,29 @@ export function PedidoComentarios({ pedidoId, readOnly = false }: Props) {
 
     try {
       if (arquivo) {
-        const ext = arquivo.name.split(".").pop();
-        const path = `${pedidoId}/${crypto.randomUUID()}.${ext}`;
-        const { error: uploadErr } = await supabase.storage
-          .from("pedido-anexos")
-          .upload(path, arquivo);
-        if (uploadErr) throw uploadErr;
-        
-        const { data: urlData } = supabase.storage
-          .from("pedido-anexos")
-          .getPublicUrl(path);
-        const { data: signedData } = await supabase.storage
-          .from("pedido-anexos")
-          .createSignedUrl(path, 60 * 60 * 24 * 365);
-        anexo_url = signedData?.signedUrl || urlData.publicUrl;
+        const arquivo_base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(",")[1]);
+          };
+          reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
+          reader.readAsDataURL(arquivo);
+        });
+
+        const { data: r2Data, error: r2Error } = await supabase.functions.invoke("r2-upload", {
+          body: {
+            arquivo_base64,
+            nome_arquivo: arquivo.name,
+            mime_type: arquivo.type,
+            pasta: "pedidos",
+          },
+        });
+
+        if (r2Error) throw new Error(r2Error.message || "Erro no upload");
+        if (!r2Data?.sucesso) throw new Error(r2Data?.erro || "Erro no upload R2");
+
+        anexo_url = r2Data.url;
         anexo_nome = arquivo.name;
       }
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,11 +34,13 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Maximize2, X, Building2, FileText, Headphones, Calendar as CalendarIcon,
   User, Plus, Link2, Paperclip, Download, Edit2, MessageSquare,
   ChevronDown, Phone, Mail, Star, CalendarDays, Clock, Trash2,
-  Play, PauseCircle, CheckCircle,
+  Play, PauseCircle, CheckCircle, Upload, Loader2,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { format, isSameDay } from "date-fns";
@@ -54,7 +57,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   const { user, roles } = useAuth();
   const userId = user?.id || "";
   const { canEditar } = useCrudPermissions("tickets", roles);
-
+  const queryClient = useQueryClient();
   const { data: ticket } = useTicketDetail(ticketId);
   const { data: comentarios = [] } = useTicketComentarios(ticketId);
   const { data: curtidas = [] } = useTicketCurtidas(ticketId);
@@ -87,6 +90,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   const [showPausarDialog, setShowPausarDialog] = useState(false);
   const [showResolucaoDialog, setShowResolucaoDialog] = useState(false);
   const [resolucaoText, setResolucaoText] = useState("");
+  const [uploadingAnexo, setUploadingAnexo] = useState(false);
 
   const mentionUsers = profiles.map((p) => ({ id: p.user_id, user_id: p.user_id, full_name: p.full_name }));
 
@@ -575,9 +579,71 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
 
               {/* Anexos */}
               <div className="bg-card rounded-xl border p-4 space-y-2">
-                <h4 className="text-sm font-semibold flex items-center gap-1">
-                  <Paperclip className="h-3 w-3" /> Anexos
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold flex items-center gap-1">
+                    <Paperclip className="h-3 w-3" /> Anexos
+                  </h4>
+                  {canEditar && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        disabled={uploadingAnexo}
+                        onClick={() => {
+                          const input = document.createElement("input");
+                          input.type = "file";
+                          input.onchange = async (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0];
+                            if (!file) return;
+                            if (file.size > 10 * 1024 * 1024) {
+                              toast.error("Arquivo excede o limite de 10MB.");
+                              return;
+                            }
+                            setUploadingAnexo(true);
+                            try {
+                              const arquivo_base64 = await new Promise<string>((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onload = () => resolve((reader.result as string).split(",")[1]);
+                                reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
+                                reader.readAsDataURL(file);
+                              });
+
+                              const { data: r2Data, error: r2Error } = await supabase.functions.invoke("r2-upload", {
+                                body: {
+                                  arquivo_base64,
+                                  nome_arquivo: file.name,
+                                  mime_type: file.type,
+                                  pasta: "tickets",
+                                },
+                              });
+
+                              if (r2Error) throw new Error(r2Error.message || "Erro no upload");
+                              if (!r2Data?.sucesso) throw new Error(r2Data?.erro || "Erro no upload R2");
+
+                              await supabase.from("ticket_anexos").insert({
+                                ticket_id: ticket.id,
+                                nome: file.name,
+                                url: r2Data.url,
+                              });
+
+                              queryClient.invalidateQueries({ queryKey: ["ticket_anexos", ticket.id] });
+                              toast.success("Anexo enviado!");
+                            } catch (err: any) {
+                              toast.error("Erro ao enviar anexo");
+                              console.error(err);
+                            } finally {
+                              setUploadingAnexo(false);
+                            }
+                          };
+                          input.click();
+                        }}
+                      >
+                        {uploadingAnexo ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                      </Button>
+                    </>
+                  )}
+                </div>
                 {anexos.map((a) => (
                   <div key={a.id} className="text-xs flex items-center gap-2">
                     <FileText className="h-3 w-3 text-muted-foreground" />

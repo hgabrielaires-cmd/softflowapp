@@ -78,9 +78,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!["tickets", "clientes"].includes(pasta)) {
+    if (!["tickets", "clientes", "pedidos"].includes(pasta)) {
       return new Response(
-        JSON.stringify({ sucesso: false, erro: "Pasta deve ser 'tickets' ou 'clientes'" }),
+        JSON.stringify({ sucesso: false, erro: "Pasta deve ser 'tickets', 'clientes' ou 'pedidos'" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
