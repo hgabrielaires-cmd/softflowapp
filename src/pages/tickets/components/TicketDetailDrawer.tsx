@@ -627,6 +627,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
                                 url: r2Data.url,
                               });
 
+                              queryClient.invalidateQueries({ queryKey: ["ticket_anexos", ticket.id] });
                               toast.success("Anexo enviado!");
                             } catch (err: any) {
                               toast.error("Erro ao enviar anexo");
