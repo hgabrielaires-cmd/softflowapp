@@ -648,20 +648,31 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
                   <div key={a.id} className="text-xs flex items-center gap-2">
                     <FileText className="h-3 w-3 text-muted-foreground" />
                     <span className="truncate flex-1">{a.nome}</span>
-                    <a href={a.url} download={a.nome} target="_blank" rel="noreferrer"
-                      onClick={(e) => {
+                    <a
+                      href={a.url}
+                      download={a.nome}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={async (e) => {
                         e.preventDefault();
-                        fetch(a.url)
-                          .then(res => res.blob())
-                          .then(blob => {
-                            const url = URL.createObjectURL(blob);
-                            const link = document.createElement("a");
-                            link.href = url;
-                            link.download = a.nome;
-                            link.click();
-                            URL.revokeObjectURL(url);
-                          })
-                          .catch(() => window.open(a.url, "_blank"));
+                        try {
+                          const key = new URL(a.url).pathname.replace(/^\//, "");
+                          const { data, error } = await supabase.functions.invoke("r2-download", {
+                            body: { key, filename: a.nome },
+                            responseType: "blob",
+                          } as any);
+
+                          if (error) throw error;
+                          const blob = data as Blob;
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement("a");
+                          link.href = url;
+                          link.download = a.nome;
+                          link.click();
+                          URL.revokeObjectURL(url);
+                        } catch {
+                          toast.error("Erro ao baixar anexo");
+                        }
                       }}
                     >
                       <Download className="h-3 w-3" />
