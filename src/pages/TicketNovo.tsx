@@ -505,7 +505,17 @@ export default function TicketNovo() {
                 </Select>
               </div>
 
-              {/* Row 6: Descrição */}
+              {/* Row 6: Título */}
+              <div>
+                <Label className="text-xs">Título do Ticket</Label>
+                <Input
+                  value={titulo}
+                  onChange={(e) => setTitulo(e.target.value)}
+                  placeholder="Digite o título do ticket..."
+                />
+              </div>
+
+              {/* Row 7: Descrição */}
               <div>
                 <Label className="text-xs">Descrição</Label>
                 <Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)}
