@@ -774,59 +774,105 @@ export default function Pedidos() {
   async function handleCnpjBlurCliente() {
     const cnpj = clienteForm.cnpj_cpf.replace(/\D/g, "");
     if (cnpj.length !== 14) return;
+
     setCnpjError("");
     setLoadingCnpj(true);
+
     try {
-      let data = null;
-      // Try BrasilAPI first
+      let data: any = null;
+
+      // 1) BrasilAPI
       try {
         const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
-        if (res.ok) data = await res.json();
-      } catch {}
-      // Fallback to ReceitaWS
+        if (res.ok) {
+          const d = await res.json();
+          data = {
+            razao_social: d.razao_social || "",
+            nome_fantasia: d.nome_fantasia || d.razao_social || "",
+            email: d.email || "",
+            telefone: `${d.ddd_telefone_1 || ""}${d.telefone_1 || ""}`.replace(/\D/g, ""),
+            municipio: d.municipio || "",
+            uf: d.uf || "",
+            logradouro: d.logradouro ? `${d.tipo_logradouro || ""} ${d.logradouro}`.trim() : "",
+            bairro: d.bairro || "",
+            cep: (d.cep || "").replace(/\D/g, ""),
+            numero: d.numero || "",
+            complemento: d.complemento || "",
+          };
+        }
+      } catch {
+        // fallback
+      }
+
+      // 2) publica.cnpj.ws (fallback principal no front-end por CORS)
       if (!data) {
         try {
-          const res2 = await fetch(`https://receitaws.com.br/v1/cnpj/${cnpj}`);
+          const res2 = await fetch(`https://publica.cnpj.ws/cnpj/${cnpj}`);
           if (res2.ok) {
             const d = await res2.json();
+            const est = d?.estabelecimento || {};
+            data = {
+              razao_social: d?.razao_social || "",
+              nome_fantasia: est?.nome_fantasia || d?.razao_social || "",
+              email: est?.email || "",
+              telefone: `${est?.ddd1 || ""}${est?.telefone1 || ""}`.replace(/\D/g, ""),
+              municipio: est?.cidade?.nome || "",
+              uf: est?.estado?.sigla || "",
+              logradouro: [est?.tipo_logradouro, est?.logradouro].filter(Boolean).join(" ").trim(),
+              bairro: est?.bairro || "",
+              cep: (est?.cep || "").replace(/\D/g, ""),
+              numero: est?.numero || "",
+              complemento: est?.complemento || "",
+            };
+          }
+        } catch {
+          // fallback
+        }
+      }
+
+      // 3) ReceitaWS (best effort)
+      if (!data) {
+        try {
+          const res3 = await fetch(`https://receitaws.com.br/v1/cnpj/${cnpj}`);
+          if (res3.ok) {
+            const d = await res3.json();
             if (d.status !== "ERROR") {
               data = {
                 razao_social: d.nome || "",
-                nome_fantasia: d.fantasia || "",
+                nome_fantasia: d.fantasia || d.nome || "",
                 email: d.email || "",
-                ddd_telefone_1: d.telefone ? d.telefone.split("/")[0].replace(/[^\d]/g, "").slice(0, 2) : "",
-                telefone_1: d.telefone ? d.telefone.split("/")[0].replace(/[^\d]/g, "").slice(2) : "",
+                telefone: (d.telefone || "").replace(/[^\d]/g, ""),
                 municipio: d.municipio || "",
                 uf: d.uf || "",
-                tipo_logradouro: "",
                 logradouro: d.logradouro || "",
                 bairro: d.bairro || "",
-                cep: d.cep ? d.cep.replace(/\D/g, "") : "",
+                cep: (d.cep || "").replace(/\D/g, ""),
+                numero: d.numero || "",
+                complemento: d.complemento || "",
               };
             }
           }
-        } catch {}
+        } catch {
+          // sem fallback adicional
+        }
       }
+
       if (!data) {
         setCnpjError("CNPJ não encontrado. Verifique o número ou tente novamente.");
       } else {
-        const telefoneApi = data.ddd_telefone_1
-          ? `(${data.ddd_telefone_1}) ${data.telefone_1 || ""}`.trim()
-          : "";
-        const logradouroApi = data.logradouro
-          ? `${data.tipo_logradouro || ""} ${data.logradouro}`.trim()
-          : "";
         setClienteForm((f) => ({
           ...f,
-          razao_social: f.razao_social || data.razao_social || "",
-          nome_fantasia: f.nome_fantasia || data.nome_fantasia || "",
-          email: f.email || data.email || "",
-          telefone: f.telefone || telefoneApi,
-          cidade: f.cidade || data.municipio || "",
-          uf: f.uf || data.uf || "",
-          logradouro: f.logradouro || logradouroApi,
-          bairro: f.bairro || data.bairro || "",
-          cep: f.cep || (data.cep ? data.cep.replace(/\D/g, "") : ""),
+          razao_social: f.razao_social || data.razao_social,
+          nome_fantasia: f.nome_fantasia || data.nome_fantasia,
+          email: f.email || data.email,
+          telefone: f.telefone || data.telefone,
+          cidade: f.cidade || data.municipio,
+          uf: f.uf || data.uf,
+          logradouro: f.logradouro || data.logradouro,
+          bairro: f.bairro || data.bairro,
+          cep: f.cep || data.cep,
+          numero: f.numero || data.numero,
+          complemento: f.complemento || data.complemento,
         }));
       }
     } catch {

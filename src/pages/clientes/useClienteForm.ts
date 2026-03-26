@@ -80,22 +80,23 @@ export function useClienteForm({
   async function handleCnpjBlur() {
     const cnpj = form.cnpj_cpf.replace(/\D/g, "");
     if (cnpj.length !== 14) return;
+
     setCnpjError("");
     setLoadingCnpj(true);
+
     try {
-      // Tenta BrasilAPI primeiro, fallback para ReceitaWS
       let dadosCnpj: any = null;
 
+      // 1) BrasilAPI
       try {
         const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
         if (res.ok) {
           const data = await res.json();
-          const dddTel = (data.ddd_telefone_1 || "").replace(/\D/g, "");
           dadosCnpj = {
             razao_social: data.razao_social || "",
-            nome_fantasia: data.nome_fantasia || "",
+            nome_fantasia: data.nome_fantasia || data.razao_social || "",
             email: data.email || "",
-            telefone: dddTel,
+            telefone: `${data.ddd_telefone_1 || ""}${data.telefone_1 || ""}`.replace(/\D/g, ""),
             municipio: data.municipio || "",
             uf: data.uf || "",
             logradouro: data.logradouro ? `${data.tipo_logradouro || ""} ${data.logradouro}`.trim() : "",
@@ -106,21 +107,47 @@ export function useClienteForm({
           };
         }
       } catch {
-        // BrasilAPI falhou, tenta fallback
+        // fallback
       }
 
+      // 2) publica.cnpj.ws (fallback principal no front-end por CORS)
       if (!dadosCnpj) {
         try {
-          const res2 = await fetch(`https://receitaws.com.br/v1/cnpj/${cnpj}`);
+          const res2 = await fetch(`https://publica.cnpj.ws/cnpj/${cnpj}`);
           if (res2.ok) {
             const data = await res2.json();
+            const est = data?.estabelecimento || {};
+            dadosCnpj = {
+              razao_social: data?.razao_social || "",
+              nome_fantasia: est?.nome_fantasia || data?.razao_social || "",
+              email: est?.email || "",
+              telefone: `${est?.ddd1 || ""}${est?.telefone1 || ""}`.replace(/\D/g, ""),
+              municipio: est?.cidade?.nome || "",
+              uf: est?.estado?.sigla || "",
+              logradouro: [est?.tipo_logradouro, est?.logradouro].filter(Boolean).join(" ").trim(),
+              bairro: est?.bairro || "",
+              cep: (est?.cep || "").replace(/\D/g, ""),
+              numero: est?.numero || "",
+              complemento: est?.complemento || "",
+            };
+          }
+        } catch {
+          // fallback
+        }
+      }
+
+      // 3) ReceitaWS (best effort)
+      if (!dadosCnpj) {
+        try {
+          const res3 = await fetch(`https://receitaws.com.br/v1/cnpj/${cnpj}`);
+          if (res3.ok) {
+            const data = await res3.json();
             if (data.status !== "ERROR") {
-              const tel = (data.telefone || "").replace(/[^\d]/g, "");
               dadosCnpj = {
                 razao_social: data.nome || "",
-                nome_fantasia: data.fantasia || "",
+                nome_fantasia: data.fantasia || data.nome || "",
                 email: data.email || "",
-                telefone: tel,
+                telefone: (data.telefone || "").replace(/[^\d]/g, ""),
                 municipio: data.municipio || "",
                 uf: data.uf || "",
                 logradouro: data.logradouro || "",
@@ -132,7 +159,7 @@ export function useClienteForm({
             }
           }
         } catch {
-          // Fallback também falhou
+          // sem fallback adicional
         }
       }
 
@@ -142,7 +169,7 @@ export function useClienteForm({
         setForm((f) => ({
           ...f,
           razao_social: f.razao_social || dadosCnpj.razao_social,
-          nome_fantasia: f.nome_fantasia || dadosCnpj.nome_fantasia || dadosCnpj.razao_social,
+          nome_fantasia: f.nome_fantasia || dadosCnpj.nome_fantasia,
           email: f.email || dadosCnpj.email,
           telefone: f.telefone || dadosCnpj.telefone,
           cidade: f.cidade || dadosCnpj.municipio,
