@@ -116,12 +116,14 @@ Deno.serve(async (req) => {
       fileBytes[i] = binaryStr.charCodeAt(i);
     }
 
-    // Build object key
+    // Build object key — sanitize filename to avoid signature issues
     const timestamp = Date.now();
-    const objectKey = `${pasta}/${timestamp}_${nome_arquivo}`;
+    const safeName = nome_arquivo.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const objectKey = `${pasta}/${timestamp}_${safeName}`;
 
     // AWS Signature V4
-    const host = new URL(endpoint).host;
+    const parsedEndpoint = new URL(endpoint);
+    const host = parsedEndpoint.host;
     const region = "auto";
     const service = "s3";
     const now = new Date();
@@ -130,7 +132,8 @@ Deno.serve(async (req) => {
 
     const payloadHash = await sha256(fileBytes);
 
-    const canonicalUri = `/${bucket_name}/${objectKey}`;
+    // URI-encode each path segment for the canonical URI
+    const encodedPath = `/${bucket_name}/${objectKey.split("/").map(s => encodeURIComponent(s)).join("/")}`;
     const canonicalQuerystring = "";
 
     const signedHeaders = "content-type;host;x-amz-content-sha256;x-amz-date";
@@ -142,7 +145,7 @@ Deno.serve(async (req) => {
 
     const canonicalRequest = [
       "PUT",
-      canonicalUri,
+      encodedPath,
       canonicalQuerystring,
       canonicalHeaders,
       signedHeaders,
@@ -163,14 +166,15 @@ Deno.serve(async (req) => {
     const authorizationHeader =
       `AWS4-HMAC-SHA256 Credential=${access_key_id}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
-    // Upload to R2
-    const uploadUrl = `${endpoint.replace(/\/$/, "")}/${bucket_name}/${objectKey}`;
+    // Upload to R2 — use the same encoded path
+    const uploadUrl = `${parsedEndpoint.origin}${encodedPath}`;
+
+    console.log("R2 upload URL:", uploadUrl);
 
     const uploadRes = await fetch(uploadUrl, {
       method: "PUT",
       headers: {
         "Content-Type": mime_type,
-        Host: host,
         "x-amz-date": amzDate,
         "x-amz-content-sha256": payloadHash,
         Authorization: authorizationHeader,
