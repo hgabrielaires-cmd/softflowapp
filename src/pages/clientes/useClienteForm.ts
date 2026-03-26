@@ -83,32 +83,79 @@ export function useClienteForm({
     setCnpjError("");
     setLoadingCnpj(true);
     try {
-      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
-      if (!res.ok) {
-        setCnpjError("CNPJ não encontrado");
+      // Tenta BrasilAPI primeiro, fallback para ReceitaWS
+      let dadosCnpj: any = null;
+
+      try {
+        const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+        if (res.ok) {
+          const data = await res.json();
+          const dddTel = (data.ddd_telefone_1 || "").replace(/\D/g, "");
+          dadosCnpj = {
+            razao_social: data.razao_social || "",
+            nome_fantasia: data.nome_fantasia || "",
+            email: data.email || "",
+            telefone: dddTel,
+            municipio: data.municipio || "",
+            uf: data.uf || "",
+            logradouro: data.logradouro ? `${data.tipo_logradouro || ""} ${data.logradouro}`.trim() : "",
+            bairro: data.bairro || "",
+            cep: (data.cep || "").replace(/\D/g, ""),
+            numero: data.numero || "",
+            complemento: data.complemento || "",
+          };
+        }
+      } catch {
+        // BrasilAPI falhou, tenta fallback
+      }
+
+      if (!dadosCnpj) {
+        try {
+          const res2 = await fetch(`https://receitaws.com.br/v1/cnpj/${cnpj}`);
+          if (res2.ok) {
+            const data = await res2.json();
+            if (data.status !== "ERROR") {
+              const tel = (data.telefone || "").replace(/[^\d]/g, "");
+              dadosCnpj = {
+                razao_social: data.nome || "",
+                nome_fantasia: data.fantasia || "",
+                email: data.email || "",
+                telefone: tel,
+                municipio: data.municipio || "",
+                uf: data.uf || "",
+                logradouro: data.logradouro || "",
+                bairro: data.bairro || "",
+                cep: (data.cep || "").replace(/\D/g, ""),
+                numero: data.numero || "",
+                complemento: data.complemento || "",
+              };
+            }
+          }
+        } catch {
+          // Fallback também falhou
+        }
+      }
+
+      if (!dadosCnpj) {
+        setCnpjError("CNPJ não encontrado. Verifique o número ou tente novamente.");
       } else {
-        const data = await res.json();
-        const telefoneApi = data.ddd_telefone_1
-          ? `(${data.ddd_telefone_1}) ${data.telefone_1 || ""}`.trim()
-          : "";
-        const logradouroApi = data.logradouro
-          ? `${data.tipo_logradouro || ""} ${data.logradouro}`.trim()
-          : "";
         setForm((f) => ({
           ...f,
-          razao_social: f.razao_social || data.razao_social || "",
-          nome_fantasia: f.nome_fantasia || data.nome_fantasia || "",
-          email: f.email || data.email || "",
-          telefone: f.telefone || telefoneApi,
-          cidade: f.cidade || data.municipio || "",
-          uf: f.uf || data.uf || "",
-          logradouro: f.logradouro || logradouroApi,
-          bairro: f.bairro || data.bairro || "",
-          cep: f.cep || (data.cep ? data.cep.replace(/\D/g, "") : ""),
+          razao_social: f.razao_social || dadosCnpj.razao_social,
+          nome_fantasia: f.nome_fantasia || dadosCnpj.nome_fantasia || dadosCnpj.razao_social,
+          email: f.email || dadosCnpj.email,
+          telefone: f.telefone || dadosCnpj.telefone,
+          cidade: f.cidade || dadosCnpj.municipio,
+          uf: f.uf || dadosCnpj.uf,
+          logradouro: f.logradouro || dadosCnpj.logradouro,
+          bairro: f.bairro || dadosCnpj.bairro,
+          cep: f.cep || dadosCnpj.cep,
+          numero: f.numero || dadosCnpj.numero,
+          complemento: f.complemento || dadosCnpj.complemento,
         }));
       }
     } catch {
-      setCnpjError("CNPJ não encontrado");
+      setCnpjError("Erro ao consultar CNPJ. Tente novamente.");
     } finally {
       setLoadingCnpj(false);
     }
