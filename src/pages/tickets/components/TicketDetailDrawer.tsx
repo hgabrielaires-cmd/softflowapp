@@ -57,7 +57,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   const { user, roles } = useAuth();
   const userId = user?.id || "";
   const { canEditar } = useCrudPermissions("tickets", roles);
-
+  const queryClient = useQueryClient();
   const { data: ticket } = useTicketDetail(ticketId);
   const { data: comentarios = [] } = useTicketComentarios(ticketId);
   const { data: curtidas = [] } = useTicketCurtidas(ticketId);
