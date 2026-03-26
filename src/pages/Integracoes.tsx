@@ -110,8 +110,8 @@ const integrationDefs: IntegrationDef[] = [
   },
   {
     key: "r2",
-    icon: <Cloud className="h-16 w-16" />,
-    hasLogo: false,
+    icon: <img src={logoCloudflare} alt="Cloudflare R2" className="h-16 w-auto" />,
+    hasLogo: true,
     title: "Cloudflare R2",
     description: "Armazenamento de arquivos e documentos",
     accentColor: "bg-orange-500",
