@@ -693,22 +693,7 @@ export default function PainelAtendimento() {
                                 )}
                                 {statusAtiv === "pendente" && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Pendente</Badge>}
                                 {statusAtiv === "em_andamento" && (
-                                  <Button size="sm" className="h-8 text-xs px-3 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => {
-                                    const atividadeItems: ChecklistItem[] = Array.isArray(atividade.checklist) ? atividade.checklist : [];
-                                    if (atividadeItems.length > 0) {
-                                      const todosFeitos = atividadeItems.every((_: ChecklistItem, i: number) => {
-                                        const k = `${atividade.id}_${i}`;
-                                        return checklistProgresso[k]?.concluido === true;
-                                      });
-                                      if (!todosFeitos) {
-                                        toast.error("Conclua todos os itens do checklist antes de finalizar a atividade.");
-                                        return;
-                                      }
-                                    }
-                                    concluirAtividade(detailCard.id, atividade.id, detailCard.etapa_id, atividade.horas_estimadas || 0);
-                                  }}>
-                                    <CheckSquare className="h-4 w-4" />Concluir
-                                  </Button>
+                                  <Badge className="text-[9px] px-1.5 py-0 bg-emerald-500 text-white border-emerald-500">Em andamento</Badge>
                                 )}
                                 {statusAtiv === "em_andamento" && (
                                   <Badge className="text-[9px] px-1.5 py-0 bg-emerald-500 text-white border-emerald-500">Em andamento</Badge>
@@ -782,6 +767,27 @@ export default function PainelAtendimento() {
                                   );
                                 })}
                               </ul>
+                            )}
+                            {/* Botão Concluir após o checklist */}
+                            {statusAtiv === "em_andamento" && (
+                              <div className="flex justify-end mt-3 pt-2 border-t border-border/30">
+                                <Button size="sm" className="h-8 text-xs px-3 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => {
+                                  const atividadeItems: ChecklistItem[] = Array.isArray(atividade.checklist) ? atividade.checklist : [];
+                                  if (atividadeItems.length > 0) {
+                                    const todosFeitos = atividadeItems.every((_: ChecklistItem, i: number) => {
+                                      const k = `${atividade.id}_${i}`;
+                                      return checklistProgresso[k]?.concluido === true;
+                                    });
+                                    if (!todosFeitos) {
+                                      toast.error("Conclua todos os itens do checklist antes de finalizar a atividade.");
+                                      return;
+                                    }
+                                  }
+                                  concluirAtividade(detailCard.id, atividade.id, detailCard.etapa_id, atividade.horas_estimadas || 0);
+                                }}>
+                                  <CheckSquare className="h-4 w-4" />Concluir
+                                </Button>
+                              </div>
                             )}
                           </div>
                         );
