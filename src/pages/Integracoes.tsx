@@ -1079,6 +1079,18 @@ export default function Integracoes() {
       }
       return null;
     }
+    if (key === "r2") {
+      if (r2Config) {
+        return {
+          id: "r2",
+          nome: "r2",
+          ativo: r2Config.ativo === true,
+          token: "configured",
+          server_url: null,
+        } as IntegrationConfig;
+      }
+      return null;
+    }
     return configs.find((c) => c.nome === key) || null;
   }
 
