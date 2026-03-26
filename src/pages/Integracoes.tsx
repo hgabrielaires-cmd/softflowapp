@@ -3,6 +3,7 @@ import logoZapsign from "@/assets/logo-zapsign.svg";
 import logoWhatsapp from "@/assets/logo-whatsapp.svg";
 import logoBrowserless from "@/assets/logo-browserless.svg";
 import logoAsaas from "@/assets/logo-asaas.svg";
+import logoCloudflare from "@/assets/logo-cloudflare.svg";
 import { AppLayout } from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -109,8 +110,8 @@ const integrationDefs: IntegrationDef[] = [
   },
   {
     key: "r2",
-    icon: <Cloud className="h-16 w-16" />,
-    hasLogo: false,
+    icon: <img src={logoCloudflare} alt="Cloudflare R2" className="h-16 w-auto" />,
+    hasLogo: true,
     title: "Cloudflare R2",
     description: "Armazenamento de arquivos e documentos",
     accentColor: "bg-orange-500",
