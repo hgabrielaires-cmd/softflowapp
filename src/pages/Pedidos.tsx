@@ -211,6 +211,18 @@ export default function Pedidos() {
         anexo_nome: firstName,
       });
 
+      // Insert additional comments for remaining attachments
+      for (let i = 1; i < anexoUrls.length; i++) {
+        await supabase.from("pedido_comentarios").insert({
+          pedido_id: pedidoId,
+          user_id: user.id,
+          texto: `📎 Anexo adicional`,
+          prioridade: draft.prioridade,
+          anexo_url: anexoUrls[i],
+          anexo_nome: anexoNomes[i],
+        });
+      }
+
       // Extract @mentions and create notifications
       const mentionRegex = /@([\w\u00C0-\u024F]+)/g;
       let mentionMatch;
