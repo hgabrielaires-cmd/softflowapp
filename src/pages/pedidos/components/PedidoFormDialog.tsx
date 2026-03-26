@@ -996,7 +996,7 @@ export function PedidoFormDialog(props: PedidoFormDialogProps) {
                   setEditingDraftIdx(null);
                   setDraftTexto("");
                   setDraftPrioridade("normal");
-                  setDraftArquivo(null);
+                  setDraftArquivos([]);
                   setOpenComentarioDialog(true);
                 }}
               >
