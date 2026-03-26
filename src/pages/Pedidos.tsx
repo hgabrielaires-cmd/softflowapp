@@ -1334,7 +1334,7 @@ export default function Pedidos() {
         setEditingDraftIdx={setEditingDraftIdx}
         setDraftTexto={setDraftTexto}
         setDraftPrioridade={setDraftPrioridade}
-        setDraftArquivo={setDraftArquivo}
+        setDraftArquivos={setDraftArquivos}
         clientes={clientes}
       />
 
