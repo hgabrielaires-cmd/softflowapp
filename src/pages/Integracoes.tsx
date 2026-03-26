@@ -107,6 +107,22 @@ const integrationDefs: IntegrationDef[] = [
       "Webhooks para atualização de status",
     ],
   },
+  {
+    key: "r2",
+    icon: <Cloud className="h-16 w-16" />,
+    hasLogo: false,
+    title: "Cloudflare R2",
+    description: "Armazenamento de arquivos e documentos",
+    accentColor: "bg-orange-500",
+    tokenLabel: "",
+    tokenPlaceholder: "",
+    details: [
+      "Armazenamento de anexos de tickets",
+      "Documentos e cardápios de clientes",
+      "Links diretos para download pelo usuário",
+      "10GB gratuitos por mês",
+    ],
+  },
 ];
 // ── WhatsApp Config Dialog (Evolution API) ──
 
