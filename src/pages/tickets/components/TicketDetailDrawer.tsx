@@ -619,9 +619,13 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
           oldStatus: ticket.status,
           userId,
           resolucao: resolucaoText,
+        }, {
+          onSuccess: () => {
+            setShowResolucaoDialog(false);
+            setResolucaoText("");
+            onClose();
+          },
         });
-        setShowResolucaoDialog(false);
-        setResolucaoText("");
       }}
     />
     </>
