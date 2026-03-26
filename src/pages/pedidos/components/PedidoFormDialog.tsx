@@ -141,7 +141,7 @@ export interface PedidoFormDialogProps {
   setEditingDraftIdx: (v: number | null) => void;
   setDraftTexto: (v: string) => void;
   setDraftPrioridade: (v: string) => void;
-  setDraftArquivo: (v: File | null) => void;
+  setDraftArquivos: (v: File[]) => void;
 
   // Data for lists
   clientes: Cliente[];

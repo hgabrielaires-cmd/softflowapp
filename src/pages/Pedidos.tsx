@@ -1346,12 +1346,11 @@ export default function Pedidos() {
         setTexto={setDraftTexto}
         prioridade={draftPrioridade}
         setPrioridade={setDraftPrioridade}
-        arquivo={draftArquivo}
-        setArquivo={setDraftArquivo}
+        arquivos={draftArquivos}
+        setArquivos={setDraftArquivos}
         fileRef={draftFileRef}
         isEditing={editingDraftIdx !== null}
         onSave={handleAddDraftComentario}
-        onFileChange={handleDraftFileChange}
         users={allMentionUsers}
       />
       <ClienteRapidoDialog
