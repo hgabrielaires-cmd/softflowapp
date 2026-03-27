@@ -174,3 +174,43 @@ export function useAgendaHoje() {
     },
   });
 }
+
+export function useAtendentesPresenca() {
+  return useQuery<AtendentePresenca[]>({
+    queryKey: ["dash_atendentes_presenca"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, avatar_url")
+        .eq("is_atendente_chat", true)
+        .eq("ativo", true);
+      if (error) throw error;
+
+      const userIds = (data ?? []).map((p: any) => p.user_id);
+      if (userIds.length === 0) return [];
+
+      const { data: presencas } = await supabase
+        .from("atendente_presenca")
+        .select("user_id, status, last_heartbeat")
+        .in("user_id", userIds);
+
+      const presMap = new Map(
+        (presencas ?? []).map((p: any) => [p.user_id, p])
+      );
+
+      return (data ?? []).map((p: any) => {
+        const pres = presMap.get(p.user_id);
+        return {
+          user_id: p.user_id,
+          full_name: p.full_name,
+          avatar_url: p.avatar_url,
+          presenca_status: resolveStatus(
+            pres?.status ?? null,
+            pres?.last_heartbeat ?? null
+          ),
+        } as AtendentePresenca;
+      });
+    },
+    refetchInterval: 30000,
+  });
+}

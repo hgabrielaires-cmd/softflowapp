@@ -15,6 +15,7 @@ import { GraficoCategoria } from "./dashboard-atendimento/components/GraficoCate
 import { TicketsAntigos } from "./dashboard-atendimento/components/TicketsAntigos";
 import { KanbanMini } from "./dashboard-atendimento/components/KanbanMini";
 import { AgendaDia } from "./dashboard-atendimento/components/AgendaDia";
+import { AtendentesPanel } from "./dashboard-atendimento/components/AtendentesPanel";
 import {
   useDashKpis,
   useDashAlertas,
@@ -22,6 +23,7 @@ import {
   useTicketsMaisAntigos,
   useKanbanResumo,
   useAgendaHoje,
+  useAtendentesPresenca,
 } from "./dashboard-atendimento/useDashAtendimentoQueries";
 
 export default function DashboardAtendimento() {
