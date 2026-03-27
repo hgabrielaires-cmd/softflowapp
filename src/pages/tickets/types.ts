@@ -56,6 +56,12 @@ export interface Ticket {
   anexos_count?: number;
 }
 
+export interface TicketAnexoItem {
+  nome: string;
+  url: string;
+  tipo?: string;
+}
+
 export interface TicketComentario {
   id: string;
   ticket_id: string;
@@ -65,6 +71,7 @@ export interface TicketComentario {
   conteudo: string;
   metadata: Record<string, unknown>;
   parent_id: string | null;
+  anexos: TicketAnexoItem[] | null;
   created_at: string;
   profile?: Pick<Profile, "user_id" | "full_name" | "avatar_url"> | null;
 }
