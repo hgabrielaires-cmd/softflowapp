@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatInternoWidget } from "@/components/ChatInterno/ChatInternoWidget";
 import { usePresenca } from "@/hooks/usePresenca";
-import { Circle, ImageIcon } from "lucide-react";
+import { Circle } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1341,7 +1341,6 @@ export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [viewAvatarOpen, setViewAvatarOpen] = useState(false);
   const { status: presencaStatus, setStatus: setPresencaStatus, isAtendente } = usePresenca();
 
   const initials = profile?.full_name
@@ -1431,23 +1430,11 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </>
               )}
 
-              {profile?.avatar_url && (
-                <DropdownMenuItem onClick={() => setViewAvatarOpen(true)}>
-                  <ImageIcon className="mr-2 h-4 w-4" />Ver foto
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem onClick={() => navigate("/perfil")}><User className="mr-2 h-4 w-4" />Meu perfil</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive"><LogOut className="mr-2 h-4 w-4" />Sair</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* Dialog ver foto */}
-          <Dialog open={viewAvatarOpen} onOpenChange={setViewAvatarOpen}>
-            <DialogContent className="max-w-xs flex items-center justify-center p-6">
-              <img src={profile?.avatar_url || ""} alt={profile?.full_name || ""} className="rounded-lg max-w-full max-h-72 object-contain" />
-            </DialogContent>
-          </Dialog>
         </header>
 
         {/* Page Content */}
