@@ -1341,9 +1341,6 @@ export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const { status: presencaStatus, setStatus: setPresencaStatus, isAtendente } = usePresenca();
   const { status: presencaStatus, setStatus: setPresencaStatus, isAtendente } = usePresenca();
 
   const initials = profile?.full_name
