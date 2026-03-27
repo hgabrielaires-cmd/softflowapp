@@ -26,7 +26,7 @@ import { ptBR } from "date-fns/locale";
 import {
   LayoutGrid, List, Search, Clock, Building2, User, Play, AlertTriangle, RefreshCw, ArrowRight, CheckSquare,
   CalendarDays, Pencil, MoreHorizontal, XCircle, PauseCircle, UserPlus, Ban, X,
-  Heart, Reply, CornerDownRight, BellRing, BellOff, ChevronRight, History, Info, FileText, Paperclip, Download,
+  Heart, Reply, CornerDownRight, BellRing, BellOff, ChevronRight, History, Info, FileText, Paperclip, Download, Loader2,
 } from "lucide-react";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { ChecklistItem } from "@/lib/supabase-types";
@@ -94,6 +94,7 @@ export default function PainelAtendimento() {
   
   const [, setTick] = useState(0);
   const [novoComentario, setNovoComentario] = useState("");
+  const [enviandoComentario, setEnviandoComentario] = useState(false);
   const mentionedUsersRef = useRef<string[]>([]);
   const [comentarios, setComentarios] = useState<any[]>([]);
   const [curtidas, setCurtidas] = useState<Record<string, string[]>>({});
@@ -985,9 +986,12 @@ export default function PainelAtendimento() {
                         e.target.value = "";
                       }} />
                     </div>
-                    <Button size="sm" className="self-end h-8" disabled={!novoComentario.trim() && !((window as any).__painelAnexoFiles?.length > 0)} onClick={async () => {
+                    <Button size="sm" className="self-end h-8" disabled={enviandoComentario || (!novoComentario.trim() && !((window as any).__painelAnexoFiles?.length > 0))} onClick={async () => {
+                      if (enviandoComentario) return;
+                      setEnviandoComentario(true);
+                      try {
                       const { data: { user } } = await supabase.auth.getUser();
-                      if (!user || !detailCard) return;
+                      if (!user || !detailCard) { setEnviandoComentario(false); return; }
                       const { data: myProfile } = await supabase.from("profiles").select("id, full_name, telefone").eq("user_id", user.id).maybeSingle();
 
                       const arquivos: File[] = (window as any).__painelAnexoFiles || [];
@@ -1035,7 +1039,8 @@ export default function PainelAtendimento() {
                         try { const { data: seguidores } = await supabase.from("painel_seguidores").select("user_id").eq("card_id", detailCard.id).is("unfollowed_at", null); for (const seg of (seguidores || [])) { if (seg.user_id === user.id) continue; if (mentionedUserIds.has(seg.user_id)) continue; await supabase.from("notificacoes").insert({ titulo: `💬 ${autorNome} comentou no projeto`, mensagem: `${autorNome} fez um comentário no projeto ${clienteNome} que você segue: "${textoFinal.slice(0, 100)}${textoFinal.length > 100 ? "..." : ""}"`, tipo: "info", criado_por: user.id, destinatario_user_id: seg.user_id, metadata: { card_id: detailCard.id, comentario_id: novo.id } }); } } catch { }
                         setNovoComentario(""); setReplyTo(null); mentionedUsersRef.current = []; (window as any).__painelAnexoFiles = undefined; toast.success(replyTo ? "Resposta adicionada!" : "Comentário adicionado!");
                       } else { toast.error("Erro ao adicionar comentário."); }
-                    }}>{replyTo ? "Responder" : "Incluir"}</Button>
+                      } finally { setEnviandoComentario(false); }
+                    }}>{enviandoComentario ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />Enviando...</> : (replyTo ? "Responder" : "Incluir")}</Button>
                   </div>
                   {/* Preview de arquivos selecionados */}
                   {(() => {
