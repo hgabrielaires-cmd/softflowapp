@@ -26,6 +26,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { AppRole, ROLE_LABELS, Profile } from "@/lib/supabase-types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ChatInternoWidget } from "@/components/ChatInterno/ChatInternoWidget";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1412,6 +1413,9 @@ export function AppLayout({ children }: AppLayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Chat Interno Flutuante */}
+      <ChatInternoWidget />
     </div>
   );
 }

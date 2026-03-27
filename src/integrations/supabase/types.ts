@@ -506,6 +506,120 @@ export type Database = {
           },
         ]
       }
+      chat_interno_conversas: {
+        Row: {
+          created_at: string | null
+          id: string
+          nome: string | null
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          nome?: string | null
+          tipo?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          nome?: string | null
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      chat_interno_leituras: {
+        Row: {
+          id: string
+          lida_em: string | null
+          mensagem_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          lida_em?: string | null
+          mensagem_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          lida_em?: string | null
+          mensagem_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_interno_leituras_mensagem_id_fkey"
+            columns: ["mensagem_id"]
+            isOneToOne: false
+            referencedRelation: "chat_interno_mensagens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_interno_mensagens: {
+        Row: {
+          conteudo: string
+          conversa_id: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          conteudo: string
+          conversa_id: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          conteudo?: string
+          conversa_id?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_interno_mensagens_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "chat_interno_conversas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_interno_participantes: {
+        Row: {
+          conversa_id: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          conversa_id: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          conversa_id?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_interno_participantes_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "chat_interno_conversas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_mensagens: {
         Row: {
           atendente_id: string | null
