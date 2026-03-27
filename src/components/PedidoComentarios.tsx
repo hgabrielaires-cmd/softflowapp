@@ -331,14 +331,35 @@ export function PedidoComentarios({ pedidoId, readOnly = false }: Props) {
         </div>
         <p className="text-xs whitespace-pre-wrap">{c.texto}</p>
         {c.anexo_url && c.anexo_nome && (
-          <a
-            href={c.anexo_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                const isR2 = c.anexo_url!.includes(".r2.dev/") || c.anexo_url!.includes("r2.cloudflarestorage.com");
+                if (isR2) {
+                  const key = new URL(c.anexo_url!).pathname.replace(/^\//, "");
+                  const { data, error } = await supabase.functions.invoke("r2-download", {
+                    body: { key, filename: c.anexo_nome },
+                  });
+                  if (error) throw error;
+                  const blob = data instanceof Blob ? data : new Blob([data]);
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement("a");
+                  link.href = url;
+                  link.download = c.anexo_nome!;
+                  link.click();
+                  URL.revokeObjectURL(url);
+                } else {
+                  window.open(c.anexo_url!, "_blank");
+                }
+              } catch {
+                window.open(c.anexo_url!, "_blank");
+              }
+            }}
+            className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
           >
             <Download className="h-3 w-3" /> {c.anexo_nome}
-          </a>
+          </button>
         )}
         {/* Actions: Like + Reply */}
         {user && (
