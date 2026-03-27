@@ -25,7 +25,7 @@ import type { TicketFormData, TicketPrioridade, TicketMesa, TicketModo, TicketSt
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Clock, Trash2, Search, Eye, CalendarDays } from "lucide-react";
+import { ArrowLeft, Clock, Trash2, Search, Eye, CalendarDays, Paperclip, X, Loader2, FileText } from "lucide-react";
 import { isSameDay } from "date-fns";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -85,6 +85,8 @@ export default function TicketNovo() {
   const [tagInput, setTagInput] = useState("");
   const [agendaDatas, setAgendaDatas] = useState<{ date: Date; hora: string }[]>([]);
   const [agendaOpen, setAgendaOpen] = useState(false);
+  const [anexos, setAnexos] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   // SLA calculation
   const tipoSelecionado = tipos.find((t) => t.id === tipoAtendimentoId);
@@ -209,32 +211,58 @@ export default function TicketNovo() {
     }
   }, [selfFollow, userId]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!modo) {
       toast.error("Selecione o Modo do ticket (Interno ou Externo).");
       return;
     }
-    const data: TicketFormData = {
-      titulo: titulo.trim() || "Ticket",
-      descricao_html: descricao,
-      cliente_id: clienteId,
-      contrato_id: contratoId,
-      mesa,
-      modo,
-      tipo_atendimento_id: tipoAtendimentoId,
-      prioridade,
-      responsavel_id: responsavelId,
-      sla_horas: slaHoras,
-      tags,
-      previsao_entrega: null,
-      ticket_pai_id: ticketPaiId,
-      seguidores,
-    };
-    const agendamentos = agendaDatas.map((item) => ({
-      data: format(item.date, "yyyy-MM-dd"),
-      hora_inicio: item.hora || null,
-    }));
-    createTicket.mutate({ data, userId, agendamentos });
+
+    setUploading(true);
+    try {
+      // Upload files to R2
+      const anexosUpload: { nome: string; url: string; tipo_mime: string; tamanho_bytes: number }[] = [];
+      for (const file of anexos) {
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`Arquivo "${file.name}" excede 10MB`);
+          continue;
+        }
+        const base64 = await fileToBase64(file);
+        const { data: r2Data, error: r2Error } = await supabase.functions.invoke("r2-upload", {
+          body: { arquivo_base64: base64, nome_arquivo: file.name, mime_type: file.type, pasta: "tickets" },
+        });
+        if (r2Error || !r2Data?.url) {
+          toast.error(`Erro ao enviar "${file.name}"`);
+          continue;
+        }
+        anexosUpload.push({ nome: file.name, url: r2Data.url, tipo_mime: file.type, tamanho_bytes: file.size });
+      }
+
+      const data: TicketFormData = {
+        titulo: titulo.trim() || "Ticket",
+        descricao_html: descricao,
+        cliente_id: clienteId,
+        contrato_id: contratoId,
+        mesa,
+        modo,
+        tipo_atendimento_id: tipoAtendimentoId,
+        prioridade,
+        responsavel_id: responsavelId,
+        sla_horas: slaHoras,
+        tags,
+        previsao_entrega: null,
+        ticket_pai_id: ticketPaiId,
+        seguidores,
+      };
+      const agendamentos = agendaDatas.map((item) => ({
+        data: format(item.date, "yyyy-MM-dd"),
+        hora_inicio: item.hora || null,
+      }));
+      createTicket.mutate({ data, userId, agendamentos, anexos: anexosUpload });
+    } catch {
+      toast.error("Erro ao processar anexos.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -521,6 +549,55 @@ export default function TicketNovo() {
                 <Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)}
                   placeholder="Descreva o ticket..." className="min-h-[200px]" />
               </div>
+
+              {/* Row 8: Anexos */}
+              <div>
+                <Label className="text-xs">Anexos</Label>
+                <div className="mt-1 border border-dashed rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const input = document.createElement("input");
+                        input.type = "file";
+                        input.multiple = true;
+                        input.accept = "*/*";
+                        input.onchange = (e) => {
+                          const files = (e.target as HTMLInputElement).files;
+                          if (files) setAnexos((prev) => [...prev, ...Array.from(files)]);
+                        };
+                        input.click();
+                      }}
+                    >
+                      <Paperclip className="h-3.5 w-3.5 mr-1.5" />
+                      Adicionar arquivos
+                    </Button>
+                    <span className="text-xs text-muted-foreground">Máx. 10MB por arquivo</span>
+                  </div>
+                  {anexos.length > 0 && (
+                    <div className="space-y-1">
+                      {anexos.map((file, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-xs bg-muted/50 rounded px-2 py-1.5">
+                          <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="truncate flex-1">{file.name}</span>
+                          <span className="text-muted-foreground shrink-0">
+                            {(file.size / 1024).toFixed(0)}KB
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setAnexos((prev) => prev.filter((_, i) => i !== idx))}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Right 40% */}
@@ -737,11 +814,25 @@ export default function TicketNovo() {
         {/* Footer */}
         <div className="shrink-0 px-4 py-3 border-t flex items-center justify-between">
           <Button variant="outline" onClick={() => navigate("/tickets")}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={createTicket.isPending} className="bg-primary hover:bg-primary/90">
-            {createTicket.isPending ? "Salvando..." : "Salvar Ticket"}
+          <Button onClick={handleSave} disabled={createTicket.isPending || uploading} className="bg-primary hover:bg-primary/90">
+            {uploading ? (
+              <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Enviando anexos...</>
+            ) : createTicket.isPending ? "Salvando..." : "Salvar Ticket"}
           </Button>
         </div>
       </div>
     </AppLayout>
   );
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(",")[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
