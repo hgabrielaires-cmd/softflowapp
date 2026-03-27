@@ -903,6 +903,23 @@ export default function PainelAtendimento() {
                               <span className="text-[10px] text-muted-foreground">{new Date(com.created_at).toLocaleDateString("pt-BR")} {new Date(com.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
                             </div>
                             <p className="text-foreground/90 whitespace-pre-wrap pl-6">{renderMentionText(com.texto, responsaveis as any)}</p>
+                            {com.anexo_url && com.anexo_nome && (
+                              <button type="button" className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline cursor-pointer bg-transparent border-none p-0 pl-6 mt-0.5" onClick={async () => {
+                                try {
+                                  const isR2 = com.anexo_url.includes(".r2.dev/") || com.anexo_url.includes("r2.cloudflarestorage.com");
+                                  if (isR2) {
+                                    const key = new URL(com.anexo_url).pathname.replace(/^\//, "");
+                                    const { data, error } = await supabase.functions.invoke("r2-download", { body: { key, filename: com.anexo_nome } });
+                                    if (error) throw error;
+                                    const blob = data instanceof Blob ? data : new Blob([data]);
+                                    const url = URL.createObjectURL(blob);
+                                    const link = document.createElement("a");
+                                    link.href = url; link.download = com.anexo_nome; link.click();
+                                    URL.revokeObjectURL(url);
+                                  } else { window.open(com.anexo_url, "_blank"); }
+                                } catch { window.open(com.anexo_url, "_blank"); }
+                              }}><Download className="h-3 w-3" /> {com.anexo_nome}</button>
+                            )}
                             <div className="flex items-center gap-3 pl-6 mt-1">
                               <button type="button" className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-red-500 transition-colors" onClick={async () => {
                                 const { data: { user } } = await supabase.auth.getUser();
