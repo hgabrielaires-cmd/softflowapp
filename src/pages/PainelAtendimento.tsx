@@ -26,7 +26,7 @@ import { ptBR } from "date-fns/locale";
 import {
   LayoutGrid, List, Search, Clock, Building2, User, Play, AlertTriangle, RefreshCw, ArrowRight, CheckSquare,
   CalendarDays, Pencil, MoreHorizontal, XCircle, PauseCircle, UserPlus, Ban, X,
-  Heart, Reply, CornerDownRight, BellRing, BellOff, ChevronRight, History, Info, FileText,
+  Heart, Reply, CornerDownRight, BellRing, BellOff, ChevronRight, History, Info, FileText, Paperclip, Download,
 } from "lucide-react";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { ChecklistItem } from "@/lib/supabase-types";
@@ -214,7 +214,7 @@ export default function PainelAtendimento() {
     }
     (async () => {
       const [{ data: coms }, { data: tecs }, { data: likes }, { data: agData }, { data: seguindo }, { data: allSeguidores }] = await Promise.all([
-        supabase.from("painel_comentarios").select("id, texto, criado_por, created_at, parent_id, etapa_id").eq("card_id", detailCard.id).order("created_at", { ascending: true }),
+        supabase.from("painel_comentarios").select("id, texto, criado_por, created_at, parent_id, etapa_id, anexo_url, anexo_nome").eq("card_id", detailCard.id).order("created_at", { ascending: true }),
         supabase.from("painel_tecnicos").select("tecnico_id").eq("card_id", detailCard.id),
         supabase.from("painel_curtidas").select("comentario_id, user_id"),
         supabase.from("painel_agendamentos").select("*, jornada_atividades(nome), painel_etapas:etapa_id(nome, cor)").eq("card_id", detailCard.id).order("data"),
@@ -903,6 +903,23 @@ export default function PainelAtendimento() {
                               <span className="text-[10px] text-muted-foreground">{new Date(com.created_at).toLocaleDateString("pt-BR")} {new Date(com.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
                             </div>
                             <p className="text-foreground/90 whitespace-pre-wrap pl-6">{renderMentionText(com.texto, responsaveis as any)}</p>
+                            {com.anexo_url && com.anexo_nome && (
+                              <button type="button" className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline cursor-pointer bg-transparent border-none p-0 pl-6 mt-0.5" onClick={async () => {
+                                try {
+                                  const isR2 = com.anexo_url.includes(".r2.dev/") || com.anexo_url.includes("r2.cloudflarestorage.com");
+                                  if (isR2) {
+                                    const key = new URL(com.anexo_url).pathname.replace(/^\//, "");
+                                    const { data, error } = await supabase.functions.invoke("r2-download", { body: { key, filename: com.anexo_nome } });
+                                    if (error) throw error;
+                                    const blob = data instanceof Blob ? data : new Blob([data]);
+                                    const url = URL.createObjectURL(blob);
+                                    const link = document.createElement("a");
+                                    link.href = url; link.download = com.anexo_nome; link.click();
+                                    URL.revokeObjectURL(url);
+                                  } else { window.open(com.anexo_url, "_blank"); }
+                                } catch { window.open(com.anexo_url, "_blank"); }
+                              }}><Download className="h-3 w-3" /> {com.anexo_nome}</button>
+                            )}
                             <div className="flex items-center gap-3 pl-6 mt-1">
                               <button type="button" className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-red-500 transition-colors" onClick={async () => {
                                 const { data: { user } } = await supabase.auth.getUser();
@@ -937,33 +954,80 @@ export default function PainelAtendimento() {
                   </div>
                 )}
                 {replyTo && <div className="flex items-center gap-2 text-xs bg-primary/5 border border-primary/20 rounded px-2 py-1"><CornerDownRight className="h-3 w-3 text-primary" /><span className="text-muted-foreground">Respondendo <strong className="text-foreground">{replyTo.autorNome}</strong></span><button type="button" className="ml-auto text-muted-foreground hover:text-foreground" onClick={() => setReplyTo(null)}><XCircle className="h-3.5 w-3.5" /></button></div>}
-                <div className="flex gap-2">
-                  <MentionInput value={novoComentario} onChange={setNovoComentario} users={responsaveis as any} placeholder={replyTo ? `Responder ${replyTo.autorNome}...` : "Digite um comentário... Use @nome para mencionar"} onMentionsChange={(ids) => { mentionedUsersRef.current = ids; }} />
-                  <Button size="sm" className="self-end h-8" disabled={!novoComentario.trim()} onClick={async () => {
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (!user || !detailCard) return;
-                    const { data: myProfile } = await supabase.from("profiles").select("id, full_name, telefone").eq("user_id", user.id).maybeSingle();
-                    const { data: novo, error } = await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, texto: novoComentario.trim(), criado_por: myProfile?.id || user.id, etapa_id: detailCard.etapa_id, parent_id: replyTo?.id || null }).select("id, texto, criado_por, created_at, parent_id").single();
-                    if (!error && novo) {
-                      setComentarios((prev) => [...prev, novo]);
-                      const clienteNome = detailCard.clientes?.nome_fantasia || "Cliente";
-                      const autorNome = myProfile?.full_name?.split(" ")[0] || "Alguém";
-                      if (replyTo) { const parentCom = comentarios.find((c: any) => c.id === replyTo.id); if (parentCom && parentCom.criado_por !== (myProfile?.id || user.id)) { const parentProf = (responsaveis as any[]).find((r: any) => r.id === parentCom.criado_por); if (parentProf?.user_id) { await supabase.from("notificacoes").insert({ titulo: `💬 ${autorNome} respondeu seu comentário`, mensagem: `${autorNome} respondeu seu comentário no projeto ${clienteNome}: "${novoComentario.trim().slice(0, 100)}${novoComentario.trim().length > 100 ? "..." : ""}"`, tipo: "info", criado_por: user.id, destinatario_user_id: parentProf.user_id, metadata: { card_id: detailCard.id, comentario_id: novo.id } }); } } }
-                      const mentioned = mentionedUsersRef.current;
-                      if (mentioned.length > 0) {
-                        for (const profileId of mentioned) {
-                          await supabase.from("painel_mencoes").insert({ comentario_id: novo.id, card_id: detailCard.id, mencionado_user_id: profileId, mencionado_por: myProfile?.id || user.id });
-                          const prof = (responsaveis as any[]).find((r: any) => r.id === profileId);
-                          await supabase.from("notificacoes").insert({ titulo: `💬 ${autorNome} mencionou você`, mensagem: `Você foi mencionado em um comentário no projeto ${clienteNome}: "${novoComentario.trim().slice(0, 100)}${novoComentario.trim().length > 100 ? "..." : ""}"`, tipo: "info", criado_por: user.id, destinatario_user_id: prof?.user_id || profileId, metadata: { card_id: detailCard.id, comentario_id: novo.id } });
-                          if (prof?.telefone) { try { const { data: intConfig } = await supabase.from("integracoes_config").select("*").eq("nome", "evolution_api").eq("ativo", true).maybeSingle(); if (intConfig?.server_url && intConfig?.token) { await supabase.functions.invoke("evolution-api", { body: { action: "send_message", server_url: intConfig.server_url, api_key: intConfig.token, instance_name: "Softflow_WhatsApp", phone: prof.telefone, message: `💬 *Menção em comentário*\n\n${autorNome} mencionou você no projeto *${clienteNome}*:\n\n"${novoComentario.trim().slice(0, 200)}${novoComentario.trim().length > 200 ? "..." : ""}"` } }); } } catch { } }
+                <div className="space-y-1">
+                  {(() => {
+                    const fileInputRef = document.getElementById("com-file-input-painel") as HTMLInputElement | null;
+                    return null;
+                  })()}
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <MentionInput value={novoComentario} onChange={setNovoComentario} users={responsaveis as any} placeholder={replyTo ? `Responder ${replyTo.autorNome}...` : "Digite um comentário... Use @nome para mencionar"} onMentionsChange={(ids) => { mentionedUsersRef.current = ids; }} />
+                      <button type="button" className="absolute left-1 bottom-1 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" onClick={() => {
+                        const inp = document.getElementById("com-file-input-painel") as HTMLInputElement;
+                        if (inp) inp.click();
+                      }}><Paperclip className="h-4 w-4" /></button>
+                      <input id="com-file-input-painel" type="file" className="hidden" onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        if (f.size > 10 * 1024 * 1024) { toast.error("Arquivo máximo: 10MB"); e.target.value = ""; return; }
+                        (window as any).__painelAnexoFile = f;
+                        toast.info(`📎 ${f.name} selecionado`);
+                        e.target.value = "";
+                      }} />
+                    </div>
+                    <Button size="sm" className="self-end h-8" disabled={!novoComentario.trim() && !(window as any).__painelAnexoFile} onClick={async () => {
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (!user || !detailCard) return;
+                      const { data: myProfile } = await supabase.from("profiles").select("id, full_name, telefone").eq("user_id", user.id).maybeSingle();
+
+                      let anexo_url: string | null = null;
+                      let anexo_nome: string | null = null;
+                      const arquivo = (window as any).__painelAnexoFile as File | undefined;
+                      if (arquivo) {
+                        try {
+                          const base64 = await new Promise<string>((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => { const result = reader.result as string; resolve(result.split(",")[1]); };
+                            reader.onerror = reject;
+                            reader.readAsDataURL(arquivo);
+                          });
+                          const { data: r2Data, error: r2Err } = await supabase.functions.invoke("r2-upload", {
+                            body: { arquivo_base64: base64, nome_arquivo: arquivo.name, mime_type: arquivo.type, pasta: "pedidos" },
+                          });
+                          if (r2Err || !r2Data?.sucesso) throw new Error(r2Data?.erro || "Erro no upload");
+                          anexo_url = r2Data.url;
+                          anexo_nome = arquivo.name;
+                        } catch (err: any) {
+                          toast.error("Erro ao enviar anexo: " + (err?.message || ""));
+                          return;
+                        } finally {
+                          (window as any).__painelAnexoFile = undefined;
                         }
                       }
-                      const mentionedUserIds = new Set(mentioned.map((pid: string) => { const prof = (responsaveis as any[]).find((r: any) => r.id === pid); return prof?.user_id || pid; }));
-                      if (replyTo) { const parentCom = comentarios.find((c: any) => c.id === replyTo.id); if (parentCom) { const parentProf = (responsaveis as any[]).find((r: any) => r.id === parentCom.criado_por); if (parentProf?.user_id) mentionedUserIds.add(parentProf.user_id); } }
-                      try { const { data: seguidores } = await supabase.from("painel_seguidores").select("user_id").eq("card_id", detailCard.id).is("unfollowed_at", null); for (const seg of (seguidores || [])) { if (seg.user_id === user.id) continue; if (mentionedUserIds.has(seg.user_id)) continue; await supabase.from("notificacoes").insert({ titulo: `💬 ${autorNome} comentou no projeto`, mensagem: `${autorNome} fez um comentário no projeto ${clienteNome} que você segue: "${novoComentario.trim().slice(0, 100)}${novoComentario.trim().length > 100 ? "..." : ""}"`, tipo: "info", criado_por: user.id, destinatario_user_id: seg.user_id, metadata: { card_id: detailCard.id, comentario_id: novo.id } }); } } catch { }
-                      setNovoComentario(""); setReplyTo(null); mentionedUsersRef.current = []; toast.success(replyTo ? "Resposta adicionada!" : "Comentário adicionado!");
-                    } else { toast.error("Erro ao adicionar comentário."); }
-                  }}>{replyTo ? "Responder" : "Incluir"}</Button>
+
+                      const textoFinal = novoComentario.trim() || (anexo_nome ? `📎 ${anexo_nome}` : "");
+                      const { data: novo, error } = await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, texto: textoFinal, criado_por: myProfile?.id || user.id, etapa_id: detailCard.etapa_id, parent_id: replyTo?.id || null, anexo_url, anexo_nome } as any).select("id, texto, criado_por, created_at, parent_id, anexo_url, anexo_nome").single();
+                      if (!error && novo) {
+                        setComentarios((prev) => [...prev, novo]);
+                        const clienteNome = detailCard.clientes?.nome_fantasia || "Cliente";
+                        const autorNome = myProfile?.full_name?.split(" ")[0] || "Alguém";
+                        if (replyTo) { const parentCom = comentarios.find((c: any) => c.id === replyTo.id); if (parentCom && parentCom.criado_por !== (myProfile?.id || user.id)) { const parentProf = (responsaveis as any[]).find((r: any) => r.id === parentCom.criado_por); if (parentProf?.user_id) { await supabase.from("notificacoes").insert({ titulo: `💬 ${autorNome} respondeu seu comentário`, mensagem: `${autorNome} respondeu seu comentário no projeto ${clienteNome}: "${textoFinal.slice(0, 100)}${textoFinal.length > 100 ? "..." : ""}"`, tipo: "info", criado_por: user.id, destinatario_user_id: parentProf.user_id, metadata: { card_id: detailCard.id, comentario_id: novo.id } }); } } }
+                        const mentioned = mentionedUsersRef.current;
+                        if (mentioned.length > 0) {
+                          for (const profileId of mentioned) {
+                            await supabase.from("painel_mencoes").insert({ comentario_id: novo.id, card_id: detailCard.id, mencionado_user_id: profileId, mencionado_por: myProfile?.id || user.id });
+                            const prof = (responsaveis as any[]).find((r: any) => r.id === profileId);
+                            await supabase.from("notificacoes").insert({ titulo: `💬 ${autorNome} mencionou você`, mensagem: `Você foi mencionado em um comentário no projeto ${clienteNome}: "${textoFinal.slice(0, 100)}${textoFinal.length > 100 ? "..." : ""}"`, tipo: "info", criado_por: user.id, destinatario_user_id: prof?.user_id || profileId, metadata: { card_id: detailCard.id, comentario_id: novo.id } });
+                            if (prof?.telefone) { try { const { data: intConfig } = await supabase.from("integracoes_config").select("*").eq("nome", "evolution_api").eq("ativo", true).maybeSingle(); if (intConfig?.server_url && intConfig?.token) { await supabase.functions.invoke("evolution-api", { body: { action: "send_message", server_url: intConfig.server_url, api_key: intConfig.token, instance_name: "Softflow_WhatsApp", phone: prof.telefone, message: `💬 *Menção em comentário*\n\n${autorNome} mencionou você no projeto *${clienteNome}*:\n\n"${textoFinal.slice(0, 200)}${textoFinal.length > 200 ? "..." : ""}"` } }); } } catch { } }
+                          }
+                        }
+                        const mentionedUserIds = new Set(mentioned.map((pid: string) => { const prof = (responsaveis as any[]).find((r: any) => r.id === pid); return prof?.user_id || pid; }));
+                        if (replyTo) { const parentCom = comentarios.find((c: any) => c.id === replyTo.id); if (parentCom) { const parentProf = (responsaveis as any[]).find((r: any) => r.id === parentCom.criado_por); if (parentProf?.user_id) mentionedUserIds.add(parentProf.user_id); } }
+                        try { const { data: seguidores } = await supabase.from("painel_seguidores").select("user_id").eq("card_id", detailCard.id).is("unfollowed_at", null); for (const seg of (seguidores || [])) { if (seg.user_id === user.id) continue; if (mentionedUserIds.has(seg.user_id)) continue; await supabase.from("notificacoes").insert({ titulo: `💬 ${autorNome} comentou no projeto`, mensagem: `${autorNome} fez um comentário no projeto ${clienteNome} que você segue: "${textoFinal.slice(0, 100)}${textoFinal.length > 100 ? "..." : ""}"`, tipo: "info", criado_por: user.id, destinatario_user_id: seg.user_id, metadata: { card_id: detailCard.id, comentario_id: novo.id } }); } } catch { }
+                        setNovoComentario(""); setReplyTo(null); mentionedUsersRef.current = []; (window as any).__painelAnexoFile = undefined; toast.success(replyTo ? "Resposta adicionada!" : "Comentário adicionado!");
+                      } else { toast.error("Erro ao adicionar comentário."); }
+                    }}>{replyTo ? "Responder" : "Incluir"}</Button>
+                  </div>
                 </div>
               </div>
 

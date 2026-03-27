@@ -3658,6 +3658,8 @@ export type Database = {
       }
       painel_comentarios: {
         Row: {
+          anexo_nome: string | null
+          anexo_url: string | null
           card_id: string
           created_at: string
           criado_por: string
@@ -3667,6 +3669,8 @@ export type Database = {
           texto: string
         }
         Insert: {
+          anexo_nome?: string | null
+          anexo_url?: string | null
           card_id: string
           created_at?: string
           criado_por: string
@@ -3676,6 +3680,8 @@ export type Database = {
           texto: string
         }
         Update: {
+          anexo_nome?: string | null
+          anexo_url?: string | null
           card_id?: string
           created_at?: string
           criado_por?: string
