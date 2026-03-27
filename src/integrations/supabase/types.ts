@@ -637,6 +637,41 @@ export type Database = {
           },
         ]
       }
+      cliente_documentos: {
+        Row: {
+          cliente_id: string
+          criado_em: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          url: string
+        }
+        Insert: {
+          cliente_id: string
+          criado_em?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          url: string
+        }
+        Update: {
+          cliente_id?: string
+          criado_em?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_documentos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientes: {
         Row: {
           apelido: string | null
