@@ -5623,6 +5623,14 @@ export type Database = {
     }
     Functions: {
       check_login_blocked: { Args: { p_email: string }; Returns: boolean }
+      criar_conversa_direta: {
+        Args: { p_target_user_id: string }
+        Returns: string
+      }
+      criar_conversa_grupo: {
+        Args: { p_nome: string; p_participantes: string[] }
+        Returns: string
+      }
       get_cron_secret: { Args: never; Returns: string }
       has_role: {
         Args: {
