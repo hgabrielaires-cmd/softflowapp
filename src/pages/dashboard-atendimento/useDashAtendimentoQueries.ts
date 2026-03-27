@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { DashKpi, TicketAlerta, TicketPorCategoria, TicketAntigo, KanbanResumo } from "./types";
 import { KANBAN_STATUS_COLORS } from "./constants";
 import { diasDesde, horasEntre } from "./helpers";
+import { resolveStatus, type AtendentePresenca } from "./components/AtendentesPanel";
 
 export function useDashKpis(startDate: string, endDate: string) {
   return useQuery<DashKpi>({
