@@ -211,32 +211,58 @@ export default function TicketNovo() {
     }
   }, [selfFollow, userId]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!modo) {
       toast.error("Selecione o Modo do ticket (Interno ou Externo).");
       return;
     }
-    const data: TicketFormData = {
-      titulo: titulo.trim() || "Ticket",
-      descricao_html: descricao,
-      cliente_id: clienteId,
-      contrato_id: contratoId,
-      mesa,
-      modo,
-      tipo_atendimento_id: tipoAtendimentoId,
-      prioridade,
-      responsavel_id: responsavelId,
-      sla_horas: slaHoras,
-      tags,
-      previsao_entrega: null,
-      ticket_pai_id: ticketPaiId,
-      seguidores,
-    };
-    const agendamentos = agendaDatas.map((item) => ({
-      data: format(item.date, "yyyy-MM-dd"),
-      hora_inicio: item.hora || null,
-    }));
-    createTicket.mutate({ data, userId, agendamentos });
+
+    setUploading(true);
+    try {
+      // Upload files to R2
+      const anexosUpload: { nome: string; url: string; tipo_mime: string; tamanho_bytes: number }[] = [];
+      for (const file of anexos) {
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`Arquivo "${file.name}" excede 10MB`);
+          continue;
+        }
+        const base64 = await fileToBase64(file);
+        const { data: r2Data, error: r2Error } = await supabase.functions.invoke("r2-upload", {
+          body: { arquivo_base64: base64, nome_arquivo: file.name, mime_type: file.type, pasta: "tickets" },
+        });
+        if (r2Error || !r2Data?.url) {
+          toast.error(`Erro ao enviar "${file.name}"`);
+          continue;
+        }
+        anexosUpload.push({ nome: file.name, url: r2Data.url, tipo_mime: file.type, tamanho_bytes: file.size });
+      }
+
+      const data: TicketFormData = {
+        titulo: titulo.trim() || "Ticket",
+        descricao_html: descricao,
+        cliente_id: clienteId,
+        contrato_id: contratoId,
+        mesa,
+        modo,
+        tipo_atendimento_id: tipoAtendimentoId,
+        prioridade,
+        responsavel_id: responsavelId,
+        sla_horas: slaHoras,
+        tags,
+        previsao_entrega: null,
+        ticket_pai_id: ticketPaiId,
+        seguidores,
+      };
+      const agendamentos = agendaDatas.map((item) => ({
+        data: format(item.date, "yyyy-MM-dd"),
+        hora_inicio: item.hora || null,
+      }));
+      createTicket.mutate({ data, userId, agendamentos, anexos: anexosUpload });
+    } catch {
+      toast.error("Erro ao processar anexos.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
