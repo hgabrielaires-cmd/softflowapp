@@ -61,6 +61,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
   const [editIsVendedor, setEditIsVendedor] = useState(false);
   const [editMesaIds, setEditMesaIds] = useState<string[]>([]);
   const [editActive, setEditActive] = useState(true);
+  const [editIsAtendenteChat, setEditIsAtendenteChat] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // ── WhatsApp boas-vindas ──
