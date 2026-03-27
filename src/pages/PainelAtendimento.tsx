@@ -965,27 +965,40 @@ export default function PainelAtendimento() {
                 <div className="space-y-1">
                   {(() => {
                     const fileInputRef = document.getElementById("com-file-input-painel") as HTMLInputElement | null;
-                    return null;
+                   return null;
                   })()}
+                  {/* Preview de arquivos selecionados */}
+                  {anexoFiles.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {anexoFiles.map((f, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 text-[10px] bg-muted px-2 py-0.5 rounded-full">
+                          <Paperclip className="h-2.5 w-2.5" /> {f.name}
+                          <button type="button" className="ml-0.5 text-destructive hover:text-destructive/80" onClick={() => {
+                            setAnexoFiles(prev => prev.filter((_, idx) => idx !== i));
+                          }}>×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="flex gap-2">
-                    <div className="flex-1 relative">
+                    <div className="flex-1">
                       <MentionInput value={novoComentario} onChange={setNovoComentario} users={responsaveis as any} placeholder={replyTo ? `Responder ${replyTo.autorNome}...` : "Digite um comentário... Use @nome para mencionar"} onMentionsChange={(ids) => { mentionedUsersRef.current = ids; }} />
-                      <button type="button" className="absolute left-1 bottom-1 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" onClick={() => {
-                        const inp = document.getElementById("com-file-input-painel") as HTMLInputElement;
-                        if (inp) inp.click();
-                      }}><Paperclip className="h-4 w-4" /></button>
-                      <input id="com-file-input-painel" type="file" multiple className="hidden" onChange={(e) => {
-                        const files = e.target.files;
-                        if (!files || files.length === 0) return;
-                        const existing: File[] = (window as any).__painelAnexoFiles || [];
-                        for (let i = 0; i < files.length; i++) {
-                          if (files[i].size > 10 * 1024 * 1024) { toast.error(`${files[i].name} excede 10MB`); continue; }
-                          existing.push(files[i]);
-                        }
-                        (window as any).__painelAnexoFiles = existing;
-                        toast.info(`📎 ${existing.length} arquivo(s) selecionado(s)`);
-                        e.target.value = "";
-                      }} />
+                    </div>
+                    <button type="button" className="self-end p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors h-8" onClick={() => {
+                      const inp = document.getElementById("com-file-input-painel") as HTMLInputElement;
+                      if (inp) inp.click();
+                    }}><Paperclip className="h-4 w-4" /></button>
+                    <input id="com-file-input-painel" type="file" multiple className="hidden" onChange={(e) => {
+                      const files = e.target.files;
+                      if (!files || files.length === 0) return;
+                      const newFiles: File[] = [];
+                      for (let i = 0; i < files.length; i++) {
+                        if (files[i].size > 10 * 1024 * 1024) { toast.error(`${files[i].name} excede 10MB`); continue; }
+                        newFiles.push(files[i]);
+                      }
+                      setAnexoFiles(prev => [...prev, ...newFiles]);
+                      e.target.value = "";
+                    }} />
                     </div>
                     <Button size="sm" className="self-end h-8" disabled={enviandoComentario || (!novoComentario.trim() && !((window as any).__painelAnexoFiles?.length > 0))} onClick={async () => {
                       if (enviandoComentario) return;
