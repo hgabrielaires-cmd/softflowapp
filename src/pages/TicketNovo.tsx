@@ -549,6 +549,55 @@ export default function TicketNovo() {
                 <Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)}
                   placeholder="Descreva o ticket..." className="min-h-[200px]" />
               </div>
+
+              {/* Row 8: Anexos */}
+              <div>
+                <Label className="text-xs">Anexos</Label>
+                <div className="mt-1 border border-dashed rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const input = document.createElement("input");
+                        input.type = "file";
+                        input.multiple = true;
+                        input.accept = "*/*";
+                        input.onchange = (e) => {
+                          const files = (e.target as HTMLInputElement).files;
+                          if (files) setAnexos((prev) => [...prev, ...Array.from(files)]);
+                        };
+                        input.click();
+                      }}
+                    >
+                      <Paperclip className="h-3.5 w-3.5 mr-1.5" />
+                      Adicionar arquivos
+                    </Button>
+                    <span className="text-xs text-muted-foreground">Máx. 10MB por arquivo</span>
+                  </div>
+                  {anexos.length > 0 && (
+                    <div className="space-y-1">
+                      {anexos.map((file, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-xs bg-muted/50 rounded px-2 py-1.5">
+                          <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="truncate flex-1">{file.name}</span>
+                          <span className="text-muted-foreground shrink-0">
+                            {(file.size / 1024).toFixed(0)}KB
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setAnexos((prev) => prev.filter((_, i) => i !== idx))}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Right 40% */}

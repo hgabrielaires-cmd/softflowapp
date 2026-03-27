@@ -6,7 +6,11 @@ import type { TicketFormData, TicketStatus } from "./types";
 export function useCreateTicket(onCreated?: () => void) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ data, userId, agendamentos = [] }: { data: TicketFormData; userId: string; agendamentos?: { data: string; hora_inicio: string | null }[] }) => {
+    mutationFn: async ({ data, userId, agendamentos = [], anexos = [] }: {
+      data: TicketFormData; userId: string;
+      agendamentos?: { data: string; hora_inicio: string | null }[];
+      anexos?: { nome: string; url: string; tipo_mime: string; tamanho_bytes: number }[];
+    }) => {
       const { data: ticket, error } = await supabase
         .from("tickets")
         .insert({
@@ -44,6 +48,20 @@ export function useCreateTicket(onCreated?: () => void) {
         visibilidade: "publico",
         conteudo: "Ticket criado",
       });
+
+      // Save anexos
+      if (anexos.length > 0) {
+        const anexoRows = anexos.map((a) => ({
+          ticket_id: ticket.id,
+          nome: a.nome,
+          url: a.url,
+          tipo_mime: a.tipo_mime,
+          tamanho_bytes: a.tamanho_bytes,
+          uploaded_by: userId,
+        }));
+        const { error: anexoError } = await supabase.from("ticket_anexos").insert(anexoRows);
+        if (anexoError) console.error("Erro ao salvar anexos:", anexoError);
+      }
 
       // Save agendamentos if any dates were selected
       if (agendamentos.length > 0) {
