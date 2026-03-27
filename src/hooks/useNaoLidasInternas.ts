@@ -1,9 +1,27 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 
 export function useNaoLidasInternas() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Realtime subscription to refresh unread count
+  useEffect(() => {
+    const channel = supabase
+      .channel("nao-lidas-global")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_interno_mensagens" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["chat-interno-nao-lidas"] });
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   return useQuery({
     queryKey: ["chat-interno-nao-lidas", user?.id],
@@ -12,7 +30,6 @@ export function useNaoLidasInternas() {
     queryFn: async (): Promise<number> => {
       if (!user) return 0;
 
-      // Get all conversations user participates in
       const { data: participacoes } = await supabase
         .from("chat_interno_participantes")
         .select("conversa_id")
@@ -22,7 +39,6 @@ export function useNaoLidasInternas() {
 
       const conversaIds = participacoes.map((p) => p.conversa_id);
 
-      // Get all messages in those conversations not sent by current user
       const { data: msgs } = await supabase
         .from("chat_interno_mensagens")
         .select("id")
@@ -33,7 +49,6 @@ export function useNaoLidasInternas() {
 
       const msgIds = msgs.map((m) => m.id);
 
-      // Get which of those messages user has read
       const { data: leituras } = await supabase
         .from("chat_interno_leituras")
         .select("mensagem_id")
