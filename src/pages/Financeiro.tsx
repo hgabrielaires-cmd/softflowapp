@@ -138,7 +138,7 @@ export default function Financeiro() {
     setLoading(true);
     let pedidosQuery = supabase
       .from("pedidos")
-      .select("*, clientes(nome_fantasia), planos(nome), filiais(nome)")
+      .select("*, clientes(nome_fantasia), planos(nome), filiais(nome), vendedor:profiles!pedidos_vendedor_id_fkey(full_name)")
       .eq("financeiro_status", "Aguardando")
       .eq("status_pedido", "Aguardando Financeiro")
       .order("created_at", { ascending: true });
