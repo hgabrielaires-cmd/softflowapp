@@ -81,7 +81,7 @@ export function PedidoComentarios({ pedidoId, readOnly = false }: Props) {
       .order("created_at", { ascending: false });
 
     if (data) {
-      setComentarios(data as Comentario[]);
+      setComentarios(data as unknown as Comentario[]);
       const userIds = [...new Set(data.map((c: any) => c.user_id))];
       if (userIds.length > 0) {
         const { data: profs } = await supabase
