@@ -15,6 +15,7 @@ import { GraficoCategoria } from "./dashboard-atendimento/components/GraficoCate
 import { TicketsAntigos } from "./dashboard-atendimento/components/TicketsAntigos";
 import { KanbanMini } from "./dashboard-atendimento/components/KanbanMini";
 import { AgendaDia } from "./dashboard-atendimento/components/AgendaDia";
+import { AtendentesPanel } from "./dashboard-atendimento/components/AtendentesPanel";
 import {
   useDashKpis,
   useDashAlertas,
@@ -22,6 +23,7 @@ import {
   useTicketsMaisAntigos,
   useKanbanResumo,
   useAgendaHoje,
+  useAtendentesPresenca,
 } from "./dashboard-atendimento/useDashAtendimentoQueries";
 
 export default function DashboardAtendimento() {
@@ -43,6 +45,7 @@ export default function DashboardAtendimento() {
   const { data: antigos, isLoading: loadAntigos } = useTicketsMaisAntigos();
   const { data: kanban, isLoading: loadKanban } = useKanbanResumo(startDate, endDate);
   const { data: agenda, isLoading: loadAgenda } = useAgendaHoje();
+  const { data: atendentes, isLoading: loadAtendentes } = useAtendentesPresenca();
 
   const handleVerTicket = (id: string) => {
     navigate(`/tickets?ticket=${id}`);
@@ -55,6 +58,7 @@ export default function DashboardAtendimento() {
     queryClient.invalidateQueries({ queryKey: ["dash_tickets_mais_antigos"] });
     queryClient.invalidateQueries({ queryKey: ["dash_tickets_kanban_resumo"] });
     queryClient.invalidateQueries({ queryKey: ["dash_tickets_agenda_hoje"] });
+    queryClient.invalidateQueries({ queryKey: ["dash_atendentes_presenca"] });
   };
 
   const rangeLabel =
@@ -107,6 +111,9 @@ export default function DashboardAtendimento() {
 
         {/* KPIs */}
         <KpiCards kpis={kpis} loading={loadKpi} />
+
+        {/* Atendentes */}
+        <AtendentesPanel atendentes={atendentes} loading={loadAtendentes} />
 
         {/* Main grid: content + sidebar */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
