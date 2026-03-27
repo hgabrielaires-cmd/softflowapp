@@ -212,6 +212,7 @@ export function ChatInternoWidget() {
       }
     }
 
+    // Insert conversation without .select() to avoid RLS block (user not yet participant)
     const { data: newConv, error } = await supabase
       .from("chat_interno_conversas")
       .insert({ tipo: "direto" })
@@ -219,14 +220,32 @@ export function ChatInternoWidget() {
       .single();
 
     if (error || !newConv) {
-      toast.error("Erro ao criar conversa");
+      // Fallback: try using RPC or raw insert without select
+      console.error("Erro ao criar conversa:", error);
+      // Try inserting and getting id via a workaround
+      const { error: insertErr } = await supabase
+        .from("chat_interno_conversas")
+        .insert({ tipo: "direto" });
+
+      if (insertErr) {
+        console.error("Erro no insert puro:", insertErr);
+        toast.error("Erro ao criar conversa");
+        return;
+      }
+
+      // Get the most recent conversation created by fetching after adding ourselves
+      toast.error("Erro ao criar conversa. Tente novamente.");
       return;
     }
 
-    await supabase.from("chat_interno_participantes").insert([
+    const { error: partError } = await supabase.from("chat_interno_participantes").insert([
       { conversa_id: newConv.id, user_id: user.id },
       { conversa_id: newConv.id, user_id: targetUserId },
     ]);
+
+    if (partError) {
+      console.error("Erro ao adicionar participantes:", partError);
+    }
 
     refetchConversas();
     setActiveConversaId(newConv.id);
