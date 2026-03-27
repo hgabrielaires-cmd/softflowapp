@@ -176,80 +176,24 @@ export function ChatInternoWidget() {
     markAsRead(c.id);
   }, [markAsRead]);
 
-  // Start or open DM with a user
+  // Start or open DM with a user (uses SECURITY DEFINER function)
   const startDm = useCallback(async (targetUserId: string, targetName: string) => {
     if (!user) return;
 
-    const { data: myConversas } = await supabase
-      .from("chat_interno_participantes")
-      .select("conversa_id")
-      .eq("user_id", user.id);
+    const { data, error } = await supabase.rpc("criar_conversa_direta", {
+      p_target_user_id: targetUserId,
+    });
 
-    if (myConversas?.length) {
-      for (const mc of myConversas) {
-        const { data: conv } = await supabase
-          .from("chat_interno_conversas")
-          .select("id, tipo")
-          .eq("id", mc.conversa_id)
-          .eq("tipo", "direto")
-          .maybeSingle();
-
-        if (conv) {
-          const { data: otherPart } = await supabase
-            .from("chat_interno_participantes")
-            .select("user_id")
-            .eq("conversa_id", conv.id)
-            .eq("user_id", targetUserId)
-            .maybeSingle();
-
-          if (otherPart) {
-            setActiveConversaId(conv.id);
-            setActiveConversaName(targetName);
-            markAsRead(conv.id);
-            return;
-          }
-        }
-      }
-    }
-
-    // Insert conversation without .select() to avoid RLS block (user not yet participant)
-    const { data: newConv, error } = await supabase
-      .from("chat_interno_conversas")
-      .insert({ tipo: "direto" })
-      .select("id")
-      .single();
-
-    if (error || !newConv) {
-      // Fallback: try using RPC or raw insert without select
-      console.error("Erro ao criar conversa:", error);
-      // Try inserting and getting id via a workaround
-      const { error: insertErr } = await supabase
-        .from("chat_interno_conversas")
-        .insert({ tipo: "direto" });
-
-      if (insertErr) {
-        console.error("Erro no insert puro:", insertErr);
-        toast.error("Erro ao criar conversa");
-        return;
-      }
-
-      // Get the most recent conversation created by fetching after adding ourselves
-      toast.error("Erro ao criar conversa. Tente novamente.");
+    if (error || !data) {
+      console.error("Erro ao criar conversa direta:", error);
+      toast.error("Erro ao criar conversa");
       return;
     }
 
-    const { error: partError } = await supabase.from("chat_interno_participantes").insert([
-      { conversa_id: newConv.id, user_id: user.id },
-      { conversa_id: newConv.id, user_id: targetUserId },
-    ]);
-
-    if (partError) {
-      console.error("Erro ao adicionar participantes:", partError);
-    }
-
     refetchConversas();
-    setActiveConversaId(newConv.id);
+    setActiveConversaId(data);
     setActiveConversaName(targetName);
+    markAsRead(data);
   }, [user, markAsRead, refetchConversas]);
 
   // Create group
