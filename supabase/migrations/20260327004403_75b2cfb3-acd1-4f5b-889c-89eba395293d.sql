@@ -1,0 +1,1 @@
+ALTER TABLE public.ticket_comentarios ADD COLUMN IF NOT EXISTS anexos jsonb DEFAULT '[]'::jsonb;

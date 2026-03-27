@@ -274,7 +274,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
                 <TicketNovaResposta
                   isLoading={addComment.isPending}
                   users={mentionUsers}
-                  onSubmit={(conteudo, visibilidade, mentionedUserIds) =>
+                  onSubmit={(conteudo, visibilidade, mentionedUserIds, anexos) =>
                     addComment.mutate({
                       ticketId: ticket.id,
                       userId,
@@ -282,6 +282,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
                       visibilidade,
                       mentionedUserIds,
                       ticketNumero: ticket.numero_exibicao,
+                      anexos,
                     })
                   }
                 />

@@ -5109,6 +5109,7 @@ export type Database = {
       }
       ticket_comentarios: {
         Row: {
+          anexos: Json | null
           conteudo: string
           created_at: string
           id: string
@@ -5120,6 +5121,7 @@ export type Database = {
           visibilidade: string
         }
         Insert: {
+          anexos?: Json | null
           conteudo?: string
           created_at?: string
           id?: string
@@ -5131,6 +5133,7 @@ export type Database = {
           visibilidade?: string
         }
         Update: {
+          anexos?: Json | null
           conteudo?: string
           created_at?: string
           id?: string

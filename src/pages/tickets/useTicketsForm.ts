@@ -105,12 +105,13 @@ export function useAddTicketComment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({
-      ticketId, userId, conteudo, visibilidade, mentionedUserIds = [], ticketNumero = "",
+      ticketId, userId, conteudo, visibilidade, mentionedUserIds = [], ticketNumero = "", anexos = [],
     }: {
       ticketId: string; userId: string; conteudo: string;
       visibilidade: "publico" | "interno";
       mentionedUserIds?: string[];
       ticketNumero?: string;
+      anexos?: { nome: string; url: string; tipo?: string }[];
     }) => {
       const { error } = await supabase.from("ticket_comentarios").insert({
         ticket_id: ticketId,
@@ -118,7 +119,8 @@ export function useAddTicketComment() {
         tipo: "comentario",
         visibilidade,
         conteudo,
-      });
+        anexos: anexos.length > 0 ? anexos : [],
+      } as any);
       if (error) throw error;
 
       // Send notifications for mentions
