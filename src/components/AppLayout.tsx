@@ -743,6 +743,30 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
     return () => clearInterval(interval);
   }, [profile]);
 
+  // Realtime: toast on new notification
+  useEffect(() => {
+    if (!profile?.user_id) return;
+    const channel = supabase
+      .channel("notif-bell-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notificacoes" },
+        (payload) => {
+          const n = payload.new as any;
+          if (!n) return;
+          // Only show if targeted to this user or broadcast
+          const isForMe =
+            !n.destinatario_user_id ||
+            n.destinatario_user_id === profile.user_id;
+          if (!isForMe) return;
+          toast.info("🔔 Nova notificação", { description: n.titulo || "Você tem uma nova notificação" });
+          loadNotificacoes();
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [profile?.user_id]);
+
   async function handleAprovar(sol: SolicitacaoDesconto) {
     setProcessingId(sol.id);
     await supabase.from("solicitacoes_desconto").update({ status: "Aprovado", aprovado_por: profile?.user_id, aprovado_em: new Date().toISOString() }).eq("id", sol.id);
