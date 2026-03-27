@@ -1039,7 +1039,8 @@ export default function PainelAtendimento() {
                         try { const { data: seguidores } = await supabase.from("painel_seguidores").select("user_id").eq("card_id", detailCard.id).is("unfollowed_at", null); for (const seg of (seguidores || [])) { if (seg.user_id === user.id) continue; if (mentionedUserIds.has(seg.user_id)) continue; await supabase.from("notificacoes").insert({ titulo: `💬 ${autorNome} comentou no projeto`, mensagem: `${autorNome} fez um comentário no projeto ${clienteNome} que você segue: "${textoFinal.slice(0, 100)}${textoFinal.length > 100 ? "..." : ""}"`, tipo: "info", criado_por: user.id, destinatario_user_id: seg.user_id, metadata: { card_id: detailCard.id, comentario_id: novo.id } }); } } catch { }
                         setNovoComentario(""); setReplyTo(null); mentionedUsersRef.current = []; (window as any).__painelAnexoFiles = undefined; toast.success(replyTo ? "Resposta adicionada!" : "Comentário adicionado!");
                       } else { toast.error("Erro ao adicionar comentário."); }
-                    }}>{replyTo ? "Responder" : "Incluir"}</Button>
+                      } finally { setEnviandoComentario(false); }
+                    }}>{enviandoComentario ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />Enviando...</> : (replyTo ? "Responder" : "Incluir")}</Button>
                   </div>
                   {/* Preview de arquivos selecionados */}
                   {(() => {
