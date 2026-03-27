@@ -814,11 +814,25 @@ export default function TicketNovo() {
         {/* Footer */}
         <div className="shrink-0 px-4 py-3 border-t flex items-center justify-between">
           <Button variant="outline" onClick={() => navigate("/tickets")}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={createTicket.isPending} className="bg-primary hover:bg-primary/90">
-            {createTicket.isPending ? "Salvando..." : "Salvar Ticket"}
+          <Button onClick={handleSave} disabled={createTicket.isPending || uploading} className="bg-primary hover:bg-primary/90">
+            {uploading ? (
+              <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Enviando anexos...</>
+            ) : createTicket.isPending ? "Salvando..." : "Salvar Ticket"}
           </Button>
         </div>
       </div>
     </AppLayout>
   );
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(",")[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
