@@ -412,6 +412,13 @@ export function ClienteFormDialog({
             )}
           </div>
 
+          {/* Documentos - só exibe para clientes já salvos */}
+          {editing && (
+            <div className="border-t pt-4 mt-4">
+              <ClienteDocumentosSection clienteId={editing.id} readOnly={viewOnly} />
+            </div>
+          )}
+
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>{viewOnly ? "Fechar" : "Cancelar"}</Button>
