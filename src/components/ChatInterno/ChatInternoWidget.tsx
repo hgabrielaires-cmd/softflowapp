@@ -196,30 +196,23 @@ export function ChatInternoWidget() {
     markAsRead(data);
   }, [user, markAsRead, refetchConversas]);
 
-  // Create group
+  // Create group (uses SECURITY DEFINER function)
   const criarGrupo = useCallback(async () => {
     if (!user || !novoGrupoNome.trim() || novoGrupoSelecionados.length === 0) {
       toast.error("Preencha o nome e selecione participantes");
       return;
     }
 
-    const { data: newConv, error } = await supabase
-      .from("chat_interno_conversas")
-      .insert({ tipo: "grupo", nome: novoGrupoNome.trim() })
-      .select("id")
-      .single();
+    const { data, error } = await supabase.rpc("criar_conversa_grupo", {
+      p_nome: novoGrupoNome.trim(),
+      p_participantes: novoGrupoSelecionados,
+    });
 
-    if (error || !newConv) {
+    if (error || !data) {
+      console.error("Erro ao criar grupo:", error);
       toast.error("Erro ao criar grupo");
       return;
     }
-
-    const participants = [user.id, ...novoGrupoSelecionados].map((uid) => ({
-      conversa_id: newConv.id,
-      user_id: uid,
-    }));
-
-    await supabase.from("chat_interno_participantes").insert(participants);
 
     setNovoGrupoOpen(false);
     setNovoGrupoNome("");
