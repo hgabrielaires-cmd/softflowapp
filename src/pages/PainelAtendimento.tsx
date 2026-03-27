@@ -986,9 +986,12 @@ export default function PainelAtendimento() {
                         e.target.value = "";
                       }} />
                     </div>
-                    <Button size="sm" className="self-end h-8" disabled={!novoComentario.trim() && !((window as any).__painelAnexoFiles?.length > 0)} onClick={async () => {
+                    <Button size="sm" className="self-end h-8" disabled={enviandoComentario || (!novoComentario.trim() && !((window as any).__painelAnexoFiles?.length > 0))} onClick={async () => {
+                      if (enviandoComentario) return;
+                      setEnviandoComentario(true);
+                      try {
                       const { data: { user } } = await supabase.auth.getUser();
-                      if (!user || !detailCard) return;
+                      if (!user || !detailCard) { setEnviandoComentario(false); return; }
                       const { data: myProfile } = await supabase.from("profiles").select("id, full_name, telefone").eq("user_id", user.id).maybeSingle();
 
                       const arquivos: File[] = (window as any).__painelAnexoFiles || [];
