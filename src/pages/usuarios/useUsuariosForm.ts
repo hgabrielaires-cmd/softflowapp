@@ -381,6 +381,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
     editIsVendedor, setEditIsVendedor,
     editMesaIds, setEditMesaIds,
     editActive, setEditActive,
+    editIsAtendenteChat, setEditIsAtendenteChat,
     saving,
     handleEdit,
     openEditDialog,
