@@ -81,6 +81,31 @@ export function TicketTimeline({ comentarios, curtidas, users = [], currentUserI
             {isComment && users.length > 0 ? renderMentionText(c.conteudo, users) : c.conteudo}
           </p>
 
+          {/* Anexos */}
+          {isComment && Array.isArray(c.anexos) && c.anexos.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {c.anexos.map((a, i) => (
+                <button
+                  key={i}
+                  className="inline-flex items-center gap-1 text-[11px] bg-muted hover:bg-muted/80 px-2 py-1 rounded transition-colors"
+                  title={a.nome}
+                  onClick={async () => {
+                    try {
+                      const key = new URL(a.url).pathname.replace(/^\//, "");
+                      const { data } = await supabase.functions.invoke("r2-download", { body: { key, filename: a.nome } });
+                      if (data?.signedUrl) { window.open(data.signedUrl, "_blank"); }
+                      else { window.open(a.url, "_blank"); }
+                    } catch { window.open(a.url, "_blank"); }
+                  }}
+                >
+                  <Paperclip className="h-3 w-3 shrink-0" />
+                  <span className="max-w-[140px] truncate">{a.nome}</span>
+                  <Download className="h-3 w-3 shrink-0 text-muted-foreground" />
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Actions: Like + Reply */}
           {isComment && (
             <div className="flex items-center gap-3 mt-2">
