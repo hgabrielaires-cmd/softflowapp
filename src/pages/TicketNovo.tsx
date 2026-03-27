@@ -25,7 +25,7 @@ import type { TicketFormData, TicketPrioridade, TicketMesa, TicketModo, TicketSt
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Clock, Trash2, Search, Eye, CalendarDays } from "lucide-react";
+import { ArrowLeft, Clock, Trash2, Search, Eye, CalendarDays, Paperclip, X, Loader2, FileText } from "lucide-react";
 import { isSameDay } from "date-fns";
 import { toast } from "sonner";
 import { format } from "date-fns";
