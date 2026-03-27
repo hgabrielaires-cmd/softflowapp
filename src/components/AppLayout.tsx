@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatInternoWidget } from "@/components/ChatInterno/ChatInternoWidget";
 import { usePresenca } from "@/hooks/usePresenca";
-import { Circle, ImageIcon } from "lucide-react";
+import { Circle } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
