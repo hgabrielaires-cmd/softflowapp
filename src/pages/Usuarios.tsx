@@ -255,6 +255,7 @@ export default function Usuarios() {
         editPermiteCancelarProjeto={f.editPermiteCancelarProjeto} setEditPermiteCancelarProjeto={f.setEditPermiteCancelarProjeto}
         editPermiteVerValoresProjeto={f.editPermiteVerValoresProjeto} setEditPermiteVerValoresProjeto={f.setEditPermiteVerValoresProjeto}
         editActive={f.editActive} setEditActive={f.setEditActive}
+        editIsAtendenteChat={f.editIsAtendenteChat} setEditIsAtendenteChat={f.setEditIsAtendenteChat}
         saving={f.saving}
         handleEdit={f.handleEdit}
         filiais={q.filiais}
