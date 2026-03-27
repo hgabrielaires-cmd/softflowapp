@@ -7,23 +7,7 @@ export function useNaoLidasInternas() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Realtime subscription to refresh unread count
-  useEffect(() => {
-    const channel = supabase
-      .channel("nao-lidas-global")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "chat_interno_mensagens" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["chat-interno-nao-lidas"] });
-        }
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [queryClient]);
-
-  return useQuery({
+  const query = useQuery({
     queryKey: ["chat-interno-nao-lidas", user?.id],
     enabled: !!user,
     refetchInterval: 15_000,
@@ -59,4 +43,22 @@ export function useNaoLidasInternas() {
       return msgIds.filter((id) => !lidasSet.has(id)).length;
     },
   });
+
+  // Realtime subscription to refresh unread count
+  useEffect(() => {
+    const channel = supabase
+      .channel("nao-lidas-global")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_interno_mensagens" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["chat-interno-nao-lidas"] });
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
+  return query;
 }
