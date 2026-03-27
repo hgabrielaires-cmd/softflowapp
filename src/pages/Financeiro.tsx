@@ -152,7 +152,22 @@ export default function Financeiro() {
       pedidosQuery,
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
     ]);
-    setPedidos((pedidosData || []) as PedidoFila[]);
+
+    // Enriquecer com nome do vendedor
+    const pedidosList = (pedidosData || []) as PedidoFila[];
+    const vendedorIds = [...new Set(pedidosList.map(p => p.vendedor_id).filter(Boolean))];
+    let vendedorMap: Record<string, string> = {};
+    if (vendedorIds.length > 0) {
+      const { data: vendedores } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", vendedorIds);
+      if (vendedores) {
+        vendedorMap = Object.fromEntries(vendedores.map(v => [v.user_id, v.full_name]));
+      }
+    }
+    const enriched = pedidosList.map(p => ({ ...p, vendedor_nome: vendedorMap[p.vendedor_id] || "" }));
+    setPedidos(enriched as PedidoFila[]);
     setFiliais((filiaisData || []) as Filial[]);
     setLoading(false);
   }
