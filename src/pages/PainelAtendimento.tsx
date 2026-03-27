@@ -26,7 +26,7 @@ import { ptBR } from "date-fns/locale";
 import {
   LayoutGrid, List, Search, Clock, Building2, User, Play, AlertTriangle, RefreshCw, ArrowRight, CheckSquare,
   CalendarDays, Pencil, MoreHorizontal, XCircle, PauseCircle, UserPlus, Ban, X,
-  Heart, Reply, CornerDownRight, BellRing, BellOff, ChevronRight, History, Info, FileText,
+  Heart, Reply, CornerDownRight, BellRing, BellOff, ChevronRight, History, Info, FileText, Paperclip, Download,
 } from "lucide-react";
 import { CHECKLIST_TIPO_LABELS } from "@/lib/supabase-types";
 import type { ChecklistItem } from "@/lib/supabase-types";
