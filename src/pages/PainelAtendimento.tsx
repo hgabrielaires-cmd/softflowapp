@@ -94,6 +94,7 @@ export default function PainelAtendimento() {
   
   const [, setTick] = useState(0);
   const [novoComentario, setNovoComentario] = useState("");
+  const [enviandoComentario, setEnviandoComentario] = useState(false);
   const mentionedUsersRef = useRef<string[]>([]);
   const [comentarios, setComentarios] = useState<any[]>([]);
   const [curtidas, setCurtidas] = useState<Record<string, string[]>>({});
