@@ -152,7 +152,22 @@ export default function Financeiro() {
       pedidosQuery,
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
     ]);
-    setPedidos((pedidosData || []) as PedidoFila[]);
+
+    // Enriquecer com nome do vendedor
+    const pedidosList = (pedidosData || []) as PedidoFila[];
+    const vendedorIds = [...new Set(pedidosList.map(p => p.vendedor_id).filter(Boolean))];
+    let vendedorMap: Record<string, string> = {};
+    if (vendedorIds.length > 0) {
+      const { data: vendedores } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", vendedorIds);
+      if (vendedores) {
+        vendedorMap = Object.fromEntries(vendedores.map(v => [v.user_id, v.full_name]));
+      }
+    }
+    const enriched = pedidosList.map(p => ({ ...p, vendedor_nome: vendedorMap[p.vendedor_id] || "" }));
+    setPedidos(enriched as PedidoFila[]);
     setFiliais((filiaisData || []) as Filial[]);
     setLoading(false);
   }
@@ -513,6 +528,7 @@ export default function Financeiro() {
                 <div><p className="text-muted-foreground text-xs">Plano</p><p className="font-semibold text-sm">{selected.planos?.nome}</p></div>
                 <div><p className="text-muted-foreground text-xs">Filial</p><p className="font-semibold text-sm">{selected.filiais?.nome}</p></div>
                 <div><p className="text-muted-foreground text-xs">Data</p><p className="font-semibold text-sm">{format(new Date(selected.created_at), "dd/MM/yyyy", { locale: ptBR })}</p></div>
+                <div className="col-span-2"><p className="text-muted-foreground text-xs">Vendedor</p><p className="font-semibold text-sm">{(selected as any).vendedor_nome || "—"}</p></div>
               </div>
 
               {/* ── Itens do Pedido ── */}
