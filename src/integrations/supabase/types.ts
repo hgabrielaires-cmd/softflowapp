@@ -5640,6 +5640,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_chat_participant: {
+        Args: { _conversa_id: string; _user_id: string }
+        Returns: boolean
+      }
       record_login_attempt: {
         Args: { p_email: string; p_ip?: string; p_success: boolean }
         Returns: undefined
