@@ -112,6 +112,9 @@ export default function DashboardAtendimento() {
         {/* KPIs */}
         <KpiCards kpis={kpis} loading={loadKpi} />
 
+        {/* Atendentes */}
+        <AtendentesPanel atendentes={atendentes} loading={loadAtendentes} />
+
         {/* Main grid: content + sidebar */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Central (2/3) */}
