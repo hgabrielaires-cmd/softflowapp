@@ -858,7 +858,10 @@ export default function PainelAtendimento() {
                                 {ag.painel_etapas?.nome && <Badge variant="outline" className="text-[10px] h-5 shrink-0" style={{ borderColor: ag.painel_etapas.cor || undefined, color: ag.painel_etapas.cor || undefined }}>{ag.painel_etapas.nome}</Badge>}
                                 {!configLocked && isEtapaAgendamento && <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0 ml-auto" onClick={async () => { await supabase.from("painel_agendamentos").delete().eq("id", ag.id); setCardAgendamentos(prev => prev.filter(a => a.id !== ag.id)); toast.success("Agendamento removido!"); }}><X className="h-3 w-3" /></Button>}
                               </div>
-                              {ag.jornada_atividades?.nome && <span className="text-[11px] font-medium text-foreground pl-5 truncate" title={ag.jornada_atividades.nome}>{ag.jornada_atividades.nome}</span>}
+                              {(() => {
+                                const nomeAtividade = ag.jornada_atividades?.nome || (ag.atividade_id ? checklistEtapa.find((a: any) => a.id === ag.atividade_id)?.nome : null) || ag.titulo;
+                                return nomeAtividade ? <span className="text-[11px] font-medium text-foreground pl-5 truncate" title={nomeAtividade}>{nomeAtividade}</span> : null;
+                              })()}
                             </div>
                           ))}
                         </div>
