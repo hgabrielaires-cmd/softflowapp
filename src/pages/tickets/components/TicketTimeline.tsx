@@ -4,9 +4,10 @@ import { TicketComentario, TicketCurtida } from "../types";
 import { formatRelativeTime } from "../helpers";
 import { UserAvatar } from "@/components/UserAvatar";
 import { renderMentionText } from "@/components/MentionInput";
-import { Lock, ArrowRightLeft, MessageSquare, Info, Heart, Reply, Send } from "lucide-react";
+import { Lock, ArrowRightLeft, MessageSquare, Info, Heart, Reply, Send, Paperclip, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MentionUser {
   id: string;
