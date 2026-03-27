@@ -214,7 +214,7 @@ export default function PainelAtendimento() {
     }
     (async () => {
       const [{ data: coms }, { data: tecs }, { data: likes }, { data: agData }, { data: seguindo }, { data: allSeguidores }] = await Promise.all([
-        supabase.from("painel_comentarios").select("id, texto, criado_por, created_at, parent_id, etapa_id, anexo_url, anexo_nome").eq("card_id", detailCard.id).order("created_at", { ascending: true }),
+        supabase.from("painel_comentarios").select("id, texto, criado_por, created_at, parent_id, etapa_id, anexo_url, anexo_nome, anexos").eq("card_id", detailCard.id).order("created_at", { ascending: true }),
         supabase.from("painel_tecnicos").select("tecnico_id").eq("card_id", detailCard.id),
         supabase.from("painel_curtidas").select("comentario_id, user_id"),
         supabase.from("painel_agendamentos").select("*, jornada_atividades(nome), painel_etapas:etapa_id(nome, cor)").eq("card_id", detailCard.id).order("data"),
