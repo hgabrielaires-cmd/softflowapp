@@ -26,6 +26,11 @@ const PRIORIDADE_MAP: Record<string, { label: string; emoji: string }> = {
 
 const MAX_FILE_SIZE = 11 * 1024 * 1024; // 11MB
 
+interface AnexoItem {
+  url: string;
+  nome: string;
+}
+
 interface Comentario {
   id: string;
   pedido_id: string;
@@ -34,6 +39,7 @@ interface Comentario {
   prioridade: string;
   anexo_url: string | null;
   anexo_nome: string | null;
+  anexos: AnexoItem[] | null;
   parent_id: string | null;
   created_at: string;
 }
