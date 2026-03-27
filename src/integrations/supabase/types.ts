@@ -76,6 +76,27 @@ export type Database = {
         }
         Relationships: []
       }
+      atendente_presenca: {
+        Row: {
+          last_heartbeat: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          last_heartbeat?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          last_heartbeat?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -4591,6 +4612,8 @@ export type Database = {
           acesso_global: boolean
           active: boolean
           avatar_url: string | null
+          chat_last_heartbeat: string | null
+          chat_status: string | null
           comissao_implantacao_percentual: number | null
           comissao_mensalidade_percentual: number | null
           comissao_percentual: number | null
@@ -4607,6 +4630,7 @@ export type Database = {
           funil_favorito_id: string | null
           gestor_desconto: boolean | null
           id: string
+          is_atendente_chat: boolean | null
           is_tecnico: boolean
           is_vendedor: boolean
           mesa_favorita_id: string | null
@@ -4625,6 +4649,8 @@ export type Database = {
           acesso_global?: boolean
           active?: boolean
           avatar_url?: string | null
+          chat_last_heartbeat?: string | null
+          chat_status?: string | null
           comissao_implantacao_percentual?: number | null
           comissao_mensalidade_percentual?: number | null
           comissao_percentual?: number | null
@@ -4641,6 +4667,7 @@ export type Database = {
           funil_favorito_id?: string | null
           gestor_desconto?: boolean | null
           id?: string
+          is_atendente_chat?: boolean | null
           is_tecnico?: boolean
           is_vendedor?: boolean
           mesa_favorita_id?: string | null
@@ -4659,6 +4686,8 @@ export type Database = {
           acesso_global?: boolean
           active?: boolean
           avatar_url?: string | null
+          chat_last_heartbeat?: string | null
+          chat_status?: string | null
           comissao_implantacao_percentual?: number | null
           comissao_mensalidade_percentual?: number | null
           comissao_percentual?: number | null
@@ -4675,6 +4704,7 @@ export type Database = {
           funil_favorito_id?: string | null
           gestor_desconto?: boolean | null
           id?: string
+          is_atendente_chat?: boolean | null
           is_tecnico?: boolean
           is_vendedor?: boolean
           mesa_favorita_id?: string | null
