@@ -85,6 +85,8 @@ export default function TicketNovo() {
   const [tagInput, setTagInput] = useState("");
   const [agendaDatas, setAgendaDatas] = useState<{ date: Date; hora: string }[]>([]);
   const [agendaOpen, setAgendaOpen] = useState(false);
+  const [anexos, setAnexos] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   // SLA calculation
   const tipoSelecionado = tipos.find((t) => t.id === tipoAtendimentoId);
