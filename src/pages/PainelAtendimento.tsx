@@ -214,7 +214,7 @@ export default function PainelAtendimento() {
     }
     (async () => {
       const [{ data: coms }, { data: tecs }, { data: likes }, { data: agData }, { data: seguindo }, { data: allSeguidores }] = await Promise.all([
-        supabase.from("painel_comentarios").select("id, texto, criado_por, created_at, parent_id, etapa_id, anexo_url, anexo_nome").eq("card_id", detailCard.id).order("created_at", { ascending: true }),
+        supabase.from("painel_comentarios").select("id, texto, criado_por, created_at, parent_id, etapa_id, anexo_url, anexo_nome, anexos").eq("card_id", detailCard.id).order("created_at", { ascending: true }),
         supabase.from("painel_tecnicos").select("tecnico_id").eq("card_id", detailCard.id),
         supabase.from("painel_curtidas").select("comentario_id, user_id"),
         supabase.from("painel_agendamentos").select("*, jornada_atividades(nome), painel_etapas:etapa_id(nome, cor)").eq("card_id", detailCard.id).order("data"),
@@ -903,23 +903,29 @@ export default function PainelAtendimento() {
                               <span className="text-[10px] text-muted-foreground">{new Date(com.created_at).toLocaleDateString("pt-BR")} {new Date(com.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
                             </div>
                             <p className="text-foreground/90 whitespace-pre-wrap pl-6">{renderMentionText(com.texto, responsaveis as any)}</p>
-                            {com.anexo_url && com.anexo_nome && (
-                              <button type="button" className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline cursor-pointer bg-transparent border-none p-0 pl-6 mt-0.5" onClick={async () => {
-                                try {
-                                  const isR2 = com.anexo_url.includes(".r2.dev/") || com.anexo_url.includes("r2.cloudflarestorage.com");
-                                  if (isR2) {
-                                    const key = new URL(com.anexo_url).pathname.replace(/^\//, "");
-                                    const { data, error } = await supabase.functions.invoke("r2-download", { body: { key, filename: com.anexo_nome } });
-                                    if (error) throw error;
-                                    const blob = data instanceof Blob ? data : new Blob([data]);
-                                    const url = URL.createObjectURL(blob);
-                                    const link = document.createElement("a");
-                                    link.href = url; link.download = com.anexo_nome; link.click();
-                                    URL.revokeObjectURL(url);
-                                  } else { window.open(com.anexo_url, "_blank"); }
-                                } catch { window.open(com.anexo_url, "_blank"); }
-                              }}><Download className="h-3 w-3" /> {com.anexo_nome}</button>
-                            )}
+                            {/* Render all attachments: prefer anexos array, fallback to legacy */}
+                            {(() => {
+                              const allAnexos = (com.anexos && Array.isArray(com.anexos) && com.anexos.length > 0)
+                                ? (com.anexos as { url: string; nome: string }[])
+                                : (com.anexo_url && com.anexo_nome ? [{ url: com.anexo_url, nome: com.anexo_nome }] : []);
+                              return allAnexos.map((anexo: { url: string; nome: string }, idx: number) => (
+                                <button key={idx} type="button" className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline cursor-pointer bg-transparent border-none p-0 pl-6 mt-0.5" onClick={async () => {
+                                  try {
+                                    const isR2 = anexo.url.includes(".r2.dev/") || anexo.url.includes("r2.cloudflarestorage.com");
+                                    if (isR2) {
+                                      const key = new URL(anexo.url).pathname.replace(/^\//, "");
+                                      const { data, error } = await supabase.functions.invoke("r2-download", { body: { key, filename: anexo.nome } });
+                                      if (error) throw error;
+                                      const blob = data instanceof Blob ? data : new Blob([data]);
+                                      const url = URL.createObjectURL(blob);
+                                      const link = document.createElement("a");
+                                      link.href = url; link.download = anexo.nome; link.click();
+                                      URL.revokeObjectURL(url);
+                                    } else { window.open(anexo.url, "_blank"); }
+                                  } catch { window.open(anexo.url, "_blank"); }
+                                }}><Download className="h-3 w-3" /> {anexo.nome}</button>
+                              ));
+                            })()}
                             <div className="flex items-center gap-3 pl-6 mt-1">
                               <button type="button" className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-red-500 transition-colors" onClick={async () => {
                                 const { data: { user } } = await supabase.auth.getUser();
@@ -966,24 +972,27 @@ export default function PainelAtendimento() {
                         const inp = document.getElementById("com-file-input-painel") as HTMLInputElement;
                         if (inp) inp.click();
                       }}><Paperclip className="h-4 w-4" /></button>
-                      <input id="com-file-input-painel" type="file" className="hidden" onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (!f) return;
-                        if (f.size > 10 * 1024 * 1024) { toast.error("Arquivo máximo: 10MB"); e.target.value = ""; return; }
-                        (window as any).__painelAnexoFile = f;
-                        toast.info(`📎 ${f.name} selecionado`);
+                      <input id="com-file-input-painel" type="file" multiple className="hidden" onChange={(e) => {
+                        const files = e.target.files;
+                        if (!files || files.length === 0) return;
+                        const existing: File[] = (window as any).__painelAnexoFiles || [];
+                        for (let i = 0; i < files.length; i++) {
+                          if (files[i].size > 10 * 1024 * 1024) { toast.error(`${files[i].name} excede 10MB`); continue; }
+                          existing.push(files[i]);
+                        }
+                        (window as any).__painelAnexoFiles = existing;
+                        toast.info(`📎 ${existing.length} arquivo(s) selecionado(s)`);
                         e.target.value = "";
                       }} />
                     </div>
-                    <Button size="sm" className="self-end h-8" disabled={!novoComentario.trim() && !(window as any).__painelAnexoFile} onClick={async () => {
+                    <Button size="sm" className="self-end h-8" disabled={!novoComentario.trim() && !((window as any).__painelAnexoFiles?.length > 0)} onClick={async () => {
                       const { data: { user } } = await supabase.auth.getUser();
                       if (!user || !detailCard) return;
                       const { data: myProfile } = await supabase.from("profiles").select("id, full_name, telefone").eq("user_id", user.id).maybeSingle();
 
-                      let anexo_url: string | null = null;
-                      let anexo_nome: string | null = null;
-                      const arquivo = (window as any).__painelAnexoFile as File | undefined;
-                      if (arquivo) {
+                      const arquivos: File[] = (window as any).__painelAnexoFiles || [];
+                      const anexosArr: { url: string; nome: string }[] = [];
+                      for (const arquivo of arquivos) {
                         try {
                           const base64 = await new Promise<string>((resolve, reject) => {
                             const reader = new FileReader();
@@ -995,18 +1004,18 @@ export default function PainelAtendimento() {
                             body: { arquivo_base64: base64, nome_arquivo: arquivo.name, mime_type: arquivo.type, pasta: "pedidos" },
                           });
                           if (r2Err || !r2Data?.sucesso) throw new Error(r2Data?.erro || "Erro no upload");
-                          anexo_url = r2Data.url;
-                          anexo_nome = arquivo.name;
+                          anexosArr.push({ url: r2Data.url, nome: arquivo.name });
                         } catch (err: any) {
                           toast.error("Erro ao enviar anexo: " + (err?.message || ""));
                           return;
-                        } finally {
-                          (window as any).__painelAnexoFile = undefined;
                         }
                       }
+                      (window as any).__painelAnexoFiles = undefined;
 
-                      const textoFinal = novoComentario.trim() || (anexo_nome ? `📎 ${anexo_nome}` : "");
-                      const { data: novo, error } = await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, texto: textoFinal, criado_por: myProfile?.id || user.id, etapa_id: detailCard.etapa_id, parent_id: replyTo?.id || null, anexo_url, anexo_nome } as any).select("id, texto, criado_por, created_at, parent_id, anexo_url, anexo_nome").single();
+                      const firstUrl = anexosArr.length > 0 ? anexosArr[0].url : null;
+                      const firstName = anexosArr.length > 0 ? anexosArr[0].nome : null;
+                      const textoFinal = novoComentario.trim() || (firstName ? `📎 ${firstName}` : "");
+                      const { data: novo, error } = await supabase.from("painel_comentarios").insert({ card_id: detailCard.id, texto: textoFinal, criado_por: myProfile?.id || user.id, etapa_id: detailCard.etapa_id, parent_id: replyTo?.id || null, anexo_url: firstUrl, anexo_nome: firstName, anexos: anexosArr.length > 0 ? anexosArr : [] } as any).select("id, texto, criado_por, created_at, parent_id, anexo_url, anexo_nome, anexos").single();
                       if (!error && novo) {
                         setComentarios((prev) => [...prev, novo]);
                         const clienteNome = detailCard.clientes?.nome_fantasia || "Cliente";
@@ -1024,10 +1033,30 @@ export default function PainelAtendimento() {
                         const mentionedUserIds = new Set(mentioned.map((pid: string) => { const prof = (responsaveis as any[]).find((r: any) => r.id === pid); return prof?.user_id || pid; }));
                         if (replyTo) { const parentCom = comentarios.find((c: any) => c.id === replyTo.id); if (parentCom) { const parentProf = (responsaveis as any[]).find((r: any) => r.id === parentCom.criado_por); if (parentProf?.user_id) mentionedUserIds.add(parentProf.user_id); } }
                         try { const { data: seguidores } = await supabase.from("painel_seguidores").select("user_id").eq("card_id", detailCard.id).is("unfollowed_at", null); for (const seg of (seguidores || [])) { if (seg.user_id === user.id) continue; if (mentionedUserIds.has(seg.user_id)) continue; await supabase.from("notificacoes").insert({ titulo: `💬 ${autorNome} comentou no projeto`, mensagem: `${autorNome} fez um comentário no projeto ${clienteNome} que você segue: "${textoFinal.slice(0, 100)}${textoFinal.length > 100 ? "..." : ""}"`, tipo: "info", criado_por: user.id, destinatario_user_id: seg.user_id, metadata: { card_id: detailCard.id, comentario_id: novo.id } }); } } catch { }
-                        setNovoComentario(""); setReplyTo(null); mentionedUsersRef.current = []; (window as any).__painelAnexoFile = undefined; toast.success(replyTo ? "Resposta adicionada!" : "Comentário adicionado!");
+                        setNovoComentario(""); setReplyTo(null); mentionedUsersRef.current = []; (window as any).__painelAnexoFiles = undefined; toast.success(replyTo ? "Resposta adicionada!" : "Comentário adicionado!");
                       } else { toast.error("Erro ao adicionar comentário."); }
                     }}>{replyTo ? "Responder" : "Incluir"}</Button>
                   </div>
+                  {/* Preview de arquivos selecionados */}
+                  {(() => {
+                    const files: File[] = (window as any).__painelAnexoFiles || [];
+                    if (files.length === 0) return null;
+                    return (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {files.map((f, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 text-[10px] bg-muted px-2 py-0.5 rounded-full">
+                            <Paperclip className="h-2.5 w-2.5" /> {f.name}
+                            <button type="button" className="ml-0.5 text-destructive hover:text-destructive/80" onClick={() => {
+                              const arr = [...((window as any).__painelAnexoFiles || [])];
+                              arr.splice(i, 1);
+                              (window as any).__painelAnexoFiles = arr;
+                              toast.info(`📎 ${arr.length} arquivo(s) selecionado(s)`);
+                            }}>×</button>
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 

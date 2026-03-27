@@ -26,6 +26,11 @@ const PRIORIDADE_MAP: Record<string, { label: string; emoji: string }> = {
 
 const MAX_FILE_SIZE = 11 * 1024 * 1024; // 11MB
 
+interface AnexoItem {
+  url: string;
+  nome: string;
+}
+
 interface Comentario {
   id: string;
   pedido_id: string;
@@ -34,6 +39,7 @@ interface Comentario {
   prioridade: string;
   anexo_url: string | null;
   anexo_nome: string | null;
+  anexos: AnexoItem[] | null;
   parent_id: string | null;
   created_at: string;
 }
@@ -75,7 +81,7 @@ export function PedidoComentarios({ pedidoId, readOnly = false }: Props) {
       .order("created_at", { ascending: false });
 
     if (data) {
-      setComentarios(data as Comentario[]);
+      setComentarios(data as unknown as Comentario[]);
       const userIds = [...new Set(data.map((c: any) => c.user_id))];
       if (userIds.length > 0) {
         const { data: profs } = await supabase
@@ -330,37 +336,44 @@ export function PedidoComentarios({ pedidoId, readOnly = false }: Props) {
           </div>
         </div>
         <p className="text-xs whitespace-pre-wrap">{c.texto}</p>
-        {c.anexo_url && c.anexo_nome && (
-          <button
-            type="button"
-            onClick={async () => {
-              try {
-                const isR2 = c.anexo_url!.includes(".r2.dev/") || c.anexo_url!.includes("r2.cloudflarestorage.com");
-                if (isR2) {
-                  const key = new URL(c.anexo_url!).pathname.replace(/^\//, "");
-                  const { data, error } = await supabase.functions.invoke("r2-download", {
-                    body: { key, filename: c.anexo_nome },
-                  });
-                  if (error) throw error;
-                  const blob = data instanceof Blob ? data : new Blob([data]);
-                  const url = URL.createObjectURL(blob);
-                  const link = document.createElement("a");
-                  link.href = url;
-                  link.download = c.anexo_nome!;
-                  link.click();
-                  URL.revokeObjectURL(url);
-                } else {
-                  window.open(c.anexo_url!, "_blank");
+        {/* Render all attachments: prefer anexos array, fallback to legacy anexo_url */}
+        {(() => {
+          const allAnexos: AnexoItem[] = (c.anexos && Array.isArray(c.anexos) && c.anexos.length > 0)
+            ? c.anexos
+            : (c.anexo_url && c.anexo_nome ? [{ url: c.anexo_url, nome: c.anexo_nome }] : []);
+          return allAnexos.map((anexo, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={async () => {
+                try {
+                  const isR2 = anexo.url.includes(".r2.dev/") || anexo.url.includes("r2.cloudflarestorage.com");
+                  if (isR2) {
+                    const key = new URL(anexo.url).pathname.replace(/^\//, "");
+                    const { data, error } = await supabase.functions.invoke("r2-download", {
+                      body: { key, filename: anexo.nome },
+                    });
+                    if (error) throw error;
+                    const blob = data instanceof Blob ? data : new Blob([data]);
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = anexo.nome;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                  } else {
+                    window.open(anexo.url, "_blank");
+                  }
+                } catch {
+                  window.open(anexo.url, "_blank");
                 }
-              } catch {
-                window.open(c.anexo_url!, "_blank");
-              }
-            }}
-            className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
-          >
-            <Download className="h-3 w-3" /> {c.anexo_nome}
-          </button>
-        )}
+              }}
+              className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
+            >
+              <Download className="h-3 w-3" /> {anexo.nome}
+            </button>
+          ));
+        })()}
         {/* Actions: Like + Reply */}
         {user && (
           <div className="pt-1 flex items-center gap-3">

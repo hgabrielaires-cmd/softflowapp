@@ -3660,6 +3660,7 @@ export type Database = {
         Row: {
           anexo_nome: string | null
           anexo_url: string | null
+          anexos: Json | null
           card_id: string
           created_at: string
           criado_por: string
@@ -3671,6 +3672,7 @@ export type Database = {
         Insert: {
           anexo_nome?: string | null
           anexo_url?: string | null
+          anexos?: Json | null
           card_id: string
           created_at?: string
           criado_por: string
@@ -3682,6 +3684,7 @@ export type Database = {
         Update: {
           anexo_nome?: string | null
           anexo_url?: string | null
+          anexos?: Json | null
           card_id?: string
           created_at?: string
           criado_por?: string
@@ -4130,6 +4133,7 @@ export type Database = {
         Row: {
           anexo_nome: string | null
           anexo_url: string | null
+          anexos: Json | null
           created_at: string
           id: string
           parent_id: string | null
@@ -4141,6 +4145,7 @@ export type Database = {
         Insert: {
           anexo_nome?: string | null
           anexo_url?: string | null
+          anexos?: Json | null
           created_at?: string
           id?: string
           parent_id?: string | null
@@ -4152,6 +4157,7 @@ export type Database = {
         Update: {
           anexo_nome?: string | null
           anexo_url?: string | null
+          anexos?: Json | null
           created_at?: string
           id?: string
           parent_id?: string | null
