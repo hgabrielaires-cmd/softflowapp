@@ -1413,6 +1413,9 @@ export function AppLayout({ children }: AppLayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Chat Interno Flutuante */}
+      <ChatInternoWidget />
     </div>
   );
 }
