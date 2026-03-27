@@ -1341,6 +1341,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [viewAvatarOpen, setViewAvatarOpen] = useState(false);
+  const { status: presencaStatus, setStatus: setPresencaStatus, isAtendente } = usePresenca();
 
   const initials = profile?.full_name
     ? profile.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
