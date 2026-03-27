@@ -58,6 +58,7 @@ export default function DashboardAtendimento() {
     queryClient.invalidateQueries({ queryKey: ["dash_tickets_mais_antigos"] });
     queryClient.invalidateQueries({ queryKey: ["dash_tickets_kanban_resumo"] });
     queryClient.invalidateQueries({ queryKey: ["dash_tickets_agenda_hoje"] });
+    queryClient.invalidateQueries({ queryKey: ["dash_atendentes_presenca"] });
   };
 
   const rangeLabel =
