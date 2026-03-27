@@ -972,12 +972,16 @@ export default function PainelAtendimento() {
                         const inp = document.getElementById("com-file-input-painel") as HTMLInputElement;
                         if (inp) inp.click();
                       }}><Paperclip className="h-4 w-4" /></button>
-                      <input id="com-file-input-painel" type="file" className="hidden" onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (!f) return;
-                        if (f.size > 10 * 1024 * 1024) { toast.error("Arquivo máximo: 10MB"); e.target.value = ""; return; }
-                        (window as any).__painelAnexoFile = f;
-                        toast.info(`📎 ${f.name} selecionado`);
+                      <input id="com-file-input-painel" type="file" multiple className="hidden" onChange={(e) => {
+                        const files = e.target.files;
+                        if (!files || files.length === 0) return;
+                        const existing: File[] = (window as any).__painelAnexoFiles || [];
+                        for (let i = 0; i < files.length; i++) {
+                          if (files[i].size > 10 * 1024 * 1024) { toast.error(`${files[i].name} excede 10MB`); continue; }
+                          existing.push(files[i]);
+                        }
+                        (window as any).__painelAnexoFiles = existing;
+                        toast.info(`📎 ${existing.length} arquivo(s) selecionado(s)`);
                         e.target.value = "";
                       }} />
                     </div>
