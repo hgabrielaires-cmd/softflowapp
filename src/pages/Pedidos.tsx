@@ -198,30 +198,18 @@ export default function Pedidos() {
         }
       }
 
-      // First comment gets first attachment, then create extra comments for remaining
-      const firstUrl = anexoUrls.length > 0 ? anexoUrls[0] : null;
-      const firstName = anexoNomes.length > 0 ? anexoNomes[0] : null;
+      // Build anexos array for JSONB column
+      const anexosArr = anexoUrls.map((url, i) => ({ url, nome: anexoNomes[i] || "arquivo" }));
 
       await supabase.from("pedido_comentarios").insert({
         pedido_id: pedidoId,
         user_id: user.id,
         texto: draft.texto,
         prioridade: draft.prioridade,
-        anexo_url: firstUrl,
-        anexo_nome: firstName,
-      });
-
-      // Insert additional comments for remaining attachments
-      for (let i = 1; i < anexoUrls.length; i++) {
-        await supabase.from("pedido_comentarios").insert({
-          pedido_id: pedidoId,
-          user_id: user.id,
-          texto: `📎 Anexo adicional`,
-          prioridade: draft.prioridade,
-          anexo_url: anexoUrls[i],
-          anexo_nome: anexoNomes[i],
-        });
-      }
+        anexo_url: anexosArr.length > 0 ? anexosArr[0].url : null,
+        anexo_nome: anexosArr.length > 0 ? anexosArr[0].nome : null,
+        anexos: anexosArr.length > 0 ? anexosArr : [],
+      } as any);
 
       // Extract @mentions and create notifications
       const mentionRegex = /@([\w\u00C0-\u024F]+)/g;
