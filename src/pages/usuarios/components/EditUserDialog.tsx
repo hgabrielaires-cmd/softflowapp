@@ -89,6 +89,8 @@ interface EditUserDialogProps {
   setEditPermiteVerValoresProjeto: (v: boolean) => void;
   editActive: boolean;
   setEditActive: (v: boolean) => void;
+  editIsAtendenteChat: boolean;
+  setEditIsAtendenteChat: (v: boolean) => void;
   saving: boolean;
   handleEdit: (e: React.FormEvent) => void;
   // Data
@@ -122,6 +124,7 @@ export function EditUserDialog({
   editPermiteCancelarProjeto, setEditPermiteCancelarProjeto,
   editPermiteVerValoresProjeto, setEditPermiteVerValoresProjeto,
   editActive, setEditActive,
+  editIsAtendenteChat, setEditIsAtendenteChat,
   saving,
   handleEdit,
   filiais,
@@ -351,6 +354,19 @@ export function EditUserDialog({
                         onChange={(e) => setEditDescontoLimiteMens(e.target.value)}
                       />
                     </div>
+                  </div>
+                </div>
+                {/* Atendente Chat */}
+                <div className="rounded-lg border border-border p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+                        <MessageCircle className="h-4 w-4 text-primary" />
+                        É atendente de chat
+                      </Label>
+                      <p className="text-xs text-muted-foreground">Atendentes aparecem na distribuição, transferência e seleção de responsável no chat</p>
+                    </div>
+                    <Switch checked={editIsAtendenteChat} onCheckedChange={setEditIsAtendenteChat} />
                   </div>
                 </div>
                 {/* Status */}

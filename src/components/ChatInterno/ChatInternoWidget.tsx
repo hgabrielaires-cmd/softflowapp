@@ -22,6 +22,23 @@ function getInitials(name: string) {
   return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 }
 
+function playNotificationSound() {
+  try {
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    oscillator.frequency.value = 880;
+    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+    oscillator.start(audioCtx.currentTime);
+    oscillator.stop(audioCtx.currentTime + 0.2);
+  } catch {
+    // ignore audio errors
+  }
+}
+
 export function ChatInternoWidget() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -34,10 +51,61 @@ export function ChatInternoWidget() {
   const [novoGrupoNome, setNovoGrupoNome] = useState("");
   const [novoGrupoSelecionados, setNovoGrupoSelecionados] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const activeConversaIdRef = useRef<string | null>(null);
+  const originalTitleRef = useRef(document.title);
+
+  // Keep ref in sync
+  useEffect(() => { activeConversaIdRef.current = activeConversaId; }, [activeConversaId]);
 
   const { data: conversas = [], refetch: refetchConversas } = useConversasInternas();
   const { data: mensagens = [] } = useMensagensInternas(activeConversaId);
   const { data: naoLidas = 0 } = useNaoLidasInternas();
+
+  // ── Title blinking when unread messages ──
+  useEffect(() => {
+    if (naoLidas > 0 && !open) {
+      let showOriginal = false;
+      const interval = setInterval(() => {
+        document.title = showOriginal ? originalTitleRef.current : "💬 Nova mensagem";
+        showOriginal = !showOriginal;
+      }, 1000);
+      return () => {
+        clearInterval(interval);
+        document.title = originalTitleRef.current;
+      };
+    } else {
+      document.title = originalTitleRef.current;
+    }
+  }, [naoLidas, open]);
+
+  // ── Global realtime listener for notifications ──
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel("chat-interno-global-notif")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "chat_interno_mensagens",
+        },
+        (payload) => {
+          const newMsg = payload.new as any;
+          // Only notify if it's not from us and not the active conversation
+          if (newMsg.user_id !== user.id && newMsg.conversa_id !== activeConversaIdRef.current) {
+            playNotificationSound();
+          }
+          // Refresh queries
+          queryClient.invalidateQueries({ queryKey: ["chat-interno-nao-lidas"] });
+          queryClient.invalidateQueries({ queryKey: ["chat-interno-conversas"] });
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user, queryClient]);
 
   // Team list
   const { data: equipe = [] } = useQuery({
@@ -112,7 +180,6 @@ export function ChatInternoWidget() {
   const startDm = useCallback(async (targetUserId: string, targetName: string) => {
     if (!user) return;
 
-    // Check if DM already exists
     const { data: myConversas } = await supabase
       .from("chat_interno_participantes")
       .select("conversa_id")
@@ -145,7 +212,6 @@ export function ChatInternoWidget() {
       }
     }
 
-    // Create new DM
     const { data: newConv, error } = await supabase
       .from("chat_interno_conversas")
       .insert({ tipo: "direto" })
@@ -209,7 +275,6 @@ export function ChatInternoWidget() {
         user_id: user.id,
         conteudo: msgInput.trim(),
       });
-      // Update conversa updated_at
       await supabase.from("chat_interno_conversas").update({ updated_at: new Date().toISOString() }).eq("id", activeConversaId);
       setMsgInput("");
     } catch {
@@ -251,7 +316,6 @@ export function ChatInternoWidget() {
       {open && (
         <div className="fixed bottom-20 right-6 z-50 w-80 h-[28rem] bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden">
           {activeConversaId ? (
-            /* Thread View */
             <div className="flex flex-col h-full">
               <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/50">
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setActiveConversaId(null)}>
@@ -302,7 +366,6 @@ export function ChatInternoWidget() {
               </div>
             </div>
           ) : (
-            /* Tabs View */
             <Tabs defaultValue="conversas" className="flex flex-col h-full">
               <TabsList className="grid grid-cols-3 mx-2 mt-2 h-8">
                 <TabsTrigger value="conversas" className="text-xs">Conversas</TabsTrigger>
@@ -310,7 +373,6 @@ export function ChatInternoWidget() {
                 <TabsTrigger value="grupos" className="text-xs">Grupos</TabsTrigger>
               </TabsList>
 
-              {/* Tab: Conversas */}
               <TabsContent value="conversas" className="flex-1 overflow-hidden m-0">
                 <ScrollArea className="h-full">
                   <div className="p-1.5 space-y-0.5">
@@ -350,7 +412,6 @@ export function ChatInternoWidget() {
                 </ScrollArea>
               </TabsContent>
 
-              {/* Tab: Equipe */}
               <TabsContent value="equipe" className="flex-1 overflow-hidden m-0">
                 <ScrollArea className="h-full">
                   <div className="p-1.5 space-y-0.5">
@@ -374,7 +435,6 @@ export function ChatInternoWidget() {
                 </ScrollArea>
               </TabsContent>
 
-              {/* Tab: Grupos */}
               <TabsContent value="grupos" className="flex-1 overflow-hidden m-0">
                 <ScrollArea className="h-full">
                   <div className="p-1.5 space-y-0.5">

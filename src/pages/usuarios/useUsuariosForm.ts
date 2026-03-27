@@ -61,6 +61,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
   const [editIsVendedor, setEditIsVendedor] = useState(false);
   const [editMesaIds, setEditMesaIds] = useState<string[]>([]);
   const [editActive, setEditActive] = useState(true);
+  const [editIsAtendenteChat, setEditIsAtendenteChat] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // ── WhatsApp boas-vindas ──
@@ -198,6 +199,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
     setEditIsVendedor((user as any).is_vendedor ?? false);
     setEditMesaIds((user.mesas_vinculadas || []).map((m) => m.id));
     setEditActive(user.active);
+    setEditIsAtendenteChat((user as any).is_atendente_chat ?? false);
     setOpenEdit(true);
   }
 
@@ -231,6 +233,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
         tipo_tecnico: editIsTecnico ? editTipoTecnico : null,
         is_vendedor: editIsVendedor,
         active: editActive,
+        is_atendente_chat: editIsAtendenteChat,
       } as any).eq("user_id", editingUser.user_id);
 
       if (profileError) throw profileError;
@@ -378,6 +381,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
     editIsVendedor, setEditIsVendedor,
     editMesaIds, setEditMesaIds,
     editActive, setEditActive,
+    editIsAtendenteChat, setEditIsAtendenteChat,
     saving,
     handleEdit,
     openEditDialog,

@@ -27,6 +27,8 @@ import { AppRole, ROLE_LABELS, Profile } from "@/lib/supabase-types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatInternoWidget } from "@/components/ChatInterno/ChatInternoWidget";
+import { usePresenca } from "@/hooks/usePresenca";
+import { Circle, ImageIcon } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1339,6 +1341,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [viewAvatarOpen, setViewAvatarOpen] = useState(false);
+  const { status: presencaStatus, setStatus: setPresencaStatus, isAtendente } = usePresenca();
 
   const initials = profile?.full_name
     ? profile.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
@@ -1390,10 +1394,18 @@ export function AppLayout({ children }: AppLayoutProps) {
           {/* Avatar com menu de perfil/sair */}
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-2 rounded-full hover:bg-accent transition-colors p-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              <Avatar className="h-8 w-8">
-                {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name} />}
-                <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">{initials}</AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className="h-8 w-8">
+                  {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name} />}
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">{initials}</AvatarFallback>
+                </Avatar>
+                {isAtendente && (
+                  <span className={cn(
+                    "absolute bottom-0 right-0 h-3 w-3 rounded-full ring-2 ring-background",
+                    presencaStatus === "online" ? "bg-green-500" : presencaStatus === "pausa" ? "bg-yellow-500" : "bg-red-500"
+                  )} />
+                )}
+              </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuLabel className="font-normal">
@@ -1401,11 +1413,41 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <p className="text-xs text-muted-foreground truncate">{roles.map((r) => ROLE_LABELS[r]).join(", ") || "—"}</p>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+
+              {/* Status de presença — somente atendentes */}
+              {isAtendente && (
+                <>
+                  <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground py-1">Meu status</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => setPresencaStatus("online")} className={cn(presencaStatus === "online" && "bg-accent")}>
+                    <Circle className="mr-2 h-3 w-3 fill-green-500 text-green-500" />Online
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPresencaStatus("pausa")} className={cn(presencaStatus === "pausa" && "bg-accent")}>
+                    <Circle className="mr-2 h-3 w-3 fill-yellow-500 text-yellow-500" />Pausa
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPresencaStatus("offline")} className={cn(presencaStatus === "offline" && "bg-accent")}>
+                    <Circle className="mr-2 h-3 w-3 fill-red-500 text-red-500" />Offline
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+
+              {profile?.avatar_url && (
+                <DropdownMenuItem onClick={() => setViewAvatarOpen(true)}>
+                  <ImageIcon className="mr-2 h-4 w-4" />Ver foto
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => navigate("/perfil")}><User className="mr-2 h-4 w-4" />Meu perfil</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive"><LogOut className="mr-2 h-4 w-4" />Sair</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Dialog ver foto */}
+          <Dialog open={viewAvatarOpen} onOpenChange={setViewAvatarOpen}>
+            <DialogContent className="max-w-xs flex items-center justify-center p-6">
+              <img src={profile?.avatar_url || ""} alt={profile?.full_name || ""} className="rounded-lg max-w-full max-h-72 object-contain" />
+            </DialogContent>
+          </Dialog>
         </header>
 
         {/* Page Content */}
