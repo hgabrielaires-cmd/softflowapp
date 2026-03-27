@@ -199,6 +199,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
     setEditIsVendedor((user as any).is_vendedor ?? false);
     setEditMesaIds((user.mesas_vinculadas || []).map((m) => m.id));
     setEditActive(user.active);
+    setEditIsAtendenteChat((user as any).is_atendente_chat ?? false);
     setOpenEdit(true);
   }
 
