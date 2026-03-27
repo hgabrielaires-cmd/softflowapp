@@ -226,14 +226,20 @@ export function ChatInternoWidget() {
     if (!user || !activeConversaId || !msgInput.trim() || sending) return;
     setSending(true);
     try {
-      await supabase.from("chat_interno_mensagens").insert({
+      const { error: msgError } = await supabase.from("chat_interno_mensagens").insert({
         conversa_id: activeConversaId,
         user_id: user.id,
         conteudo: msgInput.trim(),
       });
+      if (msgError) {
+        console.error("Erro ao inserir mensagem:", msgError);
+        toast.error("Erro ao enviar mensagem");
+        return;
+      }
       await supabase.from("chat_interno_conversas").update({ updated_at: new Date().toISOString() }).eq("id", activeConversaId);
       setMsgInput("");
-    } catch {
+    } catch (err) {
+      console.error("Erro inesperado ao enviar:", err);
       toast.error("Erro ao enviar mensagem");
     } finally {
       setSending(false);
