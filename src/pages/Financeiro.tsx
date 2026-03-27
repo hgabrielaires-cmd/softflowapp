@@ -528,7 +528,7 @@ export default function Financeiro() {
                 <div><p className="text-muted-foreground text-xs">Plano</p><p className="font-semibold text-sm">{selected.planos?.nome}</p></div>
                 <div><p className="text-muted-foreground text-xs">Filial</p><p className="font-semibold text-sm">{selected.filiais?.nome}</p></div>
                 <div><p className="text-muted-foreground text-xs">Data</p><p className="font-semibold text-sm">{format(new Date(selected.created_at), "dd/MM/yyyy", { locale: ptBR })}</p></div>
-                <div><p className="text-muted-foreground text-xs">Vendedor</p><p className="font-semibold text-sm">{(selected as any).vendedor?.full_name || "—"}</p></div>
+                <div className="col-span-2"><p className="text-muted-foreground text-xs">Vendedor</p><p className="font-semibold text-sm">{(selected as any).vendedor_nome || "—"}</p></div>
               </div>
 
               {/* ── Itens do Pedido ── */}
