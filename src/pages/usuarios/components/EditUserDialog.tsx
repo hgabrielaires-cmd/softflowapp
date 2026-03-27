@@ -89,6 +89,8 @@ interface EditUserDialogProps {
   setEditPermiteVerValoresProjeto: (v: boolean) => void;
   editActive: boolean;
   setEditActive: (v: boolean) => void;
+  editIsAtendenteChat: boolean;
+  setEditIsAtendenteChat: (v: boolean) => void;
   saving: boolean;
   handleEdit: (e: React.FormEvent) => void;
   // Data
