@@ -45,6 +45,7 @@ export default function DashboardAtendimento() {
   const { data: antigos, isLoading: loadAntigos } = useTicketsMaisAntigos();
   const { data: kanban, isLoading: loadKanban } = useKanbanResumo(startDate, endDate);
   const { data: agenda, isLoading: loadAgenda } = useAgendaHoje();
+  const { data: atendentes, isLoading: loadAtendentes } = useAtendentesPresenca();
 
   const handleVerTicket = (id: string) => {
     navigate(`/tickets?ticket=${id}`);
