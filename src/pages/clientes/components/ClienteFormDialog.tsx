@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Pencil, Loader2, MapPin, AlertCircle, Users, Star, Trash2 } from "lucide-react";
+import { ClienteDocumentosSection } from "./ClienteDocumentosSection";
 import { UF_LIST, emptyContatoForm } from "@/pages/clientes/constants";
 import type { ClienteFormState, ContatoFormState } from "@/pages/clientes/types";
 import { applyPhoneMask } from "@/lib/utils";
