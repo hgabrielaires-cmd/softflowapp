@@ -124,6 +124,7 @@ export function EditUserDialog({
   editPermiteCancelarProjeto, setEditPermiteCancelarProjeto,
   editPermiteVerValoresProjeto, setEditPermiteVerValoresProjeto,
   editActive, setEditActive,
+  editIsAtendenteChat, setEditIsAtendenteChat,
   saving,
   handleEdit,
   filiais,
