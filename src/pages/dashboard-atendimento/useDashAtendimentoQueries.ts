@@ -179,10 +179,10 @@ export function useAtendentesPresenca() {
   return useQuery<AtendentePresenca[]>({
     queryKey: ["dash_atendentes_presenca"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from("profiles")
         .select("user_id, full_name, avatar_url")
-        .eq("is_atendente_chat", true)
+        .eq("is_atendente_chat", true) as any)
         .eq("ativo", true);
       if (error) throw error;
 
