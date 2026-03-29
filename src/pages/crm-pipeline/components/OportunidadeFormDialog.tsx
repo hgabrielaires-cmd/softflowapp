@@ -5,6 +5,7 @@ import { verificarTelefoneDuplicado, type ContatoDuplicado } from "@/lib/validar
 import { TelefoneDuplicadoAlerta } from "@/components/TelefoneDuplicadoAlerta";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { OportunidadeComentarios } from "./OportunidadeComentarios";
 import { Badge } from "@/components/ui/badge";
