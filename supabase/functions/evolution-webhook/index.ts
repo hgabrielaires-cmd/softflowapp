@@ -301,12 +301,19 @@ serve(async (req) => {
       }
       const baseUrl = whatsappConfig.server_url.replace(/\/+$/, "");
       const name = instanceName || instancia || "Softflow_WhatsApp";
+      // Ensure number has country code 55 for Evolution API
+      const numeroEnvio = numero.startsWith("55") ? numero : "55" + numero;
+      console.log("[evolution-webhook] Enviando WhatsApp para:", numeroEnvio, "instância:", name);
       try {
-        await fetch(`${baseUrl}/message/sendText/${name}`, {
+        const res = await fetch(`${baseUrl}/message/sendText/${name}`, {
           method: "POST",
           headers: { "Content-Type": "application/json", apikey: whatsappConfig.token },
-          body: JSON.stringify({ number: numero, text }),
+          body: JSON.stringify({ number: numeroEnvio, text }),
         });
+        if (!res.ok) {
+          const errBody = await res.text();
+          console.error("[evolution-webhook] Falha ao enviar WhatsApp:", res.status, errBody.substring(0, 300));
+        }
       } catch (e) {
         console.error("[evolution-webhook] Erro ao enviar WhatsApp:", e);
       }
