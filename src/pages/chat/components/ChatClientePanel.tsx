@@ -610,6 +610,29 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
                   <span>{format(new Date(conversa.iniciado_em), "dd/MM HH:mm")}</span>
                 </div>
               )}
+              {ticketInfo && (
+                <div className="flex justify-between items-center pt-1 border-t border-border mt-1">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Ticket className="h-3 w-3" /> Ticket
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono font-medium">{ticketInfo.numero_exibicao}</span>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] h-4",
+                        ticketInfo.status === "Aberto" && "border-blue-400 text-blue-600",
+                        ticketInfo.status === "Em Andamento" && "border-amber-400 text-amber-600",
+                        ticketInfo.status === "Aguardando Cliente" && "border-orange-400 text-orange-600",
+                        ticketInfo.status === "Resolvido" && "border-green-400 text-green-600",
+                        ticketInfo.status === "Fechado" && "border-muted-foreground text-muted-foreground",
+                      )}
+                    >
+                      {ticketInfo.status}
+                    </Badge>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
