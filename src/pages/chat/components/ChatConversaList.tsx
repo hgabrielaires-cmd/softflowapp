@@ -18,6 +18,7 @@ interface Props {
   selectedId: string | null;
   onSelect: (c: ChatConversa) => void;
   counts: Record<string, number>;
+  onNovaConversa?: () => void;
 }
 
 export default function ChatConversaList({
