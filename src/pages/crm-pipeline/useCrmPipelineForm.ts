@@ -65,7 +65,8 @@ export function useCrmPipelineForm(funilId?: string) {
         data_previsao_fechamento: rest.data_previsao_fechamento || null,
         campos_personalizados: rest.campos_personalizados || {},
         segmento_ids: rest.segmento_ids || [],
-      }).select("*").single();
+        conversa_id: rest.conversa_id || null,
+      } as any).select("*").single();
       if (error) throw error;
       if (_contatos && _contatos.length > 0 && data?.id) {
         await saveContatos(data.id, _contatos);
