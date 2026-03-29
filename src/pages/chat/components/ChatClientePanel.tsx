@@ -800,6 +800,15 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Ticket Detail Drawer */}
+      {ticketId && (
+        <TicketDetailDrawer
+          ticketId={ticketDrawerOpen ? ticketId : null}
+          open={ticketDrawerOpen}
+          onClose={() => setTicketDrawerOpen(false)}
+        />
+      )}
     </>
   );
 }
