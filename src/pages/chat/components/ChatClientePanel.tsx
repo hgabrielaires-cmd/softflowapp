@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ExternalLink, Plus, Phone, Building2, Clock, Search, X, Star, User, CheckCircle2, RefreshCw, Ticket } from "lucide-react";
+import { TicketDetailDrawer } from "@/pages/tickets/components/TicketDetailDrawer";
 import { cn, normalizeBRPhone } from "@/lib/utils";
 import { ChatConversa, STATUS_LABELS, ChatStatus } from "../types";
 import { formatarTelefone, tempoRelativo } from "../helpers";
@@ -46,6 +47,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
   const [trocarTermo, setTrocarTermo] = useState("");
   const [trocarResultados, setTrocarResultados] = useState<any[]>([]);
   const [trocarBuscando, setTrocarBuscando] = useState(false);
+  const [ticketDrawerOpen, setTicketDrawerOpen] = useState(false);
 
   // Auto-link state
   const [empresasDetectadas, setEmpresasDetectadas] = useState<EmpresaContato[]>([]);
@@ -611,7 +613,11 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
                 </div>
               )}
               {ticketInfo && (
-                <div className="flex justify-between items-center pt-1 border-t border-border mt-1">
+                <div
+                  className="flex justify-between items-center pt-1 border-t border-border mt-1 cursor-pointer hover:bg-accent/50 rounded px-1 -mx-1 transition-colors"
+                  onClick={() => setTicketDrawerOpen(true)}
+                  title="Clique para ver detalhes do ticket"
+                >
                   <span className="text-muted-foreground flex items-center gap-1">
                     <Ticket className="h-3 w-3" /> Ticket
                   </span>
@@ -794,6 +800,15 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Ticket Detail Drawer */}
+      {ticketId && (
+        <TicketDetailDrawer
+          ticketId={ticketDrawerOpen ? ticketId : null}
+          open={ticketDrawerOpen}
+          onClose={() => setTicketDrawerOpen(false)}
+        />
+      )}
     </>
   );
 }
