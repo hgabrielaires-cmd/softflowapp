@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Building2, Phone, Star, Eye, FileText } from "lucide-react";
+import { Plus, Search, Pencil, Building2, Phone, Star, Eye, FileText, Headset } from "lucide-react";
 
 import { TablePagination } from "@/components/TablePagination";
 import { ITEMS_PER_PAGE } from "@/pages/clientes/constants";
