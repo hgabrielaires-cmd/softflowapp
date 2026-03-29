@@ -52,16 +52,18 @@ interface Props {
     origemLocked?: boolean;
     conversa_id?: string;
   };
+  filiais?: { id: string; nome: string }[];
 }
 
 const emptyContato = (): ContatoLocal => ({ nome: "", telefone: "", cargo_id: "", email: "" });
 
 export function OportunidadeFormDialog({
   open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving, exibeCliente = true, currentUserId, camposPersonalizados = [], segmentos = [], cargos = [],
-  prefill,
+  prefill, filiais = [],
 }: Props) {
   const [titulo, setTitulo] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [filialId, setFilialId] = useState<string>("");
   const [clienteId, setClienteId] = useState<string>("");
   const [responsavelId, setResponsavelId] = useState<string>("");
   const [etapaId, setEtapaId] = useState("");
@@ -139,6 +141,7 @@ export function OportunidadeFormDialog({
       } else {
         setTitulo(prefill?.titulo || "");
         setObservacoes("");
+        setFilialId("");
         setClienteId("");
         setResponsavelId(currentUserId || "");
         setEtapaId(etapaIdInicial || etapas[0]?.id || "");
@@ -185,7 +188,8 @@ export function OportunidadeFormDialog({
     c => c.obrigatorio && !camposValues[c.id]?.trim()
   );
 
-  const hasErrors = !titulo.trim() || segmentoIds.length === 0 || !contatosValid || camposObrigatoriosPendentes.length > 0;
+  const filialRequired = !!prefill?.origem && !oportunidade;
+  const hasErrors = !titulo.trim() || segmentoIds.length === 0 || !contatosValid || camposObrigatoriosPendentes.length > 0 || (filialRequired && !filialId);
 
   const handleSave = () => {
     setTried(true);
@@ -210,6 +214,7 @@ export function OportunidadeFormDialog({
       campos_personalizados: camposValues,
       _contatos: contatos,
       conversa_id: prefill?.conversa_id || null,
+      filial_id: filialId || null,
     });
   };
 
@@ -444,6 +449,22 @@ export function OportunidadeFormDialog({
             </div>
             );
           })}
+
+          {/* Filial — required for chat-originated opportunities */}
+          {prefill?.origem && !oportunidade && filiais.length > 0 && (
+            <div>
+              <Label className={tried && !filialId ? "text-destructive" : ""}>Filial *</Label>
+              <Select value={filialId || "__none__"} onValueChange={(v) => setFilialId(v === "__none__" ? "" : v)}>
+                <SelectTrigger className={tried && !filialId ? "border-destructive" : ""}><SelectValue placeholder="Selecione a filial..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Selecione...</SelectItem>
+                  {filiais.map(f => (
+                    <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Obs — only for chat-originated opportunities */}
           {prefill?.origem && !oportunidade && (

@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { useUserFiliais } from "@/hooks/useUserFiliais";
 
 interface Props {
   conversa: ChatConversa | null;
@@ -44,6 +45,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { filiaisDoUsuario } = useUserFiliais();
   const [termoBusca, setTermoBusca] = useState("");
   const [buscando, setBuscando] = useState(false);
   const [clientesEncontrados, setClientesEncontrados] = useState<any[]>([]);
@@ -508,7 +510,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
 
           // WhatsApp automation dispatch
           try {
-            const filialId = (conversa.cliente as any)?.filial_id || (conversa as any).filial_id;
+            const filialId = data.filial_id as string;
             if (filialId) {
               const { data: autoConfig } = await (supabase as any)
                 .from("crm_automacao_chat_config")
@@ -528,6 +530,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
                   const contatos = (data._contatos as any[]) || [];
                   const contatoNome = contatos[0]?.nome || created.titulo;
                   const contatoTel = contatos[0]?.telefone || "";
+                  const empresaNome = (conversa.cliente as any)?.nome_fantasia || conversa.nome_cliente || "";
                   const segIds = (data.segmento_ids as string[]) || [];
                   let segmentoNomes = "";
                   if (segIds.length > 0) {
@@ -538,14 +541,17 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
                     segmentoNomes = segs?.map((s: any) => s.nome).join(", ") || "";
                   }
                   const obs = (data.observacoes as string) || "Sem observações";
-                  const mensagem = `🔔 *Nova Oportunidade CRM (via Chat)*\n\n` +
-                    `📋 *Oportunidade:* ${created.titulo}\n` +
-                    `👤 *Contato:* ${contatoNome}\n` +
-                    `📞 *Telefone:* ${contatoTel}\n` +
-                    `🏷️ *Segmento:* ${segmentoNomes || "Não informado"}\n` +
-                    `📍 *Origem:* Chat Softplus\n` +
-                    `📝 *Obs:* ${obs}\n` +
-                    `👨‍💼 *Criado por:* ${userName}`;
+                  const linkSoftflow = window.location.origin + "/crm";
+                  const mensagem = `🎯 *Nova oportunidade no seu pipeline!*\n\n` +
+                    `Olá, *${destProfile.full_name}*! Uma nova oportunidade foi atribuída a você no Softflow.\n\n` +
+                    `📋 *${created.titulo}*\n\n` +
+                    `👤 Contato: ${contatoNome}\n\n` +
+                    `📱 Telefone: ${contatoTel}\n\n` +
+                    `🏢 Empresa: ${empresaNome || "Não informada"}\n\n` +
+                    `🏷️ Segmento: ${segmentoNomes || "Não informado"}\n\n` +
+                    `📝 Obs: ${obs}\n\n` +
+                    `Acesse o pipeline e entre em contato agora — cada minuto conta para fechar esse negócio! 🚀\n\n` +
+                    `👉 ${linkSoftflow}`;
 
                   let instancia = "Softflow_WhatsApp";
                   if (autoConfig.setor_id) {
@@ -1001,6 +1007,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
           segmentos={segmentosQuery.data || []}
           cargos={cargosQuery.data || []}
           prefill={crmPrefill}
+          filiais={filiaisDoUsuario}
         />
       )}
 
