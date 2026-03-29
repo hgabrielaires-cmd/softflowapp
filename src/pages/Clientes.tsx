@@ -304,6 +304,12 @@ export default function Clientes() {
         margemIdealHistorico={margemIdealHistorico}
       />
 
+      <ClienteAtendimentosDialog
+        open={atendimentosOpen}
+        onOpenChange={setAtendimentosOpen}
+        cliente={clienteAtendimentos}
+      />
+
     </AppLayout>
   );
 }
