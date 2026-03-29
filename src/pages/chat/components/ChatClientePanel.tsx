@@ -212,36 +212,71 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     }
   }
 
-  // Trocar empresa - busca
+  // Trocar empresa - carrega empresas do contato ao abrir
   useEffect(() => {
     if (!trocarOpen) {
       setTrocarTermo("");
       setTrocarResultados([]);
       return;
     }
-    const loadRecentes = async () => {
-      const { data } = await supabase
-        .from("clientes")
-        .select("id, nome_fantasia, cnpj_cpf")
+    const loadEmpresasContato = async () => {
+      if (!conversa?.numero_cliente) return;
+      const limpo = conversa.numero_cliente.replace(/\D/g, "");
+      if (limpo.length < 8) return;
+      const ultimos8 = limpo.slice(-8);
+
+      const { data: contatos } = await supabase
+        .from("cliente_contatos")
+        .select("cliente_id, clientes(id, nome_fantasia, cnpj_cpf)")
+        .ilike("telefone", `%${ultimos8}%`)
         .eq("ativo", true)
-        .order("created_at", { ascending: false })
-        .limit(5);
-      if (data) setTrocarResultados(data);
+        .limit(20);
+
+      if (contatos && contatos.length > 0) {
+        const empresasMap = new Map<string, any>();
+        for (const c of contatos) {
+          const cli = c.clientes as any;
+          if (cli?.id && !empresasMap.has(cli.id)) {
+            empresasMap.set(cli.id, { id: cli.id, nome_fantasia: cli.nome_fantasia, cnpj_cpf: cli.cnpj_cpf });
+          }
+        }
+        setTrocarResultados(Array.from(empresasMap.values()));
+      } else {
+        setTrocarResultados([]);
+      }
     };
-    loadRecentes();
-  }, [trocarOpen]);
+    loadEmpresasContato();
+  }, [trocarOpen, conversa?.numero_cliente]);
 
   useEffect(() => {
     if (!trocarOpen) return;
     const termo = trocarTermo.trim();
     if (!termo) {
+      // Sem termo: recarrega empresas do contato
+      if (!conversa?.numero_cliente) return;
+      const limpo = conversa.numero_cliente.replace(/\D/g, "");
+      if (limpo.length < 8) return;
+      const ultimos8 = limpo.slice(-8);
       supabase
-        .from("clientes")
-        .select("id, nome_fantasia, cnpj_cpf")
+        .from("cliente_contatos")
+        .select("cliente_id, clientes(id, nome_fantasia, cnpj_cpf)")
+        .ilike("telefone", `%${ultimos8}%`)
         .eq("ativo", true)
-        .order("created_at", { ascending: false })
-        .limit(5)
-        .then(({ data }) => { if (data) setTrocarResultados(data); });
+        .limit(20)
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            const empresasMap = new Map<string, any>();
+            for (const c of data) {
+              const cli = c.clientes as any;
+              if (cli?.id && !empresasMap.has(cli.id)) {
+                empresasMap.set(cli.id, { id: cli.id, nome_fantasia: cli.nome_fantasia, cnpj_cpf: cli.cnpj_cpf });
+              }
+            }
+            setTrocarResultados(Array.from(empresasMap.values()));
+          } else {
+            setTrocarResultados([]);
+          }
+        });
       return;
     }
     const timeout = setTimeout(async () => {
@@ -260,7 +295,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
       setTrocarBuscando(false);
     }, 300);
     return () => clearTimeout(timeout);
-  }, [trocarTermo, trocarOpen]);
+  }, [trocarTermo, trocarOpen, conversa?.numero_cliente]);
 
   if (!conversa) return null;
 
