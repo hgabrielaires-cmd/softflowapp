@@ -59,7 +59,7 @@ export function AutomacaoChatTab() {
       const res = await (supabase as any)
         .from("profiles")
         .select("user_id, full_name")
-        .eq("ativo", true)
+        .eq("active", true)
         .order("full_name");
       return res.data || [];
     },
