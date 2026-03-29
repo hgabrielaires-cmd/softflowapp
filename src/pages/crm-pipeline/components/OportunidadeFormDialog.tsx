@@ -187,7 +187,8 @@ export function OportunidadeFormDialog({
     c => c.obrigatorio && !camposValues[c.id]?.trim()
   );
 
-  const hasErrors = !titulo.trim() || segmentoIds.length === 0 || !contatosValid || camposObrigatoriosPendentes.length > 0;
+  const filialRequired = !!prefill?.origem && !oportunidade;
+  const hasErrors = !titulo.trim() || segmentoIds.length === 0 || !contatosValid || camposObrigatoriosPendentes.length > 0 || (filialRequired && !filialId);
 
   const handleSave = () => {
     setTried(true);
