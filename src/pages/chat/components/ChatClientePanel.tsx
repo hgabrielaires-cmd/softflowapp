@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,17 +8,21 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { ExternalLink, Plus, Phone, Building2, Clock, Search, X, Star, User, CheckCircle2, RefreshCw, Ticket } from "lucide-react";
+import { ExternalLink, Plus, Phone, Building2, Clock, Search, X, Star, User, CheckCircle2, RefreshCw, Ticket, Eye, TrendingUp } from "lucide-react";
 import { TicketDetailDrawer } from "@/pages/tickets/components/TicketDetailDrawer";
-import { cn, normalizeBRPhone } from "@/lib/utils";
+import { OportunidadeFormDialog } from "@/pages/crm-pipeline/components/OportunidadeFormDialog";
+import { useCrmPipelineQueries } from "@/pages/crm-pipeline/useCrmPipelineQueries";
+import { useCrmCamposPersonalizados, useCrmFunis, useCrmEtapas } from "@/pages/crm-parametros/useCrmParametrosQueries";
+import { useCrmPipelineForm } from "@/pages/crm-pipeline/useCrmPipelineForm";
+import ChatHistoricoDrawer from "./ChatHistoricoDrawer";
+import { cn, normalizeBRPhone, applyPhoneMask } from "@/lib/utils";
 import { ChatConversa, STATUS_LABELS, ChatStatus } from "../types";
 import { formatarTelefone, tempoRelativo } from "../helpers";
 import { useChatHistorico } from "../useChatQueries";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
-import ChatHistoricoDrawer from "./ChatHistoricoDrawer";
+import { useAuth } from "@/context/AuthContext";
 
 interface Props {
   conversa: ChatConversa | null;
@@ -37,6 +41,7 @@ interface EmpresaContato {
 export default function ChatClientePanel({ conversa, onSelectHistorico }: Props) {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { user } = useAuth();
   const [termoBusca, setTermoBusca] = useState("");
   const [buscando, setBuscando] = useState(false);
   const [clientesEncontrados, setClientesEncontrados] = useState<any[]>([]);
@@ -48,6 +53,8 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
   const [trocarResultados, setTrocarResultados] = useState<any[]>([]);
   const [trocarBuscando, setTrocarBuscando] = useState(false);
   const [ticketDrawerOpen, setTicketDrawerOpen] = useState(false);
+  const [crmDialogOpen, setCrmDialogOpen] = useState(false);
+  const [crmDetailConversaId, setCrmDetailConversaId] = useState<string | null>(null);
 
   // Auto-link state
   const [empresasDetectadas, setEmpresasDetectadas] = useState<EmpresaContato[]>([]);
@@ -75,10 +82,34 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     refetchInterval: 15000,
   });
 
+  // Fetch linked CRM opportunity
+  const { data: linkedOportunidade } = useQuery({
+    queryKey: ["chat-crm-oportunidade", conversa?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("crm_oportunidades")
+        .select("id, titulo, status, etapa_id, crm_etapas(nome)")
+        .eq("conversa_id", conversa!.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!conversa?.id,
+    refetchInterval: 15000,
+  });
+
+  // CRM form dependencies
+  const { data: funis = [] } = useCrmFunis();
+  const firstFunilId = funis.find(f => f.ativo)?.id || "";
+  const { data: crmEtapas = [] } = useCrmEtapas(firstFunilId);
+  const { data: camposPersonalizados = [] } = useCrmCamposPersonalizados();
+  const { createMutation } = useCrmPipelineForm(firstFunilId);
+
+  // Load responsaveis, segmentos, clientes, cargos for the CRM form
+  const { responsaveisQuery, segmentosQuery, clientesQuery, cargosQuery } = useCrmPipelineQueries(firstFunilId, "em_andamento");
+
   // Auto-detect company by phone number
   useEffect(() => {
     if (!conversa?.id || !conversa.numero_cliente) return;
-    // If already linked, skip
     if (conversa.cliente_id) {
       setEmpresasDetectadas([]);
       setAutoLinkFeito(false);
@@ -91,7 +122,6 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
       if (limpo.length < 8) return;
       const ultimos8 = limpo.slice(-8);
 
-      // Search contacts by phone
       const { data: contatos } = await supabase
         .from("cliente_contatos")
         .select("id, nome, telefone, cliente_id, clientes(id, nome_fantasia, cnpj_cpf)")
@@ -100,7 +130,6 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
         .limit(10);
 
       if (!contatos || contatos.length === 0) {
-        // Try last closed conversation for this number (flexible match)
         const { data: lastConvs } = await supabase
           .from("chat_conversas")
           .select("cliente_id, numero_cliente, clientes:clientes!chat_conversas_cliente_id_fkey(id, nome_fantasia, cnpj_cpf)")
@@ -112,16 +141,13 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
           .limit(1);
 
         const lastConv = lastConvs?.[0] || null;
-
         if (lastConv?.cliente_id && lastConv.clientes) {
-          // Auto-link from previous conversation
           await vincularClienteAuto(lastConv.cliente_id, (lastConv.clientes as any).nome_fantasia, true);
         }
         setEmpresasDetectadas([]);
         return;
       }
 
-      // Build unique companies list
       const empresasMap = new Map<string, EmpresaContato>();
       for (const c of contatos) {
         const cli = c.clientes as any;
@@ -138,13 +164,10 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
       }
 
       const empresas = Array.from(empresasMap.values());
-
       if (empresas.length === 1) {
-        // Single company → auto-link
         await vincularClienteAuto(empresas[0].empresa_id, empresas[0].empresa_nome, false);
         setEmpresasDetectadas([]);
       } else if (empresas.length > 1) {
-        // Multiple companies → show selector
         setEmpresasDetectadas(empresas);
       }
     };
@@ -152,14 +175,12 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     detectar();
   }, [conversa?.id, conversa?.numero_cliente, conversa?.cliente_id]);
 
-  /** Garante que existe um registro em cliente_contatos para este número/empresa */
   async function garantirContato(clienteId: string) {
     if (!conversa) return;
     const telefone = conversa.numero_cliente?.replace(/\D/g, "") || "";
     if (telefone.length < 8) return;
     const ultimos8 = telefone.slice(-8);
 
-    // Check if contact already exists for this client + phone
     const { data: existing } = await supabase
       .from("cliente_contatos")
       .select("id")
@@ -168,9 +189,8 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
       .eq("ativo", true)
       .limit(1);
 
-    if (existing && existing.length > 0) return; // already exists
+    if (existing && existing.length > 0) return;
 
-    // Create contact record with normalized phone
     await supabase.from("cliente_contatos").insert({
       cliente_id: clienteId,
       nome: conversa.nome_cliente || "Contato via Chat",
@@ -188,17 +208,13 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
         .update({ cliente_id: clienteId })
         .eq("id", conversa.id);
       if (error) throw error;
-
-      // Ensure contact record exists
       await garantirContato(clienteId);
-
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversa.id,
         tipo: "sistema",
         conteudo: `Cliente vinculado automaticamente: ${nomeEmpresa}`,
         remetente: "sistema",
       });
-
       setAutoLinkFeito(true);
       setAutoLinkMsg(`Vinculado automaticamente${fromHistory ? " (histórico)" : ""}`);
       qc.invalidateQueries({ queryKey: ["chat-conversas"] });
@@ -215,16 +231,13 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
         .update({ cliente_id: emp.empresa_id })
         .eq("id", conversa.id);
       if (error) throw error;
-
       await garantirContato(emp.empresa_id);
-
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversa.id,
         tipo: "sistema",
         conteudo: `Cliente vinculado: ${emp.empresa_nome}`,
         remetente: "sistema",
       });
-
       toast.success("Empresa vinculada!");
       setEmpresasDetectadas([]);
       qc.invalidateQueries({ queryKey: ["chat-conversas"] });
@@ -233,7 +246,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     }
   }
 
-  // Trocar empresa - carrega empresas do contato ao abrir
+  // Trocar empresa
   useEffect(() => {
     if (!trocarOpen) {
       setTrocarTermo("");
@@ -245,14 +258,12 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
       const limpo = conversa.numero_cliente.replace(/\D/g, "");
       if (limpo.length < 8) return;
       const ultimos8 = limpo.slice(-8);
-
       const { data: contatos } = await supabase
         .from("cliente_contatos")
         .select("cliente_id, clientes(id, nome_fantasia, cnpj_cpf)")
         .ilike("telefone", `%${ultimos8}%`)
         .eq("ativo", true)
         .limit(20);
-
       if (contatos && contatos.length > 0) {
         const empresasMap = new Map<string, any>();
         for (const c of contatos) {
@@ -273,7 +284,6 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     if (!trocarOpen) return;
     const termo = trocarTermo.trim();
     if (!termo) {
-      // Sem termo: recarrega empresas do contato
       if (!conversa?.numero_cliente) return;
       const limpo = conversa.numero_cliente.replace(/\D/g, "");
       if (limpo.length < 8) return;
@@ -331,13 +341,11 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     try {
       const limpo = termo.replace(/\D/g, "");
       const isNumerico = limpo.length >= 3 && /^\d+$/.test(limpo);
-
       let query = supabase
         .from("clientes")
         .select("id, nome_fantasia, razao_social, cnpj_cpf, apelido, filial_id")
         .eq("ativo", true)
         .limit(10);
-
       if (isNumerico && limpo.length >= 11) {
         query = query.eq("cnpj_cpf", limpo);
       } else {
@@ -351,7 +359,6 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
         }
         query = query.or(filters.join(","));
       }
-
       const { data, error } = await query;
       if (error) throw error;
       setClientesEncontrados(data || []);
@@ -369,16 +376,13 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
         .update({ cliente_id: cli.id })
         .eq("id", conversa!.id);
       if (error) throw error;
-
       await garantirContato(cli.id);
-
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversa!.id,
         tipo: "sistema",
         conteudo: `Cliente vinculado: ${cli.nome_fantasia}`,
         remetente: "sistema",
       });
-
       toast.success("Cliente vinculado!");
       qc.invalidateQueries({ queryKey: ["chat-conversas"] });
       setClientesEncontrados([]);
@@ -396,14 +400,12 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
         .update({ cliente_id: null })
         .eq("id", conversa!.id);
       if (error) throw error;
-
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversa!.id,
         tipo: "sistema",
         conteudo: "Cliente desvinculado da conversa",
         remetente: "sistema",
       });
-
       toast.success("Cliente desvinculado!");
       setAutoLinkFeito(false);
       setAutoLinkMsg(null);
@@ -418,7 +420,6 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     if (n.length <= 11) return n.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, "$1.$2.$3-$4");
     return n.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, "$1.$2.$3/$4-$5");
   }
-
 
   async function trocarEmpresa(cli: any) {
     if (!conversa) return;
@@ -442,6 +443,63 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
       toast.error("Erro: " + e.message);
     }
   }
+
+  // CRM form prefill
+  const crmPrefill = {
+    titulo: conversa.nome_cliente || "",
+    contatos: [{
+      nome: conversa.nome_cliente || "",
+      telefone: conversa.numero_cliente?.replace(/\D/g, "") || "",
+      cargo_id: "",
+      email: "",
+    }],
+    origem: "Chat Softplus",
+    origemLocked: true,
+    conversa_id: conversa.id,
+  };
+
+  const handleCrmSave = async (data: Record<string, unknown>) => {
+    createMutation.mutate({ funil_id: firstFunilId, ...data } as any, {
+      onSuccess: async (created: any) => {
+        setCrmDialogOpen(false);
+        if (created?.id) {
+          // Add note to chat
+          const userName = user?.user_metadata?.full_name || "Atendente";
+          await supabase.from("chat_mensagens").insert({
+            conversa_id: conversa.id,
+            tipo: "nota_interna",
+            conteudo: `Oportunidade CRM criada por @${userName} — ${created.titulo}`,
+            remetente: "sistema",
+            atendente_id: user?.id || null,
+          });
+
+          // Log in timeline with user info
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("user_id", authUser?.id || "")
+            .single();
+          await (supabase as any).from("crm_historico").insert({
+            oportunidade_id: created.id,
+            tipo: "criacao",
+            descricao: `Oportunidade criada por @${profile?.full_name || "Usuário"} — Origem: Chat Softplus`,
+            user_id: authUser?.id || null,
+          });
+
+          qc.invalidateQueries({ queryKey: ["chat-mensagens"] });
+          qc.invalidateQueries({ queryKey: ["chat-crm-oportunidade", conversa.id] });
+          toast.success("Oportunidade CRM criada!");
+        }
+      },
+    });
+  };
+
+  const crmStatusLabel: Record<string, string> = {
+    em_andamento: "Em Andamento",
+    ganho: "Ganho",
+    perdido: "Perdido",
+  };
 
   return (
     <>
@@ -532,7 +590,6 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
                   {empresasDetectadas.length === 0 && (
                     <>
                       <p className="text-muted-foreground">Cliente não vinculado</p>
-                      {/* CNPJ Search */}
                       <div className="space-y-1.5 pt-1">
                         <div className="flex gap-1">
                           <Input
@@ -639,6 +696,32 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
                   </div>
                 </div>
               )}
+              {/* CRM Oportunidade */}
+              {linkedOportunidade && (
+                <div
+                  className="flex justify-between items-center pt-1 border-t border-border mt-1 cursor-pointer hover:bg-accent/50 rounded px-1 -mx-1 transition-colors"
+                  onClick={() => navigate(`/crm-pipeline?oportunidade=${linkedOportunidade.id}`)}
+                  title="Clique para ver detalhes da oportunidade"
+                >
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3" /> CRM
+                  </span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="font-medium truncate max-w-[120px]">{linkedOportunidade.titulo}</span>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] h-4 shrink-0",
+                        linkedOportunidade.status === "em_andamento" && "border-blue-400 text-blue-600",
+                        linkedOportunidade.status === "ganho" && "border-green-400 text-green-600",
+                        linkedOportunidade.status === "perdido" && "border-red-400 text-red-600",
+                      )}
+                    >
+                      {crmStatusLabel[linkedOportunidade.status] || linkedOportunidade.status}
+                    </Badge>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -669,7 +752,13 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
               >
                 <Plus className="h-3 w-3" /> Abrir Ticket
               </Button>
-              <Button variant="ghost" size="sm" className="w-full justify-start text-xs h-8 gap-2" disabled>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start text-xs h-8 gap-2"
+                disabled={!!linkedOportunidade || !firstFunilId || crmEtapas.length === 0}
+                onClick={() => setCrmDialogOpen(true)}
+              >
                 <Plus className="h-3 w-3" /> Vincular CRM
               </Button>
             </CardContent>
@@ -807,6 +896,25 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
           ticketId={ticketDrawerOpen ? ticketId : null}
           open={ticketDrawerOpen}
           onClose={() => setTicketDrawerOpen(false)}
+        />
+      )}
+
+      {/* CRM Oportunidade Form Dialog */}
+      {firstFunilId && crmEtapas.length > 0 && (
+        <OportunidadeFormDialog
+          open={crmDialogOpen}
+          onOpenChange={setCrmDialogOpen}
+          etapas={crmEtapas}
+          etapaIdInicial={crmEtapas[0]?.id}
+          clientes={clientesQuery.data || []}
+          responsaveis={responsaveisQuery.data || []}
+          onSave={handleCrmSave}
+          saving={createMutation.isPending}
+          currentUserId={user?.id}
+          camposPersonalizados={camposPersonalizados}
+          segmentos={segmentosQuery.data || []}
+          cargos={cargosQuery.data || []}
+          prefill={crmPrefill}
         />
       )}
     </>
