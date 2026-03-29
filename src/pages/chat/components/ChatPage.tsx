@@ -6,6 +6,7 @@ import ChatConversaList from "./ChatConversaList";
 import ChatMessageArea from "./ChatMessageArea";
 import ChatClientePanel from "./ChatClientePanel";
 import TransferirDialog from "./TransferirDialog";
+import NovaConversaDialog from "./NovaConversaDialog";
 import EncerrarAtendimentoDialog from "./EncerrarAtendimentoDialog";
 import { useChatConversas, useChatMensagens } from "../useChatQueries";
 import { useChatActions } from "../useChatActions";
