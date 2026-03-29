@@ -131,7 +131,7 @@ export function useNotificacaoChat({ userId, conversaAbertaId }: UseNotificacaoC
           // Skip notifications for closed conversations (e.g. NPS responses)
           const { data: conv } = await supabase
             .from("chat_conversas")
-            .select("status")
+            .select("status, nome_cliente")
             .eq("id", msg.conversa_id)
             .maybeSingle();
           if (conv?.status === "encerrado") return;
