@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import ChatHistoricoDrawer from "@/pages/chat/components/ChatHistoricoDrawer";
 import { Ticket, TicketStatus } from "../types";
 import { TICKET_STATUS_COLORS, TICKET_PRIORIDADE_COLORS, TICKET_STATUSES } from "../constants";
 import { formatDateTime } from "../helpers";
@@ -38,7 +39,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Maximize2, X, Building2, FileText, Headphones, Calendar as CalendarIcon,
-  User, Plus, Link2, Paperclip, Download, Edit2, MessageSquare,
+  User, Plus, Link2, Paperclip, Download, Edit2, MessageSquare, Eye,
   ChevronDown, Phone, Mail, Star, CalendarDays, Clock, Trash2,
   Play, PauseCircle, CheckCircle, Upload, Loader2,
 } from "lucide-react";
@@ -69,6 +70,42 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   const { data: agendamentos = [] } = useTicketAgendamentos(ticketId);
   const { data: historico = [] } = useClienteTicketsHistorico(ticket?.cliente_id ?? null, ticketId);
 
+  // Fetch linked chat conversation for current ticket
+  const { data: linkedConversa } = useQuery({
+    queryKey: ["ticket-linked-conversa", ticketId],
+    queryFn: async () => {
+      if (!ticketId) return null;
+      const { data } = await supabase
+        .from("chat_conversas")
+        .select("id, protocolo, created_at")
+        .eq("ticket_id", ticketId)
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!ticketId,
+  });
+
+  // Fetch linked chat conversations for historico tickets
+  const historicoTicketIds = historico.map((h: any) => h.id).filter(Boolean);
+  const { data: historicoConversas = [] } = useQuery({
+    queryKey: ["historico-linked-conversas", historicoTicketIds],
+    queryFn: async () => {
+      if (historicoTicketIds.length === 0) return [];
+      const { data } = await supabase
+        .from("chat_conversas")
+        .select("id, protocolo, ticket_id, created_at")
+        .in("ticket_id", historicoTicketIds);
+      return data || [];
+    },
+    enabled: historicoTicketIds.length > 0,
+  });
+
+  const historicoConversasMap: Record<string, any> = {};
+  (historicoConversas as any[]).forEach((c: any) => {
+    if (c.ticket_id) historicoConversasMap[c.ticket_id] = c;
+  });
+
   const updateStatus = useUpdateTicketStatus();
   const addComment = useAddTicketComment();
   const updateResponsavel = useUpdateTicketResponsavel();
@@ -91,6 +128,9 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   const [showResolucaoDialog, setShowResolucaoDialog] = useState(false);
   const [resolucaoText, setResolucaoText] = useState("");
   const [uploadingAnexo, setUploadingAnexo] = useState(false);
+  const [viewingConversaId, setViewingConversaId] = useState<string | null>(null);
+  const [viewingConversaProtocolo, setViewingConversaProtocolo] = useState<string>("");
+  const [viewingConversaData, setViewingConversaData] = useState<string>("");
 
   const mentionUsers = profiles.map((p) => ({ id: p.user_id, user_id: p.user_id, full_name: p.full_name }));
 
@@ -290,43 +330,95 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
 
               {ticket.cliente_id && (
                 <TabsContent value="historico" className="space-y-2 mt-0">
-                  {historico.length === 0 ? (
+                  {/* Current ticket linked conversation */}
+                  {linkedConversa && (
+                    <div className="border rounded-lg p-3 bg-primary/5 border-primary/20">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                          <span className="text-xs font-medium">Conversa de origem</span>
+                          <span className="font-mono text-xs text-primary">#{linkedConversa.protocolo}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          title="Visualizar conversa"
+                          onClick={() => {
+                            setViewingConversaId(linkedConversa.id);
+                            setViewingConversaProtocolo(linkedConversa.protocolo || "");
+                            setViewingConversaData(linkedConversa.created_at || "");
+                          }}
+                        >
+                          <Eye className="h-3.5 w-3.5 text-primary" />
+                        </Button>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {linkedConversa.created_at && format(new Date(linkedConversa.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                      </p>
+                    </div>
+                  )}
+
+                  {historico.length === 0 && !linkedConversa ? (
                     <p className="text-sm text-muted-foreground text-center py-8">Nenhum ticket anterior para este cliente.</p>
                   ) : (
-                    historico.map((h: any) => (
-                      <div
-                        key={h.id}
-                        className="border rounded-lg p-3 hover:bg-accent/50 transition-colors cursor-pointer"
-                        onClick={() => onSelectTicket?.(h.id)}
-                      >
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="font-mono text-xs text-muted-foreground">#{h.numero_exibicao}</span>
-                          <Badge variant="outline" className={cn("text-[10px]", TICKET_STATUS_COLORS[h.status as TicketStatus])}>
-                            {h.status}
-                          </Badge>
-                          <Badge className={cn("text-[10px]", TICKET_PRIORIDADE_COLORS[h.prioridade])}>
-                            {h.prioridade}
-                          </Badge>
-                        </div>
-                        <p className="text-sm font-medium truncate">{h.titulo}</p>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <Badge variant="secondary" className="text-[10px]">
-                            <Headphones className="h-2.5 w-2.5 mr-0.5" /> {h.mesa}
-                          </Badge>
-                          {h.helpdesk_tipos_atendimento?.nome && (
-                            <Badge variant="outline" className="text-[10px]">
-                              {(h.helpdesk_tipos_atendimento as any).nome}
+                    historico.map((h: any) => {
+                      const hConversa = historicoConversasMap[h.id];
+                      return (
+                        <div
+                          key={h.id}
+                          className="border rounded-lg p-3 hover:bg-accent/50 transition-colors cursor-pointer"
+                          onClick={() => onSelectTicket?.(h.id)}
+                        >
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className="font-mono text-xs text-muted-foreground">#{h.numero_exibicao}</span>
+                            <Badge variant="outline" className={cn("text-[10px]", TICKET_STATUS_COLORS[h.status as TicketStatus])}>
+                              {h.status}
                             </Badge>
-                          )}
-                          {(h.tags as string[] || []).map((tag: string) => (
-                            <Badge key={tag} className="bg-blue-500/10 text-blue-600 border-blue-200 text-[9px]">{tag}</Badge>
-                          ))}
+                            <Badge className={cn("text-[10px]", TICKET_PRIORIDADE_COLORS[h.prioridade])}>
+                              {h.prioridade}
+                            </Badge>
+                            {h.origem === "chat" && hConversa && (
+                              <>
+                                <span className="text-[10px] text-muted-foreground">•</span>
+                                <span className="font-mono text-[10px] text-primary">#{hConversa.protocolo}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5"
+                                  title="Visualizar conversa"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setViewingConversaId(hConversa.id);
+                                    setViewingConversaProtocolo(hConversa.protocolo || "");
+                                    setViewingConversaData(hConversa.created_at || "");
+                                  }}
+                                >
+                                  <Eye className="h-3 w-3 text-primary" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                          <p className="text-sm font-medium truncate">{h.titulo}</p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <Badge variant="secondary" className="text-[10px]">
+                              <Headphones className="h-2.5 w-2.5 mr-0.5" /> {h.mesa}
+                            </Badge>
+                            {h.helpdesk_tipos_atendimento?.nome && (
+                              <Badge variant="outline" className="text-[10px]">
+                                {(h.helpdesk_tipos_atendimento as any).nome}
+                              </Badge>
+                            )}
+                            {(h.tags as string[] || []).map((tag: string) => (
+                              <Badge key={tag} className="bg-blue-500/10 text-blue-600 border-blue-200 text-[9px]">{tag}</Badge>
+                            ))}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            {format(new Date(h.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </p>
                         </div>
-                        <p className="text-[10px] text-muted-foreground mt-1">
-                          {format(new Date(h.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                        </p>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </TabsContent>
               )}
@@ -730,6 +822,13 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
           },
         });
       }}
+    />
+    <ChatHistoricoDrawer
+      conversaId={viewingConversaId}
+      open={!!viewingConversaId}
+      onClose={() => setViewingConversaId(null)}
+      protocolo={viewingConversaProtocolo}
+      data={viewingConversaData}
     />
     </>
   );
