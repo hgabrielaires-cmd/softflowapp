@@ -41,10 +41,16 @@ export function useChatActions() {
       // Send via WhatsApp if not internal note
       if (tipo !== "nota_interna") {
         const textoWhatsApp = `*${userName || "Atendente"}* diz:\n${texto}`;
-        const { error: sendError } = await supabase.functions.invoke("evolution-api", {
+        console.log("[Chat] Enviando WhatsApp para:", numero, "instância:", instanceName);
+        const { data: sendData, error: sendError } = await supabase.functions.invoke("evolution-api", {
           body: { action: "send_text", number: numero, text: textoWhatsApp, instance_name: instanceName },
         });
-        if (sendError) console.error("Erro ao enviar WhatsApp:", sendError);
+        if (sendError) {
+          console.error("[Chat] Erro ao enviar WhatsApp:", sendError);
+          toast.error("Mensagem salva, mas falhou ao enviar no WhatsApp: " + (sendError.message || sendError));
+        } else {
+          console.log("[Chat] WhatsApp enviado com sucesso:", sendData);
+        }
       }
 
       // Update conversation timestamp

@@ -118,7 +118,7 @@ export function useNotificacaoChat({ userId, conversaAbertaId }: UseNotificacaoC
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chat_mensagens" },
-        (payload) => {
+        async (payload) => {
           const msg = payload.new as any;
           if (!msg) return;
 
@@ -128,6 +128,14 @@ export function useNotificacaoChat({ userId, conversaAbertaId }: UseNotificacaoC
           // Skip if user is viewing this conversation and tab is focused
           if (msg.conversa_id === conversaAbertaRef.current && document.hasFocus()) return;
 
+          // Skip notifications for closed conversations (e.g. NPS responses)
+          const { data: conv } = await supabase
+            .from("chat_conversas")
+            .select("status, nome_cliente")
+            .eq("id", msg.conversa_id)
+            .maybeSingle();
+          if (conv?.status === "encerrado") return;
+
           // Sound
           if (getPref(userId, "som")) tocarBip();
 
@@ -136,16 +144,9 @@ export function useNotificacaoChat({ userId, conversaAbertaId }: UseNotificacaoC
 
           // Browser notification (fetch conversa name)
           if (getPref(userId, "browser")) {
-            supabase
-              .from("chat_conversas")
-              .select("nome_cliente")
-              .eq("id", msg.conversa_id)
-              .maybeSingle()
-              .then(({ data }) => {
-                const nome = data?.nome_cliente || "Cliente";
-                const preview = (msg.conteudo || "📎 Mídia").substring(0, 60);
-                showBrowserNotification(nome, preview, msg.conversa_id);
-              });
+            const nome = (conv as any)?.nome_cliente || "Cliente";
+            const preview = (msg.conteudo || "📎 Mídia").substring(0, 60);
+            showBrowserNotification(nome, preview, msg.conversa_id);
           }
         },
       )
