@@ -12,7 +12,7 @@ import { useUserFiliais } from "@/hooks/useUserFiliais";
 
 export function AutomacaoChatTab() {
   const qc = useQueryClient();
-  const { filiais } = useUserFiliais();
+  const { filiaisDoUsuario: filiais } = useUserFiliais();
   const [filialId, setFilialId] = useState<string>("");
   const [ativo, setAtivo] = useState(false);
   const [setorId, setSetorId] = useState<string>("");
