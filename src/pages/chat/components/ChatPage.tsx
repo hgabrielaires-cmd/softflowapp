@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import ChatConversaList from "./ChatConversaList";
 import ChatMessageArea from "./ChatMessageArea";
@@ -11,9 +12,15 @@ import { useChatActions } from "../useChatActions";
 import { useChatMediaActions } from "../useChatMediaActions";
 import { ChatConversa } from "../types";
 import { useNotificacaoChat } from "@/hooks/useNotificacaoChat";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function ChatPage() {
   const { user, profile } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
   const [tab, setTab] = useState("fila");
   const [search, setSearch] = useState("");
   const [selectedConversa, setSelectedConversa] = useState<ChatConversa | null>(null);
@@ -38,6 +45,46 @@ export default function ChatPage() {
     todos: 0,
     encerrados: 0,
   }), [filaConversas, meusConversas, triagemConversas]);
+
+  // Handle return from ticket creation
+  useEffect(() => {
+    const state = location.state as { ticketCreated?: { id: string; numero_exibicao: string }; conversaId?: string } | null;
+    if (!state?.ticketCreated || !state?.conversaId || !user?.id) return;
+
+    const { ticketCreated, conversaId } = state;
+    const userName = (profile as any)?.full_name || "Atendente";
+
+    // Clear location state
+    navigate(location.pathname, { replace: true, state: null });
+
+    (async () => {
+      // Link ticket to conversation
+      await supabase
+        .from("chat_conversas")
+        .update({ ticket_id: ticketCreated.id } as any)
+        .eq("id", conversaId);
+
+      // Add internal note
+      await supabase.from("chat_mensagens").insert({
+        conversa_id: conversaId,
+        tipo: "nota_interna",
+        conteudo: `Ticket aberto por @${userName} — ${ticketCreated.numero_exibicao}`,
+        remetente: "sistema",
+        atendente_id: user.id,
+      });
+
+      qc.invalidateQueries({ queryKey: ["chat-conversas"] });
+      qc.invalidateQueries({ queryKey: ["chat-mensagens"] });
+      toast.success(`Ticket ${ticketCreated.numero_exibicao} vinculado à conversa`);
+
+      // Select the conversation
+      const conv = conversas.find((c) => c.id === conversaId);
+      if (conv) {
+        setSelectedConversa(conv as ChatConversa);
+        setTab("meus");
+      }
+    })();
+  }, [location.state]);
 
   const conversaAtual = useMemo(() => {
     if (!selectedConversa) return null;

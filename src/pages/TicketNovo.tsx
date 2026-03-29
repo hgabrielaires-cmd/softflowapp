@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -58,19 +58,24 @@ function TagSuggestions({ input, existingTags, onSelect }: { input: string; exis
 
 export default function TicketNovo() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, profile } = useAuth();
   const userId = user?.id || "";
+
+  // Check if coming from chat
+  const chatState = location.state as { fromChat?: boolean; conversaId?: string; clienteId?: string; clienteNome?: string } | null;
+  const fromChat = chatState?.fromChat || false;
 
   const { data: profiles = [] } = useProfiles();
   const { data: tipos = [] } = useHelpdeskTipos();
   const { data: modelos = [] } = useHelpdeskModelos();
-  const createTicket = useCreateTicket(() => navigate("/tickets"));
+  const createTicket = useCreateTicket(fromChat ? undefined : () => navigate("/tickets"));
 
   // Form state
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [clienteId, setClienteId] = useState<string | null>(null);
-  const [clienteSearch, setClienteSearch] = useState("");
+  const [clienteId, setClienteId] = useState<string | null>(chatState?.clienteId || null);
+  const [clienteSearch, setClienteSearch] = useState(chatState?.clienteNome || "");
   const [contratoId, setContratoId] = useState<string | null>(null);
   const [mesa, setMesa] = useState<TicketMesa>("Suporte");
   const [modo, setModo] = useState<TicketModo | "">("");
@@ -257,7 +262,19 @@ export default function TicketNovo() {
         data: format(item.date, "yyyy-MM-dd"),
         hora_inicio: item.hora || null,
       }));
-      createTicket.mutate({ data, userId, agendamentos, anexos: anexosUpload });
+      createTicket.mutate({ data, userId, agendamentos, anexos: anexosUpload }, {
+        onSuccess: (ticket) => {
+          if (fromChat && chatState?.conversaId && ticket) {
+            navigate("/chat", {
+              state: {
+                ticketCreated: ticket,
+                conversaId: chatState.conversaId,
+              },
+              replace: true,
+            });
+          }
+        },
+      });
     } catch {
       toast.error("Erro ao processar anexos.");
     } finally {

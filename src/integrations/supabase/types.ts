@@ -356,6 +356,7 @@ export type Database = {
           tags: string[] | null
           tempo_atendimento_segundos: number | null
           tempo_espera_segundos: number | null
+          ticket_id: string | null
           titulo_atendimento: string | null
           updated_at: string | null
         }
@@ -383,6 +384,7 @@ export type Database = {
           tags?: string[] | null
           tempo_atendimento_segundos?: number | null
           tempo_espera_segundos?: number | null
+          ticket_id?: string | null
           titulo_atendimento?: string | null
           updated_at?: string | null
         }
@@ -410,6 +412,7 @@ export type Database = {
           tags?: string[] | null
           tempo_atendimento_segundos?: number | null
           tempo_espera_segundos?: number | null
+          ticket_id?: string | null
           titulo_atendimento?: string | null
           updated_at?: string | null
         }
@@ -440,6 +443,13 @@ export type Database = {
             columns: ["setor_id"]
             isOneToOne: false
             referencedRelation: "setores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_conversas_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
             referencedColumns: ["id"]
           },
         ]
