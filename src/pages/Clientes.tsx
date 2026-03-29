@@ -218,6 +218,9 @@ export default function Clientes() {
                             <FileText className="h-3.5 w-3.5" />
                           </Button>
                         )}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openAtendimentos(c)} title="Atendimentos">
+                          <Headset className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
