@@ -532,6 +532,53 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
                 </Collapsible>
               )}
 
+              {/* Conversas WhatsApp */}
+              <div className="bg-card rounded-xl border p-4 space-y-3">
+                <h4 className="text-sm font-semibold flex items-center gap-1.5">
+                  <MessageSquare className="h-3.5 w-3.5" /> Conversas WhatsApp ({linkedConversas.length})
+                </h4>
+                {linkedConversas.length > 0 ? (
+                  <div className="space-y-2">
+                    {linkedConversas.map((conv: any) => (
+                      <div key={conv.id} className="flex items-center justify-between text-xs bg-muted/30 rounded-lg p-2.5">
+                        <div className="flex-1 min-w-0 space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-primary">#{conv.protocolo}</span>
+                            <Badge variant="outline" className="text-[9px] h-3.5 px-1">{conv.status}</Badge>
+                          </div>
+                          <p className="text-muted-foreground truncate">
+                            {conv.nome_cliente || conv.numero_cliente}
+                            {(conv.cliente as any)?.nome_fantasia && ` — ${(conv.cliente as any).nome_fantasia}`}
+                          </p>
+                          {(conv.atendente as any)?.full_name && (
+                            <p className="text-muted-foreground text-[10px]">
+                              Atendente: {(conv.atendente as any).full_name}
+                            </p>
+                          )}
+                          <p className="text-muted-foreground text-[10px]">
+                            {conv.created_at && format(new Date(conv.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 flex-shrink-0"
+                          title="Visualizar conversa"
+                          onClick={() => {
+                            setViewingConversaId(conv.id);
+                            setViewingConversaProtocolo(conv.protocolo || "");
+                            setViewingConversaData(conv.created_at || "");
+                          }}
+                        >
+                          <Eye className="h-3.5 w-3.5 text-primary" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhuma conversa vinculada a este ticket.</p>
+                )}
+              </div>
 
               {/* Agenda */}
               <div className="bg-card rounded-xl border p-4 space-y-3">
