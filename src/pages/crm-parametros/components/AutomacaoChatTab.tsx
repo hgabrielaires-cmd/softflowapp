@@ -56,12 +56,12 @@ export function AutomacaoChatTab() {
   const { data: usuarios = [] } = useQuery({
     queryKey: ["profiles-list"],
     queryFn: async (): Promise<{ user_id: string; full_name: string }[]> => {
-      const { data } = await supabase
+      const res = await (supabase as any)
         .from("profiles")
         .select("user_id, full_name")
         .eq("ativo", true)
         .order("full_name");
-      return (data as any) || [];
+      return res.data || [];
     },
   });
 
