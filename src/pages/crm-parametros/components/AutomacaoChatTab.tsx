@@ -60,7 +60,7 @@ export function AutomacaoChatTab() {
         .from("profiles")
         .select("user_id, full_name")
         .eq("ativo", true)
-        .order("full_name");
+        .order("full_name") as any;
       return data || [];
     },
   });
