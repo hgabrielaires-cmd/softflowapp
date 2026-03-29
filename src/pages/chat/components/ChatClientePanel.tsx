@@ -57,6 +57,22 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     conversa?.id || null
   );
 
+  // Fetch linked ticket info
+  const ticketId = (conversa as any)?.ticket_id || null;
+  const { data: ticketInfo } = useQuery({
+    queryKey: ["chat-ticket-info", ticketId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tickets")
+        .select("id, numero_exibicao, status")
+        .eq("id", ticketId!)
+        .single();
+      return data;
+    },
+    enabled: !!ticketId,
+    refetchInterval: 15000,
+  });
+
   // Auto-detect company by phone number
   useEffect(() => {
     if (!conversa?.id || !conversa.numero_cliente) return;
