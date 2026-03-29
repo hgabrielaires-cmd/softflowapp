@@ -1860,6 +1860,7 @@ export type Database = {
           cliente_id: string | null
           concorrente: string | null
           contato_id: string | null
+          conversa_id: string | null
           created_at: string
           data_fechamento: string | null
           data_perda: string | null
@@ -1892,6 +1893,7 @@ export type Database = {
           cliente_id?: string | null
           concorrente?: string | null
           contato_id?: string | null
+          conversa_id?: string | null
           created_at?: string
           data_fechamento?: string | null
           data_perda?: string | null
@@ -1924,6 +1926,7 @@ export type Database = {
           cliente_id?: string | null
           concorrente?: string | null
           contato_id?: string | null
+          conversa_id?: string | null
           created_at?: string
           data_fechamento?: string | null
           data_perda?: string | null
@@ -1963,6 +1966,13 @@ export type Database = {
             columns: ["contato_id"]
             isOneToOne: false
             referencedRelation: "cliente_contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_oportunidades_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversas"
             referencedColumns: ["id"]
           },
           {
