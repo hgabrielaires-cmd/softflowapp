@@ -58,10 +58,11 @@ const emptyContato = (): ContatoLocal => ({ nome: "", telefone: "", cargo_id: ""
 
 export function OportunidadeFormDialog({
   open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving, exibeCliente = true, currentUserId, camposPersonalizados = [], segmentos = [], cargos = [],
-  prefill,
+  prefill, filiais = [],
 }: Props) {
   const [titulo, setTitulo] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [filialId, setFilialId] = useState<string>("");
   const [clienteId, setClienteId] = useState<string>("");
   const [responsavelId, setResponsavelId] = useState<string>("");
   const [etapaId, setEtapaId] = useState("");
