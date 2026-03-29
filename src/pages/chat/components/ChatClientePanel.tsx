@@ -703,7 +703,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
               {linkedOportunidade && (
                 <div
                   className="flex justify-between items-center pt-1 border-t border-border mt-1 cursor-pointer hover:bg-accent/50 rounded px-1 -mx-1 transition-colors"
-                  onClick={() => navigate(`/crm-pipeline?oportunidade=${linkedOportunidade.id}`)}
+                  onClick={() => setCrmDetailOpen(true)}
                   title="Clique para ver detalhes da oportunidade"
                 >
                   <span className="text-muted-foreground flex items-center gap-1">
