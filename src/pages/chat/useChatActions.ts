@@ -156,7 +156,7 @@ export function useChatActions() {
       const agora = new Date().toISOString();
       const { data: conv } = await supabase
         .from("chat_conversas")
-        .select("atendimento_iniciado_em, filial_id")
+        .select("atendimento_iniciado_em, filial_id, ticket_id")
         .eq("id", conversaId)
         .single();
 
@@ -232,6 +232,41 @@ export function useChatActions() {
         conteudo: msgNps,
         remetente: "bot",
       });
+
+      // Save conversation history to linked ticket
+      const ticketId = (conv as any)?.ticket_id;
+      if (ticketId) {
+        try {
+          const { data: allMsgs } = await supabase
+            .from("chat_mensagens")
+            .select("conteudo, remetente, tipo, created_at, atendente:atendente_id(full_name)")
+            .eq("conversa_id", conversaId)
+            .order("created_at", { ascending: true })
+            .limit(500);
+
+          if (allMsgs && allMsgs.length > 0) {
+            const lines = allMsgs.map((m: any) => {
+              const hora = new Date(m.created_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+              let autor = "Sistema";
+              if (m.remetente === "cliente") autor = "Cliente";
+              else if (m.remetente === "atendente") autor = (m.atendente as any)?.full_name || "Atendente";
+              else if (m.remetente === "bot") autor = "Bot";
+              return `[${hora}] ${autor}: ${m.conteudo || "(mídia)"}`;
+            });
+            const historico = `📋 Histórico do Chat (Protocolo do atendimento)\n\n${lines.join("\n")}`;
+
+            await supabase.from("ticket_comentarios").insert({
+              ticket_id: ticketId,
+              user_id: userId,
+              tipo: "sistema",
+              visibilidade: "interno",
+              conteudo: historico,
+            });
+          }
+        } catch (e) {
+          console.error("[Chat] Erro ao salvar histórico no ticket:", e);
+        }
+      }
     },
     onSuccess: () => {
       toast.success("Conversa encerrada!");
