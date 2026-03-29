@@ -463,27 +463,29 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
       onSuccess: async (created: any) => {
         setCrmDialogOpen(false);
         if (created?.id) {
-          // Add note to chat
-          const userName = user?.user_metadata?.full_name || "Atendente";
-          await supabase.from("chat_mensagens").insert({
-            conversa_id: conversa.id,
-            tipo: "nota_interna",
-            conteudo: `Oportunidade CRM criada por @${userName} — ${created.titulo}`,
-            remetente: "sistema",
-            atendente_id: user?.id || null,
-          });
-
-          // Log in timeline with user info
+          // Get profile name from DB
           const { data: { user: authUser } } = await supabase.auth.getUser();
           const { data: profile } = await supabase
             .from("profiles")
             .select("full_name")
             .eq("user_id", authUser?.id || "")
             .single();
+          const userName = profile?.full_name || "Usuário";
+
+          // Add note to chat
+          await supabase.from("chat_mensagens").insert({
+            conversa_id: conversa.id,
+            tipo: "nota_interna",
+            conteudo: `Oportunidade CRM criada por @${userName} — ${created.titulo}`,
+            remetente: "sistema",
+            atendente_id: authUser?.id || null,
+          });
+
+          // Log in timeline
           await (supabase as any).from("crm_historico").insert({
             oportunidade_id: created.id,
             tipo: "criacao",
-            descricao: `Oportunidade criada por @${profile?.full_name || "Usuário"} — Origem: Chat Softplus`,
+            descricao: `Oportunidade criada por @${userName} — Origem: Chat Softplus`,
             user_id: authUser?.id || null,
           });
 
