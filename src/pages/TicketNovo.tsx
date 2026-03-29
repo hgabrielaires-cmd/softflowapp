@@ -58,13 +58,18 @@ function TagSuggestions({ input, existingTags, onSelect }: { input: string; exis
 
 export default function TicketNovo() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, profile } = useAuth();
   const userId = user?.id || "";
+
+  // Check if coming from chat
+  const chatState = location.state as { fromChat?: boolean; conversaId?: string; clienteId?: string; clienteNome?: string } | null;
+  const fromChat = chatState?.fromChat || false;
 
   const { data: profiles = [] } = useProfiles();
   const { data: tipos = [] } = useHelpdeskTipos();
   const { data: modelos = [] } = useHelpdeskModelos();
-  const createTicket = useCreateTicket(() => navigate("/tickets"));
+  const createTicket = useCreateTicket(fromChat ? undefined : () => navigate("/tickets"));
 
   // Form state
   const [titulo, setTitulo] = useState("");
