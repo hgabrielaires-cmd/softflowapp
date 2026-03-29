@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { ExternalLink, Plus, Phone, Building2, Clock, Search, X, Star, User, CheckCircle2, RefreshCw } from "lucide-react";
+import { ExternalLink, Plus, Phone, Building2, Clock, Search, X, Star, User, CheckCircle2, RefreshCw, Ticket } from "lucide-react";
 import { cn, normalizeBRPhone } from "@/lib/utils";
 import { ChatConversa, STATUS_LABELS, ChatStatus } from "../types";
 import { formatarTelefone, tempoRelativo } from "../helpers";
@@ -55,6 +56,22 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     conversa?.numero_cliente || null,
     conversa?.id || null
   );
+
+  // Fetch linked ticket info
+  const ticketId = (conversa as any)?.ticket_id || null;
+  const { data: ticketInfo } = useQuery({
+    queryKey: ["chat-ticket-info", ticketId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tickets")
+        .select("id, numero_exibicao, status")
+        .eq("id", ticketId!)
+        .single();
+      return data;
+    },
+    enabled: !!ticketId,
+    refetchInterval: 15000,
+  });
 
   // Auto-detect company by phone number
   useEffect(() => {
@@ -591,6 +608,29 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Iniciada em</span>
                   <span>{format(new Date(conversa.iniciado_em), "dd/MM HH:mm")}</span>
+                </div>
+              )}
+              {ticketInfo && (
+                <div className="flex justify-between items-center pt-1 border-t border-border mt-1">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Ticket className="h-3 w-3" /> Ticket
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono font-medium">{ticketInfo.numero_exibicao}</span>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] h-4",
+                        ticketInfo.status === "Aberto" && "border-blue-400 text-blue-600",
+                        ticketInfo.status === "Em Andamento" && "border-amber-400 text-amber-600",
+                        ticketInfo.status === "Aguardando Cliente" && "border-orange-400 text-orange-600",
+                        ticketInfo.status === "Resolvido" && "border-green-400 text-green-600",
+                        ticketInfo.status === "Fechado" && "border-muted-foreground text-muted-foreground",
+                      )}
+                    >
+                      {ticketInfo.status}
+                    </Badge>
+                  </div>
                 </div>
               )}
             </CardContent>
