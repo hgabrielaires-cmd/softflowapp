@@ -213,6 +213,7 @@ export function OportunidadeFormDialog({
       campos_personalizados: camposValues,
       _contatos: contatos,
       conversa_id: prefill?.conversa_id || null,
+      filial_id: filialId || null,
     });
   };
 
