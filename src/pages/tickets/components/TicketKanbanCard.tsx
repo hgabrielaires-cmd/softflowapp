@@ -43,7 +43,7 @@ export function TicketKanbanCard({ ticket, index, seguidores, anexosCount, onCli
                 #{ticket.numero_exibicao}
               </span>
               {(ticket as any).origem === "chat" && (
-                <MessageSquare className="h-3 w-3 text-primary" title="Origem: Chat" />
+                <span title="Origem: Chat"><MessageSquare className="h-3 w-3 text-primary" /></span>
               )}
             </div>
             <Badge className={cn("text-[10px] px-1.5 py-0", TICKET_PRIORIDADE_COLORS[ticket.prioridade])}>
