@@ -406,13 +406,7 @@ export function OportunidadeFormDialog({
             </Popover>
           </div>
 
-          {/* Origem (read-only when from chat) */}
-          {prefill?.origem && (
-            <div>
-              <Label>Origem</Label>
-              <Input value={prefill.origem} disabled className="bg-muted/50" />
-            </div>
-          )}
+          {/* Origem field removed — now handled via campo personalizado "Origem" */}
 
           {/* Campos Personalizados */}
           {activeCampos.map((campo) => {
