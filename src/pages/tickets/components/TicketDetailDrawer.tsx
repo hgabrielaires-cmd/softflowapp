@@ -70,6 +70,42 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   const { data: agendamentos = [] } = useTicketAgendamentos(ticketId);
   const { data: historico = [] } = useClienteTicketsHistorico(ticket?.cliente_id ?? null, ticketId);
 
+  // Fetch linked chat conversation for current ticket
+  const { data: linkedConversa } = useQuery({
+    queryKey: ["ticket-linked-conversa", ticketId],
+    queryFn: async () => {
+      if (!ticketId) return null;
+      const { data } = await supabase
+        .from("chat_conversas")
+        .select("id, protocolo, created_at")
+        .eq("ticket_id", ticketId)
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!ticketId,
+  });
+
+  // Fetch linked chat conversations for historico tickets
+  const historicoTicketIds = historico.map((h: any) => h.id).filter(Boolean);
+  const { data: historicoConversas = [] } = useQuery({
+    queryKey: ["historico-linked-conversas", historicoTicketIds],
+    queryFn: async () => {
+      if (historicoTicketIds.length === 0) return [];
+      const { data } = await supabase
+        .from("chat_conversas")
+        .select("id, protocolo, ticket_id, created_at")
+        .in("ticket_id", historicoTicketIds);
+      return data || [];
+    },
+    enabled: historicoTicketIds.length > 0,
+  });
+
+  const historicoConversasMap: Record<string, any> = {};
+  (historicoConversas as any[]).forEach((c: any) => {
+    if (c.ticket_id) historicoConversasMap[c.ticket_id] = c;
+  });
+
   const updateStatus = useUpdateTicketStatus();
   const addComment = useAddTicketComment();
   const updateResponsavel = useUpdateTicketResponsavel();
@@ -92,6 +128,9 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   const [showResolucaoDialog, setShowResolucaoDialog] = useState(false);
   const [resolucaoText, setResolucaoText] = useState("");
   const [uploadingAnexo, setUploadingAnexo] = useState(false);
+  const [viewingConversaId, setViewingConversaId] = useState<string | null>(null);
+  const [viewingConversaProtocolo, setViewingConversaProtocolo] = useState<string>("");
+  const [viewingConversaData, setViewingConversaData] = useState<string>("");
 
   const mentionUsers = profiles.map((p) => ({ id: p.user_id, user_id: p.user_id, full_name: p.full_name }));
 
