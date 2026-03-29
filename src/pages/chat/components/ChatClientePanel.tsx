@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ExternalLink, Plus, Phone, Building2, Clock, Search, X, Star, User, CheckCircle2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { ExternalLink, Plus, Phone, Building2, Clock, Search, X, Star, User, CheckCircle2, RefreshCw } from "lucide-react";
 import { cn, normalizeBRPhone } from "@/lib/utils";
 import { ChatConversa, STATUS_LABELS, ChatStatus } from "../types";
 import { formatarTelefone, tempoRelativo } from "../helpers";
@@ -37,6 +39,10 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
   const [buscaFeita, setBuscaFeita] = useState(false);
   const [drawerAberto, setDrawerAberto] = useState(false);
   const [historicoSelecionado, setHistoricoSelecionado] = useState<any>(null);
+  const [trocarOpen, setTrocarOpen] = useState(false);
+  const [trocarTermo, setTrocarTermo] = useState("");
+  const [trocarResultados, setTrocarResultados] = useState<any[]>([]);
+  const [trocarBuscando, setTrocarBuscando] = useState(false);
 
   // Auto-link state
   const [empresasDetectadas, setEmpresasDetectadas] = useState<EmpresaContato[]>([]);
@@ -307,6 +313,83 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     return n.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, "$1.$2.$3/$4-$5");
   }
 
+  // Trocar empresa - busca
+  useEffect(() => {
+    if (!trocarOpen) {
+      setTrocarTermo("");
+      setTrocarResultados([]);
+      return;
+    }
+    // Load últimas 5 empresas como sugestão inicial
+    const loadRecentes = async () => {
+      const { data } = await supabase
+        .from("clientes")
+        .select("id, nome_fantasia, cnpj_cpf")
+        .eq("ativo", true)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (data) setTrocarResultados(data);
+    };
+    loadRecentes();
+  }, [trocarOpen]);
+
+  useEffect(() => {
+    if (!trocarOpen) return;
+    const termo = trocarTermo.trim();
+    if (!termo) {
+      // reload recentes
+      supabase
+        .from("clientes")
+        .select("id, nome_fantasia, cnpj_cpf")
+        .eq("ativo", true)
+        .order("created_at", { ascending: false })
+        .limit(5)
+        .then(({ data }) => { if (data) setTrocarResultados(data); });
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      setTrocarBuscando(true);
+      const limpo = termo.replace(/\D/g, "");
+      let query = supabase
+        .from("clientes")
+        .select("id, nome_fantasia, cnpj_cpf")
+        .eq("ativo", true)
+        .limit(10);
+
+      const filters = [`nome_fantasia.ilike.%${termo}%`];
+      if (limpo.length >= 3) filters.push(`cnpj_cpf.ilike.%${limpo}%`);
+      query = query.or(filters.join(","));
+
+      const { data } = await query;
+      setTrocarResultados(data || []);
+      setTrocarBuscando(false);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [trocarTermo, trocarOpen]);
+
+  async function trocarEmpresa(cli: any) {
+    if (!conversa) return;
+    try {
+      const { error } = await supabase
+        .from("chat_conversas")
+        .update({ cliente_id: cli.id })
+        .eq("id", conversa.id);
+      if (error) throw error;
+      await garantirContato(cli.id);
+      await supabase.from("chat_mensagens").insert({
+        conversa_id: conversa.id,
+        tipo: "sistema",
+        conteudo: `Empresa alterada para: ${cli.nome_fantasia}`,
+        remetente: "sistema",
+      });
+      toast.success("Empresa vinculada com sucesso");
+      setTrocarOpen(false);
+      qc.invalidateQueries({ queryKey: ["chat-conversas"] });
+    } catch (e: any) {
+      toast.error("Erro: " + e.message);
+    }
+  }
+
   return (
     <>
       <ScrollArea className="h-full border-l border-border bg-card">
@@ -334,6 +417,21 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
                     <a href={`/clientes`} className="text-primary hover:underline flex items-center gap-1">
                       Ver cadastro <ExternalLink className="h-3 w-3" />
                     </a>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 w-5 p-0 text-muted-foreground hover:text-primary"
+                            onClick={() => setTrocarOpen(true)}
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Trocar empresa</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -529,6 +627,56 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
         protocolo={historicoSelecionado?.protocolo}
         data={historicoSelecionado?.created_at}
       />
+
+      {/* Dialog Trocar Empresa */}
+      <Dialog open={trocarOpen} onOpenChange={setTrocarOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Vincular empresa à conversa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {cliente && (
+              <div className="flex items-center justify-between rounded-md border p-2 bg-muted/30">
+                <div className="text-xs">
+                  <span className="text-muted-foreground">Empresa atual: </span>
+                  <span className="font-medium text-foreground">{cliente.nome_fantasia}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-xs text-destructive border-destructive/50 hover:bg-destructive/10"
+                  onClick={() => { desvincularCliente(); setTrocarOpen(false); }}
+                >
+                  Desvincular
+                </Button>
+              </div>
+            )}
+            <Input
+              placeholder="Buscar empresa pelo nome ou CNPJ..."
+              value={trocarTermo}
+              onChange={(e) => setTrocarTermo(e.target.value)}
+              className="h-9 text-sm"
+              autoFocus
+            />
+            <div className="space-y-1 max-h-60 overflow-y-auto">
+              {trocarBuscando && <p className="text-xs text-muted-foreground text-center py-2">Buscando...</p>}
+              {!trocarBuscando && trocarResultados.length === 0 && trocarTermo.trim() && (
+                <p className="text-xs text-muted-foreground text-center py-2">Nenhuma empresa encontrada.</p>
+              )}
+              {!trocarBuscando && trocarResultados.map((cli: any) => (
+                <button
+                  key={cli.id}
+                  className="w-full text-left border rounded-md p-2 hover:bg-accent transition-colors"
+                  onClick={() => trocarEmpresa(cli)}
+                >
+                  <p className="font-medium text-sm text-foreground">{cli.nome_fantasia}</p>
+                  <p className="text-xs text-muted-foreground">{formatCnpj(cli.cnpj_cpf)}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
