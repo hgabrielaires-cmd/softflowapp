@@ -6,10 +6,11 @@ import type { TicketFormData, TicketStatus } from "./types";
 export function useCreateTicket(onCreated?: () => void) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ data, userId, agendamentos = [], anexos = [] }: {
+    mutationFn: async ({ data, userId, agendamentos = [], anexos = [], origem = "avulso" }: {
       data: TicketFormData; userId: string;
       agendamentos?: { data: string; hora_inicio: string | null }[];
       anexos?: { nome: string; url: string; tipo_mime: string; tamanho_bytes: number }[];
+      origem?: string;
     }) => {
       const { data: ticket, error } = await supabase
         .from("tickets")
@@ -28,7 +29,8 @@ export function useCreateTicket(onCreated?: () => void) {
           previsao_entrega: data.previsao_entrega,
           ticket_pai_id: data.ticket_pai_id || null,
           criado_por: userId,
-        })
+          origem,
+        } as any)
         .select("id, numero_exibicao")
         .single();
       if (error) throw error;

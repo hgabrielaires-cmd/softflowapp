@@ -385,6 +385,16 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
                     <span className="text-muted-foreground">Atualizado:</span>
                     <span>{formatDateTime(ticket.updated_at)}</span>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">Origem:</span>
+                    <Badge variant="outline" className={cn(
+                      "text-[10px] h-4",
+                      (ticket as any).origem === "chat" ? "border-primary text-primary" : "border-muted-foreground text-muted-foreground"
+                    )}>
+                      {(ticket as any).origem === "chat" ? "Chat" : "Avulso"}
+                    </Badge>
+                  </div>
                 </div>
               </div>
 

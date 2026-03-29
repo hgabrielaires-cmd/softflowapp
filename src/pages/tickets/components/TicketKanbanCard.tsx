@@ -4,7 +4,7 @@ import { TICKET_PRIORIDADE_COLORS } from "../constants";
 import { calcSla, formatDate } from "../helpers";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
-import { Paperclip, Building2 } from "lucide-react";
+import { Paperclip, Building2, MessageSquare } from "lucide-react";
 import { Draggable } from "@hello-pangea/dnd";
 
 interface Props {
@@ -38,9 +38,14 @@ export function TicketKanbanCard({ ticket, index, seguidores, anexosCount, onCli
         >
           {/* Header: number + priority */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-mono">
-              #{ticket.numero_exibicao}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground font-mono">
+                #{ticket.numero_exibicao}
+              </span>
+              {(ticket as any).origem === "chat" && (
+                <span title="Origem: Chat"><MessageSquare className="h-3 w-3 text-primary" /></span>
+              )}
+            </div>
             <Badge className={cn("text-[10px] px-1.5 py-0", TICKET_PRIORIDADE_COLORS[ticket.prioridade])}>
               {ticket.prioridade}
             </Badge>

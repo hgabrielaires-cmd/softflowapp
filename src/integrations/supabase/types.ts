@@ -5435,6 +5435,7 @@ export type Database = {
           modo: string
           numero_exibicao: string
           numero_registro: number
+          origem: string
           previsao_entrega: string | null
           prioridade: string
           responsavel_id: string | null
@@ -5458,6 +5459,7 @@ export type Database = {
           modo?: string
           numero_exibicao?: string
           numero_registro?: number
+          origem?: string
           previsao_entrega?: string | null
           prioridade?: string
           responsavel_id?: string | null
@@ -5481,6 +5483,7 @@ export type Database = {
           modo?: string
           numero_exibicao?: string
           numero_registro?: number
+          origem?: string
           previsao_entrega?: string | null
           prioridade?: string
           responsavel_id?: string | null
