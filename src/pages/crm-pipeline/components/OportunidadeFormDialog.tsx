@@ -52,6 +52,7 @@ interface Props {
     origemLocked?: boolean;
     conversa_id?: string;
   };
+  filiais?: { id: string; nome: string }[];
 }
 
 const emptyContato = (): ContatoLocal => ({ nome: "", telefone: "", cargo_id: "", email: "" });
