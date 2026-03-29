@@ -936,6 +936,25 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
           prefill={crmPrefill}
         />
       )}
+
+      {/* CRM Detail Sheet */}
+      <Sheet open={crmDetailOpen} onOpenChange={setCrmDetailOpen}>
+        <SheetContent side="right" className="w-[75vw] sm:max-w-[75vw] p-0 overflow-y-auto">
+          {fullOportunidade && (
+            <OportunidadeDetailView
+              oportunidade={fullOportunidade as any}
+              etapas={crmEtapas}
+              clientes={clientesQuery.data || []}
+              responsaveis={responsaveisQuery.data || []}
+              onBack={() => setCrmDetailOpen(false)}
+              camposPersonalizados={camposPersonalizados}
+              segmentos={segmentosQuery.data || []}
+              cargos={cargosQuery.data || []}
+              funilId={firstFunilId}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
