@@ -1,12 +1,11 @@
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Search } from "lucide-react";
+import { MessageSquare, Search, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CHAT_TABS } from "../constants";
 import { ChatConversa, STATUS_COLORS, STATUS_LABELS, ChatStatus } from "../types";
-import { tempoRelativo, previewMensagem, formatarTelefone } from "../helpers";
+import { tempoRelativo, formatarTelefone } from "../helpers";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Props {
@@ -24,6 +23,8 @@ export default function ChatConversaList({
   conversas, tab, onTabChange, search, onSearchChange,
   selectedId, onSelect, counts,
 }: Props) {
+  const triagemCount = counts.triagem || 0;
+
   return (
     <div className="flex flex-col h-full border-r border-border bg-card">
       {/* Header */}
@@ -46,10 +47,29 @@ export default function ChatConversaList({
             className="pl-9 h-9 text-sm"
           />
         </div>
+
+        {/* Triagem banner */}
+        {triagemCount > 0 && (
+          <button
+            onClick={() => onTabChange("triagem")}
+            className={cn(
+              "w-full flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors",
+              tab === "triagem"
+                ? "bg-primary/10 border-primary/30 text-primary"
+                : "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/50"
+            )}
+          >
+            <Info className="h-4 w-4 flex-shrink-0" />
+            <span>
+              <strong>{triagemCount}</strong>{" "}
+              {triagemCount === 1 ? "chat parado" : "chats parados"} na triagem
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
-      <Tabs value={tab} onValueChange={onTabChange} className="px-2 pt-2">
+      <Tabs value={tab === "triagem" ? "triagem" : tab} onValueChange={onTabChange} className="px-2 pt-2">
         <TabsList className="w-full h-8">
           {CHAT_TABS.map((t) => (
             <TabsTrigger key={t.value} value={t.value} className="text-xs flex-1 h-7">
@@ -63,6 +83,21 @@ export default function ChatConversaList({
           ))}
         </TabsList>
       </Tabs>
+
+      {/* Triagem active label */}
+      {tab === "triagem" && (
+        <div className="px-3 pt-2 pb-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-purple-600 dark:text-purple-400">🔍 Triagem — respondendo bot</span>
+            <button
+              onClick={() => onTabChange("fila")}
+              className="text-[10px] text-muted-foreground hover:text-foreground underline"
+            >
+              Voltar à fila
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* List */}
       <ScrollArea className="flex-1">
@@ -108,7 +143,7 @@ export default function ChatConversaList({
                   <div className="flex items-center gap-1.5 mt-1">
                     <span className={cn("w-2 h-2 rounded-full flex-shrink-0", STATUS_COLORS[c.status as ChatStatus] || "bg-gray-400")} />
                     <span className="text-[10px] text-muted-foreground">
-                      {STATUS_LABELS[c.status as ChatStatus] || c.status}
+                      {c.status === "bot" ? "Triagem" : (STATUS_LABELS[c.status as ChatStatus] || c.status)}
                     </span>
                     {c.setor && (
                       <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">

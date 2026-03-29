@@ -29,13 +29,15 @@ export default function ChatPage() {
 
   const { data: filaConversas = [] } = useChatConversas("fila", user?.id, "");
   const { data: meusConversas = [] } = useChatConversas("meus", user?.id, "");
+  const { data: triagemConversas = [] } = useChatConversas("triagem", user?.id, "");
 
   const counts = useMemo(() => ({
     fila: filaConversas.length,
     meus: meusConversas.length,
+    triagem: triagemConversas.length,
     todos: 0,
     encerrados: 0,
-  }), [filaConversas, meusConversas]);
+  }), [filaConversas, meusConversas, triagemConversas]);
 
   const conversaAtual = useMemo(() => {
     if (!selectedConversa) return null;
