@@ -445,7 +445,19 @@ export function OportunidadeFormDialog({
             );
           })}
 
-          {/* Comunicação */}
+          {/* Obs — only for chat-originated opportunities */}
+          {prefill?.origem && !oportunidade && (
+            <div>
+              <Label>Observações</Label>
+              <Textarea
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                placeholder="Descreva o que o cliente precisa..."
+                className="min-h-[80px] text-sm"
+              />
+            </div>
+          )}
+
           {oportunidade ? (
             <OportunidadeComentarios oportunidadeId={oportunidade.id} />
           ) : (
