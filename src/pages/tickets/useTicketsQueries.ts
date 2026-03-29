@@ -270,7 +270,7 @@ export function useClienteTicketsHistorico(clienteId: string | null, currentTick
     queryFn: async () => {
       let q = supabase
         .from("tickets")
-        .select("id, numero_exibicao, titulo, status, prioridade, mesa, tags, tipo_atendimento_id, created_at, helpdesk_tipos_atendimento:tipo_atendimento_id(nome)")
+        .select("id, numero_exibicao, titulo, status, prioridade, mesa, tags, tipo_atendimento_id, created_at, origem, helpdesk_tipos_atendimento:tipo_atendimento_id(nome)")
         .eq("cliente_id", clienteId!)
         .order("created_at", { ascending: false })
         .limit(50);
