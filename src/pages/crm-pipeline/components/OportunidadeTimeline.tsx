@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserAvatar } from "@/components/UserAvatar";
+import { Badge } from "@/components/ui/badge";
+import ChatHistoricoDrawer from "@/pages/chat/components/ChatHistoricoDrawer";
 import {
-  Plus, TrendingDown, TrendingUp, RotateCcw, ListChecks, Package, Pencil, Clock,
+  Plus, TrendingDown, TrendingUp, RotateCcw, ListChecks, Package, Pencil, Clock, MessageSquare, Eye,
 } from "lucide-react";
 
 interface TimelineEvent {
@@ -30,6 +32,9 @@ const ICON_MAP: Record<string, { icon: typeof Plus; color: string }> = {
 };
 
 export function OportunidadeTimeline({ oportunidadeId }: Props) {
+  const [viewingConversaId, setViewingConversaId] = useState<string | null>(null);
+  const [viewingProtocolo, setViewingProtocolo] = useState<string | undefined>();
+
   const { data: eventos = [], isLoading } = useQuery({
     queryKey: ["crm_timeline", oportunidadeId],
     queryFn: async () => {
@@ -40,7 +45,6 @@ export function OportunidadeTimeline({ oportunidadeId }: Props) {
         .order("created_at", { ascending: true });
       if (error) throw error;
 
-      // Fetch user names
       const userIds = [...new Set((data || []).map(e => e.user_id).filter(Boolean))] as string[];
       let profilesMap: Record<string, string> = {};
       if (userIds.length > 0) {
@@ -53,10 +57,29 @@ export function OportunidadeTimeline({ oportunidadeId }: Props) {
         }
       }
 
-      return (data || []).map((e, idx) => ({
+      return (data || []).map((e) => ({
         ...e,
         user_name: e.user_id ? profilesMap[e.user_id] || "Usuário" : "Sistema",
       })) as TimelineEvent[];
+    },
+  });
+
+  // Fetch linked conversation
+  const { data: linkedConversa } = useQuery({
+    queryKey: ["crm-linked-conversa", oportunidadeId],
+    queryFn: async () => {
+      const { data: oport } = await supabase
+        .from("crm_oportunidades")
+        .select("conversa_id")
+        .eq("id", oportunidadeId)
+        .single();
+      if (!oport?.conversa_id) return null;
+      const { data: conv } = await supabase
+        .from("chat_conversas")
+        .select("id, protocolo, created_at, status")
+        .eq("id", oport.conversa_id)
+        .single();
+      return conv;
     },
   });
 
@@ -81,6 +104,38 @@ export function OportunidadeTimeline({ oportunidadeId }: Props) {
 
   return (
     <div className="pt-4 pb-8 px-2">
+      {/* Linked conversation card */}
+      {linkedConversa && (
+        <div className="mb-4 rounded-lg border border-border bg-muted/30 p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">Conversa de origem</span>
+            </div>
+            <button
+              className="text-muted-foreground hover:text-primary transition-colors"
+              title="Visualizar conversa"
+              onClick={() => {
+                setViewingConversaId(linkedConversa.id);
+                setViewingProtocolo(linkedConversa.protocolo || undefined);
+              }}
+            >
+              <Eye className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="mt-1.5 flex items-center gap-3 text-xs">
+            <span className="font-mono font-medium">{linkedConversa.protocolo || "—"}</span>
+            <Badge variant="outline" className="text-[10px] h-4">{linkedConversa.status}</Badge>
+            {linkedConversa.created_at && (
+              <span className="text-muted-foreground">
+                {new Date(linkedConversa.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}{" "}
+                {new Date(linkedConversa.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="relative">
         {/* Vertical line */}
         <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-border" />
@@ -122,6 +177,13 @@ export function OportunidadeTimeline({ oportunidadeId }: Props) {
           })}
         </div>
       </div>
+
+      <ChatHistoricoDrawer
+        conversaId={viewingConversaId}
+        open={!!viewingConversaId}
+        onClose={() => setViewingConversaId(null)}
+        protocolo={viewingProtocolo}
+      />
     </div>
   );
 }
