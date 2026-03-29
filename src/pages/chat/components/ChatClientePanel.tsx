@@ -113,7 +113,6 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     },
     enabled: !!linkedOportunidade?.id && crmDetailOpen,
   });
-  });
 
   // CRM form dependencies
   const { data: funis = [] } = useCrmFunis();
