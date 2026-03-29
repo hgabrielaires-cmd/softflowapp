@@ -17,8 +17,10 @@ export function useChatConversas(tab: string, userId: string | undefined, search
         .order("updated_at", { ascending: false })
         .limit(50);
 
-      if (tab === "fila") {
-        q = q.in("status", ["bot", "aguardando"]);
+      if (tab === "triagem") {
+        q = q.eq("status", "bot");
+      } else if (tab === "fila") {
+        q = q.eq("status", "aguardando");
       } else if (tab === "meus" && userId) {
         q = q.eq("atendente_id", userId).in("status", ["em_atendimento"]);
       } else if (tab === "encerrados") {

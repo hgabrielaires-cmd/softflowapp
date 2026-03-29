@@ -99,7 +99,7 @@ export interface ChatRespostaRapida {
 export type ChatStatus = "bot" | "aguardando" | "em_atendimento" | "encerrado" | "fora_horario";
 
 export const STATUS_LABELS: Record<ChatStatus, string> = {
-  bot: "Bot",
+  bot: "Triagem",
   aguardando: "Aguardando",
   em_atendimento: "Em atendimento",
   encerrado: "Encerrado",
