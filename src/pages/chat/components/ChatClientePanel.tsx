@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 import { ExternalLink, Plus, Phone, Building2, Clock, Search, X, Star, User, CheckCircle2, RefreshCw, Ticket, Eye, TrendingUp } from "lucide-react";
 import { TicketDetailDrawer } from "@/pages/tickets/components/TicketDetailDrawer";
 import { OportunidadeFormDialog } from "@/pages/crm-pipeline/components/OportunidadeFormDialog";
+import { OportunidadeDetailView } from "@/pages/crm-pipeline/components/OportunidadeDetailView";
 import { useCrmPipelineQueries } from "@/pages/crm-pipeline/useCrmPipelineQueries";
 import { useCrmCamposPersonalizados, useCrmFunis, useCrmEtapas } from "@/pages/crm-parametros/useCrmParametrosQueries";
 import { useCrmPipelineForm } from "@/pages/crm-pipeline/useCrmPipelineForm";
