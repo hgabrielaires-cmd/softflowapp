@@ -140,6 +140,7 @@ export function OportunidadeFormDialog({
       } else {
         setTitulo(prefill?.titulo || "");
         setObservacoes("");
+        setFilialId("");
         setClienteId("");
         setResponsavelId(currentUserId || "");
         setEtapaId(etapaIdInicial || etapas[0]?.id || "");
