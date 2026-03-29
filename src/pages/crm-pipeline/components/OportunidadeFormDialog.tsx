@@ -400,9 +400,18 @@ export function OportunidadeFormDialog({
             </Popover>
           </div>
 
+          {/* Origem (read-only when from chat) */}
+          {prefill?.origem && (
+            <div>
+              <Label>Origem</Label>
+              <Input value={prefill.origem} disabled className="bg-muted/50" />
+            </div>
+          )}
+
           {/* Campos Personalizados */}
           {activeCampos.map((campo) => {
             const pendente = tried && campo.obrigatorio && !camposValues[campo.id]?.trim();
+            const isCanalLocked = prefill?.origemLocked && campo.nome.toLowerCase() === "canal";
             return (
             <div key={campo.id}>
               <Label className={pendente ? "text-destructive" : ""}>{campo.nome}{campo.obrigatorio ? " *" : ""}</Label>
@@ -410,8 +419,9 @@ export function OportunidadeFormDialog({
                 <Select
                   value={camposValues[campo.id] || "__none__"}
                   onValueChange={(v) => setCampoValue(campo.id, v === "__none__" ? "" : v)}
+                  disabled={isCanalLocked}
                 >
-                  <SelectTrigger className={pendente ? "border-destructive" : ""}><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectTrigger className={cn(pendente ? "border-destructive" : "", isCanalLocked ? "bg-muted/50" : "")}><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">Nenhum</SelectItem>
                     {campo.opcoes.map((opcao) => (
@@ -425,6 +435,7 @@ export function OportunidadeFormDialog({
                   onChange={(e) => setCampoValue(campo.id, e.target.value)}
                   placeholder={campo.nome}
                   className={pendente ? "border-destructive" : ""}
+                  disabled={isCanalLocked}
                 />
               )}
             </div>

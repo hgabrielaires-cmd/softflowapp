@@ -25,6 +25,7 @@ interface OportunidadeInput {
   campos_personalizados?: Record<string, string>;
   segmento_ids?: string[];
   _contatos?: ContatoInput[];
+  conversa_id?: string | null;
 }
 
 async function saveContatos(oportunidadeId: string, contatos: ContatoInput[]) {
