@@ -27,6 +27,7 @@ export default function ChatPage() {
   const [selectedConversa, setSelectedConversa] = useState<ChatConversa | null>(null);
   const [showTransferir, setShowTransferir] = useState(false);
   const [showEncerrar, setShowEncerrar] = useState(false);
+  const [showNovaConversa, setShowNovaConversa] = useState(false);
 
   const { data: conversas = [] } = useChatConversas(tab, user?.id, search);
   const { data: mensagens = [] } = useChatMensagens(selectedConversa?.id || null);
