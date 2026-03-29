@@ -140,13 +140,19 @@ export function OportunidadeFormDialog({
         setResponsavelId(currentUserId || "");
         setEtapaId(etapaIdInicial || etapas[0]?.id || "");
         setSegmentoIds([]);
-        // Pre-fill canal campo personalizado if from chat
+        // Pre-fill canal and origem campos personalizados if from chat
         const initialCampos: Record<string, string> = {};
         if (prefill?.origem) {
-          // Find "Canal" campo personalizado and set it
           const canalCampo = camposPersonalizados.find(c => c.nome.toLowerCase() === "canal");
           if (canalCampo) {
-            initialCampos[canalCampo.id] = "Mensagem WhatsApp";
+            // Match exact option value from DB
+            const matchCanal = canalCampo.opcoes?.find((o: string) => o.toLowerCase() === "mensagem whatsapp");
+            initialCampos[canalCampo.id] = matchCanal || "Mensagem Whatsapp";
+          }
+          const origemCampo = camposPersonalizados.find(c => c.nome.toLowerCase() === "origem");
+          if (origemCampo) {
+            const matchOrigem = origemCampo.opcoes?.find((o: string) => o.toLowerCase() === "chat softplus");
+            initialCampos[origemCampo.id] = matchOrigem || "Chat Softplus";
           }
         }
         setCamposValues(initialCampos);
