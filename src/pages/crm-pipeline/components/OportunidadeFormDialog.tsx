@@ -195,11 +195,12 @@ export function OportunidadeFormDialog({
       responsavel_id: responsavelId || null,
       segmento_ids: segmentoIds,
       valor: 0,
-      origem: null,
+      origem: prefill?.origem || null,
       observacoes: null,
       data_previsao_fechamento: null,
       campos_personalizados: camposValues,
       _contatos: contatos,
+      conversa_id: prefill?.conversa_id || null,
     });
   };
 
