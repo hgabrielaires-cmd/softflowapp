@@ -60,6 +60,7 @@ export function OportunidadeFormDialog({
   prefill,
 }: Props) {
   const [titulo, setTitulo] = useState("");
+  const [observacoes, setObservacoes] = useState("");
   const [clienteId, setClienteId] = useState<string>("");
   const [responsavelId, setResponsavelId] = useState<string>("");
   const [etapaId, setEtapaId] = useState("");
