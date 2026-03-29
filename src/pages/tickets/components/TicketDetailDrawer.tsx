@@ -70,21 +70,23 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   const { data: agendamentos = [] } = useTicketAgendamentos(ticketId);
   const { data: historico = [] } = useClienteTicketsHistorico(ticket?.cliente_id ?? null, ticketId);
 
-  // Fetch linked chat conversation for current ticket
-  const { data: linkedConversa } = useQuery({
-    queryKey: ["ticket-linked-conversa", ticketId],
+  // Fetch ALL linked chat conversations for current ticket
+  const { data: linkedConversas = [] } = useQuery({
+    queryKey: ["ticket-linked-conversas", ticketId],
     queryFn: async () => {
-      if (!ticketId) return null;
+      if (!ticketId) return [];
       const { data } = await supabase
         .from("chat_conversas")
-        .select("id, protocolo, created_at")
+        .select("id, protocolo, created_at, numero_cliente, nome_cliente, status, atendente:profiles!chat_conversas_atendente_id_fkey(full_name), cliente:clientes!chat_conversas_cliente_id_fkey(nome_fantasia)")
         .eq("ticket_id", ticketId)
-        .limit(1)
-        .maybeSingle();
-      return data;
+        .order("created_at", { ascending: false });
+      return data || [];
     },
     enabled: !!ticketId,
   });
+
+  // Keep backwards compat: linkedConversa = first one
+  const linkedConversa = linkedConversas.length > 0 ? linkedConversas[0] : null;
 
   // Fetch linked chat conversations for historico tickets
   const historicoTicketIds = historico.map((h: any) => h.id).filter(Boolean);
