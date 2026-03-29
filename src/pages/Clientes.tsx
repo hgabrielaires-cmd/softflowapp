@@ -32,6 +32,7 @@ import { HistoricoContratualDialog } from "@/pages/clientes/components/Historico
 import { ClienteContatosDialog } from "@/pages/clientes/components/ClienteContatosDialog";
 import { ContatoFormDialog } from "@/pages/clientes/components/ContatoFormDialog";
 import { ClienteFormDialog } from "@/pages/clientes/components/ClienteFormDialog";
+import { ClienteAtendimentosDialog } from "@/pages/clientes/components/ClienteAtendimentosDialog";
 
 export default function Clientes() {
   const q = useClientesQueries();
