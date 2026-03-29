@@ -389,6 +389,10 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
       toast.error("Erro: " + e.message);
     }
   }
+
+  return (
+    <>
+      <ScrollArea className="h-full border-l border-border bg-card">
         <div className="p-3 space-y-3">
           {/* Client Info */}
           <Card className="shadow-none border">
@@ -413,6 +417,21 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
                     <a href={`/clientes`} className="text-primary hover:underline flex items-center gap-1">
                       Ver cadastro <ExternalLink className="h-3 w-3" />
                     </a>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 w-5 p-0 text-muted-foreground hover:text-primary"
+                            onClick={() => setTrocarOpen(true)}
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Trocar empresa</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <Button
                       variant="ghost"
                       size="sm"
