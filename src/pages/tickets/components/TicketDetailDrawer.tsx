@@ -330,43 +330,95 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
 
               {ticket.cliente_id && (
                 <TabsContent value="historico" className="space-y-2 mt-0">
-                  {historico.length === 0 ? (
+                  {/* Current ticket linked conversation */}
+                  {linkedConversa && (
+                    <div className="border rounded-lg p-3 bg-primary/5 border-primary/20">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                          <span className="text-xs font-medium">Conversa de origem</span>
+                          <span className="font-mono text-xs text-primary">#{linkedConversa.protocolo}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          title="Visualizar conversa"
+                          onClick={() => {
+                            setViewingConversaId(linkedConversa.id);
+                            setViewingConversaProtocolo(linkedConversa.protocolo || "");
+                            setViewingConversaData(linkedConversa.created_at || "");
+                          }}
+                        >
+                          <Eye className="h-3.5 w-3.5 text-primary" />
+                        </Button>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {linkedConversa.created_at && format(new Date(linkedConversa.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                      </p>
+                    </div>
+                  )}
+
+                  {historico.length === 0 && !linkedConversa ? (
                     <p className="text-sm text-muted-foreground text-center py-8">Nenhum ticket anterior para este cliente.</p>
                   ) : (
-                    historico.map((h: any) => (
-                      <div
-                        key={h.id}
-                        className="border rounded-lg p-3 hover:bg-accent/50 transition-colors cursor-pointer"
-                        onClick={() => onSelectTicket?.(h.id)}
-                      >
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="font-mono text-xs text-muted-foreground">#{h.numero_exibicao}</span>
-                          <Badge variant="outline" className={cn("text-[10px]", TICKET_STATUS_COLORS[h.status as TicketStatus])}>
-                            {h.status}
-                          </Badge>
-                          <Badge className={cn("text-[10px]", TICKET_PRIORIDADE_COLORS[h.prioridade])}>
-                            {h.prioridade}
-                          </Badge>
-                        </div>
-                        <p className="text-sm font-medium truncate">{h.titulo}</p>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <Badge variant="secondary" className="text-[10px]">
-                            <Headphones className="h-2.5 w-2.5 mr-0.5" /> {h.mesa}
-                          </Badge>
-                          {h.helpdesk_tipos_atendimento?.nome && (
-                            <Badge variant="outline" className="text-[10px]">
-                              {(h.helpdesk_tipos_atendimento as any).nome}
+                    historico.map((h: any) => {
+                      const hConversa = historicoConversasMap[h.id];
+                      return (
+                        <div
+                          key={h.id}
+                          className="border rounded-lg p-3 hover:bg-accent/50 transition-colors cursor-pointer"
+                          onClick={() => onSelectTicket?.(h.id)}
+                        >
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className="font-mono text-xs text-muted-foreground">#{h.numero_exibicao}</span>
+                            <Badge variant="outline" className={cn("text-[10px]", TICKET_STATUS_COLORS[h.status as TicketStatus])}>
+                              {h.status}
                             </Badge>
-                          )}
-                          {(h.tags as string[] || []).map((tag: string) => (
-                            <Badge key={tag} className="bg-blue-500/10 text-blue-600 border-blue-200 text-[9px]">{tag}</Badge>
-                          ))}
+                            <Badge className={cn("text-[10px]", TICKET_PRIORIDADE_COLORS[h.prioridade])}>
+                              {h.prioridade}
+                            </Badge>
+                            {h.origem === "chat" && hConversa && (
+                              <>
+                                <span className="text-[10px] text-muted-foreground">•</span>
+                                <span className="font-mono text-[10px] text-primary">#{hConversa.protocolo}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5"
+                                  title="Visualizar conversa"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setViewingConversaId(hConversa.id);
+                                    setViewingConversaProtocolo(hConversa.protocolo || "");
+                                    setViewingConversaData(hConversa.created_at || "");
+                                  }}
+                                >
+                                  <Eye className="h-3 w-3 text-primary" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                          <p className="text-sm font-medium truncate">{h.titulo}</p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <Badge variant="secondary" className="text-[10px]">
+                              <Headphones className="h-2.5 w-2.5 mr-0.5" /> {h.mesa}
+                            </Badge>
+                            {h.helpdesk_tipos_atendimento?.nome && (
+                              <Badge variant="outline" className="text-[10px]">
+                                {(h.helpdesk_tipos_atendimento as any).nome}
+                              </Badge>
+                            )}
+                            {(h.tags as string[] || []).map((tag: string) => (
+                              <Badge key={tag} className="bg-blue-500/10 text-blue-600 border-blue-200 text-[9px]">{tag}</Badge>
+                            ))}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            {format(new Date(h.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </p>
                         </div>
-                        <p className="text-[10px] text-muted-foreground mt-1">
-                          {format(new Date(h.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                        </p>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </TabsContent>
               )}
