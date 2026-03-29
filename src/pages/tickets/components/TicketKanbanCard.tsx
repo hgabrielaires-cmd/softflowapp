@@ -4,7 +4,7 @@ import { TICKET_PRIORIDADE_COLORS } from "../constants";
 import { calcSla, formatDate } from "../helpers";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
-import { Paperclip, Building2 } from "lucide-react";
+import { Paperclip, Building2, MessageSquare } from "lucide-react";
 import { Draggable } from "@hello-pangea/dnd";
 
 interface Props {
