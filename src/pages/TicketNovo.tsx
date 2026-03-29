@@ -74,8 +74,8 @@ export default function TicketNovo() {
   // Form state
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [clienteId, setClienteId] = useState<string | null>(null);
-  const [clienteSearch, setClienteSearch] = useState("");
+  const [clienteId, setClienteId] = useState<string | null>(chatState?.clienteId || null);
+  const [clienteSearch, setClienteSearch] = useState(chatState?.clienteNome || "");
   const [contratoId, setContratoId] = useState<string | null>(null);
   const [mesa, setMesa] = useState<TicketMesa>("Suporte");
   const [modo, setModo] = useState<TicketModo | "">("");
