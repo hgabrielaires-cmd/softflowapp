@@ -43,6 +43,14 @@ interface Props {
   camposPersonalizados?: CrmCampoPersonalizado[];
   segmentos?: { id: string; nome: string }[];
   cargos?: { id: string; nome: string }[];
+  // Pre-fill from chat
+  prefill?: {
+    titulo?: string;
+    contatos?: ContatoLocal[];
+    origem?: string;
+    origemLocked?: boolean;
+    conversa_id?: string;
+  };
 }
 
 const emptyContato = (): ContatoLocal => ({ nome: "", telefone: "", cargo_id: "", email: "" });
