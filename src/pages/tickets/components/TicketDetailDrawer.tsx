@@ -823,6 +823,13 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
         });
       }}
     />
+    <ChatHistoricoDrawer
+      conversaId={viewingConversaId}
+      open={!!viewingConversaId}
+      onClose={() => setViewingConversaId(null)}
+      protocolo={viewingConversaProtocolo}
+      data={viewingConversaData}
+    />
     </>
   );
 }
