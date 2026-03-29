@@ -417,7 +417,7 @@ export function OportunidadeFormDialog({
           {/* Campos Personalizados */}
           {activeCampos.map((campo) => {
             const pendente = tried && campo.obrigatorio && !camposValues[campo.id]?.trim();
-            const isCanalLocked = prefill?.origemLocked && campo.nome.toLowerCase() === "canal";
+            const isCanalLocked = prefill?.origemLocked && (campo.nome.toLowerCase() === "canal" || campo.nome.toLowerCase() === "origem");
             return (
             <div key={campo.id}>
               <Label className={pendente ? "text-destructive" : ""}>{campo.nome}{campo.obrigatorio ? " *" : ""}</Label>
