@@ -135,13 +135,22 @@ export function OportunidadeFormDialog({
         setSegmentoIds(oportunidade.segmento_ids || []);
         setCamposValues(oportunidade.campos_personalizados || {});
       } else {
-        setTitulo("");
+        setTitulo(prefill?.titulo || "");
         setClienteId("");
         setResponsavelId(currentUserId || "");
         setEtapaId(etapaIdInicial || etapas[0]?.id || "");
         setSegmentoIds([]);
-        setCamposValues({});
-        setContatos([emptyContato()]);
+        // Pre-fill canal campo personalizado if from chat
+        const initialCampos: Record<string, string> = {};
+        if (prefill?.origem) {
+          // Find "Canal" campo personalizado and set it
+          const canalCampo = camposPersonalizados.find(c => c.nome.toLowerCase() === "canal");
+          if (canalCampo) {
+            initialCampos[canalCampo.id] = "Mensagem WhatsApp";
+          }
+        }
+        setCamposValues(initialCampos);
+        setContatos(prefill?.contatos && prefill.contatos.length > 0 ? prefill.contatos : [emptyContato()]);
         setTried(false);
         setPhoneDuplicados({});
         setPhoneIgnorado({});
