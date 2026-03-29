@@ -55,6 +55,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
   const [ticketDrawerOpen, setTicketDrawerOpen] = useState(false);
   const [crmDialogOpen, setCrmDialogOpen] = useState(false);
   const [crmDetailConversaId, setCrmDetailConversaId] = useState<string | null>(null);
+  const [crmDetailOpen, setCrmDetailOpen] = useState(false);
 
   // Auto-link state
   const [empresasDetectadas, setEmpresasDetectadas] = useState<EmpresaContato[]>([]);
