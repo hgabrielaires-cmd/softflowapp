@@ -137,6 +137,7 @@ export function OportunidadeFormDialog({
         setCamposValues(oportunidade.campos_personalizados || {});
       } else {
         setTitulo(prefill?.titulo || "");
+        setObservacoes("");
         setClienteId("");
         setResponsavelId(currentUserId || "");
         setEtapaId(etapaIdInicial || etapas[0]?.id || "");
