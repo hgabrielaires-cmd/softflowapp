@@ -7,10 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ExternalLink, Plus, Phone, Building2, Clock, Search, X, Star, User, CheckCircle2, RefreshCw, Ticket, Eye, TrendingUp } from "lucide-react";
 import { TicketDetailDrawer } from "@/pages/tickets/components/TicketDetailDrawer";
 import { OportunidadeFormDialog } from "@/pages/crm-pipeline/components/OportunidadeFormDialog";
+import { OportunidadeDetailView } from "@/pages/crm-pipeline/components/OportunidadeDetailView";
 import { useCrmPipelineQueries } from "@/pages/crm-pipeline/useCrmPipelineQueries";
 import { useCrmCamposPersonalizados, useCrmFunis, useCrmEtapas } from "@/pages/crm-parametros/useCrmParametrosQueries";
 import { useCrmPipelineForm } from "@/pages/crm-pipeline/useCrmPipelineForm";
@@ -55,6 +57,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
   const [ticketDrawerOpen, setTicketDrawerOpen] = useState(false);
   const [crmDialogOpen, setCrmDialogOpen] = useState(false);
   const [crmDetailConversaId, setCrmDetailConversaId] = useState<string | null>(null);
+  const [crmDetailOpen, setCrmDetailOpen] = useState(false);
 
   // Auto-link state
   const [empresasDetectadas, setEmpresasDetectadas] = useState<EmpresaContato[]>([]);
@@ -82,7 +85,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     refetchInterval: 15000,
   });
 
-  // Fetch linked CRM opportunity
+  // Fetch linked CRM opportunity (light for sidebar badge)
   const { data: linkedOportunidade } = useQuery({
     queryKey: ["chat-crm-oportunidade", conversa?.id],
     queryFn: async () => {
@@ -95,6 +98,20 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     },
     enabled: !!conversa?.id,
     refetchInterval: 15000,
+  });
+
+  // Fetch full opportunity for detail view
+  const { data: fullOportunidade } = useQuery({
+    queryKey: ["chat-crm-oportunidade-full", linkedOportunidade?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("crm_oportunidades")
+        .select("*, crm_etapas(id, nome, cor, funil_id)")
+        .eq("id", linkedOportunidade!.id)
+        .single();
+      return data;
+    },
+    enabled: !!linkedOportunidade?.id && crmDetailOpen,
   });
 
   // CRM form dependencies
@@ -463,27 +480,29 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
       onSuccess: async (created: any) => {
         setCrmDialogOpen(false);
         if (created?.id) {
-          // Add note to chat
-          const userName = user?.user_metadata?.full_name || "Atendente";
-          await supabase.from("chat_mensagens").insert({
-            conversa_id: conversa.id,
-            tipo: "nota_interna",
-            conteudo: `Oportunidade CRM criada por @${userName} — ${created.titulo}`,
-            remetente: "sistema",
-            atendente_id: user?.id || null,
-          });
-
-          // Log in timeline with user info
+          // Get profile name from DB
           const { data: { user: authUser } } = await supabase.auth.getUser();
           const { data: profile } = await supabase
             .from("profiles")
             .select("full_name")
             .eq("user_id", authUser?.id || "")
             .single();
+          const userName = profile?.full_name || "Usuário";
+
+          // Add note to chat
+          await supabase.from("chat_mensagens").insert({
+            conversa_id: conversa.id,
+            tipo: "nota_interna",
+            conteudo: `Oportunidade CRM criada por @${userName} — ${created.titulo}`,
+            remetente: "sistema",
+            atendente_id: authUser?.id || null,
+          });
+
+          // Log in timeline
           await (supabase as any).from("crm_historico").insert({
             oportunidade_id: created.id,
             tipo: "criacao",
-            descricao: `Oportunidade criada por @${profile?.full_name || "Usuário"} — Origem: Chat Softplus`,
+            descricao: `Oportunidade criada por @${userName} — Origem: Chat Softplus`,
             user_id: authUser?.id || null,
           });
 
@@ -700,7 +719,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
               {linkedOportunidade && (
                 <div
                   className="flex justify-between items-center pt-1 border-t border-border mt-1 cursor-pointer hover:bg-accent/50 rounded px-1 -mx-1 transition-colors"
-                  onClick={() => navigate(`/crm-pipeline?oportunidade=${linkedOportunidade.id}`)}
+                  onClick={() => setCrmDetailOpen(true)}
                   title="Clique para ver detalhes da oportunidade"
                 >
                   <span className="text-muted-foreground flex items-center gap-1">
@@ -917,6 +936,25 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
           prefill={crmPrefill}
         />
       )}
+
+      {/* CRM Detail Sheet */}
+      <Sheet open={crmDetailOpen} onOpenChange={setCrmDetailOpen}>
+        <SheetContent side="right" className="w-[75vw] sm:max-w-[75vw] p-0 overflow-y-auto">
+          {fullOportunidade && (
+            <OportunidadeDetailView
+              oportunidade={fullOportunidade as any}
+              etapas={crmEtapas}
+              clientes={clientesQuery.data || []}
+              responsaveis={responsaveisQuery.data || []}
+              onBack={() => setCrmDetailOpen(false)}
+              camposPersonalizados={camposPersonalizados}
+              segmentos={segmentosQuery.data || []}
+              cargos={cargosQuery.data || []}
+              funilId={firstFunilId}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
