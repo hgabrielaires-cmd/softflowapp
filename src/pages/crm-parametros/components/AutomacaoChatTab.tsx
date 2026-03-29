@@ -47,7 +47,7 @@ export function AutomacaoChatTab() {
         .from("setores")
         .select("id, nome")
         .eq("ativo", true)
-        .order("nome");
+        .order("nome") as any;
       return data || [];
     },
   });
