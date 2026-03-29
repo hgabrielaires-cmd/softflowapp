@@ -627,6 +627,56 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
         protocolo={historicoSelecionado?.protocolo}
         data={historicoSelecionado?.created_at}
       />
+
+      {/* Dialog Trocar Empresa */}
+      <Dialog open={trocarOpen} onOpenChange={setTrocarOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Vincular empresa à conversa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {cliente && (
+              <div className="flex items-center justify-between rounded-md border p-2 bg-muted/30">
+                <div className="text-xs">
+                  <span className="text-muted-foreground">Empresa atual: </span>
+                  <span className="font-medium text-foreground">{cliente.nome_fantasia}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-xs text-destructive border-destructive/50 hover:bg-destructive/10"
+                  onClick={() => { desvincularCliente(); setTrocarOpen(false); }}
+                >
+                  Desvincular
+                </Button>
+              </div>
+            )}
+            <Input
+              placeholder="Buscar empresa pelo nome ou CNPJ..."
+              value={trocarTermo}
+              onChange={(e) => setTrocarTermo(e.target.value)}
+              className="h-9 text-sm"
+              autoFocus
+            />
+            <div className="space-y-1 max-h-60 overflow-y-auto">
+              {trocarBuscando && <p className="text-xs text-muted-foreground text-center py-2">Buscando...</p>}
+              {!trocarBuscando && trocarResultados.length === 0 && trocarTermo.trim() && (
+                <p className="text-xs text-muted-foreground text-center py-2">Nenhuma empresa encontrada.</p>
+              )}
+              {!trocarBuscando && trocarResultados.map((cli: any) => (
+                <button
+                  key={cli.id}
+                  className="w-full text-left border rounded-md p-2 hover:bg-accent transition-colors"
+                  onClick={() => trocarEmpresa(cli)}
+                >
+                  <p className="font-medium text-sm text-foreground">{cli.nome_fantasia}</p>
+                  <p className="text-xs text-muted-foreground">{formatCnpj(cli.cnpj_cpf)}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
