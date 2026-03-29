@@ -85,7 +85,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     refetchInterval: 15000,
   });
 
-  // Fetch linked CRM opportunity
+  // Fetch linked CRM opportunity (light for sidebar badge)
   const { data: linkedOportunidade } = useQuery({
     queryKey: ["chat-crm-oportunidade", conversa?.id],
     queryFn: async () => {
@@ -98,6 +98,21 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     },
     enabled: !!conversa?.id,
     refetchInterval: 15000,
+  });
+
+  // Fetch full opportunity for detail view
+  const { data: fullOportunidade } = useQuery({
+    queryKey: ["chat-crm-oportunidade-full", linkedOportunidade?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("crm_oportunidades")
+        .select("*, crm_etapas(id, nome, cor, funil_id)")
+        .eq("id", linkedOportunidade!.id)
+        .single();
+      return data;
+    },
+    enabled: !!linkedOportunidade?.id && crmDetailOpen,
+  });
   });
 
   // CRM form dependencies
