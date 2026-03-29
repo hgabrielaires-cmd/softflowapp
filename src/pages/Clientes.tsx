@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Search, Pencil, Building2, Phone, Star, Eye, FileText } from "lucide-react";
+import { Plus, Search, Pencil, Building2, Phone, Star, Eye, FileText, Headset } from "lucide-react";
 
 import { TablePagination } from "@/components/TablePagination";
 import { ITEMS_PER_PAGE } from "@/pages/clientes/constants";
@@ -32,6 +32,7 @@ import { HistoricoContratualDialog } from "@/pages/clientes/components/Historico
 import { ClienteContatosDialog } from "@/pages/clientes/components/ClienteContatosDialog";
 import { ContatoFormDialog } from "@/pages/clientes/components/ContatoFormDialog";
 import { ClienteFormDialog } from "@/pages/clientes/components/ClienteFormDialog";
+import { ClienteAtendimentosDialog } from "@/pages/clientes/components/ClienteAtendimentosDialog";
 
 export default function Clientes() {
   const q = useClientesQueries();
@@ -58,7 +59,13 @@ export default function Clientes() {
 
   const ct = useClienteContatos({ fetchContatos });
 
+  const [atendimentosOpen, setAtendimentosOpen] = useState(false);
+  const [clienteAtendimentos, setClienteAtendimentos] = useState<any>(null);
 
+  function openAtendimentos(c: any) {
+    setClienteAtendimentos(c);
+    setAtendimentosOpen(true);
+  }
   async function handleToggleAtivo(c: Cliente) {
     const ok = await toggleAtivo(c);
     if (!ok) toast.error("Erro ao atualizar status");
@@ -211,6 +218,9 @@ export default function Clientes() {
                             <FileText className="h-3.5 w-3.5" />
                           </Button>
                         )}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openAtendimentos(c)} title="Atendimentos">
+                          <Headset className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -292,6 +302,12 @@ export default function Clientes() {
         podeVerRentabilidade={podeVerRentabilidade}
         rentabilidadeConsolidada={rentabilidadeConsolidada}
         margemIdealHistorico={margemIdealHistorico}
+      />
+
+      <ClienteAtendimentosDialog
+        open={atendimentosOpen}
+        onOpenChange={setAtendimentosOpen}
+        cliente={clienteAtendimentos}
       />
 
     </AppLayout>
