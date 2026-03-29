@@ -262,7 +262,19 @@ export default function TicketNovo() {
         data: format(item.date, "yyyy-MM-dd"),
         hora_inicio: item.hora || null,
       }));
-      createTicket.mutate({ data, userId, agendamentos, anexos: anexosUpload });
+      createTicket.mutate({ data, userId, agendamentos, anexos: anexosUpload }, {
+        onSuccess: (ticket) => {
+          if (fromChat && chatState?.conversaId && ticket) {
+            navigate("/chat", {
+              state: {
+                ticketCreated: ticket,
+                conversaId: chatState.conversaId,
+              },
+              replace: true,
+            });
+          }
+        },
+      });
     } catch {
       toast.error("Erro ao processar anexos.");
     } finally {
