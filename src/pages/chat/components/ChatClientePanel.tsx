@@ -602,7 +602,25 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
               <CardTitle className="text-sm">Ações rápidas</CardTitle>
             </CardHeader>
             <CardContent className="p-3 pt-0 space-y-1.5">
-              <Button variant="ghost" size="sm" className="w-full justify-start text-xs h-8 gap-2" disabled>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start text-xs h-8 gap-2"
+                onClick={() => {
+                  if (!conversa?.cliente_id) {
+                    toast.error("Vincule um cliente antes de abrir ticket");
+                    return;
+                  }
+                  navigate("/tickets/novo", {
+                    state: {
+                      fromChat: true,
+                      conversaId: conversa.id,
+                      clienteId: conversa.cliente_id,
+                      clienteNome: (conversa.cliente as any)?.nome_fantasia || "",
+                    },
+                  });
+                }}
+              >
                 <Plus className="h-3 w-3" /> Abrir Ticket
               </Button>
               <Button variant="ghost" size="sm" className="w-full justify-start text-xs h-8 gap-2" disabled>
