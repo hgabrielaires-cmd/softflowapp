@@ -1007,6 +1007,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
           segmentos={segmentosQuery.data || []}
           cargos={cargosQuery.data || []}
           prefill={crmPrefill}
+          filiais={filiaisDoUsuario}
         />
       )}
 
