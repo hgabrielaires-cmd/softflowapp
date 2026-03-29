@@ -449,6 +449,22 @@ export function OportunidadeFormDialog({
             );
           })}
 
+          {/* Filial — required for chat-originated opportunities */}
+          {prefill?.origem && !oportunidade && filiais.length > 0 && (
+            <div>
+              <Label className={tried && !filialId ? "text-destructive" : ""}>Filial *</Label>
+              <Select value={filialId || "__none__"} onValueChange={(v) => setFilialId(v === "__none__" ? "" : v)}>
+                <SelectTrigger className={tried && !filialId ? "border-destructive" : ""}><SelectValue placeholder="Selecione a filial..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Selecione...</SelectItem>
+                  {filiais.map(f => (
+                    <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Obs — only for chat-originated opportunities */}
           {prefill?.origem && !oportunidade && (
             <div>
