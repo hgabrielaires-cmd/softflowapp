@@ -212,6 +212,56 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     }
   }
 
+  // Trocar empresa - busca
+  useEffect(() => {
+    if (!trocarOpen) {
+      setTrocarTermo("");
+      setTrocarResultados([]);
+      return;
+    }
+    const loadRecentes = async () => {
+      const { data } = await supabase
+        .from("clientes")
+        .select("id, nome_fantasia, cnpj_cpf")
+        .eq("ativo", true)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (data) setTrocarResultados(data);
+    };
+    loadRecentes();
+  }, [trocarOpen]);
+
+  useEffect(() => {
+    if (!trocarOpen) return;
+    const termo = trocarTermo.trim();
+    if (!termo) {
+      supabase
+        .from("clientes")
+        .select("id, nome_fantasia, cnpj_cpf")
+        .eq("ativo", true)
+        .order("created_at", { ascending: false })
+        .limit(5)
+        .then(({ data }) => { if (data) setTrocarResultados(data); });
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      setTrocarBuscando(true);
+      const limpo = termo.replace(/\D/g, "");
+      let query = supabase
+        .from("clientes")
+        .select("id, nome_fantasia, cnpj_cpf")
+        .eq("ativo", true)
+        .limit(10);
+      const filters = [`nome_fantasia.ilike.%${termo}%`];
+      if (limpo.length >= 3) filters.push(`cnpj_cpf.ilike.%${limpo}%`);
+      query = query.or(filters.join(","));
+      const { data } = await query;
+      setTrocarResultados(data || []);
+      setTrocarBuscando(false);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [trocarTermo, trocarOpen]);
+
   if (!conversa) return null;
 
   const cliente = conversa.cliente as any;
