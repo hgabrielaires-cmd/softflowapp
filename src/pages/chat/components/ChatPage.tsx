@@ -114,6 +114,7 @@ export default function ChatPage() {
             selectedId={selectedConversa?.id || null}
             onSelect={(c) => setSelectedConversa(c)}
             counts={counts}
+            onNovaConversa={() => setShowNovaConversa(true)}
           />
         </div>
 
