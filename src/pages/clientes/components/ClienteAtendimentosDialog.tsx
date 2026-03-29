@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Headset, Eye, Loader2, MessageSquare, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Headset, Eye, Loader2, MessageSquare, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -49,17 +49,61 @@ function formatDuracao(s: number | null) {
   return `${m}min`;
 }
 
+function HighlightText({ text, term }: { text: string; term: string }) {
+  if (!term.trim()) return <>{text}</>;
+  const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark key={i} className="bg-yellow-200 text-yellow-900 rounded-sm px-0.5">{part}</mark>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
 export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props) {
   const [conversas, setConversas] = useState<Conversa[]>([]);
   const [loading, setLoading] = useState(false);
   const [limit, setLimit] = useState(10);
   const [total, setTotal] = useState(0);
 
-  // Mensagens dialog
   const [mensagensOpen, setMensagensOpen] = useState(false);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [loadingMsg, setLoadingMsg] = useState(false);
   const [conversaSel, setConversaSel] = useState<Conversa | null>(null);
+
+  // Search
+  const [buscaAberta, setBuscaAberta] = useState(false);
+  const [buscaTermo, setBuscaTermo] = useState("");
+
+  // Scroll ref
+  const msgEndRef = useRef<HTMLDivElement>(null);
+
+  const mensagensFiltradas = useMemo(() => {
+    if (!buscaTermo.trim()) return mensagens;
+    const lower = buscaTermo.toLowerCase();
+    return mensagens.filter((m) => m.conteudo?.toLowerCase().includes(lower));
+  }, [mensagens, buscaTermo]);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (mensagensFiltradas.length > 0 && !loadingMsg) {
+      setTimeout(() => msgEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    }
+  }, [mensagensFiltradas, loadingMsg]);
+
+  // Reset search on close
+  useEffect(() => {
+    if (!mensagensOpen) {
+      setBuscaAberta(false);
+      setBuscaTermo("");
+    }
+  }, [mensagensOpen]);
 
   useEffect(() => {
     if (!open || !cliente?.id) {
@@ -79,7 +123,6 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
         .from("chat_conversas")
         .select("id", { count: "exact", head: true })
         .eq("cliente_id", cliente.id);
-
       setTotal(count || 0);
 
       const { data } = await supabase
@@ -88,7 +131,6 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
         .eq("cliente_id", cliente.id)
         .order("created_at", { ascending: false })
         .limit(limit);
-
       setConversas((data as any) || []);
     } finally {
       setLoading(false);
@@ -112,7 +154,7 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
     }
   }
 
-  const badge = (status: string | null) => {
+  const badgeFn = (status: string | null) => {
     const s = STATUS_BADGE[status || ""] || { class: "bg-muted text-muted-foreground", label: status || "—" };
     return <Badge className={cn("text-[10px] border-0", s.class)}>{s.label}</Badge>;
   };
@@ -159,7 +201,7 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
                         <td className="px-3 py-2 text-xs">{format(new Date(c.created_at), "dd/MM/yyyy HH:mm")}</td>
                         <td className="px-3 py-2 text-xs">{(c.atendente as any)?.full_name || "—"}</td>
                         <td className="px-3 py-2 text-xs">{(c.setor as any)?.nome || "—"}</td>
-                        <td className="px-3 py-2">{badge(c.status)}</td>
+                        <td className="px-3 py-2">{badgeFn(c.status)}</td>
                         <td className="px-3 py-2 text-xs">{formatDuracao(c.tempo_atendimento_segundos)}</td>
                         <td className="px-3 py-2 text-center">
                           <Button variant="ghost" size="icon" className="h-7 w-7" title="Ver mensagens" onClick={() => abrirMensagens(c)}>
@@ -189,12 +231,53 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
       <Dialog open={mensagensOpen} onOpenChange={setMensagensOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-sm">
-              <MessageSquare className="h-4 w-4" />
-              Atendimento {conversaSel?.protocolo || ""}
-            </DialogTitle>
+            <div className="flex items-center justify-between gap-2">
+              <DialogTitle className="flex items-center gap-2 text-sm">
+                <MessageSquare className="h-4 w-4" />
+                Atendimento {conversaSel?.protocolo || ""}
+              </DialogTitle>
+              <Button
+                variant={buscaAberta ? "secondary" : "ghost"}
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                title="Buscar mensagens"
+                onClick={() => {
+                  setBuscaAberta((v) => !v);
+                  if (buscaAberta) setBuscaTermo("");
+                }}
+              >
+                <Search className="h-3.5 w-3.5" />
+              </Button>
+            </div>
             {conversaSel?.titulo_atendimento && (
               <p className="text-xs text-muted-foreground italic">"{conversaSel.titulo_atendimento}"</p>
+            )}
+            {buscaAberta && (
+              <div className="relative mt-2">
+                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar nas mensagens..."
+                  value={buscaTermo}
+                  onChange={(e) => setBuscaTermo(e.target.value)}
+                  className="pl-8 pr-8 h-9 text-xs"
+                  autoFocus
+                />
+                {buscaTermo && (
+                  <button
+                    className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+                    onClick={() => setBuscaTermo("")}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+            {buscaTermo.trim() && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {mensagensFiltradas.length > 0
+                  ? `${mensagensFiltradas.length} mensagem(ns) encontrada(s)`
+                  : `Nenhuma mensagem encontrada para "${buscaTermo}"`}
+              </p>
             )}
           </DialogHeader>
 
@@ -202,12 +285,16 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          ) : mensagens.length === 0 ? (
+          ) : mensagensFiltradas.length === 0 && !buscaTermo.trim() ? (
             <p className="text-sm text-muted-foreground text-center py-8">Nenhuma mensagem encontrada.</p>
+          ) : mensagensFiltradas.length === 0 && buscaTermo.trim() ? (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              Nenhuma mensagem encontrada para "{buscaTermo}"
+            </p>
           ) : (
-            <ScrollArea className="flex-1 max-h-[60vh] pr-2">
+            <div className="flex-1 overflow-y-auto max-h-[60vh] pr-2">
               <div className="space-y-2 py-2">
-                {mensagens.map((m) => {
+                {mensagensFiltradas.map((m) => {
                   const isSistema = m.remetente === "sistema" || m.tipo === "sistema";
                   const isAtendente = m.remetente === "atendente";
                   const isBot = m.remetente === "bot" || m.tipo === "bot";
@@ -216,7 +303,7 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
                     return (
                       <div key={m.id} className="text-center">
                         <span className="text-[10px] text-muted-foreground italic bg-muted/50 px-2 py-0.5 rounded-full">
-                          {m.conteudo}
+                          {buscaTermo ? <HighlightText text={m.conteudo || ""} term={buscaTermo} /> : m.conteudo}
                           {m.created_at && ` • ${format(new Date(m.created_at), "HH:mm")}`}
                         </span>
                       </div>
@@ -234,7 +321,9 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
                         <p className="font-medium text-[10px] text-muted-foreground mb-0.5">
                           {isAtendente ? ((m.atendente as any)?.full_name || "Atendente") : isBot ? "🤖 Bot" : "Cliente"}
                         </p>
-                        <p className="whitespace-pre-wrap break-words">{m.conteudo}</p>
+                        <p className="whitespace-pre-wrap break-words">
+                          {buscaTermo ? <HighlightText text={m.conteudo || ""} term={buscaTermo} /> : m.conteudo}
+                        </p>
                         {m.created_at && (
                           <p className="text-[10px] text-muted-foreground/70 mt-1 text-right">
                             {format(new Date(m.created_at), "dd/MM HH:mm")}
@@ -244,8 +333,9 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
                     </div>
                   );
                 })}
+                <div ref={msgEndRef} />
               </div>
-            </ScrollArea>
+            </div>
           )}
         </DialogContent>
       </Dialog>
