@@ -43,12 +43,21 @@ interface Props {
   camposPersonalizados?: CrmCampoPersonalizado[];
   segmentos?: { id: string; nome: string }[];
   cargos?: { id: string; nome: string }[];
+  // Pre-fill from chat
+  prefill?: {
+    titulo?: string;
+    contatos?: ContatoLocal[];
+    origem?: string;
+    origemLocked?: boolean;
+    conversa_id?: string;
+  };
 }
 
 const emptyContato = (): ContatoLocal => ({ nome: "", telefone: "", cargo_id: "", email: "" });
 
 export function OportunidadeFormDialog({
   open, onOpenChange, etapas, etapaIdInicial, oportunidade, clientes, responsaveis, onSave, saving, exibeCliente = true, currentUserId, camposPersonalizados = [], segmentos = [], cargos = [],
+  prefill,
 }: Props) {
   const [titulo, setTitulo] = useState("");
   const [clienteId, setClienteId] = useState<string>("");
@@ -126,13 +135,22 @@ export function OportunidadeFormDialog({
         setSegmentoIds(oportunidade.segmento_ids || []);
         setCamposValues(oportunidade.campos_personalizados || {});
       } else {
-        setTitulo("");
+        setTitulo(prefill?.titulo || "");
         setClienteId("");
         setResponsavelId(currentUserId || "");
         setEtapaId(etapaIdInicial || etapas[0]?.id || "");
         setSegmentoIds([]);
-        setCamposValues({});
-        setContatos([emptyContato()]);
+        // Pre-fill canal campo personalizado if from chat
+        const initialCampos: Record<string, string> = {};
+        if (prefill?.origem) {
+          // Find "Canal" campo personalizado and set it
+          const canalCampo = camposPersonalizados.find(c => c.nome.toLowerCase() === "canal");
+          if (canalCampo) {
+            initialCampos[canalCampo.id] = "Mensagem WhatsApp";
+          }
+        }
+        setCamposValues(initialCampos);
+        setContatos(prefill?.contatos && prefill.contatos.length > 0 ? prefill.contatos : [emptyContato()]);
         setTried(false);
         setPhoneDuplicados({});
         setPhoneIgnorado({});
@@ -177,11 +195,12 @@ export function OportunidadeFormDialog({
       responsavel_id: responsavelId || null,
       segmento_ids: segmentoIds,
       valor: 0,
-      origem: null,
+      origem: prefill?.origem || null,
       observacoes: null,
       data_previsao_fechamento: null,
       campos_personalizados: camposValues,
       _contatos: contatos,
+      conversa_id: prefill?.conversa_id || null,
     });
   };
 
@@ -381,9 +400,18 @@ export function OportunidadeFormDialog({
             </Popover>
           </div>
 
+          {/* Origem (read-only when from chat) */}
+          {prefill?.origem && (
+            <div>
+              <Label>Origem</Label>
+              <Input value={prefill.origem} disabled className="bg-muted/50" />
+            </div>
+          )}
+
           {/* Campos Personalizados */}
           {activeCampos.map((campo) => {
             const pendente = tried && campo.obrigatorio && !camposValues[campo.id]?.trim();
+            const isCanalLocked = prefill?.origemLocked && campo.nome.toLowerCase() === "canal";
             return (
             <div key={campo.id}>
               <Label className={pendente ? "text-destructive" : ""}>{campo.nome}{campo.obrigatorio ? " *" : ""}</Label>
@@ -391,8 +419,9 @@ export function OportunidadeFormDialog({
                 <Select
                   value={camposValues[campo.id] || "__none__"}
                   onValueChange={(v) => setCampoValue(campo.id, v === "__none__" ? "" : v)}
+                  disabled={isCanalLocked}
                 >
-                  <SelectTrigger className={pendente ? "border-destructive" : ""}><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectTrigger className={cn(pendente ? "border-destructive" : "", isCanalLocked ? "bg-muted/50" : "")}><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">Nenhum</SelectItem>
                     {campo.opcoes.map((opcao) => (
@@ -406,6 +435,7 @@ export function OportunidadeFormDialog({
                   onChange={(e) => setCampoValue(campo.id, e.target.value)}
                   placeholder={campo.nome}
                   className={pendente ? "border-destructive" : ""}
+                  disabled={isCanalLocked}
                 />
               )}
             </div>
