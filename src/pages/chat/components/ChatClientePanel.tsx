@@ -613,7 +613,11 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
                 </div>
               )}
               {ticketInfo && (
-                <div className="flex justify-between items-center pt-1 border-t border-border mt-1">
+                <div
+                  className="flex justify-between items-center pt-1 border-t border-border mt-1 cursor-pointer hover:bg-accent/50 rounded px-1 -mx-1 transition-colors"
+                  onClick={() => setTicketDrawerOpen(true)}
+                  title="Clique para ver detalhes do ticket"
+                >
                   <span className="text-muted-foreground flex items-center gap-1">
                     <Ticket className="h-3 w-3" /> Ticket
                   </span>
