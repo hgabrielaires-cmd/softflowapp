@@ -1,0 +1,1 @@
+ALTER TABLE public.chat_conversas ADD COLUMN IF NOT EXISTS ticket_id uuid REFERENCES public.tickets(id) ON DELETE SET NULL;
