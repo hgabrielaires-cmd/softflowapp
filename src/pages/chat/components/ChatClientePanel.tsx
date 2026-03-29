@@ -47,6 +47,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
   const [trocarTermo, setTrocarTermo] = useState("");
   const [trocarResultados, setTrocarResultados] = useState<any[]>([]);
   const [trocarBuscando, setTrocarBuscando] = useState(false);
+  const [ticketDrawerOpen, setTicketDrawerOpen] = useState(false);
 
   // Auto-link state
   const [empresasDetectadas, setEmpresasDetectadas] = useState<EmpresaContato[]>([]);
