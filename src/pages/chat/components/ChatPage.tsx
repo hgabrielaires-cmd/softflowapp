@@ -54,7 +54,7 @@ export default function ChatPage() {
     const { ticketCreated, conversaId } = state;
     const userName = (profile as any)?.full_name || "Atendente";
 
-    // Clear location state
+    // Clear location state immediately
     navigate(location.pathname, { replace: true, state: null });
 
     (async () => {
@@ -73,16 +73,22 @@ export default function ChatPage() {
         atendente_id: user.id,
       });
 
-      qc.invalidateQueries({ queryKey: ["chat-conversas"] });
-      qc.invalidateQueries({ queryKey: ["chat-mensagens"] });
-      toast.success(`Ticket ${ticketCreated.numero_exibicao} vinculado à conversa`);
+      // Fetch the conversation directly to select it
+      const { data: convData } = await supabase
+        .from("chat_conversas")
+        .select("*, cliente:clientes(*), atendente:profiles!chat_conversas_atendente_id_fkey(*), setor:setores(*)")
+        .eq("id", conversaId)
+        .single();
 
-      // Select the conversation
-      const conv = conversas.find((c) => c.id === conversaId);
-      if (conv) {
-        setSelectedConversa(conv as ChatConversa);
+      await qc.invalidateQueries({ queryKey: ["chat-conversas"] });
+      await qc.invalidateQueries({ queryKey: ["chat-mensagens"] });
+
+      if (convData) {
+        setSelectedConversa(convData as unknown as ChatConversa);
         setTab("meus");
       }
+
+      toast.success(`Ticket ${ticketCreated.numero_exibicao} vinculado à conversa`);
     })();
   }, [location.state]);
 
