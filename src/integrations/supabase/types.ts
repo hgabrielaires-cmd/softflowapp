@@ -1488,6 +1488,51 @@ export type Database = {
           },
         ]
       }
+      crm_automacao_chat_config: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          destinatario_user_id: string
+          filial_id: string
+          id: string
+          setor_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          destinatario_user_id: string
+          filial_id: string
+          id?: string
+          setor_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          destinatario_user_id?: string
+          filial_id?: string
+          id?: string
+          setor_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_automacao_chat_config_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: true
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_automacao_chat_config_setor_id_fkey"
+            columns: ["setor_id"]
+            isOneToOne: false
+            referencedRelation: "setores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_campos_personalizados: {
         Row: {
           ativo: boolean
