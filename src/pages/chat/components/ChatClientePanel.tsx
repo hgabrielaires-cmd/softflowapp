@@ -45,6 +45,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { filiaisDoUsuario } = useUserFiliais();
   const [termoBusca, setTermoBusca] = useState("");
   const [buscando, setBuscando] = useState(false);
   const [clientesEncontrados, setClientesEncontrados] = useState<any[]>([]);
