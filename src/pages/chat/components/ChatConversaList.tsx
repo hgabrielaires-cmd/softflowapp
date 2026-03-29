@@ -1,7 +1,8 @@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Search, Info } from "lucide-react";
+import { MessageSquare, Search, Info, PenSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CHAT_TABS } from "../constants";
 import { ChatConversa, STATUS_COLORS, STATUS_LABELS, ChatStatus } from "../types";
