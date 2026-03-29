@@ -6,6 +6,7 @@ import ChatConversaList from "./ChatConversaList";
 import ChatMessageArea from "./ChatMessageArea";
 import ChatClientePanel from "./ChatClientePanel";
 import TransferirDialog from "./TransferirDialog";
+import NovaConversaDialog from "./NovaConversaDialog";
 import EncerrarAtendimentoDialog from "./EncerrarAtendimentoDialog";
 import { useChatConversas, useChatMensagens } from "../useChatQueries";
 import { useChatActions } from "../useChatActions";
@@ -26,6 +27,7 @@ export default function ChatPage() {
   const [selectedConversa, setSelectedConversa] = useState<ChatConversa | null>(null);
   const [showTransferir, setShowTransferir] = useState(false);
   const [showEncerrar, setShowEncerrar] = useState(false);
+  const [showNovaConversa, setShowNovaConversa] = useState(false);
 
   const { data: conversas = [] } = useChatConversas(tab, user?.id, search);
   const { data: mensagens = [] } = useChatMensagens(selectedConversa?.id || null);
@@ -112,6 +114,7 @@ export default function ChatPage() {
             selectedId={selectedConversa?.id || null}
             onSelect={(c) => setSelectedConversa(c)}
             counts={counts}
+            onNovaConversa={() => setShowNovaConversa(true)}
           />
         </div>
 
@@ -203,6 +206,23 @@ export default function ChatPage() {
                 setTab("meus");
               },
             });
+          }}
+        />
+
+        <NovaConversaDialog
+          open={showNovaConversa}
+          onOpenChange={setShowNovaConversa}
+          onConversaCriada={async (conversaId) => {
+            await qc.invalidateQueries({ queryKey: ["chat-conversas"] });
+            const { data: convData } = await supabase
+              .from("chat_conversas")
+              .select("*, cliente:clientes(*), atendente:profiles!chat_conversas_atendente_id_fkey(*), setor:setores(*)")
+              .eq("id", conversaId)
+              .single();
+            if (convData) {
+              setSelectedConversa(convData as unknown as ChatConversa);
+              setTab("meus");
+            }
           }}
         />
       </div>

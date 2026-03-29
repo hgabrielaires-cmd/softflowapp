@@ -70,21 +70,23 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
   const { data: agendamentos = [] } = useTicketAgendamentos(ticketId);
   const { data: historico = [] } = useClienteTicketsHistorico(ticket?.cliente_id ?? null, ticketId);
 
-  // Fetch linked chat conversation for current ticket
-  const { data: linkedConversa } = useQuery({
-    queryKey: ["ticket-linked-conversa", ticketId],
+  // Fetch ALL linked chat conversations for current ticket
+  const { data: linkedConversas = [] } = useQuery({
+    queryKey: ["ticket-linked-conversas", ticketId],
     queryFn: async () => {
-      if (!ticketId) return null;
+      if (!ticketId) return [];
       const { data } = await supabase
         .from("chat_conversas")
-        .select("id, protocolo, created_at")
+        .select("id, protocolo, created_at, numero_cliente, nome_cliente, status, atendente:profiles!chat_conversas_atendente_id_fkey(full_name), cliente:clientes!chat_conversas_cliente_id_fkey(nome_fantasia)")
         .eq("ticket_id", ticketId)
-        .limit(1)
-        .maybeSingle();
-      return data;
+        .order("created_at", { ascending: false });
+      return data || [];
     },
     enabled: !!ticketId,
   });
+
+  // Keep backwards compat: linkedConversa = first one
+  const linkedConversa = linkedConversas.length > 0 ? linkedConversas[0] : null;
 
   // Fetch linked chat conversations for historico tickets
   const historicoTicketIds = historico.map((h: any) => h.id).filter(Boolean);
@@ -530,6 +532,53 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
                 </Collapsible>
               )}
 
+              {/* Conversas WhatsApp */}
+              <div className="bg-card rounded-xl border p-4 space-y-3">
+                <h4 className="text-sm font-semibold flex items-center gap-1.5">
+                  <MessageSquare className="h-3.5 w-3.5" /> Conversas WhatsApp ({linkedConversas.length})
+                </h4>
+                {linkedConversas.length > 0 ? (
+                  <div className="space-y-2">
+                    {linkedConversas.map((conv: any) => (
+                      <div key={conv.id} className="flex items-center justify-between text-xs bg-muted/30 rounded-lg p-2.5">
+                        <div className="flex-1 min-w-0 space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-primary">#{conv.protocolo}</span>
+                            <Badge variant="outline" className="text-[9px] h-3.5 px-1">{conv.status}</Badge>
+                          </div>
+                          <p className="text-muted-foreground truncate">
+                            {conv.nome_cliente || conv.numero_cliente}
+                            {(conv.cliente as any)?.nome_fantasia && ` — ${(conv.cliente as any).nome_fantasia}`}
+                          </p>
+                          {(conv.atendente as any)?.full_name && (
+                            <p className="text-muted-foreground text-[10px]">
+                              Atendente: {(conv.atendente as any).full_name}
+                            </p>
+                          )}
+                          <p className="text-muted-foreground text-[10px]">
+                            {conv.created_at && format(new Date(conv.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 flex-shrink-0"
+                          title="Visualizar conversa"
+                          onClick={() => {
+                            setViewingConversaId(conv.id);
+                            setViewingConversaProtocolo(conv.protocolo || "");
+                            setViewingConversaData(conv.created_at || "");
+                          }}
+                        >
+                          <Eye className="h-3.5 w-3.5 text-primary" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhuma conversa vinculada a este ticket.</p>
+                )}
+              </div>
 
               {/* Agenda */}
               <div className="bg-card rounded-xl border p-4 space-y-3">

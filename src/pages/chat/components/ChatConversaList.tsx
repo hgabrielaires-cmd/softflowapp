@@ -1,7 +1,8 @@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Search, Info } from "lucide-react";
+import { MessageSquare, Search, Info, PenSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CHAT_TABS } from "../constants";
 import { ChatConversa, STATUS_COLORS, STATUS_LABELS, ChatStatus } from "../types";
@@ -17,11 +18,12 @@ interface Props {
   selectedId: string | null;
   onSelect: (c: ChatConversa) => void;
   counts: Record<string, number>;
+  onNovaConversa?: () => void;
 }
 
 export default function ChatConversaList({
   conversas, tab, onTabChange, search, onSearchChange,
-  selectedId, onSelect, counts,
+  selectedId, onSelect, counts, onNovaConversa,
 }: Props) {
   const triagemCount = counts.triagem || 0;
 
@@ -37,6 +39,17 @@ export default function ChatConversaList({
               {counts.fila}
             </Badge>
           )}
+          <div className="ml-auto">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Nova conversa"
+              onClick={onNovaConversa}
+            >
+              <PenSquare className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
