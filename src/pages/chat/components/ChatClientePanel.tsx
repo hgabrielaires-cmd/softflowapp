@@ -690,21 +690,46 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
               className="h-9 text-sm"
               autoFocus
             />
+            {!trocarTermo.trim() && (
+              <p className="text-xs text-muted-foreground">
+                Empresas vinculadas ao contato ({trocarResultados.length})
+              </p>
+            )}
             <div className="space-y-1 max-h-60 overflow-y-auto">
               {trocarBuscando && <p className="text-xs text-muted-foreground text-center py-2">Buscando...</p>}
               {!trocarBuscando && trocarResultados.length === 0 && trocarTermo.trim() && (
                 <p className="text-xs text-muted-foreground text-center py-2">Nenhuma empresa encontrada.</p>
               )}
-              {!trocarBuscando && trocarResultados.map((cli: any) => (
-                <button
-                  key={cli.id}
-                  className="w-full text-left border rounded-md p-2 hover:bg-accent transition-colors"
-                  onClick={() => trocarEmpresa(cli)}
-                >
-                  <p className="font-medium text-sm text-foreground">{cli.nome_fantasia}</p>
-                  <p className="text-xs text-muted-foreground">{formatCnpj(cli.cnpj_cpf)}</p>
-                </button>
-              ))}
+              {!trocarBuscando && trocarResultados.map((cli: any) => {
+                const isAtual = cliente?.id === cli.id;
+                return (
+                  <button
+                    key={cli.id}
+                    className={cn(
+                      "w-full text-left border rounded-md p-2 transition-colors",
+                      isAtual
+                        ? "border-green-300 bg-green-50 dark:bg-green-950/30 dark:border-green-700"
+                        : "hover:bg-accent"
+                    )}
+                    onClick={() => !isAtual && trocarEmpresa(cli)}
+                    disabled={isAtual}
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className={cn("font-medium text-sm", isAtual ? "text-green-700 dark:text-green-400" : "text-foreground")}>
+                        {cli.nome_fantasia}
+                      </p>
+                      {isAtual && (
+                        <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-[10px] h-4 border-0">
+                          Atual vinculada
+                        </Badge>
+                      )}
+                    </div>
+                    <p className={cn("text-xs", isAtual ? "text-green-600/70 dark:text-green-400/70" : "text-muted-foreground")}>
+                      {formatCnpj(cli.cnpj_cpf)}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </DialogContent>
