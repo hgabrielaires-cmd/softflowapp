@@ -506,6 +506,73 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
             user_id: authUser?.id || null,
           });
 
+          // WhatsApp automation dispatch
+          try {
+            const filialId = (conversa.cliente as any)?.filial_id || (conversa as any).filial_id;
+            if (filialId) {
+              const { data: autoConfig } = await (supabase as any)
+                .from("crm_automacao_chat_config")
+                .select("*")
+                .eq("filial_id", filialId)
+                .eq("ativo", true)
+                .maybeSingle();
+
+              if (autoConfig?.destinatario_user_id) {
+                const { data: destProfile } = await supabase
+                  .from("profiles")
+                  .select("full_name, telefone")
+                  .eq("user_id", autoConfig.destinatario_user_id)
+                  .single();
+
+                if (destProfile?.telefone) {
+                  const contatos = (data._contatos as any[]) || [];
+                  const contatoNome = contatos[0]?.nome || created.titulo;
+                  const contatoTel = contatos[0]?.telefone || "";
+                  const segIds = (data.segmento_ids as string[]) || [];
+                  let segmentoNomes = "";
+                  if (segIds.length > 0) {
+                    const { data: segs } = await supabase
+                      .from("segmentos")
+                      .select("nome")
+                      .in("id", segIds);
+                    segmentoNomes = segs?.map((s: any) => s.nome).join(", ") || "";
+                  }
+                  const obs = (data.observacoes as string) || "Sem observações";
+                  const mensagem = `🔔 *Nova Oportunidade CRM (via Chat)*\n\n` +
+                    `📋 *Oportunidade:* ${created.titulo}\n` +
+                    `👤 *Contato:* ${contatoNome}\n` +
+                    `📞 *Telefone:* ${contatoTel}\n` +
+                    `🏷️ *Segmento:* ${segmentoNomes || "Não informado"}\n` +
+                    `📍 *Origem:* Chat Softplus\n` +
+                    `📝 *Obs:* ${obs}\n` +
+                    `👨‍💼 *Criado por:* ${userName}`;
+
+                  let instancia = "Softflow_WhatsApp";
+                  if (autoConfig.setor_id) {
+                    const { data: setor } = await supabase
+                      .from("setores")
+                      .select("instance_name")
+                      .eq("id", autoConfig.setor_id)
+                      .single();
+                    if (setor?.instance_name) instancia = setor.instance_name;
+                  }
+
+                  const telDestino = destProfile.telefone.replace(/\D/g, "");
+                  await supabase.functions.invoke("evolution-api", {
+                    body: {
+                      action: "send_text",
+                      instance_name: instancia,
+                      number: telDestino,
+                      text: mensagem,
+                    },
+                  });
+                }
+              }
+            }
+          } catch (whatsErr) {
+            console.error("Erro na automação WhatsApp CRM:", whatsErr);
+          }
+
           qc.invalidateQueries({ queryKey: ["chat-mensagens"] });
           qc.invalidateQueries({ queryKey: ["chat-crm-oportunidade", conversa.id] });
           toast.success("Oportunidade CRM criada!");

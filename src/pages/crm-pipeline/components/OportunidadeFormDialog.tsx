@@ -5,6 +5,7 @@ import { verificarTelefoneDuplicado, type ContatoDuplicado } from "@/lib/validar
 import { TelefoneDuplicadoAlerta } from "@/components/TelefoneDuplicadoAlerta";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { OportunidadeComentarios } from "./OportunidadeComentarios";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +61,7 @@ export function OportunidadeFormDialog({
   prefill,
 }: Props) {
   const [titulo, setTitulo] = useState("");
+  const [observacoes, setObservacoes] = useState("");
   const [clienteId, setClienteId] = useState<string>("");
   const [responsavelId, setResponsavelId] = useState<string>("");
   const [etapaId, setEtapaId] = useState("");
@@ -136,6 +138,7 @@ export function OportunidadeFormDialog({
         setCamposValues(oportunidade.campos_personalizados || {});
       } else {
         setTitulo(prefill?.titulo || "");
+        setObservacoes("");
         setClienteId("");
         setResponsavelId(currentUserId || "");
         setEtapaId(etapaIdInicial || etapas[0]?.id || "");
@@ -202,7 +205,7 @@ export function OportunidadeFormDialog({
       segmento_ids: segmentoIds,
       valor: 0,
       origem: prefill?.origem || null,
-      observacoes: null,
+      observacoes: observacoes.trim() || null,
       data_previsao_fechamento: null,
       campos_personalizados: camposValues,
       _contatos: contatos,
@@ -442,7 +445,19 @@ export function OportunidadeFormDialog({
             );
           })}
 
-          {/* Comunicação */}
+          {/* Obs — only for chat-originated opportunities */}
+          {prefill?.origem && !oportunidade && (
+            <div>
+              <Label>Observações</Label>
+              <Textarea
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                placeholder="Descreva o que o cliente precisa..."
+                className="min-h-[80px] text-sm"
+              />
+            </div>
+          )}
+
           {oportunidade ? (
             <OportunidadeComentarios oportunidadeId={oportunidade.id} />
           ) : (
