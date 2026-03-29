@@ -29,7 +29,8 @@ export function useCreateTicket(onCreated?: () => void) {
           previsao_entrega: data.previsao_entrega,
           ticket_pai_id: data.ticket_pai_id || null,
           criado_por: userId,
-        })
+          origem,
+        } as any)
         .select("id, numero_exibicao")
         .single();
       if (error) throw error;

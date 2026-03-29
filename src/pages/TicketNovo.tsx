@@ -262,7 +262,7 @@ export default function TicketNovo() {
         data: format(item.date, "yyyy-MM-dd"),
         hora_inicio: item.hora || null,
       }));
-      createTicket.mutate({ data, userId, agendamentos, anexos: anexosUpload }, {
+      createTicket.mutate({ data, userId, agendamentos, anexos: anexosUpload, origem: fromChat ? "chat" : "avulso" }, {
         onSuccess: (ticket) => {
           if (fromChat && chatState?.conversaId && ticket) {
             navigate("/chat", {

@@ -38,9 +38,14 @@ export function TicketKanbanCard({ ticket, index, seguidores, anexosCount, onCli
         >
           {/* Header: number + priority */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-mono">
-              #{ticket.numero_exibicao}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground font-mono">
+                #{ticket.numero_exibicao}
+              </span>
+              {(ticket as any).origem === "chat" && (
+                <MessageSquare className="h-3 w-3 text-primary" title="Origem: Chat" />
+              )}
+            </div>
             <Badge className={cn("text-[10px] px-1.5 py-0", TICKET_PRIORIDADE_COLORS[ticket.prioridade])}>
               {ticket.prioridade}
             </Badge>
