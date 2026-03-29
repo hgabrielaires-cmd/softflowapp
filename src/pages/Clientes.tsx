@@ -59,7 +59,13 @@ export default function Clientes() {
 
   const ct = useClienteContatos({ fetchContatos });
 
+  const [atendimentosOpen, setAtendimentosOpen] = useState(false);
+  const [clienteAtendimentos, setClienteAtendimentos] = useState<any>(null);
 
+  function openAtendimentos(c: any) {
+    setClienteAtendimentos(c);
+    setAtendimentosOpen(true);
+  }
   async function handleToggleAtivo(c: Cliente) {
     const ok = await toggleAtivo(c);
     if (!ok) toast.error("Erro ao atualizar status");
