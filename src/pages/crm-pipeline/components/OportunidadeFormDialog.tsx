@@ -204,7 +204,7 @@ export function OportunidadeFormDialog({
       segmento_ids: segmentoIds,
       valor: 0,
       origem: prefill?.origem || null,
-      observacoes: null,
+      observacoes: observacoes.trim() || null,
       data_previsao_fechamento: null,
       campos_personalizados: camposValues,
       _contatos: contatos,
