@@ -73,6 +73,7 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
   const [loading, setLoading] = useState(false);
   const [limit, setLimit] = useState(10);
   const [total, setTotal] = useState(0);
+  const [setoresMap, setSetoresMap] = useState<Record<string, string>>({});
 
   const [mensagensOpen, setMensagensOpen] = useState(false);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
@@ -106,6 +107,20 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
       setBuscaTermo("");
     }
   }, [mensagensOpen]);
+
+  // Load setores map for fallback
+  useEffect(() => {
+    if (open) {
+      supabase
+        .from("setores")
+        .select("id, nome")
+        .then(({ data }) => {
+          const map: Record<string, string> = {};
+          (data || []).forEach((s: any) => { map[s.id] = s.nome; });
+          setSetoresMap(map);
+        });
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open || !cliente?.id) {
