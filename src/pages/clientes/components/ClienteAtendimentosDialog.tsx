@@ -77,6 +77,7 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const perPage = 10;
+  const [setoresMap, setSetoresMap] = useState<Record<string, string>>({});
   const totalPages = Math.ceil(total / perPage);
 
   const [mensagensOpen, setMensagensOpen] = useState(false);
