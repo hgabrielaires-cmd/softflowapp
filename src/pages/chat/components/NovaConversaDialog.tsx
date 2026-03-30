@@ -183,11 +183,22 @@ export default function NovaConversaDialog({ open, onOpenChange, onConversaCriad
       // Nova conversa sempre usa instância Helpdesk
       const instancia = "Helpdesk";
 
+      // Generate protocolo (same format as evolution-webhook)
+      const agora = new Date();
+      const hoje = agora.toISOString().slice(0, 10).replace(/-/g, "");
+      const { count } = await supabase
+        .from("chat_conversas")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", agora.toISOString().slice(0, 10));
+      const seq = ((count || 0) + 1).toString().padStart(3, "0");
+      const protocolo = `#${hoje}${seq}`;
+
       // Create conversa
-      const agora = new Date().toISOString();
+      const agoraISO = agora.toISOString();
       const { data: conv, error } = await supabase
         .from("chat_conversas")
         .insert({
+          protocolo,
           numero_cliente: numero,
           nome_cliente: selectedContato?.nome || selectedEmpresa.nome_fantasia,
           cliente_id: selectedEmpresa.id,
@@ -197,9 +208,9 @@ export default function NovaConversaDialog({ open, onOpenChange, onConversaCriad
           atendente_id: user.id,
           canal: "whatsapp",
           canal_instancia: instancia,
-          iniciado_em: agora,
-          atendimento_iniciado_em: agora,
-          updated_at: agora,
+          iniciado_em: agoraISO,
+          atendimento_iniciado_em: agoraISO,
+          updated_at: agoraISO,
         })
         .select("id")
         .single();
