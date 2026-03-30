@@ -47,27 +47,61 @@ export default function ChatClienteCadastroDialog({ open, onOpenChange, clienteI
 
   const { documentos, isLoading: loadingDocs } = useClienteDocumentos(open ? clienteId : null);
 
-  // Fetch active contracts with plan info + modules
+  // Fetch active contracts with plan info + modules from pedidos
   const { data: servicos, isLoading: loadingServicos } = useQuery({
     queryKey: ["chat-cliente-servicos", clienteId],
     queryFn: async () => {
-      // Get active contratos_financeiros
-      const { data: cfs } = await supabase
-        .from("contratos_financeiros")
-        .select("id, tipo, plano_id, contrato_id, planos(nome, descricao)")
+      // Get active contratos with pedido info
+      const { data: contratos } = await supabase
+        .from("contratos")
+        .select("id, tipo, status, plano_id, pedido_id, planos(nome, descricao)")
         .eq("cliente_id", clienteId!)
-        .ilike("status", "ativo");
-      if (!cfs || cfs.length === 0) return null;
+        .in("status", ["Ativo"])
+        .order("created_at", { ascending: false });
+      if (!contratos || contratos.length === 0) return null;
 
-      // Get active modules for these contracts
-      const cfIds = cfs.map(c => c.id);
-      const { data: modulos } = await supabase
-        .from("contrato_financeiro_modulos")
-        .select("id, nome, ativo")
-        .in("contrato_financeiro_id", cfIds)
-        .eq("ativo", true);
+      // Deduplicate plans - keep unique plano_id for Base contracts
+      const planoMap = new Map<string, any>();
+      const aditivos: any[] = [];
+      for (const c of contratos) {
+        if (c.tipo === "Base") {
+          if (c.plano_id && !planoMap.has(c.plano_id)) {
+            planoMap.set(c.plano_id, c);
+          }
+        } else if (c.tipo === "Aditivo") {
+          aditivos.push(c);
+        }
+      }
 
-      return { contratos: cfs, modulos: modulos || [] };
+      // Collect modules from active aditivo pedidos
+      const pedidoIds = aditivos
+        .map(a => a.pedido_id)
+        .filter(Boolean);
+      
+      let modulos: { nome: string; quantidade: number }[] = [];
+      if (pedidoIds.length > 0) {
+        const { data: pedidos } = await supabase
+          .from("pedidos")
+          .select("modulos_adicionais")
+          .in("id", pedidoIds);
+        if (pedidos) {
+          const moduloMap = new Map<string, { nome: string; quantidade: number }>();
+          for (const p of pedidos) {
+            const mods = (p.modulos_adicionais as any[]) || [];
+            for (const m of mods) {
+              const existing = moduloMap.get(m.nome);
+              if (existing) {
+                existing.quantidade += (m.quantidade || 1);
+              } else {
+                moduloMap.set(m.nome, { nome: m.nome, quantidade: m.quantidade || 1 });
+              }
+            }
+          }
+          modulos = Array.from(moduloMap.values());
+        }
+      }
+
+      return { planos: Array.from(planoMap.values()), modulos };
     },
     enabled: !!clienteId && open,
   });
