@@ -71,6 +71,8 @@ interface EditUserDialogProps {
   setEditTipoTecnico: (v: string) => void;
   editMesaIds: string[];
   setEditMesaIds: React.Dispatch<React.SetStateAction<string[]>>;
+  editSetorId: string;
+  setEditSetorId: (v: string) => void;
   editDescontoLimiteImp: string;
   setEditDescontoLimiteImp: (v: string) => void;
   editDescontoLimiteMens: string;
