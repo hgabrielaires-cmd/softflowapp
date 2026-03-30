@@ -85,8 +85,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
     enabled: !!ticketId,
   });
 
-  // Keep backwards compat: linkedConversa = first one
-  const linkedConversa = linkedConversas.length > 0 ? linkedConversas[0] : null;
+  // All linked conversations (multiple possible)
 
   // Fetch linked chat conversations for historico tickets
   const historicoTicketIds = historico.map((h: any) => h.id).filter(Boolean);
