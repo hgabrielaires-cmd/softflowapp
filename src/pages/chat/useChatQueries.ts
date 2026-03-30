@@ -22,7 +22,19 @@ export function useChatConversas(tab: string, userId: string | undefined, search
       } else if (tab === "fila") {
         q = q.eq("status", "aguardando");
       } else if (tab === "meus" && userId) {
-        q = q.eq("atendente_id", userId).in("status", ["em_atendimento"]);
+        // Fetch IDs where user is a collaborator
+        const { data: colabData } = await (supabase as any)
+          .from("chat_conversa_atendentes")
+          .select("conversa_id")
+          .eq("user_id", userId);
+        const colabIds = (colabData || []).map((c: any) => c.conversa_id);
+
+        if (colabIds.length > 0) {
+          q = q.in("status", ["em_atendimento"])
+            .or(`atendente_id.eq.${userId},id.in.(${colabIds.join(",")})`);
+        } else {
+          q = q.eq("atendente_id", userId).in("status", ["em_atendimento"]);
+        }
       } else if (tab === "encerrados") {
         q = q.in("status", ["encerrado", "fora_horario"]);
       }
