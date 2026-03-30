@@ -216,11 +216,11 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
                   </thead>
                   <tbody className="divide-y divide-border">
                     {conversas.map((c) => {
-                      // Tipo: Ativo = Nova Conversa (iniciado_em ≈ created_at), Receptivo = fluxo bot
+                      // Tipo: Ativo = Nova Conversa (atendimento_iniciado_em ≈ created_at), Receptivo = fluxo bot
                       const isAtivo = (() => {
-                        if (!c.iniciado_em) return false;
-                        const diff = Math.abs(new Date(c.created_at).getTime() - new Date(c.iniciado_em).getTime());
-                        return diff < 10000; // < 10s = ativo
+                        if (!c.atendimento_iniciado_em) return false;
+                        const diff = Math.abs(new Date(c.created_at).getTime() - new Date(c.atendimento_iniciado_em).getTime());
+                        return diff < 10000; // < 10s = ativo (conversa já iniciou com atendente)
                       })();
 
                       // Setor: preferir o da conversa, fallback para setor do atendente
