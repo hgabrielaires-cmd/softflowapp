@@ -103,6 +103,7 @@ export function CreateUserDialog({
   inviteIsTecnico, setInviteIsTecnico,
   inviteTipoTecnico, setInviteTipoTecnico,
   inviteMesaIds, setInviteMesaIds,
+  inviteSetorId, setInviteSetorId,
   inviteDescontoLimiteImp, setInviteDescontoLimiteImp,
   inviteDescontoLimiteMens, setInviteDescontoLimiteMens,
   inviteGestorDesconto, setInviteGestorDesconto,
@@ -111,6 +112,7 @@ export function CreateUserDialog({
   handleInvite,
   filiais,
   mesasDisponiveis,
+  setoresDisponiveis,
 }: CreateUserDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
