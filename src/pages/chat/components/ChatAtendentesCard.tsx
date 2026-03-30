@@ -5,22 +5,35 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Users, Plus, X } from "lucide-react";
+import { Users, Plus, X, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { resolvePresencaStatus } from "@/lib/presenca";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Props {
   conversaId: string;
   atendenteId: string | null;
+  onLeaveConversation?: () => void;
 }
 
-export default function ChatAtendentesCard({ conversaId, atendenteId }: Props) {
+export default function ChatAtendentesCard({ conversaId, atendenteId, onLeaveConversation }: Props) {
   const { user, profile } = useAuth();
   const qc = useQueryClient();
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [sairDialogOpen, setSairDialogOpen] = useState(false);
 
   // Fetch the main atendente
   const { data: mainAtendente } = useQuery({
@@ -50,6 +63,10 @@ export default function ChatAtendentesCard({ conversaId, atendenteId }: Props) {
     },
     enabled: !!conversaId,
   });
+
+  // Check if current user is a collaborator (not the main atendente)
+  const meuColab = colaboradores.find((c: any) => c.user_id === user?.id);
+  const isColaborador = !!meuColab && atendenteId !== user?.id;
 
   // Fetch available agents (for invite popover)
   const { data: agentesDisponiveis = [] } = useQuery({
@@ -95,6 +112,35 @@ export default function ChatAtendentesCard({ conversaId, atendenteId }: Props) {
     if (status === "online") return "bg-green-500";
     if (status === "pausa") return "bg-yellow-500";
     return "bg-muted-foreground/40";
+  }
+
+  async function sairDaConversa() {
+    if (!meuColab || !user) return;
+    try {
+      const { error } = await (supabase as any)
+        .from("chat_conversa_atendentes")
+        .delete()
+        .eq("id", meuColab.id);
+      if (error) throw error;
+
+      const meuNome = (profile as any)?.full_name || "Atendente";
+
+      await supabase.from("chat_mensagens").insert({
+        conversa_id: conversaId,
+        tipo: "sistema",
+        conteudo: `${meuNome} saiu da conversa`,
+        remetente: "sistema",
+      });
+
+      toast.success("Você saiu da conversa");
+      qc.invalidateQueries({ queryKey: ["chat-conversa-atendentes", conversaId] });
+      qc.invalidateQueries({ queryKey: ["chat-mensagens"] });
+      qc.invalidateQueries({ queryKey: ["chat-conversas"] });
+      setSairDialogOpen(false);
+      onLeaveConversation?.();
+    } catch (e: any) {
+      toast.error("Erro ao sair: " + e.message);
+    }
   }
 
   async function convidarAtendente(agente: any) {
@@ -257,6 +303,38 @@ export default function ChatAtendentesCard({ conversaId, atendenteId }: Props) {
             </ScrollArea>
           </PopoverContent>
         </Popover>
+
+        {/* Leave conversation button — only for collaborators */}
+        {isColaborador && (
+          <AlertDialog open={sairDialogOpen} onOpenChange={setSairDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full h-7 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+              >
+                <LogOut className="h-3 w-3" /> Sair da conversa
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Sair da conversa?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Deseja sair desta conversa? Ela continuará ativa para os outros atendentes.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={sairDaConversa}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Sair
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </CardContent>
     </Card>
   );

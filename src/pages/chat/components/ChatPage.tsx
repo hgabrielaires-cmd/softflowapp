@@ -166,7 +166,13 @@ export default function ChatPage() {
         />
 
         <div className="w-[320px] flex-shrink-0 hidden xl:block">
-          <ChatClientePanel conversa={conversaAtual as ChatConversa | null} />
+          <ChatClientePanel
+            conversa={conversaAtual as ChatConversa | null}
+            onLeaveConversation={() => {
+              setSelectedConversa(null);
+              setTab("meus");
+            }}
+          />
         </div>
 
         <TransferirDialog
