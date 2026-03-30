@@ -331,14 +331,14 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
 
               {ticket.cliente_id && (
                 <TabsContent value="historico" className="space-y-2 mt-0">
-                  {/* Current ticket linked conversation */}
-                  {linkedConversa && (
-                    <div className="border rounded-lg p-3 bg-primary/5 border-primary/20">
+                  {/* All linked conversations */}
+                  {linkedConversas.map((lc: any) => (
+                    <div key={lc.id} className="border rounded-lg p-3 bg-primary/5 border-primary/20">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <MessageSquare className="h-3.5 w-3.5 text-primary" />
                           <span className="text-xs font-medium">Conversa de origem</span>
-                          <span className="font-mono text-xs text-primary">#{linkedConversa.protocolo}</span>
+                          <span className="font-mono text-xs text-primary">#{lc.protocolo}</span>
                         </div>
                         <Button
                           variant="ghost"
@@ -346,19 +346,19 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
                           className="h-6 w-6"
                           title="Visualizar conversa"
                           onClick={() => {
-                            setViewingConversaId(linkedConversa.id);
-                            setViewingConversaProtocolo(linkedConversa.protocolo || "");
-                            setViewingConversaData(linkedConversa.created_at || "");
+                            setViewingConversaId(lc.id);
+                            setViewingConversaProtocolo(lc.protocolo || "");
+                            setViewingConversaData(lc.created_at || "");
                           }}
                         >
                           <Eye className="h-3.5 w-3.5 text-primary" />
                         </Button>
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-1">
-                        {linkedConversa.created_at && format(new Date(linkedConversa.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        {lc.created_at && format(new Date(lc.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                       </p>
                     </div>
-                  )}
+                  ))}
 
                   {historico.length === 0 && !linkedConversa ? (
                     <p className="text-sm text-muted-foreground text-center py-8">Nenhum ticket anterior para este cliente.</p>
