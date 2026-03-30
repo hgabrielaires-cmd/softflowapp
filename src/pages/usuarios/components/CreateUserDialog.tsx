@@ -68,6 +68,8 @@ interface CreateUserDialogProps {
   setInviteTipoTecnico: (v: string) => void;
   inviteMesaIds: string[];
   setInviteMesaIds: React.Dispatch<React.SetStateAction<string[]>>;
+  inviteSetorId: string;
+  setInviteSetorId: (v: string) => void;
   inviteDescontoLimiteImp: string;
   setInviteDescontoLimiteImp: (v: string) => void;
   inviteDescontoLimiteMens: string;
@@ -81,6 +83,7 @@ interface CreateUserDialogProps {
   // Data
   filiais: Filial[];
   mesasDisponiveis: MesaOption[];
+  setoresDisponiveis: SetorOption[];
 }
 
 export function CreateUserDialog({
