@@ -74,8 +74,9 @@ function HighlightText({ text, term }: { text: string; term: string }) {
 export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props) {
   const [conversas, setConversas] = useState<Conversa[]>([]);
   const [loading, setLoading] = useState(false);
-  const [limit, setLimit] = useState(10);
+  const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const perPage = 10;
   const [setoresMap, setSetoresMap] = useState<Record<string, string>>({});
 
   const [mensagensOpen, setMensagensOpen] = useState(false);
