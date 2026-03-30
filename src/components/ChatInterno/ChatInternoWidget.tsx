@@ -130,6 +130,21 @@ export function ChatInternoWidget() {
     },
   });
 
+  // Realtime subscription for instant presence updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('presenca-updates-chat')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'atendente_presenca',
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['chat-interno-presencas'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const presencaMap = new Map(presencas.map((p) => [p.user_id, p]));
 
   // Scroll to bottom when messages change

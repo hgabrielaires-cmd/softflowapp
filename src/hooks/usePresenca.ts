@@ -4,8 +4,8 @@ import { useAuth } from "@/context/AuthContext";
 
 type PresencaStatus = "online" | "pausa" | "offline";
 
-const HEARTBEAT_INTERVAL_MS = 30_000; // 30s
-const HEARTBEAT_TIMEOUT_MS = 5 * 60 * 1000; // 5 min
+const HEARTBEAT_INTERVAL_MS = 20_000; // 20s
+const HEARTBEAT_TIMEOUT_MS = 90_000; // 90s
 
 export function usePresenca() {
   const { user, profile } = useAuth();
@@ -34,8 +34,14 @@ export function usePresenca() {
     async (newStatus: PresencaStatus) => {
       setStatusState(newStatus);
       await upsertPresenca(newStatus);
+      // Broadcast para atualizar outros clientes instantaneamente
+      await supabase.channel('presenca-broadcast').send({
+        type: 'broadcast',
+        event: 'status_changed',
+        payload: { user_id: user?.id, status: newStatus },
+      });
     },
-    [upsertPresenca]
+    [upsertPresenca, user]
   );
 
   // Heartbeat: update last_heartbeat every 30s when online
@@ -86,13 +92,21 @@ export function usePresenca() {
       const lastHb = data.last_heartbeat ? new Date(data.last_heartbeat).getTime() : 0;
       const now = Date.now();
 
-      if (savedStatus === "online" && now - lastHb > HEARTBEAT_TIMEOUT_MS) {
-        // Stale online → mark offline
-        setStatusState("offline");
-        await upsertPresenca("offline");
+      if (savedStatus === "online") {
+        if (now - lastHb > HEARTBEAT_TIMEOUT_MS) {
+          // Stale online (janela estava fechada) → marcar offline
+          setStatusState("offline");
+          await upsertPresenca("offline");
+        } else {
+          // Heartbeat recente → restaurar online
+          setStatusState("online");
+        }
+      } else if (savedStatus === "pausa") {
+        // Pausa é intencional → restaurar sempre
+        setStatusState("pausa");
       } else {
-        // Restore saved status (pausa, offline, or valid online)
-        setStatusState(savedStatus);
+        // offline → manter
+        setStatusState("offline");
       }
     })();
   }, [user, upsertPresenca]);

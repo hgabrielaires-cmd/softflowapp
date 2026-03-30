@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { DashKpi, TicketAlerta, TicketPorCategoria, TicketAntigo, KanbanResumo } from "./types";
 import { KANBAN_STATUS_COLORS } from "./constants";
@@ -176,6 +177,23 @@ export function useAgendaHoje() {
 }
 
 export function useAtendentesPresenca() {
+  const queryClient = useQueryClient();
+
+  // Realtime subscription for instant presence updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('presenca-updates-dash')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'atendente_presenca',
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['dash_atendentes_presenca'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   return useQuery<AtendentePresenca[]>({
     queryKey: ["dash_atendentes_presenca"],
     queryFn: async () => {
