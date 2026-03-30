@@ -23,6 +23,7 @@ interface Conversa {
   titulo_atendimento: string | null;
   tempo_atendimento_segundos: number | null;
   iniciado_em: string | null;
+  atendimento_iniciado_em: string | null;
   atendente: { full_name: string; setor_id?: string | null } | null;
   setor: { nome: string } | null;
   ticket: { numero_exibicao: string } | null;
@@ -144,7 +145,7 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
 
       const { data } = await supabase
         .from("chat_conversas")
-        .select("id, protocolo, created_at, status, titulo_atendimento, tempo_atendimento_segundos, iniciado_em, atendente:profiles!chat_conversas_atendente_id_fkey(full_name, setor_id), setor:setores!chat_conversas_setor_id_fkey(nome), ticket:tickets!chat_conversas_ticket_id_fkey(numero_exibicao)")
+        .select("id, protocolo, created_at, status, titulo_atendimento, tempo_atendimento_segundos, iniciado_em, atendimento_iniciado_em, atendente:profiles!chat_conversas_atendente_id_fkey(full_name, setor_id), setor:setores!chat_conversas_setor_id_fkey(nome), ticket:tickets!chat_conversas_ticket_id_fkey(numero_exibicao)")
         .eq("cliente_id", cliente.id)
         .order("created_at", { ascending: false })
         .limit(limit);
@@ -215,11 +216,11 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
                   </thead>
                   <tbody className="divide-y divide-border">
                     {conversas.map((c) => {
-                      // Tipo: Ativo = Nova Conversa (iniciado_em ≈ created_at), Receptivo = fluxo bot
+                      // Tipo: Ativo = Nova Conversa (atendimento_iniciado_em ≈ created_at), Receptivo = fluxo bot
                       const isAtivo = (() => {
-                        if (!c.iniciado_em) return false;
-                        const diff = Math.abs(new Date(c.created_at).getTime() - new Date(c.iniciado_em).getTime());
-                        return diff < 10000; // < 10s = ativo
+                        if (!c.atendimento_iniciado_em) return false;
+                        const diff = Math.abs(new Date(c.created_at).getTime() - new Date(c.atendimento_iniciado_em).getTime());
+                        return diff < 10000; // < 10s = ativo (conversa já iniciou com atendente)
                       })();
 
                       // Setor: preferir o da conversa, fallback para setor do atendente
