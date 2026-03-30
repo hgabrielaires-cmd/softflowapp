@@ -23,6 +23,7 @@ interface Conversa {
   titulo_atendimento: string | null;
   tempo_atendimento_segundos: number | null;
   iniciado_em: string | null;
+  atendimento_iniciado_em: string | null;
   atendente: { full_name: string; setor_id?: string | null } | null;
   setor: { nome: string } | null;
   ticket: { numero_exibicao: string } | null;
