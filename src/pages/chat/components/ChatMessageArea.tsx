@@ -1,4 +1,6 @@
 import { useRef, useEffect, useState, useMemo, useCallback, ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Lock, MessageSquare, Download, FileText, FileSpreadsheet, File as FileIcon, Search, X, ChevronUp, ChevronDown, ArrowLeft } from "lucide-react";
@@ -49,6 +51,22 @@ export default function ChatMessageArea({
   conversa, mensagens, userId, userName,
   onSend, onSendMedia, onIniciarAtendimento, onEncerrar, onTransferir, isLoading,
 }: Props) {
+  // Check if user is a collaborator on this conversation
+  const { data: ehColaborador } = useQuery({
+    queryKey: ["chat-colaborador", conversa?.id, userId],
+    queryFn: async () => {
+      if (!conversa?.id || !userId) return false;
+      const { data } = await supabase
+        .from("chat_conversa_atendentes")
+        .select("id")
+        .eq("conversa_id", conversa.id)
+        .eq("user_id", userId)
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!conversa?.id && !!userId,
+  });
+
   const [modoNota, setModoNota] = useState(false);
   const [imagemFull, setImagemFull] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -142,7 +160,7 @@ export default function ChatMessageArea({
     );
   }
 
-  const podeComentar = conversa.status === "em_atendimento" && conversa.atendente_id === userId;
+  const podeComentar = conversa.status === "em_atendimento" && (conversa.atendente_id === userId || !!ehColaborador);
   const podeIniciar = conversa.status === "aguardando" || conversa.status === "bot";
   const termoAtivo = buscaAtiva && termoBusca.trim().length > 0;
 
