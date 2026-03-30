@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { MessageSquare, X, ArrowLeft, Send, Users, UsersRound, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { resolvePresencaStatus } from "@/lib/presenca";
@@ -51,6 +51,7 @@ export function ChatInternoWidget() {
   const [novoGrupoOpen, setNovoGrupoOpen] = useState(false);
   const [novoGrupoNome, setNovoGrupoNome] = useState("");
   const [novoGrupoSelecionados, setNovoGrupoSelecionados] = useState<string[]>([]);
+  const [presenceNow, setPresenceNow] = useState(() => Date.now());
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeConversaIdRef = useRef<string | null>(null);
   const originalTitleRef = useRef(document.title);
@@ -146,7 +147,18 @@ export function ChatInternoWidget() {
     return () => { supabase.removeChannel(channel); };
   }, [queryClient]);
 
-  const presencaMap = new Map(presencas.map((p) => [p.user_id, p]));
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setPresenceNow(Date.now());
+    }, 15_000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const presencaMap = useMemo(
+    () => new Map(presencas.map((p) => [p.user_id, p])),
+    [presencas]
+  );
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -263,6 +275,7 @@ export function ChatInternoWidget() {
   }, [user, activeConversaId, msgInput, sending]);
 
   const getStatusColor = (userId: string) => {
+    void presenceNow;
     const p = presencaMap.get(userId);
     const status = resolvePresencaStatus(p?.status, p?.last_heartbeat);
     if (status === "online") return "bg-green-500";
