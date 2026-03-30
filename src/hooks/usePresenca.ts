@@ -4,8 +4,8 @@ import { useAuth } from "@/context/AuthContext";
 
 type PresencaStatus = "online" | "pausa" | "offline";
 
-const HEARTBEAT_INTERVAL_MS = 30_000; // 30s
-const HEARTBEAT_TIMEOUT_MS = 5 * 60 * 1000; // 5 min
+const HEARTBEAT_INTERVAL_MS = 20_000; // 20s
+const HEARTBEAT_TIMEOUT_MS = 90_000; // 90s
 
 export function usePresenca() {
   const { user, profile } = useAuth();
