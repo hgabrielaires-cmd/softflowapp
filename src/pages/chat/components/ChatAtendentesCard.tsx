@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { resolvePresencaStatus } from "@/lib/presenca";
 
 interface Props {
   conversaId: string;
@@ -87,14 +88,7 @@ export default function ChatAtendentesCard({ conversaId, atendenteId }: Props) {
 
   function getPresencaStatus(userId: string) {
     const p = presencas.find((pr: any) => pr.user_id === userId);
-    if (!p) return "offline";
-    if (p.status === "pausa") return "pausa";
-    if (p.status === "online" && p.last_heartbeat) {
-      const diff = Date.now() - new Date(p.last_heartbeat).getTime();
-      if (diff > 90_000) return "offline";
-      return "online";
-    }
-    return p.status || "offline";
+    return resolvePresencaStatus(p?.status, p?.last_heartbeat);
   }
 
   function presencaColor(status: string) {

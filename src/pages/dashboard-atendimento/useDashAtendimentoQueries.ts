@@ -1,10 +1,11 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { resolvePresencaStatus } from "@/lib/presenca";
 import type { DashKpi, TicketAlerta, TicketPorCategoria, TicketAntigo, KanbanResumo } from "./types";
 import { KANBAN_STATUS_COLORS } from "./constants";
 import { diasDesde, horasEntre } from "./helpers";
-import { resolveStatus, type AtendentePresenca } from "./components/AtendentesPanel";
+import type { AtendentePresenca } from "./components/AtendentesPanel";
 
 export function useDashKpis(startDate: string, endDate: string) {
   return useQuery<DashKpi>({
@@ -222,7 +223,7 @@ export function useAtendentesPresenca() {
           user_id: p.user_id,
           full_name: p.full_name,
           avatar_url: p.avatar_url,
-          presenca_status: resolveStatus(
+          presenca_status: resolvePresencaStatus(
             pres?.status ?? null,
             pres?.last_heartbeat ?? null
           ),

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-
-type PresencaStatus = "online" | "pausa" | "offline";
-
-const HEARTBEAT_INTERVAL_MS = 20_000; // 20s
-const HEARTBEAT_TIMEOUT_MS = 90_000; // 90s
+import {
+  HEARTBEAT_INTERVAL_MS,
+  HEARTBEAT_TIMEOUT_MS,
+  type PresencaStatus,
+} from "@/lib/presenca";
 
 export function usePresenca() {
   const { user, profile } = useAuth();
@@ -44,7 +44,7 @@ export function usePresenca() {
     [upsertPresenca, user]
   );
 
-  // Heartbeat: update last_heartbeat every 30s when online
+  // Heartbeat: update last_heartbeat when online
   useEffect(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);

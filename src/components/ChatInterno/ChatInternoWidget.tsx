@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageSquare, X, ArrowLeft, Send, Users, UsersRound, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { resolvePresencaStatus } from "@/lib/presenca";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useConversasInternas, ConversaInterna } from "@/hooks/useConversasInternas";
@@ -263,9 +264,9 @@ export function ChatInternoWidget() {
 
   const getStatusColor = (userId: string) => {
     const p = presencaMap.get(userId);
-    if (!p) return "bg-muted";
-    if (p.status === "online") return "bg-green-500";
-    if (p.status === "pausa") return "bg-yellow-500";
+    const status = resolvePresencaStatus(p?.status, p?.last_heartbeat);
+    if (status === "online") return "bg-green-500";
+    if (status === "pausa") return "bg-yellow-500";
     return "bg-muted";
   };
 
