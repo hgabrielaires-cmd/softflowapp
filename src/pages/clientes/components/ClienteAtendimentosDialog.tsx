@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Headset, Eye, Loader2, MessageSquare, Search, X } from "lucide-react";
+import { Headset, Eye, Loader2, MessageSquare, Search, X, Ticket, PhoneOutgoing, PhoneIncoming } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -22,8 +22,10 @@ interface Conversa {
   status: string | null;
   titulo_atendimento: string | null;
   tempo_atendimento_segundos: number | null;
-  atendente: { full_name: string } | null;
+  iniciado_em: string | null;
+  atendente: { full_name: string; setor_id?: string | null } | null;
   setor: { nome: string } | null;
+  ticket: { numero_exibicao: string } | null;
 }
 
 interface Mensagem {
@@ -71,6 +73,7 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
   const [loading, setLoading] = useState(false);
   const [limit, setLimit] = useState(10);
   const [total, setTotal] = useState(0);
+  const [setoresMap, setSetoresMap] = useState<Record<string, string>>({});
 
   const [mensagensOpen, setMensagensOpen] = useState(false);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
@@ -105,6 +108,20 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
     }
   }, [mensagensOpen]);
 
+  // Load setores map for fallback
+  useEffect(() => {
+    if (open) {
+      supabase
+        .from("setores")
+        .select("id, nome")
+        .then(({ data }) => {
+          const map: Record<string, string> = {};
+          (data || []).forEach((s: any) => { map[s.id] = s.nome; });
+          setSetoresMap(map);
+        });
+    }
+  }, [open]);
+
   useEffect(() => {
     if (!open || !cliente?.id) {
       setConversas([]);
@@ -127,7 +144,7 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
 
       const { data } = await supabase
         .from("chat_conversas")
-        .select("id, protocolo, created_at, status, titulo_atendimento, tempo_atendimento_segundos, atendente:profiles!chat_conversas_atendente_id_fkey(full_name), setor:setores!chat_conversas_setor_id_fkey(nome)")
+        .select("id, protocolo, created_at, status, titulo_atendimento, tempo_atendimento_segundos, iniciado_em, atendente:profiles!chat_conversas_atendente_id_fkey(full_name, setor_id), setor:setores!chat_conversas_setor_id_fkey(nome), ticket:tickets!chat_conversas_ticket_id_fkey(numero_exibicao)")
         .eq("cliente_id", cliente.id)
         .order("created_at", { ascending: false })
         .limit(limit);
@@ -162,7 +179,7 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Headset className="h-4 w-4" />
@@ -189,27 +206,63 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
                       <th className="text-left px-3 py-2 font-medium">Data</th>
                       <th className="text-left px-3 py-2 font-medium">Atendente</th>
                       <th className="text-left px-3 py-2 font-medium">Setor</th>
+                      <th className="text-left px-3 py-2 font-medium">Tipo</th>
+                      <th className="text-left px-3 py-2 font-medium">Ticket</th>
                       <th className="text-left px-3 py-2 font-medium">Status</th>
                       <th className="text-left px-3 py-2 font-medium">Duração</th>
                       <th className="text-center px-3 py-2 font-medium w-16">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {conversas.map((c) => (
-                      <tr key={c.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-3 py-2 font-mono text-xs">{c.protocolo || "—"}</td>
-                        <td className="px-3 py-2 text-xs">{format(new Date(c.created_at), "dd/MM/yyyy HH:mm")}</td>
-                        <td className="px-3 py-2 text-xs">{(c.atendente as any)?.full_name || "—"}</td>
-                        <td className="px-3 py-2 text-xs">{(c.setor as any)?.nome || "—"}</td>
-                        <td className="px-3 py-2">{badgeFn(c.status)}</td>
-                        <td className="px-3 py-2 text-xs">{formatDuracao(c.tempo_atendimento_segundos)}</td>
-                        <td className="px-3 py-2 text-center">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Ver mensagens" onClick={() => abrirMensagens(c)}>
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
+                    {conversas.map((c) => {
+                      // Tipo: Ativo = Nova Conversa (iniciado_em ≈ created_at), Receptivo = fluxo bot
+                      const isAtivo = (() => {
+                        if (!c.iniciado_em) return false;
+                        const diff = Math.abs(new Date(c.created_at).getTime() - new Date(c.iniciado_em).getTime());
+                        return diff < 10000; // < 10s = ativo
+                      })();
+
+                      // Setor: preferir o da conversa, fallback para setor do atendente
+                      const setorNome = (c.setor as any)?.nome
+                        || ((c.atendente as any)?.setor_id ? setoresMap[(c.atendente as any).setor_id] : null)
+                        || "—";
+
+                      const ticketNum = (c.ticket as any)?.numero_exibicao || null;
+
+                      return (
+                        <tr key={c.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="px-3 py-2 font-mono text-xs">{c.protocolo || "—"}</td>
+                          <td className="px-3 py-2 text-xs">{format(new Date(c.created_at), "dd/MM/yyyy HH:mm")}</td>
+                          <td className="px-3 py-2 text-xs">{(c.atendente as any)?.full_name || "—"}</td>
+                          <td className="px-3 py-2 text-xs">{setorNome}</td>
+                          <td className="px-3 py-2">
+                            {isAtivo ? (
+                              <Badge className="text-[10px] border-0 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 gap-0.5">
+                                <PhoneOutgoing className="h-2.5 w-2.5" /> Ativo
+                              </Badge>
+                            ) : (
+                              <Badge className="text-[10px] border-0 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 gap-0.5">
+                                <PhoneIncoming className="h-2.5 w-2.5" /> Receptivo
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-xs font-mono">
+                            {ticketNum ? (
+                              <Badge variant="outline" className="text-[10px] gap-0.5">
+                                <Ticket className="h-2.5 w-2.5" /> {ticketNum}
+                              </Badge>
+                            ) : "—"}
+                          </td>
+                          <td className="px-3 py-2">{badgeFn(c.status)}</td>
+                          <td className="px-3 py-2 text-xs">{formatDuracao(c.tempo_atendimento_segundos)}</td>
+                          <td className="px-3 py-2 text-center">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Ver mensagens" onClick={() => abrirMensagens(c)}>
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

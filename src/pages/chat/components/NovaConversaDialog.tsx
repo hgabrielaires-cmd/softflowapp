@@ -183,6 +183,14 @@ export default function NovaConversaDialog({ open, onOpenChange, onConversaCriad
       // Nova conversa sempre usa instância Helpdesk
       const instancia = "Helpdesk";
 
+      // Fetch user's setor_id from profile
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("setor_id")
+        .eq("user_id", user.id)
+        .single();
+      const setorId = userProfile?.setor_id || null;
+
       // Generate protocolo (same format as evolution-webhook)
       const agora = new Date();
       const hoje = agora.toISOString().slice(0, 10).replace(/-/g, "");
@@ -204,6 +212,7 @@ export default function NovaConversaDialog({ open, onOpenChange, onConversaCriad
           cliente_id: selectedEmpresa.id,
           contato_id: selectedContato?.id || null,
           ticket_id: selectedTicketId || null,
+          setor_id: setorId,
           status: "em_atendimento",
           atendente_id: user.id,
           canal: "whatsapp",
