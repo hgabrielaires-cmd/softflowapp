@@ -18,7 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { ROLE_LABELS } from "@/lib/supabase-types";
 import type { AppRole } from "@/lib/supabase-types";
 import { ALL_ROLES, TIPO_TECNICO_OPTIONS } from "../constants";
-import type { MesaOption } from "../types";
+import type { MesaOption, SetorOption } from "../types";
 import {
   Plus,
   Search,
