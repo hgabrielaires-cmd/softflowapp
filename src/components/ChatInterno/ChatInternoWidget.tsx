@@ -121,7 +121,6 @@ export function ChatInternoWidget() {
   });
 
   // Presence data
-  const queryClient = useQueryClient();
   const { data: presencas = [] } = useQuery({
     queryKey: ["chat-interno-presencas"],
     refetchInterval: 30_000,
