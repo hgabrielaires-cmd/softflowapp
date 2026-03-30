@@ -11,6 +11,7 @@ export function useUsuariosQueries() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [mesasDisponiveis, setMesasDisponiveis] = useState<MesaOption[]>([]);
+  const [setoresDisponiveis, setSetoresDisponiveis] = useState<SetorOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [filiaisLoaded, setFiliaisLoaded] = useState(false);
   const [search, setSearch] = useState("");
