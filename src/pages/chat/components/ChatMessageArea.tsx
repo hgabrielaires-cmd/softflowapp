@@ -284,7 +284,35 @@ export default function ChatMessageArea({
             )}
             {conversa.status === "em_atendimento" && (
               <>
-                <Button size="sm" variant="outline" onClick={onTransferir}>Transferir</Button>
+                {isColaboradorNaoResponsavel && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10 gap-1">
+                        <LogOut className="h-3.5 w-3.5" /> Sair
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Sair da conversa?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Deseja sair desta conversa? Ela continuará ativa para os outros atendentes.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleSairConversa}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Sair
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+                {!isColaboradorNaoResponsavel && (
+                  <Button size="sm" variant="outline" onClick={onTransferir}>Transferir</Button>
+                )}
                 <Button size="sm" variant="destructive" onClick={onEncerrar}>Encerrar</Button>
               </>
             )}
