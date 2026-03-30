@@ -331,6 +331,38 @@ export type Database = {
           },
         ]
       }
+      chat_conversa_atendentes: {
+        Row: {
+          conversa_id: string
+          convidado_por: string | null
+          entrou_em: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          conversa_id: string
+          convidado_por?: string | null
+          entrou_em?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          conversa_id?: string
+          convidado_por?: string | null
+          entrou_em?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversa_atendentes_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_conversas: {
         Row: {
           atendente_id: string | null
