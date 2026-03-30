@@ -1,13 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Building2, User, Phone, Mail, MapPin, FileText, Package, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClienteDocumentos } from "@/hooks/useClienteDocumentos";
-import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -38,8 +35,7 @@ export default function ChatClienteCadastroDialog({ open, onOpenChange, clienteI
         .select("*")
         .eq("cliente_id", clienteId!)
         .eq("ativo", true)
-        .order("decisor", { ascending: false })
-        .limit(50);
+        .order("decisor", { ascending: false });
       return data || [];
     },
     enabled: !!clienteId && open,
@@ -144,31 +140,33 @@ export default function ChatClienteCadastroDialog({ open, onOpenChange, clienteI
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-xl w-[95vw] h-[85vh] overflow-hidden p-0">
         <DialogHeader className="p-4 pb-2">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Building2 className="h-4 w-4" />
             {cliente?.nome_fantasia || "Cadastro do Cliente"}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Visualização do cadastro do cliente com dados gerais, anexos e serviços.
+          </DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
-          <div className="flex justify-center py-10">
+          <div className="flex h-full items-center justify-center pb-6">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : cliente ? (
-          <Tabs defaultValue="geral" className="px-4 pb-4">
-            <TabsList className="w-full">
+          <Tabs defaultValue="geral" className="flex h-[calc(85vh-72px)] flex-col px-4 pb-4">
+            <TabsList className="w-full shrink-0">
               <TabsTrigger value="geral" className="flex-1 text-xs">Dados Gerais</TabsTrigger>
               <TabsTrigger value="anexos" className="flex-1 text-xs">Anexos</TabsTrigger>
               <TabsTrigger value="servicos" className="flex-1 text-xs">Serviços / Produtos</TabsTrigger>
             </TabsList>
 
             {/* DADOS GERAIS */}
-            <TabsContent value="geral">
-              <ScrollArea className="max-h-[55vh]">
-                <div className="space-y-4 pr-2">
-                  {/* Empresa */}
+            <TabsContent value="geral" className="mt-3 flex-1 min-h-0">
+              <div className="h-full overflow-y-auto pr-2">
+                <div className="space-y-4">
                   <div className="space-y-2">
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Empresa</h4>
                     <div className="grid grid-cols-2 gap-2 text-sm">
@@ -199,8 +197,7 @@ export default function ChatClienteCadastroDialog({ open, onOpenChange, clienteI
                     )}
                   </div>
 
-                  {/* Contatos */}
-                  <div className="space-y-2">
+                  <div className="space-y-2 pb-2">
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contatos</h4>
                     {contatos.length === 0 ? (
                       <p className="text-xs text-muted-foreground">Nenhum contato cadastrado.</p>
@@ -213,16 +210,14 @@ export default function ChatClienteCadastroDialog({ open, onOpenChange, clienteI
                               <span className="text-sm font-medium text-foreground">{ct.nome}</span>
                               {ct.decisor && <Badge variant="outline" className="text-[10px] h-4">Decisor</Badge>}
                             </div>
-                            {ct.cargo && (
-                              <p className="text-[11px] text-muted-foreground ml-5">{ct.cargo}</p>
-                            )}
+                            {ct.cargo && <p className="text-[11px] text-muted-foreground ml-5">{ct.cargo}</p>}
                             {ct.telefone && (
                               <p className="text-[11px] text-muted-foreground ml-5 flex items-center gap-1">
                                 <Phone className="h-2.5 w-2.5" /> {ct.telefone}
                               </p>
                             )}
                             {ct.email && (
-                              <p className="text-[11px] text-muted-foreground ml-5 flex items-center gap-1">
+                              <p className="text-[11px] text-muted-foreground ml-5 flex items-center gap-1 break-all">
                                 <Mail className="h-2.5 w-2.5" /> {ct.email}
                               </p>
                             )}
@@ -232,13 +227,13 @@ export default function ChatClienteCadastroDialog({ open, onOpenChange, clienteI
                     )}
                   </div>
                 </div>
-              </ScrollArea>
+              </div>
             </TabsContent>
 
             {/* ANEXOS */}
-            <TabsContent value="anexos">
-              <ScrollArea className="max-h-[55vh]">
-                <div className="space-y-2 pr-2">
+            <TabsContent value="anexos" className="mt-3 flex-1 min-h-0">
+              <div className="h-full overflow-y-auto pr-2">
+                <div className="space-y-2 pb-2">
                   {loadingDocs ? (
                     <div className="flex justify-center py-6">
                       <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -263,13 +258,13 @@ export default function ChatClienteCadastroDialog({ open, onOpenChange, clienteI
                     ))
                   )}
                 </div>
-              </ScrollArea>
+              </div>
             </TabsContent>
 
             {/* SERVIÇOS / PRODUTOS */}
-            <TabsContent value="servicos">
-              <ScrollArea className="max-h-[55vh]">
-                <div className="space-y-3 pr-2">
+            <TabsContent value="servicos" className="mt-3 flex-1 min-h-0">
+              <div className="h-full overflow-y-auto pr-2">
+                <div className="space-y-3 pb-2">
                   {loadingServicos ? (
                     <div className="flex justify-center py-6">
                       <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -289,14 +284,12 @@ export default function ChatClienteCadastroDialog({ open, onOpenChange, clienteI
                               </span>
                               <Badge variant="outline" className="text-[10px] h-4">{cf.tipo}</Badge>
                             </div>
-                            {plano?.descricao && (
-                              <p className="text-[11px] text-muted-foreground ml-5">{plano.descricao}</p>
-                            )}
+                            {plano?.descricao && <p className="text-[11px] text-muted-foreground ml-5">{plano.descricao}</p>}
                           </div>
                         );
                       })}
 
-                      {servicos.modulos.length > 0 && (
+                      {servicos?.modulos?.length > 0 && (
                         <div className="space-y-1.5">
                           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Módulos Adicionais</h4>
                           {servicos.modulos.map((m: any, idx: number) => (
@@ -305,9 +298,7 @@ export default function ChatClienteCadastroDialog({ open, onOpenChange, clienteI
                                 <Package className="h-3 w-3 text-muted-foreground" />
                                 <span className="text-sm text-foreground">{m.nome}</span>
                               </div>
-                              {m.quantidade > 1 && (
-                                <Badge variant="secondary" className="text-[10px]">x{m.quantidade}</Badge>
-                              )}
+                              {m.quantidade > 1 && <Badge variant="secondary" className="text-[10px]">x{m.quantidade}</Badge>}
                             </div>
                           ))}
                         </div>
@@ -315,7 +306,7 @@ export default function ChatClienteCadastroDialog({ open, onOpenChange, clienteI
                     </>
                   )}
                 </div>
-              </ScrollArea>
+              </div>
             </TabsContent>
           </Tabs>
         ) : null}
