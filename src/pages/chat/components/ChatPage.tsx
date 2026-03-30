@@ -163,6 +163,10 @@ export default function ChatPage() {
           }}
           onEncerrar={() => setShowEncerrar(true)}
           onTransferir={() => setShowTransferir(true)}
+          onLeaveConversation={() => {
+            setSelectedConversa(null);
+            setTab("meus");
+          }}
         />
 
         <div className="w-[320px] flex-shrink-0 hidden xl:block">

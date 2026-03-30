@@ -1,15 +1,28 @@
 import { useRef, useEffect, useState, useMemo, useCallback, ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Lock, MessageSquare, Download, FileText, FileSpreadsheet, File as FileIcon, Search, X, ChevronUp, ChevronDown, ArrowLeft } from "lucide-react";
+import { Send, Lock, MessageSquare, Download, FileText, FileSpreadsheet, File as FileIcon, Search, X, ChevronUp, ChevronDown, ArrowLeft, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ChatConversa, ChatMensagem, STATUS_COLORS, STATUS_LABELS, ChatStatus } from "../types";
 import { formatarTelefone } from "../helpers";
 import { format } from "date-fns";
 import ChatInputArea from "./ChatInputArea";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 function getDocIcon(nome: string | null) {
   if (!nome) return <FileIcon className="h-4 w-4" />;
@@ -44,13 +57,16 @@ interface Props {
   onIniciarAtendimento: () => void;
   onEncerrar: () => void;
   onTransferir: () => void;
+  onLeaveConversation?: () => void;
   isLoading?: boolean;
 }
 
 export default function ChatMessageArea({
   conversa, mensagens, userId, userName,
-  onSend, onSendMedia, onIniciarAtendimento, onEncerrar, onTransferir, isLoading,
+  onSend, onSendMedia, onIniciarAtendimento, onEncerrar, onTransferir, onLeaveConversation, isLoading,
 }: Props) {
+  const { profile } = useAuth();
+  const qc = useQueryClient();
   // Check if user is a collaborator on this conversation
   const { data: ehColaborador } = useQuery({
     queryKey: ["chat-colaborador", conversa?.id, userId],
@@ -162,7 +178,35 @@ export default function ChatMessageArea({
 
   const podeComentar = conversa.status === "em_atendimento" && (conversa.atendente_id === userId || !!ehColaborador);
   const podeIniciar = conversa.status === "aguardando" || conversa.status === "bot";
+  const isColaboradorNaoResponsavel = !!ehColaborador && conversa.atendente_id !== userId;
   const termoAtivo = buscaAtiva && termoBusca.trim().length > 0;
+
+  async function handleSairConversa() {
+    if (!conversa || !userId) return;
+    try {
+      const { error } = await (supabase as any)
+        .from("chat_conversa_atendentes")
+        .delete()
+        .eq("conversa_id", conversa.id)
+        .eq("user_id", userId);
+      if (error) throw error;
+      const meuNome = (profile as any)?.full_name || "Atendente";
+      await supabase.from("chat_mensagens").insert({
+        conversa_id: conversa.id,
+        tipo: "sistema",
+        conteudo: `${meuNome} saiu da conversa`,
+        remetente: "sistema",
+      });
+      toast.success("Você saiu da conversa");
+      qc.invalidateQueries({ queryKey: ["chat-conversa-atendentes", conversa.id] });
+      qc.invalidateQueries({ queryKey: ["chat-mensagens"] });
+      qc.invalidateQueries({ queryKey: ["chat-conversas"] });
+      qc.invalidateQueries({ queryKey: ["chat-colaborador"] });
+      onLeaveConversation?.();
+    } catch (e: any) {
+      toast.error("Erro ao sair: " + e.message);
+    }
+  }
 
   return (
     <div className="flex-1 flex flex-col bg-background min-w-0">
@@ -240,7 +284,35 @@ export default function ChatMessageArea({
             )}
             {conversa.status === "em_atendimento" && (
               <>
-                <Button size="sm" variant="outline" onClick={onTransferir}>Transferir</Button>
+                {isColaboradorNaoResponsavel && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10 gap-1">
+                        <LogOut className="h-3.5 w-3.5" /> Sair
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Sair da conversa?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Deseja sair desta conversa? Ela continuará ativa para os outros atendentes.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleSairConversa}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Sair
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+                {!isColaboradorNaoResponsavel && (
+                  <Button size="sm" variant="outline" onClick={onTransferir}>Transferir</Button>
+                )}
                 <Button size="sm" variant="destructive" onClick={onEncerrar}>Encerrar</Button>
               </>
             )}
