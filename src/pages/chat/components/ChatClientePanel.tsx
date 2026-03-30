@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
+import ChatAtendentesCard from "./ChatAtendentesCard";
 
 interface Props {
   conversa: ChatConversa | null;
@@ -857,6 +858,14 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
               )}
             </CardContent>
           </Card>
+
+          {/* Atendentes */}
+          {conversa.status === "em_atendimento" && (
+            <ChatAtendentesCard
+              conversaId={conversa.id}
+              atendenteId={conversa.atendente_id}
+            />
+          )}
 
           {/* Quick Actions */}
           <Card className="shadow-none border">

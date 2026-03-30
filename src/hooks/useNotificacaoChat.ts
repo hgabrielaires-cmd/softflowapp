@@ -141,15 +141,23 @@ export function useNotificacaoChat({ userId, conversaAbertaId }: UseNotificacaoC
           // Never notify for triagem (bot) or encerrado
           if (status === "bot" || status === "encerrado") return;
 
+          // Check if user is a collaborator
+          const { count: colabCount } = await (supabase as any)
+            .from("chat_conversa_atendentes")
+            .select("id", { count: "exact", head: true })
+            .eq("conversa_id", msg.conversa_id)
+            .eq("user_id", userId);
+          const ehColaborador = (colabCount || 0) > 0;
+
           // Determine if sound should play
-          const ehMinhaConversa = conv.atendente_id === userId;
+          const ehMinhaConversa = conv.atendente_id === userId || ehColaborador;
           let deveTocarSom = false;
 
           if (status === "aguardando") {
             // Fila: notify everyone
             deveTocarSom = true;
           } else if (status === "em_atendimento" && ehMinhaConversa) {
-            // Only the assigned agent hears it
+            // Only the assigned agent or collaborator hears it
             deveTocarSom = true;
           }
           // Other cases (em_atendimento of another agent, fora_horario): no sound
