@@ -147,7 +147,7 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
 
       const { data } = await supabase
         .from("chat_conversas")
-        .select("id, protocolo, created_at, status, titulo_atendimento, tempo_atendimento_segundos, iniciado_em, atendimento_iniciado_em, atendente:profiles!chat_conversas_atendente_id_fkey(full_name, setor_id), setor:setores!chat_conversas_setor_id_fkey(nome), ticket:tickets!chat_conversas_ticket_id_fkey(numero_exibicao)")
+        .select("id, protocolo, created_at, status, titulo_atendimento, tempo_atendimento_segundos, iniciado_em, atendimento_iniciado_em, nome_cliente, nps_nota, atendente:profiles!chat_conversas_atendente_id_fkey(full_name, setor_id), setor:setores!chat_conversas_setor_id_fkey(nome), ticket:tickets!chat_conversas_ticket_id_fkey(numero_exibicao)")
         .eq("cliente_id", cliente.id)
         .order("created_at", { ascending: false })
         .limit(limit);
