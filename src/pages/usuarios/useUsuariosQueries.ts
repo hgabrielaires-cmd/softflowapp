@@ -113,6 +113,7 @@ export function useUsuariosQueries() {
     users,
     filiais,
     mesasDisponiveis,
+    setoresDisponiveis,
     loading,
     search,
     setSearch,

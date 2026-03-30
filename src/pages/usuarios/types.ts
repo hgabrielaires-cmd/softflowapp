@@ -14,3 +14,8 @@ export interface MesaOption {
   id: string;
   nome: string;
 }
+
+export interface SetorOption {
+  id: string;
+  nome: string;
+}
