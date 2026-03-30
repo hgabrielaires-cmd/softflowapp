@@ -56,7 +56,7 @@ export default function ChatClienteCadastroDialog({ open, onOpenChange, clienteI
         .from("contratos_financeiros")
         .select("id, tipo, plano_id, contrato_id, planos(nome, descricao)")
         .eq("cliente_id", clienteId!)
-        .eq("status", "ativo");
+        .ilike("status", "ativo");
       if (!cfs || cfs.length === 0) return null;
 
       // Get active modules for these contracts
