@@ -33,6 +33,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
   const [inviteTipoTecnico, setInviteTipoTecnico] = useState("interno");
   const [inviteIsVendedor, setInviteIsVendedor] = useState(false);
   const [inviteMesaIds, setInviteMesaIds] = useState<string[]>([]);
+  const [inviteSetorId, setInviteSetorId] = useState("");
   const [inviting, setInviting] = useState(false);
 
   // ── Edit dialog state ──
