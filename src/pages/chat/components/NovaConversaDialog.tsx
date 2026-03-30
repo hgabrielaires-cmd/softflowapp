@@ -212,6 +212,7 @@ export default function NovaConversaDialog({ open, onOpenChange, onConversaCriad
           cliente_id: selectedEmpresa.id,
           contato_id: selectedContato?.id || null,
           ticket_id: selectedTicketId || null,
+          setor_id: setorId,
           status: "em_atendimento",
           atendente_id: user.id,
           canal: "whatsapp",
