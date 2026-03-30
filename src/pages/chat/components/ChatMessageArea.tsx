@@ -57,13 +57,16 @@ interface Props {
   onIniciarAtendimento: () => void;
   onEncerrar: () => void;
   onTransferir: () => void;
+  onLeaveConversation?: () => void;
   isLoading?: boolean;
 }
 
 export default function ChatMessageArea({
   conversa, mensagens, userId, userName,
-  onSend, onSendMedia, onIniciarAtendimento, onEncerrar, onTransferir, isLoading,
+  onSend, onSendMedia, onIniciarAtendimento, onEncerrar, onTransferir, onLeaveConversation, isLoading,
 }: Props) {
+  const { profile } = useAuth();
+  const qc = useQueryClient();
   // Check if user is a collaborator on this conversation
   const { data: ehColaborador } = useQuery({
     queryKey: ["chat-colaborador", conversa?.id, userId],
