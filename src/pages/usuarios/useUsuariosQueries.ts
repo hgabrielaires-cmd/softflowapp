@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppRole, Filial } from "@/lib/supabase-types";
 import { toast } from "sonner";
 import { ITEMS_PER_PAGE } from "./constants";
-import type { UserWithRoles, MesaOption } from "./types";
+import type { UserWithRoles, MesaOption, SetorOption } from "./types";
 
 export function useUsuariosQueries() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
