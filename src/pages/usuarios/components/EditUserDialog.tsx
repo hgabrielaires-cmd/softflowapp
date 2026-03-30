@@ -19,7 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { ROLE_LABELS } from "@/lib/supabase-types";
 import type { AppRole } from "@/lib/supabase-types";
 import { ALL_ROLES, TIPO_TECNICO_OPTIONS } from "../constants";
-import type { UserWithRoles, MesaOption } from "../types";
+import type { UserWithRoles, MesaOption, SetorOption } from "../types";
 import {
   Users,
   KeyRound,
@@ -71,6 +71,8 @@ interface EditUserDialogProps {
   setEditTipoTecnico: (v: string) => void;
   editMesaIds: string[];
   setEditMesaIds: React.Dispatch<React.SetStateAction<string[]>>;
+  editSetorId: string;
+  setEditSetorId: (v: string) => void;
   editDescontoLimiteImp: string;
   setEditDescontoLimiteImp: (v: string) => void;
   editDescontoLimiteMens: string;
@@ -96,6 +98,7 @@ interface EditUserDialogProps {
   // Data
   filiais: Filial[];
   mesasDisponiveis: MesaOption[];
+  setoresDisponiveis: SetorOption[];
 }
 
 export function EditUserDialog({
@@ -115,6 +118,7 @@ export function EditUserDialog({
   editIsTecnico, setEditIsTecnico,
   editTipoTecnico, setEditTipoTecnico,
   editMesaIds, setEditMesaIds,
+  editSetorId, setEditSetorId,
   editDescontoLimiteImp, setEditDescontoLimiteImp,
   editDescontoLimiteMens, setEditDescontoLimiteMens,
   editGestorDesconto, setEditGestorDesconto,
@@ -129,6 +133,7 @@ export function EditUserDialog({
   handleEdit,
   filiais,
   mesasDisponiveis,
+  setoresDisponiveis,
 }: EditUserDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -187,6 +192,17 @@ export function EditUserDialog({
                       <SelectContent>
                         {ALL_ROLES.map((r) => (
                           <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Setor (Departamento)</Label>
+                    <Select value={editSetorId} onValueChange={setEditSetorId}>
+                      <SelectTrigger><SelectValue placeholder="Selecione o setor..." /></SelectTrigger>
+                      <SelectContent>
+                        {setoresDisponiveis.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

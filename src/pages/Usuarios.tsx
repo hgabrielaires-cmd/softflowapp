@@ -218,6 +218,7 @@ export default function Usuarios() {
         inviteIsTecnico={f.inviteIsTecnico} setInviteIsTecnico={f.setInviteIsTecnico}
         inviteTipoTecnico={f.inviteTipoTecnico} setInviteTipoTecnico={f.setInviteTipoTecnico}
         inviteMesaIds={f.inviteMesaIds} setInviteMesaIds={f.setInviteMesaIds}
+        inviteSetorId={f.inviteSetorId} setInviteSetorId={f.setInviteSetorId}
         inviteDescontoLimiteImp={f.inviteDescontoLimiteImp} setInviteDescontoLimiteImp={f.setInviteDescontoLimiteImp}
         inviteDescontoLimiteMens={f.inviteDescontoLimiteMens} setInviteDescontoLimiteMens={f.setInviteDescontoLimiteMens}
         inviteGestorDesconto={f.inviteGestorDesconto} setInviteGestorDesconto={f.setInviteGestorDesconto}
@@ -226,6 +227,7 @@ export default function Usuarios() {
         handleInvite={f.handleInvite}
         filiais={q.filiais}
         mesasDisponiveis={q.mesasDisponiveis}
+        setoresDisponiveis={q.setoresDisponiveis}
       />
 
       {/* ── Edit Dialog ── */}
@@ -246,6 +248,7 @@ export default function Usuarios() {
         editIsTecnico={f.editIsTecnico} setEditIsTecnico={f.setEditIsTecnico}
         editTipoTecnico={f.editTipoTecnico} setEditTipoTecnico={f.setEditTipoTecnico}
         editMesaIds={f.editMesaIds} setEditMesaIds={f.setEditMesaIds}
+        editSetorId={f.editSetorId} setEditSetorId={f.setEditSetorId}
         editDescontoLimiteImp={f.editDescontoLimiteImp} setEditDescontoLimiteImp={f.setEditDescontoLimiteImp}
         editDescontoLimiteMens={f.editDescontoLimiteMens} setEditDescontoLimiteMens={f.setEditDescontoLimiteMens}
         editGestorDesconto={f.editGestorDesconto} setEditGestorDesconto={f.setEditGestorDesconto}
@@ -260,6 +263,7 @@ export default function Usuarios() {
         handleEdit={f.handleEdit}
         filiais={q.filiais}
         mesasDisponiveis={q.mesasDisponiveis}
+        setoresDisponiveis={q.setoresDisponiveis}
       />
     </AppLayout>
   );

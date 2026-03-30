@@ -5,24 +5,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppRole, Filial } from "@/lib/supabase-types";
 import { toast } from "sonner";
 import { ITEMS_PER_PAGE } from "./constants";
-import type { UserWithRoles, MesaOption } from "./types";
+import type { UserWithRoles, MesaOption, SetorOption } from "./types";
 
 export function useUsuariosQueries() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [filiais, setFiliais] = useState<Filial[]>([]);
   const [mesasDisponiveis, setMesasDisponiveis] = useState<MesaOption[]>([]);
+  const [setoresDisponiveis, setSetoresDisponiveis] = useState<SetorOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [filiaisLoaded, setFiliaisLoaded] = useState(false);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   const loadFiliais = useCallback(async () => {
-    const [{ data: fData }, { data: mData }] = await Promise.all([
+    const [{ data: fData }, { data: mData }, { data: sData }] = await Promise.all([
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
       supabase.from("mesas_atendimento").select("id, nome").eq("ativo", true).order("nome"),
+      supabase.from("setores").select("id, nome").eq("ativo", true).order("nome"),
     ]);
     if (fData) setFiliais(fData as Filial[]);
     if (mData) setMesasDisponiveis(mData as MesaOption[]);
+    if (sData) setSetoresDisponiveis(sData as SetorOption[]);
     setFiliaisLoaded(true);
   }, []);
 
@@ -110,6 +113,7 @@ export function useUsuariosQueries() {
     users,
     filiais,
     mesasDisponiveis,
+    setoresDisponiveis,
     loading,
     search,
     setSearch,

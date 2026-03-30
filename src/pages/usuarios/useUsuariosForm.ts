@@ -33,6 +33,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
   const [inviteTipoTecnico, setInviteTipoTecnico] = useState("interno");
   const [inviteIsVendedor, setInviteIsVendedor] = useState(false);
   const [inviteMesaIds, setInviteMesaIds] = useState<string[]>([]);
+  const [inviteSetorId, setInviteSetorId] = useState("");
   const [inviting, setInviting] = useState(false);
 
   // ── Edit dialog state ──
@@ -60,6 +61,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
   const [editTipoTecnico, setEditTipoTecnico] = useState("interno");
   const [editIsVendedor, setEditIsVendedor] = useState(false);
   const [editMesaIds, setEditMesaIds] = useState<string[]>([]);
+  const [editSetorId, setEditSetorId] = useState("");
   const [editActive, setEditActive] = useState(true);
   const [editIsAtendenteChat, setEditIsAtendenteChat] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -136,6 +138,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
         is_tecnico: inviteIsTecnico,
         tipo_tecnico: inviteIsTecnico ? inviteTipoTecnico : null,
         is_vendedor: inviteIsVendedor,
+        setor_id: inviteSetorId || null,
       } as any).eq("user_id", data.user.id);
 
       if (inviteFilialIds.length > 0 && !inviteAcessoGlobal) {
@@ -170,7 +173,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
   }
 
   function resetInviteForm() {
-    setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteFilialIds([]); setInviteAcessoGlobal(false); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteComissaoServ("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone(""); setInviteIsTecnico(false); setInviteTipoTecnico("interno"); setInviteIsVendedor(false); setInviteMesaIds([]);
+    setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteFilialIds([]); setInviteAcessoGlobal(false); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteComissaoServ("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone(""); setInviteIsTecnico(false); setInviteTipoTecnico("interno"); setInviteIsVendedor(false); setInviteMesaIds([]); setInviteSetorId("");
   }
 
   // ── Open edit dialog ──
@@ -198,6 +201,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
     setEditTipoTecnico((user as any).tipo_tecnico || "interno");
     setEditIsVendedor((user as any).is_vendedor ?? false);
     setEditMesaIds((user.mesas_vinculadas || []).map((m) => m.id));
+    setEditSetorId((user as any).setor_id || "");
     setEditActive(user.active);
     setEditIsAtendenteChat((user as any).is_atendente_chat ?? false);
     setOpenEdit(true);
@@ -234,6 +238,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
         is_vendedor: editIsVendedor,
         active: editActive,
         is_atendente_chat: editIsAtendenteChat,
+        setor_id: editSetorId || null,
       } as any).eq("user_id", editingUser.user_id);
 
       if (profileError) throw profileError;
@@ -352,6 +357,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
     inviteTipoTecnico, setInviteTipoTecnico,
     inviteIsVendedor, setInviteIsVendedor,
     inviteMesaIds, setInviteMesaIds,
+    inviteSetorId, setInviteSetorId,
     inviting,
     handleInvite,
 
@@ -380,6 +386,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
     editTipoTecnico, setEditTipoTecnico,
     editIsVendedor, setEditIsVendedor,
     editMesaIds, setEditMesaIds,
+    editSetorId, setEditSetorId,
     editActive, setEditActive,
     editIsAtendenteChat, setEditIsAtendenteChat,
     saving,

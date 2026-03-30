@@ -18,7 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { ROLE_LABELS } from "@/lib/supabase-types";
 import type { AppRole } from "@/lib/supabase-types";
 import { ALL_ROLES, TIPO_TECNICO_OPTIONS } from "../constants";
-import type { MesaOption } from "../types";
+import type { MesaOption, SetorOption } from "../types";
 import {
   Plus,
   Search,
@@ -68,6 +68,8 @@ interface CreateUserDialogProps {
   setInviteTipoTecnico: (v: string) => void;
   inviteMesaIds: string[];
   setInviteMesaIds: React.Dispatch<React.SetStateAction<string[]>>;
+  inviteSetorId: string;
+  setInviteSetorId: (v: string) => void;
   inviteDescontoLimiteImp: string;
   setInviteDescontoLimiteImp: (v: string) => void;
   inviteDescontoLimiteMens: string;
@@ -81,6 +83,7 @@ interface CreateUserDialogProps {
   // Data
   filiais: Filial[];
   mesasDisponiveis: MesaOption[];
+  setoresDisponiveis: SetorOption[];
 }
 
 export function CreateUserDialog({
@@ -100,6 +103,7 @@ export function CreateUserDialog({
   inviteIsTecnico, setInviteIsTecnico,
   inviteTipoTecnico, setInviteTipoTecnico,
   inviteMesaIds, setInviteMesaIds,
+  inviteSetorId, setInviteSetorId,
   inviteDescontoLimiteImp, setInviteDescontoLimiteImp,
   inviteDescontoLimiteMens, setInviteDescontoLimiteMens,
   inviteGestorDesconto, setInviteGestorDesconto,
@@ -108,6 +112,7 @@ export function CreateUserDialog({
   handleInvite,
   filiais,
   mesasDisponiveis,
+  setoresDisponiveis,
 }: CreateUserDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -154,6 +159,17 @@ export function CreateUserDialog({
                 <SelectContent>
                   {ALL_ROLES.map((r) => (
                     <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Setor (Departamento)</Label>
+              <Select value={inviteSetorId} onValueChange={setInviteSetorId}>
+                <SelectTrigger><SelectValue placeholder="Selecione o setor..." /></SelectTrigger>
+                <SelectContent>
+                  {setoresDisponiveis.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
