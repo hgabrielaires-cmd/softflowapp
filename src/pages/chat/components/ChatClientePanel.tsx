@@ -1070,6 +1070,12 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
           )}
         </SheetContent>
       </Sheet>
+
+      <ChatClienteCadastroDialog
+        open={cadastroDialogOpen}
+        onOpenChange={setCadastroDialogOpen}
+        clienteId={clienteIdAtual}
+      />
     </>
   );
 }
