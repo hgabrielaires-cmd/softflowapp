@@ -260,6 +260,23 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
                             ) : "—"}
                           </td>
                           <td className="px-3 py-2">{badgeFn(c.status)}</td>
+                          <td className="px-3 py-2 text-center">
+                            {c.nps_nota ? (
+                              <div className="flex items-center justify-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                  <Star
+                                    key={s}
+                                    className={cn(
+                                      "h-3 w-3",
+                                      s <= c.nps_nota! ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"
+                                    )}
+                                  />
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </td>
                           <td className="px-3 py-2 text-xs">{formatDuracao(c.tempo_atendimento_segundos)}</td>
                           <td className="px-3 py-2 text-center">
                             <Button variant="ghost" size="icon" className="h-7 w-7" title="Ver mensagens" onClick={() => abrirMensagens(c)}>
