@@ -295,6 +295,7 @@ export default function ChatDashboard({ onVerConversa }: Props) {
               <TableRow>
                 <TableHead className="text-xs">Atendente</TableHead>
                 <TableHead className="text-xs text-right">Atendimentos</TableHead>
+                <TableHead className="text-xs text-right">Como convidado</TableHead>
                 <TableHead className="text-xs text-right">Tempo médio</TableHead>
                 <TableHead className="text-xs text-right">NPS</TableHead>
               </TableRow>
@@ -304,12 +305,24 @@ export default function ChatDashboard({ onVerConversa }: Props) {
                 <TableRow key={i}>
                   <TableCell className="text-sm font-medium">{r.nome}</TableCell>
                   <TableCell className="text-sm text-right">{r.total}</TableCell>
+                  <TableCell className="text-sm text-right">
+                    {r.convidado > 0 ? (
+                      <Badge
+                        className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[10px] px-1.5 py-0"
+                        title={`${r.convidado} atendimento${r.convidado > 1 ? "s" : ""} como colaborador convidado`}
+                      >
+                        {r.convidado}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">0</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-sm text-right">{r.total > 0 ? formatDuracao(Math.round(r.tempo / r.total)) : "—"}</TableCell>
                   <TableCell className="text-sm text-right">{r.npsCount > 0 ? (r.npsSum / r.npsCount).toFixed(1) : "—"}</TableCell>
                 </TableRow>
               ))}
               {ranking.length === 0 && (
-                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground text-sm">Sem dados</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground text-sm">Sem dados</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
