@@ -151,19 +151,38 @@ export default function ChatDashboard({ onVerConversa }: Props) {
 
   // Ranking
   const ranking = useMemo(() => {
-    const map: Record<string, { nome: string; avatar: string | null; total: number; tempo: number; npsSum: number; npsCount: number }> = {};
+    const map: Record<string, { nome: string; avatar: string | null; total: number; convidado: number; tempo: number; npsSum: number; npsCount: number }> = {};
+
+    // Count as primary owner
     conversas.forEach((c: any) => {
       if (!c.atendente_id) return;
       const at = c.atendente as any;
       if (!map[c.atendente_id]) {
-        map[c.atendente_id] = { nome: at?.full_name || "—", avatar: at?.avatar_url, total: 0, tempo: 0, npsSum: 0, npsCount: 0 };
+        map[c.atendente_id] = { nome: at?.full_name || "—", avatar: at?.avatar_url, total: 0, convidado: 0, tempo: 0, npsSum: 0, npsCount: 0 };
       }
       map[c.atendente_id].total++;
       if (c.tempo_atendimento_segundos) map[c.atendente_id].tempo += c.tempo_atendimento_segundos;
       if (c.nps_nota != null) { map[c.atendente_id].npsSum += c.nps_nota; map[c.atendente_id].npsCount++; }
     });
+
+    // Count as collaborator
+    colaboracoes.forEach((colab: any) => {
+      const uid = colab.user_id;
+      const conv = colab.conversa;
+      if (!uid || !conv) return;
+      // Skip if already the primary owner (avoid double-counting)
+      if (conv.atendente_id === uid) return;
+      if (!map[uid]) {
+        // Need to find name from atendentes list
+        const at = atendentes?.find((a: any) => a.user_id === uid);
+        map[uid] = { nome: at?.full_name || "—", avatar: at?.avatar_url || null, total: 0, convidado: 0, tempo: 0, npsSum: 0, npsCount: 0 };
+      }
+      map[uid].total++;
+      map[uid].convidado++;
+    });
+
     return Object.values(map).sort((a, b) => b.total - a.total);
-  }, [conversas]);
+  }, [conversas, colaboracoes, atendentes]);
 
   // NPS ruim
   const npsRuim = useMemo(() =>
