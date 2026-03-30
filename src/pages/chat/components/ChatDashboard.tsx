@@ -76,6 +76,32 @@ export default function ChatDashboard({ onVerConversa }: Props) {
     },
   });
 
+  // Fetch collaborator participations for the period
+  const { data: colaboracoes = [] } = useQuery({
+    queryKey: ["chat-dashboard-colab", dataInicio, setorFiltro],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("chat_conversa_atendentes")
+        .select(`
+          user_id,
+          conversa_id,
+          entrou_em,
+          conversa:chat_conversas!inner(
+            id, atendente_id, status, created_at,
+            tempo_atendimento_segundos, nps_nota, setor_id
+          )
+        `)
+        .gte("entrou_em", dataInicio);
+      if (error) throw error;
+
+      let result = (data || []) as any[];
+      if (setorFiltro !== "todos") {
+        result = result.filter((c: any) => c.conversa?.setor_id === setorFiltro);
+      }
+      return result;
+    },
+  });
+
   // KPIs
   const total = conversas.length;
   const encerrados = conversas.filter((c: any) => c.status === "encerrado");
