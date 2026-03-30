@@ -44,7 +44,7 @@ interface EmpresaContato {
   empresa_cnpj: string;
 }
 
-export default function ChatClientePanel({ conversa, onSelectHistorico }: Props) {
+export default function ChatClientePanel({ conversa, onSelectHistorico, onLeaveConversation }: Props) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -865,6 +865,7 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
             <ChatAtendentesCard
               conversaId={conversa.id}
               atendenteId={conversa.atendente_id}
+              onLeaveConversation={onLeaveConversation}
             />
           )}
 
