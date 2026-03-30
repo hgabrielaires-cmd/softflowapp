@@ -34,8 +34,14 @@ export function usePresenca() {
     async (newStatus: PresencaStatus) => {
       setStatusState(newStatus);
       await upsertPresenca(newStatus);
+      // Broadcast para atualizar outros clientes instantaneamente
+      await supabase.channel('presenca-broadcast').send({
+        type: 'broadcast',
+        event: 'status_changed',
+        payload: { user_id: user?.id, status: newStatus },
+      });
     },
-    [upsertPresenca]
+    [upsertPresenca, user]
   );
 
   // Heartbeat: update last_heartbeat every 30s when online
