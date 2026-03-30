@@ -19,7 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { ROLE_LABELS } from "@/lib/supabase-types";
 import type { AppRole } from "@/lib/supabase-types";
 import { ALL_ROLES, TIPO_TECNICO_OPTIONS } from "../constants";
-import type { UserWithRoles, MesaOption } from "../types";
+import type { UserWithRoles, MesaOption, SetorOption } from "../types";
 import {
   Users,
   KeyRound,
