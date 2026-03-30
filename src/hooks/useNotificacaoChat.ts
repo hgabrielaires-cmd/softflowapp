@@ -185,6 +185,7 @@ export function useNotificacaoChat({ userId, conversaAbertaId }: UseNotificacaoC
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "chat_conversas", filter: "status=eq.aguardando" },
         () => {
+          // Fila/aguardando: notify all agents
           if (getPref(userId, "som")) tocarBip();
           if (!document.hasFocus()) startTitleBlink();
         },
