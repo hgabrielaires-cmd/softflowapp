@@ -274,7 +274,7 @@ export default function ChatClienteCadastroDialog({ open, onOpenChange, clienteI
                     <div className="flex justify-center py-6">
                       <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                     </div>
-                  ) : !servicos || servicos.planos.length === 0 ? (
+                  ) : !servicos?.planos?.length ? (
                     <p className="text-xs text-muted-foreground text-center py-6">Nenhum serviço/produto ativo.</p>
                   ) : (
                     <>
