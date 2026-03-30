@@ -18,12 +18,14 @@ export function useUsuariosQueries() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const loadFiliais = useCallback(async () => {
-    const [{ data: fData }, { data: mData }] = await Promise.all([
+    const [{ data: fData }, { data: mData }, { data: sData }] = await Promise.all([
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
       supabase.from("mesas_atendimento").select("id, nome").eq("ativo", true).order("nome"),
+      supabase.from("setores").select("id, nome").eq("ativo", true).order("nome"),
     ]);
     if (fData) setFiliais(fData as Filial[]);
     if (mData) setMesasDisponiveis(mData as MesaOption[]);
+    if (sData) setSetoresDisponiveis(sData as SetorOption[]);
     setFiliaisLoaded(true);
   }, []);
 
