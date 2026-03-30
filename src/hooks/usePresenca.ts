@@ -8,7 +8,7 @@ import {
 } from "@/lib/presenca";
 
 export function usePresenca() {
-  const { user, profile } = useAuth();
+  const { user, profile, session } = useAuth();
   const [status, setStatusState] = useState<PresencaStatus>("offline");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -33,6 +33,13 @@ export function usePresenca() {
   const setStatus = useCallback(
     async (newStatus: PresencaStatus) => {
       setStatusState(newStatus);
+      if (newStatus === "offline") {
+        try {
+          sessionStorage.removeItem("softflow_presenca_restore");
+        } catch {
+          // ignore sessionStorage errors
+        }
+      }
       await upsertPresenca(newStatus);
       // Broadcast para atualizar outros clientes instantaneamente
       await supabase.channel('presenca-broadcast').send({
@@ -43,6 +50,37 @@ export function usePresenca() {
     },
     [upsertPresenca, user]
   );
+
+  const persistOfflineOnExit = useCallback(() => {
+    if (!user || !session?.access_token || !isAtendente || status === "offline") return;
+
+    const nowIso = new Date().toISOString();
+
+    try {
+      sessionStorage.setItem("softflow_presenca_restore", status);
+    } catch {
+      // ignore sessionStorage errors
+    }
+
+    void fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/atendente_presenca?user_id=eq.${encodeURIComponent(user.id)}`,
+      {
+        method: "PATCH",
+        keepalive: true,
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({
+          status: "offline",
+          last_heartbeat: nowIso,
+          updated_at: nowIso,
+        }),
+      }
+    ).catch(() => undefined);
+  }, [isAtendente, session?.access_token, status, user]);
 
   // Heartbeat: update last_heartbeat when online
   useEffect(() => {
@@ -71,11 +109,40 @@ export function usePresenca() {
     };
   }, [status, user]);
 
+  useEffect(() => {
+    if (!user || !isAtendente) return;
+
+    const handlePageExit = () => {
+      persistOfflineOnExit();
+    };
+
+    window.addEventListener("pagehide", handlePageExit);
+    window.addEventListener("beforeunload", handlePageExit);
+
+    return () => {
+      window.removeEventListener("pagehide", handlePageExit);
+      window.removeEventListener("beforeunload", handlePageExit);
+    };
+  }, [isAtendente, persistOfflineOnExit, user]);
+
   // On mount: restore or correct status
   useEffect(() => {
     if (!user) return;
 
     (async () => {
+      try {
+        const restoreStatus = sessionStorage.getItem("softflow_presenca_restore");
+        sessionStorage.removeItem("softflow_presenca_restore");
+
+        if (restoreStatus === "online" || restoreStatus === "pausa") {
+          setStatusState(restoreStatus);
+          await upsertPresenca(restoreStatus);
+          return;
+        }
+      } catch {
+        // ignore sessionStorage errors
+      }
+
       const { data } = await supabase
         .from("atendente_presenca")
         .select("status, last_heartbeat")
