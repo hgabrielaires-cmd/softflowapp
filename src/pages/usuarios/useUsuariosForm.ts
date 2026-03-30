@@ -357,6 +357,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
     inviteTipoTecnico, setInviteTipoTecnico,
     inviteIsVendedor, setInviteIsVendedor,
     inviteMesaIds, setInviteMesaIds,
+    inviteSetorId, setInviteSetorId,
     inviting,
     handleInvite,
 
