@@ -98,6 +98,7 @@ interface EditUserDialogProps {
   // Data
   filiais: Filial[];
   mesasDisponiveis: MesaOption[];
+  setoresDisponiveis: SetorOption[];
 }
 
 export function EditUserDialog({
