@@ -76,6 +76,32 @@ export default function ChatDashboard({ onVerConversa }: Props) {
     },
   });
 
+  // Fetch collaborator participations for the period
+  const { data: colaboracoes = [] } = useQuery({
+    queryKey: ["chat-dashboard-colab", dataInicio, setorFiltro],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("chat_conversa_atendentes")
+        .select(`
+          user_id,
+          conversa_id,
+          entrou_em,
+          conversa:chat_conversas!inner(
+            id, atendente_id, status, created_at,
+            tempo_atendimento_segundos, nps_nota, setor_id
+          )
+        `)
+        .gte("entrou_em", dataInicio);
+      if (error) throw error;
+
+      let result = (data || []) as any[];
+      if (setorFiltro !== "todos") {
+        result = result.filter((c: any) => c.conversa?.setor_id === setorFiltro);
+      }
+      return result;
+    },
+  });
+
   // KPIs
   const total = conversas.length;
   const encerrados = conversas.filter((c: any) => c.status === "encerrado");
@@ -125,19 +151,38 @@ export default function ChatDashboard({ onVerConversa }: Props) {
 
   // Ranking
   const ranking = useMemo(() => {
-    const map: Record<string, { nome: string; avatar: string | null; total: number; tempo: number; npsSum: number; npsCount: number }> = {};
+    const map: Record<string, { nome: string; avatar: string | null; total: number; convidado: number; tempo: number; npsSum: number; npsCount: number }> = {};
+
+    // Count as primary owner
     conversas.forEach((c: any) => {
       if (!c.atendente_id) return;
       const at = c.atendente as any;
       if (!map[c.atendente_id]) {
-        map[c.atendente_id] = { nome: at?.full_name || "—", avatar: at?.avatar_url, total: 0, tempo: 0, npsSum: 0, npsCount: 0 };
+        map[c.atendente_id] = { nome: at?.full_name || "—", avatar: at?.avatar_url, total: 0, convidado: 0, tempo: 0, npsSum: 0, npsCount: 0 };
       }
       map[c.atendente_id].total++;
       if (c.tempo_atendimento_segundos) map[c.atendente_id].tempo += c.tempo_atendimento_segundos;
       if (c.nps_nota != null) { map[c.atendente_id].npsSum += c.nps_nota; map[c.atendente_id].npsCount++; }
     });
+
+    // Count as collaborator
+    colaboracoes.forEach((colab: any) => {
+      const uid = colab.user_id;
+      const conv = colab.conversa;
+      if (!uid || !conv) return;
+      // Skip if already the primary owner (avoid double-counting)
+      if (conv.atendente_id === uid) return;
+      if (!map[uid]) {
+        // Need to find name from atendentes list
+        const at = atendentes?.find((a: any) => a.user_id === uid);
+        map[uid] = { nome: at?.full_name || "—", avatar: at?.avatar_url || null, total: 0, convidado: 0, tempo: 0, npsSum: 0, npsCount: 0 };
+      }
+      map[uid].total++;
+      map[uid].convidado++;
+    });
+
     return Object.values(map).sort((a, b) => b.total - a.total);
-  }, [conversas]);
+  }, [conversas, colaboracoes, atendentes]);
 
   // NPS ruim
   const npsRuim = useMemo(() =>
@@ -250,6 +295,7 @@ export default function ChatDashboard({ onVerConversa }: Props) {
               <TableRow>
                 <TableHead className="text-xs">Atendente</TableHead>
                 <TableHead className="text-xs text-right">Atendimentos</TableHead>
+                <TableHead className="text-xs text-right">Como convidado</TableHead>
                 <TableHead className="text-xs text-right">Tempo médio</TableHead>
                 <TableHead className="text-xs text-right">NPS</TableHead>
               </TableRow>
@@ -259,12 +305,24 @@ export default function ChatDashboard({ onVerConversa }: Props) {
                 <TableRow key={i}>
                   <TableCell className="text-sm font-medium">{r.nome}</TableCell>
                   <TableCell className="text-sm text-right">{r.total}</TableCell>
+                  <TableCell className="text-sm text-right">
+                    {r.convidado > 0 ? (
+                      <Badge
+                        className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[10px] px-1.5 py-0"
+                        title={`${r.convidado} atendimento${r.convidado > 1 ? "s" : ""} como colaborador convidado`}
+                      >
+                        {r.convidado}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">0</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-sm text-right">{r.total > 0 ? formatDuracao(Math.round(r.tempo / r.total)) : "—"}</TableCell>
                   <TableCell className="text-sm text-right">{r.npsCount > 0 ? (r.npsSum / r.npsCount).toFixed(1) : "—"}</TableCell>
                 </TableRow>
               ))}
               {ranking.length === 0 && (
-                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground text-sm">Sem dados</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground text-sm">Sem dados</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
