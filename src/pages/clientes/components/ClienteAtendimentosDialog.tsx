@@ -129,12 +129,12 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
   useEffect(() => {
     if (!open || !cliente?.id) {
       setConversas([]);
-      setLimit(10);
+      setPage(1);
       setTotal(0);
       return;
     }
     fetchConversas();
-  }, [open, cliente?.id, limit]);
+  }, [open, cliente?.id, page]);
 
   async function fetchConversas() {
     if (!cliente?.id) return;
