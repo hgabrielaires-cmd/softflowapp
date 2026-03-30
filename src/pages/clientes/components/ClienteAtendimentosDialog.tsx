@@ -22,8 +22,10 @@ interface Conversa {
   status: string | null;
   titulo_atendimento: string | null;
   tempo_atendimento_segundos: number | null;
-  atendente: { full_name: string } | null;
+  iniciado_em: string | null;
+  atendente: { full_name: string; setor_id?: string | null } | null;
   setor: { nome: string } | null;
+  ticket: { numero_exibicao: string } | null;
 }
 
 interface Mensagem {
