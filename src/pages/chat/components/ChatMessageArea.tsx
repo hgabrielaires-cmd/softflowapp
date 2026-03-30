@@ -1,4 +1,6 @@
 import { useRef, useEffect, useState, useMemo, useCallback, ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Lock, MessageSquare, Download, FileText, FileSpreadsheet, File as FileIcon, Search, X, ChevronUp, ChevronDown, ArrowLeft } from "lucide-react";
