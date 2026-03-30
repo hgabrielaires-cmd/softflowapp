@@ -201,6 +201,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
     setEditTipoTecnico((user as any).tipo_tecnico || "interno");
     setEditIsVendedor((user as any).is_vendedor ?? false);
     setEditMesaIds((user.mesas_vinculadas || []).map((m) => m.id));
+    setEditSetorId((user as any).setor_id || "");
     setEditActive(user.active);
     setEditIsAtendenteChat((user as any).is_atendente_chat ?? false);
     setOpenEdit(true);
