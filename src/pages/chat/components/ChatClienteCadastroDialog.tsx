@@ -274,11 +274,11 @@ export default function ChatClienteCadastroDialog({ open, onOpenChange, clienteI
                     <div className="flex justify-center py-6">
                       <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                     </div>
-                  ) : !servicos || servicos.contratos.length === 0 ? (
+                  ) : !servicos || servicos.planos.length === 0 ? (
                     <p className="text-xs text-muted-foreground text-center py-6">Nenhum serviço/produto ativo.</p>
                   ) : (
                     <>
-                      {servicos.contratos.map((cf: any) => {
+                      {servicos.planos.map((cf: any) => {
                         const plano = cf.planos as any;
                         return (
                           <div key={cf.id} className="bg-muted/40 rounded-md p-3 space-y-1.5">
@@ -299,10 +299,15 @@ export default function ChatClienteCadastroDialog({ open, onOpenChange, clienteI
                       {servicos.modulos.length > 0 && (
                         <div className="space-y-1.5">
                           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Módulos Adicionais</h4>
-                          {servicos.modulos.map((m: any) => (
-                            <div key={m.id} className="flex items-center gap-2 bg-muted/40 rounded-md px-3 py-2">
-                              <Package className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-sm text-foreground">{m.nome}</span>
+                          {servicos.modulos.map((m: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between bg-muted/40 rounded-md px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <Package className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-sm text-foreground">{m.nome}</span>
+                              </div>
+                              {m.quantidade > 1 && (
+                                <Badge variant="secondary" className="text-[10px]">x{m.quantidade}</Badge>
+                              )}
                             </div>
                           ))}
                         </div>
