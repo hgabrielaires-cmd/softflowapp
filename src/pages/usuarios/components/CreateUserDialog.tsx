@@ -163,6 +163,17 @@ export function CreateUserDialog({
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label>Setor (Departamento)</Label>
+              <Select value={inviteSetorId} onValueChange={setInviteSetorId}>
+                <SelectTrigger><SelectValue placeholder="Selecione o setor..." /></SelectTrigger>
+                <SelectContent>
+                  {setoresDisponiveis.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           {/* Filiais */}
           <div className="rounded-lg border border-border p-3 space-y-3">

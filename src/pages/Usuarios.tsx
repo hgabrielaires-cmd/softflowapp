@@ -248,6 +248,7 @@ export default function Usuarios() {
         editIsTecnico={f.editIsTecnico} setEditIsTecnico={f.setEditIsTecnico}
         editTipoTecnico={f.editTipoTecnico} setEditTipoTecnico={f.setEditTipoTecnico}
         editMesaIds={f.editMesaIds} setEditMesaIds={f.setEditMesaIds}
+        editSetorId={f.editSetorId} setEditSetorId={f.setEditSetorId}
         editDescontoLimiteImp={f.editDescontoLimiteImp} setEditDescontoLimiteImp={f.setEditDescontoLimiteImp}
         editDescontoLimiteMens={f.editDescontoLimiteMens} setEditDescontoLimiteMens={f.setEditDescontoLimiteMens}
         editGestorDesconto={f.editGestorDesconto} setEditGestorDesconto={f.setEditGestorDesconto}
@@ -262,6 +263,7 @@ export default function Usuarios() {
         handleEdit={f.handleEdit}
         filiais={q.filiais}
         mesasDisponiveis={q.mesasDisponiveis}
+        setoresDisponiveis={q.setoresDisponiveis}
       />
     </AppLayout>
   );
