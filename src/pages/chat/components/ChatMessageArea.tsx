@@ -160,7 +160,7 @@ export default function ChatMessageArea({
     );
   }
 
-  const podeComentar = conversa.status === "em_atendimento" && conversa.atendente_id === userId;
+  const podeComentar = conversa.status === "em_atendimento" && (conversa.atendente_id === userId || !!ehColaborador);
   const podeIniciar = conversa.status === "aguardando" || conversa.status === "bot";
   const termoAtivo = buscaAtiva && termoBusca.trim().length > 0;
 
