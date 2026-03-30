@@ -654,9 +654,13 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
                     </div>
                   )}
                   <div className="flex items-center gap-2 mt-1">
-                    <a href={`/clientes`} className="text-primary hover:underline flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setCadastroDialogOpen(true)}
+                      className="text-primary hover:underline flex items-center gap-1 text-xs bg-transparent border-none p-0 cursor-pointer"
+                    >
                       Ver cadastro <ExternalLink className="h-3 w-3" />
-                    </a>
+                    </button>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
