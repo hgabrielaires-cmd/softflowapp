@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Headset, Eye, Loader2, MessageSquare, Search, X, Ticket, PhoneOutgoing, PhoneIncoming } from "lucide-react";
+import { Headset, Eye, Loader2, MessageSquare, Search, X, Ticket, PhoneOutgoing, PhoneIncoming, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
