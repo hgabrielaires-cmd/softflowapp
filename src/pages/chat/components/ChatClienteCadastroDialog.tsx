@@ -38,7 +38,8 @@ export default function ChatClienteCadastroDialog({ open, onOpenChange, clienteI
         .select("*")
         .eq("cliente_id", clienteId!)
         .eq("ativo", true)
-        .order("decisor", { ascending: false });
+        .order("decisor", { ascending: false })
+        .limit(50);
       return data || [];
     },
     enabled: !!clienteId && open,
