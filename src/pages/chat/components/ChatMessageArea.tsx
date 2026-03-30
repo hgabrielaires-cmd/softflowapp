@@ -1,15 +1,28 @@
 import { useRef, useEffect, useState, useMemo, useCallback, ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Lock, MessageSquare, Download, FileText, FileSpreadsheet, File as FileIcon, Search, X, ChevronUp, ChevronDown, ArrowLeft } from "lucide-react";
+import { Send, Lock, MessageSquare, Download, FileText, FileSpreadsheet, File as FileIcon, Search, X, ChevronUp, ChevronDown, ArrowLeft, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ChatConversa, ChatMensagem, STATUS_COLORS, STATUS_LABELS, ChatStatus } from "../types";
 import { formatarTelefone } from "../helpers";
 import { format } from "date-fns";
 import ChatInputArea from "./ChatInputArea";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 function getDocIcon(nome: string | null) {
   if (!nome) return <FileIcon className="h-4 w-4" />;
