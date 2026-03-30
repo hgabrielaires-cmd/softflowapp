@@ -4819,6 +4819,7 @@ export type Database = {
           permite_ver_valores_projeto: boolean
           permitir_cnpj_duplicado: boolean | null
           recebe_comissao: boolean
+          setor_id: string | null
           telefone: string | null
           tipo_tecnico: string | null
           updated_at: string
@@ -4856,6 +4857,7 @@ export type Database = {
           permite_ver_valores_projeto?: boolean
           permitir_cnpj_duplicado?: boolean | null
           recebe_comissao?: boolean
+          setor_id?: string | null
           telefone?: string | null
           tipo_tecnico?: string | null
           updated_at?: string
@@ -4893,6 +4895,7 @@ export type Database = {
           permite_ver_valores_projeto?: boolean
           permitir_cnpj_duplicado?: boolean | null
           recebe_comissao?: boolean
+          setor_id?: string | null
           telefone?: string | null
           tipo_tecnico?: string | null
           updated_at?: string
@@ -4925,6 +4928,13 @@ export type Database = {
             columns: ["mesa_favorita_id"]
             isOneToOne: false
             referencedRelation: "mesas_atendimento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_setor_id_fkey"
+            columns: ["setor_id"]
+            isOneToOne: false
+            referencedRelation: "setores"
             referencedColumns: ["id"]
           },
         ]
