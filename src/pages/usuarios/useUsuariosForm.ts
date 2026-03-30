@@ -138,6 +138,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
         is_tecnico: inviteIsTecnico,
         tipo_tecnico: inviteIsTecnico ? inviteTipoTecnico : null,
         is_vendedor: inviteIsVendedor,
+        setor_id: inviteSetorId || null,
       } as any).eq("user_id", data.user.id);
 
       if (inviteFilialIds.length > 0 && !inviteAcessoGlobal) {
