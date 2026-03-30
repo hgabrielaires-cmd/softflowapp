@@ -180,8 +180,8 @@ export default function NovaConversaDialog({ open, onOpenChange, onConversaCriad
 
     setCriando(true);
     try {
-      // Get instance
-      const { instancia } = await getInstanciaDoUsuario(user.id);
+      // Nova conversa sempre usa instância Helpdesk
+      const instancia = "Helpdesk";
 
       // Create conversa
       const agora = new Date().toISOString();
