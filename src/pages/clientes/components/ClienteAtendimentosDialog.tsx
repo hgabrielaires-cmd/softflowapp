@@ -238,6 +238,7 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
                         <tr key={c.id} className="hover:bg-muted/30 transition-colors">
                           <td className="px-3 py-2 font-mono text-xs">{c.protocolo || "—"}</td>
                           <td className="px-3 py-2 text-xs">{format(new Date(c.created_at), "dd/MM/yyyy HH:mm")}</td>
+                          <td className="px-3 py-2 text-xs">{c.nome_cliente || "—"}</td>
                           <td className="px-3 py-2 text-xs">{(c.atendente as any)?.full_name || "—"}</td>
                           <td className="px-3 py-2 text-xs">{setorNome}</td>
                           <td className="px-3 py-2">
