@@ -13,7 +13,7 @@ interface AtendentesPanelProps {
   loading?: boolean;
 }
 
-const HEARTBEAT_TIMEOUT_MS = 5 * 60 * 1000;
+const HEARTBEAT_TIMEOUT_MS = 90_000;
 
 function resolveStatus(
   status: string | null,
