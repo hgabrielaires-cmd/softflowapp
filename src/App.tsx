@@ -1,3 +1,4 @@
+import React, { Suspense } from "react";
 import { useVersionCheck } from "@/hooks/useVersionCheck";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -6,52 +7,69 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Usuarios from "./pages/Usuarios";
-import Perfil from "./pages/Perfil";
-import Filiais from "./pages/Filiais";
-import Financeiro from "./pages/Financeiro";
 import { ComingSoon } from "./components/ComingSoon";
-import Clientes from "./pages/Clientes";
-import Contatos from "@/pages/Contatos";
-import Planos from "./pages/Planos";
-import Pedidos from "./pages/Pedidos";
-import Contratos from "./pages/Contratos";
-import Notificacoes from "./pages/Notificacoes";
-import ModelosContrato from "./pages/ModelosContrato";
-import PerfisUsuario from "./pages/PerfisUsuario";
-import Fornecedores from "./pages/Fornecedores";
-import Servicos from "./pages/Servicos";
-import Integracoes from "./pages/Integracoes";
-import ResetPassword from "./pages/ResetPassword";
-import NotFound from "./pages/NotFound";
-import Agenda from "./pages/Agenda";
-import TrocarSenha from "./pages/TrocarSenha";
-import MesasAtendimento from "./pages/MesasAtendimento";
-import JornadaImplantacao from "./pages/JornadaImplantacao";
-import PainelAtendimento from "./pages/PainelAtendimento";
-import EtapasPainel from "./pages/EtapasPainel";
-import DashboardFinanceiro from "./pages/DashboardFinanceiro";
-import DashboardAtendimento from "./pages/DashboardAtendimento";
-import DashboardChatAtendimento from "./pages/DashboardChatAtendimento";
-import Segmentos from "./pages/Segmentos";
-import Setores from "./pages/Setores";
-import Automacoes from "./pages/Automacoes";
-import Faturamento from "./pages/Faturamento";
-import ConfigurarFaturamento from "./pages/configurar-faturamento/components/ConfigurarFaturamento";
-import CrmParametros from "./pages/crm-parametros/CrmParametros";
-import CrmPipeline from "./pages/CrmPipeline";
-import Tickets from "./pages/Tickets";
-import TicketNovo from "./pages/TicketNovo";
-import HelpdeskParametros from "./pages/HelpdeskParametros";
-import TesteAsaas from "./pages/TesteAsaas";
-import AgendaCrm from "./pages/AgendaCrm";
-import DashboardCrm from "./pages/DashboardCrm";
-import Chat from "./pages/Chat";
-import ChatParametros from "./pages/chat-parametros";
 
-const queryClient = new QueryClient();
+// ── Lazy-loaded pages ────────────────────────────────────────────────────────
+const Login = React.lazy(() => import("./pages/Login"));
+const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
+const TrocarSenha = React.lazy(() => import("./pages/TrocarSenha"));
+const NotFound = React.lazy(() => import("./pages/NotFound"));
+const Dashboard = React.lazy(() => import("./pages/Dashboard"));
+const Usuarios = React.lazy(() => import("./pages/Usuarios"));
+const Perfil = React.lazy(() => import("./pages/Perfil"));
+const Filiais = React.lazy(() => import("./pages/Filiais"));
+const Financeiro = React.lazy(() => import("./pages/Financeiro"));
+const Clientes = React.lazy(() => import("./pages/Clientes"));
+const Contatos = React.lazy(() => import("@/pages/Contatos"));
+const Planos = React.lazy(() => import("./pages/Planos"));
+const Pedidos = React.lazy(() => import("./pages/Pedidos"));
+const Contratos = React.lazy(() => import("./pages/Contratos"));
+const Notificacoes = React.lazy(() => import("./pages/Notificacoes"));
+const ModelosContrato = React.lazy(() => import("./pages/ModelosContrato"));
+const PerfisUsuario = React.lazy(() => import("./pages/PerfisUsuario"));
+const Fornecedores = React.lazy(() => import("./pages/Fornecedores"));
+const Servicos = React.lazy(() => import("./pages/Servicos"));
+const Integracoes = React.lazy(() => import("./pages/Integracoes"));
+const Agenda = React.lazy(() => import("./pages/Agenda"));
+const MesasAtendimento = React.lazy(() => import("./pages/MesasAtendimento"));
+const JornadaImplantacao = React.lazy(() => import("./pages/JornadaImplantacao"));
+const PainelAtendimento = React.lazy(() => import("./pages/PainelAtendimento"));
+const EtapasPainel = React.lazy(() => import("./pages/EtapasPainel"));
+const DashboardFinanceiro = React.lazy(() => import("./pages/DashboardFinanceiro"));
+const DashboardAtendimento = React.lazy(() => import("./pages/DashboardAtendimento"));
+const DashboardChatAtendimento = React.lazy(() => import("./pages/DashboardChatAtendimento"));
+const Segmentos = React.lazy(() => import("./pages/Segmentos"));
+const Setores = React.lazy(() => import("./pages/Setores"));
+const Automacoes = React.lazy(() => import("./pages/Automacoes"));
+const Faturamento = React.lazy(() => import("./pages/Faturamento"));
+const ConfigurarFaturamento = React.lazy(() => import("./pages/configurar-faturamento/components/ConfigurarFaturamento"));
+const CrmParametros = React.lazy(() => import("./pages/crm-parametros/CrmParametros"));
+const CrmPipeline = React.lazy(() => import("./pages/CrmPipeline"));
+const Tickets = React.lazy(() => import("./pages/Tickets"));
+const TicketNovo = React.lazy(() => import("./pages/TicketNovo"));
+const HelpdeskParametros = React.lazy(() => import("./pages/HelpdeskParametros"));
+const TesteAsaas = React.lazy(() => import("./pages/TesteAsaas"));
+const AgendaCrm = React.lazy(() => import("./pages/AgendaCrm"));
+const DashboardCrm = React.lazy(() => import("./pages/DashboardCrm"));
+const Chat = React.lazy(() => import("./pages/Chat"));
+const ChatParametros = React.lazy(() => import("./pages/chat-parametros"));
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
+}
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 2, // 2 min default
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => {
   useVersionCheck();
@@ -62,6 +80,7 @@ const App = () => {
       <Sonner richColors />
       <BrowserRouter>
         <AuthProvider>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
@@ -413,6 +432,7 @@ const App = () => {
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
