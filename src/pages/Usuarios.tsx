@@ -218,6 +218,7 @@ export default function Usuarios() {
         inviteIsTecnico={f.inviteIsTecnico} setInviteIsTecnico={f.setInviteIsTecnico}
         inviteTipoTecnico={f.inviteTipoTecnico} setInviteTipoTecnico={f.setInviteTipoTecnico}
         inviteMesaIds={f.inviteMesaIds} setInviteMesaIds={f.setInviteMesaIds}
+        inviteSetorId={f.inviteSetorId} setInviteSetorId={f.setInviteSetorId}
         inviteDescontoLimiteImp={f.inviteDescontoLimiteImp} setInviteDescontoLimiteImp={f.setInviteDescontoLimiteImp}
         inviteDescontoLimiteMens={f.inviteDescontoLimiteMens} setInviteDescontoLimiteMens={f.setInviteDescontoLimiteMens}
         inviteGestorDesconto={f.inviteGestorDesconto} setInviteGestorDesconto={f.setInviteGestorDesconto}
@@ -226,6 +227,7 @@ export default function Usuarios() {
         handleInvite={f.handleInvite}
         filiais={q.filiais}
         mesasDisponiveis={q.mesasDisponiveis}
+        setoresDisponiveis={q.setoresDisponiveis}
       />
 
       {/* ── Edit Dialog ── */}
