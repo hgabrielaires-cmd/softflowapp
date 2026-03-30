@@ -206,27 +206,63 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
                       <th className="text-left px-3 py-2 font-medium">Data</th>
                       <th className="text-left px-3 py-2 font-medium">Atendente</th>
                       <th className="text-left px-3 py-2 font-medium">Setor</th>
+                      <th className="text-left px-3 py-2 font-medium">Tipo</th>
+                      <th className="text-left px-3 py-2 font-medium">Ticket</th>
                       <th className="text-left px-3 py-2 font-medium">Status</th>
                       <th className="text-left px-3 py-2 font-medium">Duração</th>
                       <th className="text-center px-3 py-2 font-medium w-16">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {conversas.map((c) => (
-                      <tr key={c.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-3 py-2 font-mono text-xs">{c.protocolo || "—"}</td>
-                        <td className="px-3 py-2 text-xs">{format(new Date(c.created_at), "dd/MM/yyyy HH:mm")}</td>
-                        <td className="px-3 py-2 text-xs">{(c.atendente as any)?.full_name || "—"}</td>
-                        <td className="px-3 py-2 text-xs">{(c.setor as any)?.nome || "—"}</td>
-                        <td className="px-3 py-2">{badgeFn(c.status)}</td>
-                        <td className="px-3 py-2 text-xs">{formatDuracao(c.tempo_atendimento_segundos)}</td>
-                        <td className="px-3 py-2 text-center">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Ver mensagens" onClick={() => abrirMensagens(c)}>
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
+                    {conversas.map((c) => {
+                      // Tipo: Ativo = Nova Conversa (iniciado_em ≈ created_at), Receptivo = fluxo bot
+                      const isAtivo = (() => {
+                        if (!c.iniciado_em) return false;
+                        const diff = Math.abs(new Date(c.created_at).getTime() - new Date(c.iniciado_em).getTime());
+                        return diff < 10000; // < 10s = ativo
+                      })();
+
+                      // Setor: preferir o da conversa, fallback para setor do atendente
+                      const setorNome = (c.setor as any)?.nome
+                        || ((c.atendente as any)?.setor_id ? setoresMap[(c.atendente as any).setor_id] : null)
+                        || "—";
+
+                      const ticketNum = (c.ticket as any)?.numero_exibicao || null;
+
+                      return (
+                        <tr key={c.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="px-3 py-2 font-mono text-xs">{c.protocolo || "—"}</td>
+                          <td className="px-3 py-2 text-xs">{format(new Date(c.created_at), "dd/MM/yyyy HH:mm")}</td>
+                          <td className="px-3 py-2 text-xs">{(c.atendente as any)?.full_name || "—"}</td>
+                          <td className="px-3 py-2 text-xs">{setorNome}</td>
+                          <td className="px-3 py-2">
+                            {isAtivo ? (
+                              <Badge className="text-[10px] border-0 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 gap-0.5">
+                                <PhoneOutgoing className="h-2.5 w-2.5" /> Ativo
+                              </Badge>
+                            ) : (
+                              <Badge className="text-[10px] border-0 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 gap-0.5">
+                                <PhoneIncoming className="h-2.5 w-2.5" /> Receptivo
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-xs font-mono">
+                            {ticketNum ? (
+                              <Badge variant="outline" className="text-[10px] gap-0.5">
+                                <Ticket className="h-2.5 w-2.5" /> {ticketNum}
+                              </Badge>
+                            ) : "—"}
+                          </td>
+                          <td className="px-3 py-2">{badgeFn(c.status)}</td>
+                          <td className="px-3 py-2 text-xs">{formatDuracao(c.tempo_atendimento_segundos)}</td>
+                          <td className="px-3 py-2 text-center">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Ver mensagens" onClick={() => abrirMensagens(c)}>
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
