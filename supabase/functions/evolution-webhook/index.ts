@@ -356,7 +356,8 @@ serve(async (req) => {
     }
 
     // ── Check for recently closed conversation awaiting NPS ──
-    const { data: conversaNps } = await supabase
+    // Fetch ALL pending NPS conversations for this number (not just one)
+    const { data: conversasNpsPendentes } = await supabase
       .from("chat_conversas")
       .select("id, nps_enviado, nps_nota, canal_instancia")
       .eq("numero_cliente", numero)
@@ -364,12 +365,12 @@ serve(async (req) => {
       .eq("nps_enviado", true)
       .is("nps_nota", null)
       .gte("encerrado_em", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-      .order("encerrado_em", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order("encerrado_em", { ascending: false });
+
+    const conversaNps = conversasNpsPendentes?.[0] || null;
 
     if (conversaNps) {
-      // Save the client's message in the closed conversation
+      // Save the client's message in the most recent closed conversation
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversaNps.id,
         tipo,
@@ -383,11 +384,14 @@ serve(async (req) => {
 
       const nota = parseInt((conteudo || "").trim()[0]);
       if (nota >= 1 && nota <= 5) {
-        // Valid NPS score
-        await supabase
-          .from("chat_conversas")
-          .update({ nps_nota: nota, nps_comentario: conteudo.trim() })
-          .eq("id", conversaNps.id);
+        // Valid NPS score — update ALL pending NPS conversations for this number
+        const allIds = conversasNpsPendentes!.map((c: any) => c.id);
+        for (const cId of allIds) {
+          await supabase
+            .from("chat_conversas")
+            .update({ nps_nota: nota, nps_comentario: conteudo.trim() })
+            .eq("id", cId);
+        }
 
         const agradecimento = "Obrigado pela sua avaliação! Sua opinião é muito importante para nós. 🙏😊";
         await sendWhatsApp(agradecimento, conversaNps.canal_instancia || undefined);
@@ -399,8 +403,8 @@ serve(async (req) => {
           remetente: "bot",
         });
 
-        console.log(`[evolution-webhook] NPS registrado: nota ${nota} para conversa ${conversaNps.id}`);
-        return ok({ success: true, conversa_id: conversaNps.id, action: "nps_registrado" });
+        console.log(`[evolution-webhook] NPS registrado: nota ${nota} para ${allIds.length} conversa(s)`);
+        return ok({ success: true, conversa_id: conversaNps.id, action: "nps_registrado", updated: allIds.length });
       } else {
         // Invalid NPS response - ask again
         const reenvio = "Por favor, responda apenas com o número de 1 a 5. 😊";
