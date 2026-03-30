@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { resolvePresencaStatus } from "@/lib/presenca";
@@ -179,6 +179,15 @@ export function useAgendaHoje() {
 
 export function useAtendentesPresenca() {
   const queryClient = useQueryClient();
+  const [presenceNow, setPresenceNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setPresenceNow(Date.now());
+    }, 15_000);
+
+    return () => window.clearInterval(timer);
+  }, []);
 
   // Realtime subscription for instant presence updates
   useEffect(() => {
@@ -198,6 +207,7 @@ export function useAtendentesPresenca() {
   return useQuery<AtendentePresenca[]>({
     queryKey: ["dash_atendentes_presenca"],
     queryFn: async () => {
+      void presenceNow;
       const { data, error } = await (supabase
         .from("profiles")
         .select("user_id, full_name, avatar_url")
