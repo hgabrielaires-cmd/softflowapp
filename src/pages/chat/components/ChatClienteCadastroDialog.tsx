@@ -1,13 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Building2, User, Phone, Mail, MapPin, FileText, Package, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useClienteDocumentos } from "@/hooks/useClienteDocumentos";
-import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
 
 interface Props {
   open: boolean;
