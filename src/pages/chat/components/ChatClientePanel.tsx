@@ -859,6 +859,14 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
             </CardContent>
           </Card>
 
+          {/* Atendentes */}
+          {conversa.status === "em_atendimento" && (
+            <ChatAtendentesCard
+              conversaId={conversa.id}
+              atendenteId={conversa.atendente_id}
+            />
+          )}
+
           {/* Quick Actions */}
           <Card className="shadow-none border">
             <CardHeader className="p-3 pb-1">
