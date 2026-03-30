@@ -310,9 +310,7 @@ export default function ChatMessageArea({
                     </AlertDialogContent>
                   </AlertDialog>
                 )}
-                {!isColaboradorNaoResponsavel && (
-                  <Button size="sm" variant="outline" onClick={onTransferir}>Transferir</Button>
-                )}
+                <Button size="sm" variant="outline" onClick={onTransferir}>Transferir</Button>
                 <Button size="sm" variant="destructive" onClick={onEncerrar}>Encerrar</Button>
               </>
             )}
