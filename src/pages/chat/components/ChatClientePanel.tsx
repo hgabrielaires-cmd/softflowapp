@@ -17,6 +17,7 @@ import { useCrmPipelineQueries } from "@/pages/crm-pipeline/useCrmPipelineQuerie
 import { useCrmCamposPersonalizados, useCrmFunis, useCrmEtapas } from "@/pages/crm-parametros/useCrmParametrosQueries";
 import { useCrmPipelineForm } from "@/pages/crm-pipeline/useCrmPipelineForm";
 import ChatHistoricoDrawer from "./ChatHistoricoDrawer";
+import ChatClienteCadastroDialog from "./ChatClienteCadastroDialog";
 import { cn, normalizeBRPhone, applyPhoneMask } from "@/lib/utils";
 import { ChatConversa, STATUS_LABELS, ChatStatus } from "../types";
 import { formatarTelefone, tempoRelativo } from "../helpers";
