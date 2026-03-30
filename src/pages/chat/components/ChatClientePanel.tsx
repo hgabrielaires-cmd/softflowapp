@@ -71,6 +71,24 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
     conversa?.id || null
   );
 
+  // NPS média do cliente vinculado
+  const clienteIdAtual = conversa?.cliente_id || (conversa?.cliente as any)?.id || null;
+  const { data: npsData } = useQuery({
+    queryKey: ["chat-cliente-nps", clienteIdAtual],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("chat_conversas")
+        .select("nps_nota")
+        .eq("cliente_id", clienteIdAtual!)
+        .not("nps_nota", "is", null);
+      if (!data || data.length === 0) return null;
+      const notas = data.map((c: any) => c.nps_nota as number);
+      const media = notas.reduce((a: number, b: number) => a + b, 0) / notas.length;
+      return { media, total: notas.length };
+    },
+    enabled: !!clienteIdAtual,
+  });
+
   // Fetch linked ticket info
   const ticketId = (conversa as any)?.ticket_id || null;
   const { data: ticketInfo } = useQuery({
