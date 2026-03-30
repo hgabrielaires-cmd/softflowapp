@@ -24,6 +24,8 @@ interface Conversa {
   tempo_atendimento_segundos: number | null;
   iniciado_em: string | null;
   atendimento_iniciado_em: string | null;
+  nome_cliente: string | null;
+  nps_nota: number | null;
   atendente: { full_name: string; setor_id?: string | null } | null;
   setor: { nome: string } | null;
   ticket: { numero_exibicao: string } | null;
