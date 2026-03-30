@@ -173,7 +173,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
   }
 
   function resetInviteForm() {
-    setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteFilialIds([]); setInviteAcessoGlobal(false); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteComissaoServ("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone(""); setInviteIsTecnico(false); setInviteTipoTecnico("interno"); setInviteIsVendedor(false); setInviteMesaIds([]);
+    setInviteEmail(""); setInviteName(""); setInviteRole("vendedor"); setInviteFilialId(""); setInviteFilialIds([]); setInviteAcessoGlobal(false); setInviteComissaoImp("5"); setInviteComissaoMens("5"); setInviteComissaoServ("5"); setInviteDescontoLimiteImp("0"); setInviteDescontoLimiteMens("0"); setInviteGestorDesconto(false); setInvitePermitirCnpjDuplicado(false); setInviteRecebeComissao(true); setInviteTelefone(""); setInviteIsTecnico(false); setInviteTipoTecnico("interno"); setInviteIsVendedor(false); setInviteMesaIds([]); setInviteSetorId("");
   }
 
   // ── Open edit dialog ──
