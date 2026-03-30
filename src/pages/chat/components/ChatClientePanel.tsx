@@ -628,6 +628,23 @@ export default function ChatClientePanel({ conversa, onSelectHistorico }: Props)
                   <p className="font-medium text-sm text-foreground">{cliente.nome_fantasia}</p>
                   {cliente.razao_social && <p className="text-muted-foreground">{cliente.razao_social}</p>}
                   <p className="text-muted-foreground">CNPJ: {formatCnpj(cliente.cnpj_cpf)}</p>
+                  {npsData && (
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      <div className="flex items-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            className={cn(
+                              "h-3 w-3",
+                              s <= Math.round(npsData.media) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"
+                            )}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-[11px] font-semibold text-foreground">{npsData.media.toFixed(1)}</span>
+                      <span className="text-[10px] text-muted-foreground">({npsData.total})</span>
+                    </div>
+                  )}
                   {autoLinkMsg && (
                     <div className="flex items-center gap-1 text-green-600">
                       <CheckCircle2 className="h-3 w-3" />
