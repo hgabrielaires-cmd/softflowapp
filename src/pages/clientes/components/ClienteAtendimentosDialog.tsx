@@ -74,9 +74,11 @@ function HighlightText({ text, term }: { text: string; term: string }) {
 export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props) {
   const [conversas, setConversas] = useState<Conversa[]>([]);
   const [loading, setLoading] = useState(false);
-  const [limit, setLimit] = useState(10);
+  const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const perPage = 10;
   const [setoresMap, setSetoresMap] = useState<Record<string, string>>({});
+  const totalPages = Math.ceil(total / perPage);
 
   const [mensagensOpen, setMensagensOpen] = useState(false);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
@@ -128,12 +130,12 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
   useEffect(() => {
     if (!open || !cliente?.id) {
       setConversas([]);
-      setLimit(10);
+      setPage(1);
       setTotal(0);
       return;
     }
     fetchConversas();
-  }, [open, cliente?.id, limit]);
+  }, [open, cliente?.id, page]);
 
   async function fetchConversas() {
     if (!cliente?.id) return;
@@ -150,7 +152,7 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
         .select("id, protocolo, created_at, status, titulo_atendimento, tempo_atendimento_segundos, iniciado_em, atendimento_iniciado_em, nome_cliente, nps_nota, atendente:profiles!chat_conversas_atendente_id_fkey(full_name, setor_id), setor:setores!chat_conversas_setor_id_fkey(nome), ticket:tickets!chat_conversas_ticket_id_fkey(numero_exibicao)")
         .eq("cliente_id", cliente.id)
         .order("created_at", { ascending: false })
-        .limit(limit);
+        .range((page - 1) * perPage, page * perPage - 1);
       setConversas((data as any) || []);
     } finally {
       setLoading(false);
@@ -290,14 +292,36 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
                 </table>
               </div>
 
-              {conversas.length < total && (
-                <div className="text-center">
-                  <Button variant="outline" size="sm" onClick={() => setLimit((l) => l + 10)} disabled={loading}>
-                    {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                    Ver mais ({total - conversas.length} restantes)
-                  </Button>
-                </div>
-              )}
+              <div className="flex items-center justify-between pt-2">
+                <p className="text-xs text-muted-foreground">
+                  Total: <span className="font-semibold text-foreground">{total}</span> conversa{total !== 1 ? "s" : ""}
+                </p>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={page <= 1 || loading}
+                      onClick={() => setPage((p) => p - 1)}
+                    >
+                      Anterior
+                    </Button>
+                    <span className="text-xs text-muted-foreground px-2">
+                      {page} / {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={page >= totalPages || loading}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      Próxima
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </DialogContent>
