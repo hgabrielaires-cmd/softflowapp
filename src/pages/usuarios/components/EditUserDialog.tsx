@@ -118,6 +118,7 @@ export function EditUserDialog({
   editIsTecnico, setEditIsTecnico,
   editTipoTecnico, setEditTipoTecnico,
   editMesaIds, setEditMesaIds,
+  editSetorId, setEditSetorId,
   editDescontoLimiteImp, setEditDescontoLimiteImp,
   editDescontoLimiteMens, setEditDescontoLimiteMens,
   editGestorDesconto, setEditGestorDesconto,
@@ -132,6 +133,7 @@ export function EditUserDialog({
   handleEdit,
   filiais,
   mesasDisponiveis,
+  setoresDisponiveis,
 }: EditUserDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
