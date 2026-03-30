@@ -300,6 +300,24 @@ export default function ChatInputArea({
           metadata: { link: "/chat", conversa_id: conversaId },
         }));
         await supabase.from("notificacoes").insert(notifs as any);
+
+        // Send DM via chat interno for each mentioned user
+        for (const uid of mentionedIds) {
+          try {
+            const { data: dmId } = await supabase.rpc("criar_conversa_direta", {
+              p_target_user_id: uid,
+            });
+            if (dmId) {
+              await (supabase as any).from("chat_interno_mensagens").insert({
+                conversa_id: dmId,
+                user_id: userId,
+                conteudo: `📌 Você foi mencionado em uma nota interna na conversa ${protocolo || ""} de ${nomeCliente || "cliente"}:\n\n"${finalTexto.length > 200 ? finalTexto.slice(0, 200) + "…" : finalTexto}"`,
+              });
+            }
+          } catch {
+            // silent - DM notification is best-effort
+          }
+        }
       }
     }
 
