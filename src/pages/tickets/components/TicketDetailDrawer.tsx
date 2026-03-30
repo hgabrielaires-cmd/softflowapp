@@ -360,7 +360,7 @@ export function TicketDetailDrawer({ ticketId, open, onClose, onSelectTicket }: 
                     </div>
                   ))}
 
-                  {historico.length === 0 && !linkedConversa ? (
+                  {historico.length === 0 && linkedConversas.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-8">Nenhum ticket anterior para este cliente.</p>
                   ) : (
                     historico.map((h: any) => {
