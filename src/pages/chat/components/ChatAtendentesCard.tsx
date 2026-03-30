@@ -187,7 +187,7 @@ export default function ChatAtendentesCard({ conversaId, atendenteId }: Props) {
         {mainAtendente && (
           <div className="flex items-center gap-2 text-xs">
             <UserAvatar
-              name={mainAtendente.full_name || ""}
+              fullName={mainAtendente.full_name || ""}
               avatarUrl={mainAtendente.avatar_url}
               className="h-6 w-6 text-[10px]"
             />
@@ -200,7 +200,7 @@ export default function ChatAtendentesCard({ conversaId, atendenteId }: Props) {
         {colaboradores.map((colab: any) => (
           <div key={colab.id} className="flex items-center gap-2 text-xs">
             <UserAvatar
-              name={colab.profile?.full_name || ""}
+              fullName={colab.profile?.full_name || ""}
               avatarUrl={colab.profile?.avatar_url}
               className="h-6 w-6 text-[10px]"
             />
@@ -243,7 +243,7 @@ export default function ChatAtendentesCard({ conversaId, atendenteId }: Props) {
                       >
                         <div className="relative">
                           <UserAvatar
-                            name={agente.full_name || ""}
+                            fullName={agente.full_name || ""}
                             avatarUrl={agente.avatar_url}
                             className="h-6 w-6 text-[10px]"
                           />
