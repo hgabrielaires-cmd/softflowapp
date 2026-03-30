@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Headset, Eye, Loader2, MessageSquare, Search, X, Ticket, PhoneOutgoing, PhoneIncoming } from "lucide-react";
+import { Headset, Eye, Loader2, MessageSquare, Search, X, Ticket, PhoneOutgoing, PhoneIncoming, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,8 @@ interface Conversa {
   tempo_atendimento_segundos: number | null;
   iniciado_em: string | null;
   atendimento_iniciado_em: string | null;
+  nome_cliente: string | null;
+  nps_nota: number | null;
   atendente: { full_name: string; setor_id?: string | null } | null;
   setor: { nome: string } | null;
   ticket: { numero_exibicao: string } | null;
@@ -145,7 +147,7 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
 
       const { data } = await supabase
         .from("chat_conversas")
-        .select("id, protocolo, created_at, status, titulo_atendimento, tempo_atendimento_segundos, iniciado_em, atendimento_iniciado_em, atendente:profiles!chat_conversas_atendente_id_fkey(full_name, setor_id), setor:setores!chat_conversas_setor_id_fkey(nome), ticket:tickets!chat_conversas_ticket_id_fkey(numero_exibicao)")
+        .select("id, protocolo, created_at, status, titulo_atendimento, tempo_atendimento_segundos, iniciado_em, atendimento_iniciado_em, nome_cliente, nps_nota, atendente:profiles!chat_conversas_atendente_id_fkey(full_name, setor_id), setor:setores!chat_conversas_setor_id_fkey(nome), ticket:tickets!chat_conversas_ticket_id_fkey(numero_exibicao)")
         .eq("cliente_id", cliente.id)
         .order("created_at", { ascending: false })
         .limit(limit);
@@ -180,7 +182,7 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Headset className="h-4 w-4" />
@@ -202,17 +204,19 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
               <div className="rounded-lg border border-border overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-muted/50 text-xs text-muted-foreground">
-                      <th className="text-left px-3 py-2 font-medium">Protocolo</th>
-                      <th className="text-left px-3 py-2 font-medium">Data</th>
-                      <th className="text-left px-3 py-2 font-medium">Atendente</th>
-                      <th className="text-left px-3 py-2 font-medium">Setor</th>
-                      <th className="text-left px-3 py-2 font-medium">Tipo</th>
-                      <th className="text-left px-3 py-2 font-medium">Ticket</th>
-                      <th className="text-left px-3 py-2 font-medium">Status</th>
-                      <th className="text-left px-3 py-2 font-medium">Duração</th>
-                      <th className="text-center px-3 py-2 font-medium w-16">Ações</th>
-                    </tr>
+                     <tr className="bg-muted/50 text-xs text-muted-foreground">
+                       <th className="text-left px-3 py-2 font-medium">Protocolo</th>
+                       <th className="text-left px-3 py-2 font-medium">Data</th>
+                       <th className="text-left px-3 py-2 font-medium">Solicitante</th>
+                       <th className="text-left px-3 py-2 font-medium">Atendente</th>
+                       <th className="text-left px-3 py-2 font-medium">Setor</th>
+                       <th className="text-left px-3 py-2 font-medium">Tipo</th>
+                       <th className="text-left px-3 py-2 font-medium">Ticket</th>
+                       <th className="text-left px-3 py-2 font-medium">Status</th>
+                       <th className="text-center px-3 py-2 font-medium">NPS</th>
+                       <th className="text-left px-3 py-2 font-medium">Duração</th>
+                       <th className="text-center px-3 py-2 font-medium w-16">Ações</th>
+                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {conversas.map((c) => {
@@ -234,6 +238,7 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
                         <tr key={c.id} className="hover:bg-muted/30 transition-colors">
                           <td className="px-3 py-2 font-mono text-xs">{c.protocolo || "—"}</td>
                           <td className="px-3 py-2 text-xs">{format(new Date(c.created_at), "dd/MM/yyyy HH:mm")}</td>
+                          <td className="px-3 py-2 text-xs">{c.nome_cliente || "—"}</td>
                           <td className="px-3 py-2 text-xs">{(c.atendente as any)?.full_name || "—"}</td>
                           <td className="px-3 py-2 text-xs">{setorNome}</td>
                           <td className="px-3 py-2">
@@ -255,6 +260,23 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
                             ) : "—"}
                           </td>
                           <td className="px-3 py-2">{badgeFn(c.status)}</td>
+                          <td className="px-3 py-2 text-center">
+                            {c.nps_nota ? (
+                              <div className="flex items-center justify-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                  <Star
+                                    key={s}
+                                    className={cn(
+                                      "h-3 w-3",
+                                      s <= c.nps_nota! ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"
+                                    )}
+                                  />
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </td>
                           <td className="px-3 py-2 text-xs">{formatDuracao(c.tempo_atendimento_segundos)}</td>
                           <td className="px-3 py-2 text-center">
                             <Button variant="ghost" size="icon" className="h-7 w-7" title="Ver mensagens" onClick={() => abrirMensagens(c)}>
