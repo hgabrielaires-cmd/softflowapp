@@ -238,6 +238,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
         is_vendedor: editIsVendedor,
         active: editActive,
         is_atendente_chat: editIsAtendenteChat,
+        setor_id: editSetorId || null,
       } as any).eq("user_id", editingUser.user_id);
 
       if (profileError) throw profileError;
