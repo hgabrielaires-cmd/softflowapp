@@ -32,6 +32,7 @@ import ChatAtendentesCard from "./ChatAtendentesCard";
 interface Props {
   conversa: ChatConversa | null;
   onSelectHistorico?: (id: string) => void;
+  onLeaveConversation?: () => void;
 }
 
 interface EmpresaContato {
