@@ -61,6 +61,7 @@ export function useUsuariosForm({ refetchUsers }: UseUsuariosFormParams) {
   const [editTipoTecnico, setEditTipoTecnico] = useState("interno");
   const [editIsVendedor, setEditIsVendedor] = useState(false);
   const [editMesaIds, setEditMesaIds] = useState<string[]>([]);
+  const [editSetorId, setEditSetorId] = useState("");
   const [editActive, setEditActive] = useState(true);
   const [editIsAtendenteChat, setEditIsAtendenteChat] = useState(false);
   const [saving, setSaving] = useState(false);
