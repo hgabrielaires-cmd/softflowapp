@@ -128,22 +128,40 @@ export function useNotificacaoChat({ userId, conversaAbertaId }: UseNotificacaoC
           // Skip if user is viewing this conversation and tab is focused
           if (msg.conversa_id === conversaAbertaRef.current && document.hasFocus()) return;
 
-          // Skip notifications for closed conversations (e.g. NPS responses)
+          // Fetch conversation status and owner
           const { data: conv } = await supabase
             .from("chat_conversas")
-            .select("status, nome_cliente")
+            .select("status, atendente_id, nome_cliente")
             .eq("id", msg.conversa_id)
             .maybeSingle();
-          if (conv?.status === "encerrado") return;
+          if (!conv) return;
+
+          const status = conv.status;
+
+          // Never notify for triagem (bot) or encerrado
+          if (status === "bot" || status === "encerrado") return;
+
+          // Determine if sound should play
+          const ehMinhaConversa = conv.atendente_id === userId;
+          let deveTocarSom = false;
+
+          if (status === "aguardando") {
+            // Fila: notify everyone
+            deveTocarSom = true;
+          } else if (status === "em_atendimento" && ehMinhaConversa) {
+            // Only the assigned agent hears it
+            deveTocarSom = true;
+          }
+          // Other cases (em_atendimento of another agent, fora_horario): no sound
 
           // Sound
-          if (getPref(userId, "som")) tocarBip();
+          if (deveTocarSom && getPref(userId, "som")) tocarBip();
 
-          // Title blink
-          if (!document.hasFocus()) startTitleBlink();
+          // Title blink (only if sound-eligible)
+          if (deveTocarSom && !document.hasFocus()) startTitleBlink();
 
-          // Browser notification (fetch conversa name)
-          if (getPref(userId, "browser")) {
+          // Browser notification
+          if (deveTocarSom && getPref(userId, "browser")) {
             const nome = (conv as any)?.nome_cliente || "Cliente";
             const preview = (msg.conteudo || "📎 Mídia").substring(0, 60);
             showBrowserNotification(nome, preview, msg.conversa_id);
