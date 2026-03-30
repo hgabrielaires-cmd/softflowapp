@@ -144,7 +144,7 @@ export default function ChatClienteCadastroDialog({ open, onOpenChange, clienteI
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[85vh] p-0">
+      <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto p-0">
         <DialogHeader className="p-4 pb-2">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Building2 className="h-4 w-4" />
