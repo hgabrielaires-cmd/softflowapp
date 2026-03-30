@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/card";
+import { resolvePresencaStatus } from "@/lib/presenca";
 import { cn } from "@/lib/utils";
 
 interface AtendentePresenca {
@@ -11,22 +12,6 @@ interface AtendentePresenca {
 interface AtendentesPanelProps {
   atendentes?: AtendentePresenca[];
   loading?: boolean;
-}
-
-const HEARTBEAT_TIMEOUT_MS = 90_000;
-
-function resolveStatus(
-  status: string | null,
-  lastHeartbeat: string | null
-): "online" | "pausa" | "offline" {
-  if (!status || status === "offline") return "offline";
-  if (status === "pausa") return "pausa";
-  if (status === "online") {
-    if (!lastHeartbeat) return "offline";
-    const elapsed = Date.now() - new Date(lastHeartbeat).getTime();
-    return elapsed > HEARTBEAT_TIMEOUT_MS ? "offline" : "online";
-  }
-  return "offline";
 }
 
 function primeiroNome(name: string | null): string {
@@ -167,5 +152,5 @@ export function AtendentesPanel({ atendentes, loading }: AtendentesPanelProps) {
   );
 }
 
-export { resolveStatus };
+export { resolvePresencaStatus as resolveStatus };
 export type { AtendentePresenca };
