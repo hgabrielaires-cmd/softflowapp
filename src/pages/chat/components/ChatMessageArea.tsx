@@ -178,7 +178,35 @@ export default function ChatMessageArea({
 
   const podeComentar = conversa.status === "em_atendimento" && (conversa.atendente_id === userId || !!ehColaborador);
   const podeIniciar = conversa.status === "aguardando" || conversa.status === "bot";
+  const isColaboradorNaoResponsavel = !!ehColaborador && conversa.atendente_id !== userId;
   const termoAtivo = buscaAtiva && termoBusca.trim().length > 0;
+
+  async function handleSairConversa() {
+    if (!conversa || !userId) return;
+    try {
+      const { error } = await (supabase as any)
+        .from("chat_conversa_atendentes")
+        .delete()
+        .eq("conversa_id", conversa.id)
+        .eq("user_id", userId);
+      if (error) throw error;
+      const meuNome = (profile as any)?.full_name || "Atendente";
+      await supabase.from("chat_mensagens").insert({
+        conversa_id: conversa.id,
+        tipo: "sistema",
+        conteudo: `${meuNome} saiu da conversa`,
+        remetente: "sistema",
+      });
+      toast.success("Você saiu da conversa");
+      qc.invalidateQueries({ queryKey: ["chat-conversa-atendentes", conversa.id] });
+      qc.invalidateQueries({ queryKey: ["chat-mensagens"] });
+      qc.invalidateQueries({ queryKey: ["chat-conversas"] });
+      qc.invalidateQueries({ queryKey: ["chat-colaborador"] });
+      onLeaveConversation?.();
+    } catch (e: any) {
+      toast.error("Erro ao sair: " + e.message);
+    }
+  }
 
   return (
     <div className="flex-1 flex flex-col bg-background min-w-0">
