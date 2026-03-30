@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { getInstanciaDoUsuario } from "@/lib/getInstanciaDoUsuario";
+
 import {
   Building2, Search, User, Phone, ChevronLeft, ChevronRight, Ticket,
   MessageSquare, Send, SkipForward, Loader2,
@@ -180,8 +180,8 @@ export default function NovaConversaDialog({ open, onOpenChange, onConversaCriad
 
     setCriando(true);
     try {
-      // Get instance
-      const { instancia } = await getInstanciaDoUsuario(user.id);
+      // Nova conversa sempre usa instância Helpdesk
+      const instancia = "Helpdesk";
 
       // Create conversa
       const agora = new Date().toISOString();
