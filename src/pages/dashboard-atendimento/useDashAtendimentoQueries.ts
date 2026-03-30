@@ -205,7 +205,7 @@ export function useAtendentesPresenca() {
   }, [queryClient]);
 
   return useQuery<AtendentePresenca[]>({
-    queryKey: ["dash_atendentes_presenca"],
+    queryKey: ["dash_atendentes_presenca", Math.floor(presenceNow / 15000)],
     queryFn: async () => {
       void presenceNow;
       const { data, error } = await (supabase

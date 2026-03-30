@@ -129,6 +129,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    if (user) {
+      const nowIso = new Date().toISOString();
+      await supabase
+        .from("atendente_presenca")
+        .upsert(
+          {
+            user_id: user.id,
+            status: "offline",
+            last_heartbeat: nowIso,
+            updated_at: nowIso,
+          },
+          { onConflict: "user_id" }
+        );
+    }
+
     await supabase.auth.signOut();
     setProfile(null);
     setRoles([]);
