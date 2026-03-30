@@ -35,10 +35,6 @@ export default function ChatAtendentesCard({ conversaId, atendenteId, onLeaveCon
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [sairDialogOpen, setSairDialogOpen] = useState(false);
 
-  // Check if current user is a collaborator (not the main atendente)
-  const meuColab = colaboradores.find((c: any) => c.user_id === user?.id);
-  const isColaborador = !!meuColab && atendenteId !== user?.id;
-
   // Fetch the main atendente
   const { data: mainAtendente } = useQuery({
     queryKey: ["chat-main-atendente", atendenteId],
@@ -67,6 +63,10 @@ export default function ChatAtendentesCard({ conversaId, atendenteId, onLeaveCon
     },
     enabled: !!conversaId,
   });
+
+  // Check if current user is a collaborator (not the main atendente)
+  const meuColab = colaboradores.find((c: any) => c.user_id === user?.id);
+  const isColaborador = !!meuColab && atendenteId !== user?.id;
 
   // Fetch available agents (for invite popover)
   const { data: agentesDisponiveis = [] } = useQuery({
