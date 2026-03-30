@@ -291,14 +291,36 @@ export function ClienteAtendimentosDialog({ open, onOpenChange, cliente }: Props
                 </table>
               </div>
 
-              {conversas.length < total && (
-                <div className="text-center">
-                  <Button variant="outline" size="sm" onClick={() => setLimit((l) => l + 10)} disabled={loading}>
-                    {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                    Ver mais ({total - conversas.length} restantes)
-                  </Button>
-                </div>
-              )}
+              <div className="flex items-center justify-between pt-2">
+                <p className="text-xs text-muted-foreground">
+                  Total: <span className="font-semibold text-foreground">{total}</span> conversa{total !== 1 ? "s" : ""}
+                </p>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={page <= 1 || loading}
+                      onClick={() => setPage((p) => p - 1)}
+                    >
+                      Anterior
+                    </Button>
+                    <span className="text-xs text-muted-foreground px-2">
+                      {page} / {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={page >= totalPages || loading}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      Próxima
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </DialogContent>
