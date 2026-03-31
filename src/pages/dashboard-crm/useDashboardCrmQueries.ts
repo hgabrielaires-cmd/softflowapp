@@ -15,13 +15,20 @@ interface Filters {
   fim: string;
 }
 
-/** Busca IDs de clientes vinculados a uma filial — usado para filtrar oportunidades */
-async function getClienteIdsByFilial(filialId: string): Promise<string[]> {
-  const { data } = await supabase
-    .from("clientes")
-    .select("id")
+/** Busca IDs de responsáveis (vendedores) vinculados a uma filial */
+async function getResponsavelIdsByFilial(filialId: string): Promise<string[]> {
+  const { data: vinculados } = await supabase
+    .from("usuario_filiais")
+    .select("user_id")
     .eq("filial_id", filialId);
-  return (data || []).map(c => c.id);
+  const { data: globais } = await supabase
+    .from("profiles")
+    .select("user_id")
+    .eq("acesso_global", true);
+  const ids = new Set<string>();
+  (vinculados || []).forEach(v => ids.add(v.user_id));
+  (globais || []).forEach(g => ids.add(g.user_id));
+  return Array.from(ids);
 }
 
 // ─── FINALIZADAS ──────────────────────────────────────────────
