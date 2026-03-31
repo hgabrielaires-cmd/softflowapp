@@ -237,6 +237,16 @@ export default function ChatPage() {
           }}
         />
       </div>
+
+      {encerrando && (
+        <EncerramentoAtendimento
+          onComplete={() => {
+            setEncerrando(false);
+            setSelectedConversa(null);
+            setTab("meus");
+          }}
+        />
+      )}
     </AppLayout>
   );
 }
