@@ -46,14 +46,6 @@ async function resolveResponsavelIds(
   return Array.from(filialUserIds);
 }
 
-/** Aplica filtro de responsável na query */
-function applyResponsavelFilter<T extends { in: (col: string, ids: string[]) => T }>(
-  q: T,
-  effectiveIds: string[] | undefined,
-): T {
-  if (effectiveIds?.length) q = q.in("responsavel_id", effectiveIds);
-  return q;
-}
 
 // ─── FINALIZADAS ──────────────────────────────────────────────
 
