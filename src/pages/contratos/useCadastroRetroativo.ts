@@ -205,15 +205,14 @@ export function useCadastroRetroativo({ profileFilialId, loadData }: UseCadastro
     }
   }, [retroForm.cliente_id, retroClientes]);
 
-  // ── Load segmentos when filial changes ──
+  // ── Load segmentos on mount ──
   useEffect(() => {
     async function loadRetroSegmentos() {
-      if (!retroForm.filial_id) { setRetroSegmentos([]); return; }
-      const { data } = await supabase.from("segmentos").select("id, nome").eq("filial_id", retroForm.filial_id).eq("ativo", true).order("nome");
+      const { data } = await supabase.from("segmentos").select("id, nome").eq("ativo", true).order("nome");
       setRetroSegmentos((data || []) as any);
     }
     loadRetroSegmentos();
-  }, [retroForm.filial_id]);
+  }, [openRetroativo]);
 
   // ── Module helpers ──
   function handleRetroAddModulo(moduloId: string) {
