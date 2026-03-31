@@ -8,6 +8,7 @@ import ChatClientePanel from "./ChatClientePanel";
 import TransferirDialog from "./TransferirDialog";
 import NovaConversaDialog from "./NovaConversaDialog";
 import EncerrarAtendimentoDialog from "./EncerrarAtendimentoDialog";
+import EncerramentoAtendimento from "./EncerramentoAtendimento";
 import { useChatConversas, useChatMensagens } from "../useChatQueries";
 import { useChatActions } from "../useChatActions";
 import { useChatMediaActions } from "../useChatMediaActions";
@@ -28,6 +29,7 @@ export default function ChatPage() {
   const [showTransferir, setShowTransferir] = useState(false);
   const [showEncerrar, setShowEncerrar] = useState(false);
   const [showNovaConversa, setShowNovaConversa] = useState(false);
+  const [encerrando, setEncerrando] = useState(false);
 
   const { data: conversas = [] } = useChatConversas(tab, user?.id, search);
   const { data: mensagens = [] } = useChatMensagens(selectedConversa?.id || null);
@@ -212,8 +214,7 @@ export default function ChatPage() {
             }, {
               onSuccess: () => {
                 setShowEncerrar(false);
-                setSelectedConversa(null);
-                setTab("meus");
+                setEncerrando(true);
               },
             });
           }}
@@ -236,6 +237,16 @@ export default function ChatPage() {
           }}
         />
       </div>
+
+      {encerrando && (
+        <EncerramentoAtendimento
+          onComplete={() => {
+            setEncerrando(false);
+            setSelectedConversa(null);
+            setTab("meus");
+          }}
+        />
+      )}
     </AppLayout>
   );
 }
