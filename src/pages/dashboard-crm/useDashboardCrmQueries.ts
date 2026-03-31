@@ -15,20 +15,44 @@ interface Filters {
   fim: string;
 }
 
-/** Busca IDs de responsáveis (vendedores) vinculados a uma filial */
-async function getResponsavelIdsByFilial(filialId: string): Promise<string[]> {
-  const { data: vinculados } = await supabase
-    .from("usuario_filiais")
-    .select("user_id")
-    .eq("filial_id", filialId);
-  const { data: globais } = await supabase
-    .from("profiles")
-    .select("user_id")
-    .eq("acesso_global", true);
-  const ids = new Set<string>();
-  (vinculados || []).forEach(v => ids.add(v.user_id));
-  (globais || []).forEach(g => ids.add(g.user_id));
-  return Array.from(ids);
+/**
+ * Resolve os IDs de responsáveis efetivos considerando filial + filtro de vendedor.
+ * Oportunidades não têm filial_id próprio — o vínculo é pelo responsável (vendedor).
+ * Quando filialId é informado, busca vendedores da filial e faz interseção com responsavelIds.
+ */
+async function resolveResponsavelIds(
+  responsavelIds?: string[],
+  filialId?: string,
+): Promise<string[] | undefined> {
+  if (!filialId) return responsavelIds?.length ? responsavelIds : undefined;
+
+  // Busca vendedores vinculados à filial + globais
+  const [{ data: vinculados }, { data: globais }] = await Promise.all([
+    supabase.from("usuario_filiais").select("user_id").eq("filial_id", filialId),
+    supabase.from("profiles").select("user_id").eq("acesso_global", true),
+  ]);
+  const filialUserIds = new Set<string>();
+  (vinculados || []).forEach(v => filialUserIds.add(v.user_id));
+  (globais || []).forEach(g => filialUserIds.add(g.user_id));
+
+  if (filialUserIds.size === 0) return ["__none__"]; // retorna impossível para zerar resultados
+
+  // Se já há filtro de vendedor, faz interseção
+  if (responsavelIds?.length) {
+    const intersect = responsavelIds.filter(id => filialUserIds.has(id));
+    return intersect.length > 0 ? intersect : ["__none__"];
+  }
+
+  return Array.from(filialUserIds);
+}
+
+/** Aplica filtro de responsável na query */
+function applyResponsavelFilter<T extends { in: (col: string, ids: string[]) => T }>(
+  q: T,
+  effectiveIds: string[] | undefined,
+): T {
+  if (effectiveIds?.length) q = q.in("responsavel_id", effectiveIds);
+  return q;
 }
 
 // ─── FINALIZADAS ──────────────────────────────────────────────
@@ -40,9 +64,8 @@ export function useKpiFinalizadas(filters: Filters) {
     queryFn: async (): Promise<KpiFinalizadas> => {
       const { inicio, fim, funilId, responsavelIds, filialId } = filters;
       const anterior = calcularPeriodoAnterior(inicio, fim);
-      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
+      const effIds = await resolveResponsavelIds(responsavelIds, filialId);
 
-      // Helper to fetch finalizadas (ganho by data_fechamento, perdido by data_perda)
       async function fetchFinalizadas(ini: string, fi: string) {
         let qGanho = supabase
           .from("crm_oportunidades")
@@ -51,8 +74,7 @@ export function useKpiFinalizadas(filters: Filters) {
           .eq("status", "ganho")
           .gte("data_fechamento", ini)
           .lte("data_fechamento", fi);
-        if (responsavelIds?.length) qGanho = qGanho.in("responsavel_id", responsavelIds);
-        if (clienteIds) { if (clienteIds.length === 0) return []; qGanho = qGanho.in("cliente_id", clienteIds); }
+        qGanho = applyResponsavelFilter(qGanho, effIds);
 
         let qPerdido = supabase
           .from("crm_oportunidades")
@@ -61,8 +83,7 @@ export function useKpiFinalizadas(filters: Filters) {
           .eq("status", "perdido")
           .gte("data_perda", ini)
           .lte("data_perda", fi);
-        if (responsavelIds?.length) qPerdido = qPerdido.in("responsavel_id", responsavelIds);
-        if (clienteIds) { if (clienteIds.length === 0) return []; qPerdido = qPerdido.in("cliente_id", clienteIds); }
+        qPerdido = applyResponsavelFilter(qPerdido, effIds);
 
         const [{ data: ganhoData }, { data: perdidoData }] = await Promise.all([qGanho, qPerdido]);
         return [...(ganhoData || []), ...(perdidoData || [])];
@@ -78,14 +99,11 @@ export function useKpiFinalizadas(filters: Filters) {
       const ganhasAnt = (prev || []).filter(o => o.status === "ganho");
       const perdidasAnt = (prev || []).filter(o => o.status === "perdido");
 
-      // Helper: compute impl+mens per oportunidade using pedido > produtos > 0
       async function computeValues(oportunidades: typeof ganhas) {
         if (oportunidades.length === 0) return { impl: 0, mens: 0 };
-
         const pIds = oportunidades.map(o => o.pedido_id).filter(Boolean) as string[];
         const oIds = oportunidades.map(o => o.id);
 
-        // Fetch pedidos
         let pedidoMap: Record<string, { impl: number; mens: number }> = {};
         if (pIds.length > 0) {
           const { data: pedidos } = await supabase
@@ -100,7 +118,6 @@ export function useKpiFinalizadas(filters: Filters) {
           });
         }
 
-        // Fetch produtos as fallback
         let prodMap: Record<string, { impl: number; mens: number }> = {};
         if (oIds.length > 0) {
           const { data: prods } = await supabase
@@ -164,7 +181,7 @@ export function useRankingVendedores(filters: Filters, tipo: "ganho" | "andament
     enabled: !!filters.funilId,
     queryFn: async (): Promise<VendedorRanking[]> => {
       const { funilId, responsavelIds, filialId, inicio, fim } = filters;
-      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
+      const effIds = await resolveResponsavelIds(responsavelIds, filialId);
       let q = supabase
         .from("crm_oportunidades")
         .select("id, responsavel_id, status, valor, pedido_id")
@@ -175,14 +192,9 @@ export function useRankingVendedores(filters: Filters, tipo: "ganho" | "andament
       } else {
         q = q.eq("status", "aberta");
       }
-      if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
-      if (clienteIds) { if (clienteIds.length === 0) return []; q = q.in("cliente_id", clienteIds); }
+      q = applyResponsavelFilter(q, effIds);
       const { data: ops } = await q;
 
-      // For "ganho" ranking, also include lost deals filtered by data_perda (for count purposes if needed)
-      // Actually ranking ganho only needs ganho deals, so this is fine.
-
-      // Group by responsavel_id
       const map: Record<string, { count: number; valor: number; ids: string[] }> = {};
       (ops || []).forEach(o => {
         if (!o.responsavel_id) return;
@@ -192,11 +204,9 @@ export function useRankingVendedores(filters: Filters, tipo: "ganho" | "andament
       });
 
       if (tipo === "ganho") {
-        // Priority: pedido values > crm_oportunidade_produtos > campo valor
         const allIds = (ops || []).map(o => o.id);
         const pedidoIds = (ops || []).map(o => o.pedido_id).filter(Boolean) as string[];
 
-        // Fetch pedido values
         let pedidoValorMap: Record<string, number> = {};
         if (pedidoIds.length > 0) {
           const { data: pedidos } = await supabase
@@ -208,7 +218,6 @@ export function useRankingVendedores(filters: Filters, tipo: "ganho" | "andament
           });
         }
 
-        // Fetch produto values as fallback
         let prodMap: Record<string, number> = {};
         if (allIds.length > 0) {
           const { data: prods } = await supabase
@@ -221,7 +230,6 @@ export function useRankingVendedores(filters: Filters, tipo: "ganho" | "andament
           });
         }
 
-        // Map values to responsavel: pedido > produtos > campo valor
         Object.keys(map).forEach(uid => {
           const userOps = (ops || []).filter(o => o.responsavel_id === uid);
           let total = 0;
@@ -237,7 +245,6 @@ export function useRankingVendedores(filters: Filters, tipo: "ganho" | "andament
           map[uid].valor = total;
         });
       } else {
-        // Andamento: use campo valor
         (ops || []).forEach(o => {
           if (o.responsavel_id && map[o.responsavel_id]) {
             map[o.responsavel_id].valor += o.valor || 0;
@@ -245,7 +252,6 @@ export function useRankingVendedores(filters: Filters, tipo: "ganho" | "andament
         });
       }
 
-      // Fetch profiles
       const uids = Object.keys(map);
       if (uids.length === 0) return [];
       const { data: profiles } = await supabase
@@ -275,7 +281,7 @@ export function useMotivosPerda(filters: Filters) {
     enabled: !!filters.funilId,
     queryFn: async (): Promise<MotivoPerda[]> => {
       const { funilId, responsavelIds, filialId, inicio, fim } = filters;
-      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
+      const effIds = await resolveResponsavelIds(responsavelIds, filialId);
       let q = supabase
         .from("crm_oportunidades")
         .select("id, motivo_perda_id")
@@ -283,12 +289,10 @@ export function useMotivosPerda(filters: Filters) {
         .eq("status", "perdido")
         .gte("data_perda", inicio)
         .lte("data_perda", fim);
-      if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
-      if (clienteIds) { if (clienteIds.length === 0) return []; q = q.in("cliente_id", clienteIds); }
+      q = applyResponsavelFilter(q, effIds);
       const { data: ops } = await q;
       if (!ops?.length) return [];
 
-      // Get motivo names
       const motivoIds = [...new Set(ops.map(o => o.motivo_perda_id).filter(Boolean))] as string[];
       let motivoMap: Record<string, string> = {};
       if (motivoIds.length > 0) {
@@ -316,7 +320,7 @@ export function useComparativoPeriodo(filters: Filters) {
     enabled: !!filters.funilId,
     queryFn: async (): Promise<{ atual: ComparativoSemana[]; anterior: ComparativoSemana[] }> => {
       const { funilId, responsavelIds, filialId, inicio, fim } = filters;
-      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
+      const effIds = await resolveResponsavelIds(responsavelIds, filialId);
       const ant = calcularPeriodoAnterior(inicio, fim);
 
       async function fetchPeriodo(ini: string, fi: string) {
@@ -327,8 +331,7 @@ export function useComparativoPeriodo(filters: Filters) {
           .eq("status", "ganho")
           .gte("data_fechamento", ini)
           .lte("data_fechamento", fi);
-        if (responsavelIds?.length) qGanho = qGanho.in("responsavel_id", responsavelIds);
-        if (clienteIds) { if (clienteIds.length === 0) return []; qGanho = qGanho.in("cliente_id", clienteIds); }
+        qGanho = applyResponsavelFilter(qGanho, effIds);
 
         let qPerdido = supabase
           .from("crm_oportunidades")
@@ -337,11 +340,9 @@ export function useComparativoPeriodo(filters: Filters) {
           .eq("status", "perdido")
           .gte("data_perda", ini)
           .lte("data_perda", fi);
-        if (responsavelIds?.length) qPerdido = qPerdido.in("responsavel_id", responsavelIds);
-        if (clienteIds) { if (clienteIds.length === 0) return []; qPerdido = qPerdido.in("cliente_id", clienteIds); }
+        qPerdido = applyResponsavelFilter(qPerdido, effIds);
 
         const [{ data: g }, { data: p }] = await Promise.all([qGanho, qPerdido]);
-        // Normalize: use data_fechamento for ganho, data_perda for perdido
         const ganhoNorm = (g || []).map(o => ({ ...o, data_fechamento: o.data_fechamento }));
         const perdidoNorm = (p || []).map(o => ({ ...o, data_fechamento: (o as any).data_perda }));
         return [...ganhoNorm, ...perdidoNorm];
@@ -384,14 +385,13 @@ export function useKpiAndamento(filters: Omit<Filters, "inicio" | "fim">) {
     enabled: !!filters.funilId,
     queryFn: async (): Promise<KpiAndamento> => {
       const { funilId, responsavelIds, filialId } = filters;
-      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
+      const effIds = await resolveResponsavelIds(responsavelIds, filialId);
       let q = supabase
         .from("crm_oportunidades")
         .select("id, valor, data_previsao_fechamento")
         .eq("funil_id", funilId!)
         .eq("status", "aberta");
-      if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
-      if (clienteIds) { if (clienteIds.length === 0) return { totalAndamento: 0, valorTotalPipeline: 0, previsaoEsteMes: 0, valorPrevisaoEsteMes: 0, previsaoProximoMes: 0, valorPrevisaoProximoMes: 0, semPrevisao: 0 }; q = q.in("cliente_id", clienteIds); }
+      q = applyResponsavelFilter(q, effIds);
       const { data } = await q;
       const ops = data || [];
 
@@ -432,15 +432,14 @@ export function useEtapasFunil(filters: Omit<Filters, "inicio" | "fim">) {
     enabled: !!filters.funilId,
     queryFn: async (): Promise<EtapaFunil[]> => {
       const { funilId, responsavelIds, filialId } = filters;
-      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
+      const effIds = await resolveResponsavelIds(responsavelIds, filialId);
       const [{ data: etapas }, { data: ops }] = await Promise.all([
         supabase.from("crm_etapas").select("id, nome, cor, ordem")
           .eq("funil_id", funilId!).eq("ativo", true).order("ordem"),
         (() => {
           let q = supabase.from("crm_oportunidades").select("id, etapa_id, valor")
             .eq("funil_id", funilId!).eq("status", "aberta");
-          if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
-          if (clienteIds) { if (clienteIds.length === 0) return Promise.resolve({ data: [] }); q = q.in("cliente_id", clienteIds); }
+          q = applyResponsavelFilter(q, effIds);
           return q;
         })(),
       ]);
@@ -467,13 +466,11 @@ export function useTarefasAnalise(filters: Omit<Filters, "inicio" | "fim"> & { i
     enabled: !!filters.funilId,
     queryFn: async (): Promise<TarefasAnalise> => {
       const { funilId, responsavelIds, filialId } = filters;
-      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
+      const effIds = await resolveResponsavelIds(responsavelIds, filialId);
 
-      // Get open ops
       let qOps = supabase.from("crm_oportunidades").select("id, etapa_id")
         .eq("funil_id", funilId!).eq("status", "aberta");
-      if (responsavelIds?.length) qOps = qOps.in("responsavel_id", responsavelIds);
-      if (clienteIds) { if (clienteIds.length === 0) return { agendadas: 0, atrasadas: 0, diasMedioAtraso: 0, concluidas: 0, semTarefa: 0, porEtapa: [] }; qOps = qOps.in("cliente_id", clienteIds); }
+      qOps = applyResponsavelFilter(qOps, effIds);
       const { data: ops } = await qOps;
       const opIds = (ops || []).map(o => o.id);
       if (opIds.length === 0) return { agendadas: 0, atrasadas: 0, diasMedioAtraso: 0, concluidas: 0, semTarefa: 0, porEtapa: [] };
@@ -511,7 +508,6 @@ export function useTarefasAnalise(filters: Omit<Filters, "inicio" | "fim"> & { i
       const semTarefa = opIds.filter(id => !tarefasPorOp[id]).length;
       const diasMedioAtraso = atrasadas > 0 ? Math.round(totalDiasAtraso / atrasadas) : 0;
 
-      // Por etapa
       const etapaMap: Record<string, string> = {};
       (etapas || []).forEach(e => { etapaMap[e.id] = e.nome; });
 
@@ -549,26 +545,23 @@ export function useAlertasAtencao(filters: Omit<Filters, "inicio" | "fim"> & { d
     enabled: !!filters.funilId,
     queryFn: async (): Promise<AlertaAtencao[]> => {
       const { funilId, responsavelIds, filialId, diasSemInteracao } = filters;
-      const clienteIds = filialId ? await getClienteIdsByFilial(filialId) : undefined;
+      const effIds = await resolveResponsavelIds(responsavelIds, filialId);
       let q = supabase
         .from("crm_oportunidades")
         .select("id, titulo, etapa_id, responsavel_id, cliente_id, data_previsao_fechamento, updated_at, clientes(nome_fantasia)")
         .eq("funil_id", funilId!)
         .eq("status", "aberta");
-      if (responsavelIds?.length) q = q.in("responsavel_id", responsavelIds);
-      if (clienteIds) { if (clienteIds.length === 0) return []; q = q.in("cliente_id", clienteIds); }
+      q = applyResponsavelFilter(q, effIds);
       const { data: ops } = await q;
       if (!ops?.length) return [];
 
       const opIds = ops.map(o => o.id);
       const now = new Date();
 
-      // Get etapas names
       const { data: etapas } = await supabase.from("crm_etapas").select("id, nome").eq("funil_id", funilId!);
       const etapaMap: Record<string, string> = {};
       (etapas || []).forEach(e => { etapaMap[e.id] = e.nome; });
 
-      // Get responsaveis
       const rIds = [...new Set(ops.map(o => o.responsavel_id).filter(Boolean))] as string[];
       let profMap: Record<string, string> = {};
       if (rIds.length > 0) {
@@ -576,7 +569,6 @@ export function useAlertasAtencao(filters: Omit<Filters, "inicio" | "fim"> & { d
         (profs || []).forEach(p => { profMap[p.user_id] = p.full_name; });
       }
 
-      // Get latest tarefas
       const { data: tarefas } = await supabase
         .from("crm_tarefas")
         .select("oportunidade_id, data_reuniao, concluido_em")
@@ -608,18 +600,15 @@ export function useAlertasAtencao(filters: Omit<Filters, "inicio" | "fim"> & { d
           ultimo_contato: tarefaMap[o.id]?.ultimaData || o.updated_at,
         };
 
-        // Tarefa atrasada
         if (tarefaMap[o.id]?.atrasada) {
           alertas.push({ ...base, tipo: "tarefa_atrasada", dias: 0 });
         }
 
-        // Previsão vencida
         if (o.data_previsao_fechamento && new Date(o.data_previsao_fechamento) < now) {
           const dias = Math.floor((now.getTime() - new Date(o.data_previsao_fechamento).getTime()) / (1000 * 60 * 60 * 24));
           alertas.push({ ...base, tipo: "previsao_vencida", dias });
         }
 
-        // Sem interação
         const lastContact = new Date(base.ultimo_contato || o.updated_at);
         if (lastContact < limiteInteracao) {
           const dias = Math.floor((now.getTime() - lastContact.getTime()) / (1000 * 60 * 60 * 24));
@@ -627,7 +616,6 @@ export function useAlertasAtencao(filters: Omit<Filters, "inicio" | "fim"> & { d
         }
       });
 
-      // Sort by urgency
       const prioridade = { tarefa_atrasada: 0, previsao_vencida: 1, sem_interacao: 2 };
       return alertas.sort((a, b) => prioridade[a.tipo] - prioridade[b.tipo]);
     },
