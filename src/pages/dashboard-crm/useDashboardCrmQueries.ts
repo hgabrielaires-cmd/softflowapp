@@ -66,7 +66,7 @@ export function useKpiFinalizadas(filters: Filters) {
           .eq("status", "ganho")
           .gte("data_fechamento", ini)
           .lte("data_fechamento", fi);
-        qGanho = applyResponsavelFilter(qGanho, effIds);
+        if (effIds?.length) qGanho = qGanho.in("responsavel_id", effIds);
 
         let qPerdido = supabase
           .from("crm_oportunidades")
@@ -75,7 +75,7 @@ export function useKpiFinalizadas(filters: Filters) {
           .eq("status", "perdido")
           .gte("data_perda", ini)
           .lte("data_perda", fi);
-        qPerdido = applyResponsavelFilter(qPerdido, effIds);
+        if (effIds?.length) qPerdido = qPerdido.in("responsavel_id", effIds);
 
         const [{ data: ganhoData }, { data: perdidoData }] = await Promise.all([qGanho, qPerdido]);
         return [...(ganhoData || []), ...(perdidoData || [])];
@@ -184,7 +184,7 @@ export function useRankingVendedores(filters: Filters, tipo: "ganho" | "andament
       } else {
         q = q.eq("status", "aberta");
       }
-      q = applyResponsavelFilter(q, effIds);
+      if (effIds?.length) q = q.in("responsavel_id", effIds);
       const { data: ops } = await q;
 
       const map: Record<string, { count: number; valor: number; ids: string[] }> = {};
@@ -281,7 +281,7 @@ export function useMotivosPerda(filters: Filters) {
         .eq("status", "perdido")
         .gte("data_perda", inicio)
         .lte("data_perda", fim);
-      q = applyResponsavelFilter(q, effIds);
+      if (effIds?.length) q = q.in("responsavel_id", effIds);
       const { data: ops } = await q;
       if (!ops?.length) return [];
 
@@ -323,7 +323,7 @@ export function useComparativoPeriodo(filters: Filters) {
           .eq("status", "ganho")
           .gte("data_fechamento", ini)
           .lte("data_fechamento", fi);
-        qGanho = applyResponsavelFilter(qGanho, effIds);
+        if (effIds?.length) qGanho = qGanho.in("responsavel_id", effIds);
 
         let qPerdido = supabase
           .from("crm_oportunidades")
@@ -332,7 +332,7 @@ export function useComparativoPeriodo(filters: Filters) {
           .eq("status", "perdido")
           .gte("data_perda", ini)
           .lte("data_perda", fi);
-        qPerdido = applyResponsavelFilter(qPerdido, effIds);
+        if (effIds?.length) qPerdido = qPerdido.in("responsavel_id", effIds);
 
         const [{ data: g }, { data: p }] = await Promise.all([qGanho, qPerdido]);
         const ganhoNorm = (g || []).map(o => ({ ...o, data_fechamento: o.data_fechamento }));
@@ -383,7 +383,7 @@ export function useKpiAndamento(filters: Omit<Filters, "inicio" | "fim">) {
         .select("id, valor, data_previsao_fechamento")
         .eq("funil_id", funilId!)
         .eq("status", "aberta");
-      q = applyResponsavelFilter(q, effIds);
+      if (effIds?.length) q = q.in("responsavel_id", effIds);
       const { data } = await q;
       const ops = data || [];
 
@@ -431,7 +431,7 @@ export function useEtapasFunil(filters: Omit<Filters, "inicio" | "fim">) {
         (() => {
           let q = supabase.from("crm_oportunidades").select("id, etapa_id, valor")
             .eq("funil_id", funilId!).eq("status", "aberta");
-          q = applyResponsavelFilter(q, effIds);
+          if (effIds?.length) q = q.in("responsavel_id", effIds);
           return q;
         })(),
       ]);
@@ -462,7 +462,7 @@ export function useTarefasAnalise(filters: Omit<Filters, "inicio" | "fim"> & { i
 
       let qOps = supabase.from("crm_oportunidades").select("id, etapa_id")
         .eq("funil_id", funilId!).eq("status", "aberta");
-      qOps = applyResponsavelFilter(qOps, effIds);
+      if (effIds?.length) qOps = qOps.in("responsavel_id", effIds);
       const { data: ops } = await qOps;
       const opIds = (ops || []).map(o => o.id);
       if (opIds.length === 0) return { agendadas: 0, atrasadas: 0, diasMedioAtraso: 0, concluidas: 0, semTarefa: 0, porEtapa: [] };
@@ -543,7 +543,7 @@ export function useAlertasAtencao(filters: Omit<Filters, "inicio" | "fim"> & { d
         .select("id, titulo, etapa_id, responsavel_id, cliente_id, data_previsao_fechamento, updated_at, clientes(nome_fantasia)")
         .eq("funil_id", funilId!)
         .eq("status", "aberta");
-      q = applyResponsavelFilter(q, effIds);
+      if (effIds?.length) q = q.in("responsavel_id", effIds);
       const { data: ops } = await q;
       if (!ops?.length) return [];
 
