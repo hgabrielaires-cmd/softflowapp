@@ -8,6 +8,7 @@ import ChatClientePanel from "./ChatClientePanel";
 import TransferirDialog from "./TransferirDialog";
 import NovaConversaDialog from "./NovaConversaDialog";
 import EncerrarAtendimentoDialog from "./EncerrarAtendimentoDialog";
+import EncerramentoAtendimento from "./EncerramentoAtendimento";
 import { useChatConversas, useChatMensagens } from "../useChatQueries";
 import { useChatActions } from "../useChatActions";
 import { useChatMediaActions } from "../useChatMediaActions";
