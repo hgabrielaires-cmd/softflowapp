@@ -200,7 +200,7 @@ export default function ChatPage() {
           open={showEncerrar}
           onClose={() => setShowEncerrar(false)}
           conversa={conversaAtual as ChatConversa | null}
-          isPending={actions.encerrarConversa.isPending}
+          isPending={false}
           onConfirm={(clienteId, titulo) => {
             if (!conversaAtual || !user?.id) return;
             // Immediately show animation and close dialog
