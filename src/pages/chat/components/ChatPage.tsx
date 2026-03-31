@@ -203,6 +203,10 @@ export default function ChatPage() {
           isPending={actions.encerrarConversa.isPending}
           onConfirm={(clienteId, titulo) => {
             if (!conversaAtual || !user?.id) return;
+            // Immediately show animation and close dialog
+            setShowEncerrar(false);
+            setEncerrando(true);
+            // Fire mutation in background
             actions.encerrarConversa.mutate({
               conversaId: conversaAtual.id,
               userId: user.id,
@@ -211,11 +215,6 @@ export default function ChatPage() {
               instanceName: conversaAtual.canal_instancia || undefined,
               clienteId,
               tituloAtendimento: titulo,
-            }, {
-              onSuccess: () => {
-                setShowEncerrar(false);
-                setEncerrando(true);
-              },
             });
           }}
         />
