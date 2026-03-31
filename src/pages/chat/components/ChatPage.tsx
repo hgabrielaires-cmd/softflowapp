@@ -203,11 +203,7 @@ export default function ChatPage() {
           isPending={false}
           onConfirm={(clienteId, titulo) => {
             if (!conversaAtual || !user?.id) return;
-            // Immediately show animation and close dialog
-            setShowEncerrar(false);
-            setEncerrando(true);
-            // Fire mutation in background
-            actions.encerrarConversa.mutate({
+            const payload = {
               conversaId: conversaAtual.id,
               userId: user.id,
               userName,
@@ -215,7 +211,12 @@ export default function ChatPage() {
               instanceName: conversaAtual.canal_instancia || undefined,
               clienteId,
               tituloAtendimento: titulo,
-            });
+            };
+            // Close dialog and show animation FIRST
+            setShowEncerrar(false);
+            setEncerrando(true);
+            // Defer mutation so dialog unmounts before mutation isPending kicks in
+            setTimeout(() => actions.encerrarConversa.mutate(payload), 100);
           }}
         />
 
