@@ -214,8 +214,7 @@ export default function ChatPage() {
             }, {
               onSuccess: () => {
                 setShowEncerrar(false);
-                setSelectedConversa(null);
-                setTab("meus");
+                setEncerrando(true);
               },
             });
           }}
