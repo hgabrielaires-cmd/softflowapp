@@ -326,5 +326,45 @@ export function useChatActions() {
     onError: (e) => toast.error("Erro: " + e.message),
   });
 
-  return { enviarMensagem, iniciarAtendimento, encerrarConversa, transferirConversa };
+  const finalizarTriagem = useMutation({
+    mutationFn: async ({
+      conversaId,
+      userId,
+      userName,
+    }: {
+      conversaId: string;
+      userId: string;
+      userName: string;
+    }) => {
+      const agora = new Date().toISOString();
+
+      await supabase
+        .from("chat_conversas")
+        .update({
+          status: "encerrado",
+          encerrado_em: agora,
+          updated_at: agora,
+        })
+        .eq("id", conversaId);
+
+      await supabase.from("chat_mensagens").insert({
+        conversa_id: conversaId,
+        tipo: "sistema",
+        conteudo: `Triagem finalizada por ${userName} — cliente não completou o bot`,
+        remetente: "sistema",
+      });
+
+      await supabase
+        .from("chat_fila")
+        .delete()
+        .eq("conversa_id", conversaId);
+    },
+    onSuccess: () => {
+      toast.success("Triagem finalizada!");
+      invalidate();
+    },
+    onError: (e) => toast.error("Erro: " + e.message),
+  });
+
+  return { enviarMensagem, iniciarAtendimento, encerrarConversa, transferirConversa, finalizarTriagem };
 }
