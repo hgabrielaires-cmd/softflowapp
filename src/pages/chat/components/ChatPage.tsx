@@ -165,6 +165,19 @@ export default function ChatPage() {
           }}
           onEncerrar={() => setShowEncerrar(true)}
           onTransferir={() => setShowTransferir(true)}
+          onFinalizarTriagem={() => {
+            if (!conversaAtual || !user?.id) return;
+            actions.finalizarTriagem.mutate({
+              conversaId: conversaAtual.id,
+              userId: user.id,
+              userName,
+            }, {
+              onSuccess: () => {
+                setSelectedConversa(null);
+                setTab("meus");
+              },
+            });
+          }}
           onLeaveConversation={() => {
             setSelectedConversa(null);
             setTab("meus");

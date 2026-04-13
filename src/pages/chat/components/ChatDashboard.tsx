@@ -105,6 +105,11 @@ export default function ChatDashboard({ onVerConversa }: Props) {
   // KPIs
   const total = conversas.length;
   const encerrados = conversas.filter((c: any) => c.status === "encerrado");
+  const paradosTriagem = conversas.filter((c: any) => c.status === "bot");
+  const encerradosNaTriagem = encerrados.filter((c: any) => {
+    // Conversations closed from triage have no atendimento_iniciado_em
+    return !c.atendimento_iniciado_em && !c.tempo_atendimento_segundos;
+  });
   const tempoMedioAtend = encerrados.length
     ? Math.round(encerrados.reduce((s: number, c: any) => s + (c.tempo_atendimento_segundos || 0), 0) / encerrados.length)
     : 0;
@@ -208,7 +213,7 @@ export default function ChatDashboard({ onVerConversa }: Props) {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1"><MessageSquare className="h-4 w-4" /> Atendimentos</div>
@@ -237,6 +242,18 @@ export default function ChatDashboard({ onVerConversa }: Props) {
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1"><TrendingUp className="h-4 w-4" /> Resolução</div>
             <p className="text-2xl font-bold">{taxaResolucao}%</p>
+          </CardContent>
+        </Card>
+        <Card className="border-purple-200 dark:border-purple-800">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 text-xs mb-1"><AlertTriangle className="h-4 w-4" /> Parados triagem</div>
+            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{paradosTriagem.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-orange-200 dark:border-orange-800">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 text-xs mb-1"><MessageSquare className="h-4 w-4" /> Encerrados triagem</div>
+            <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{encerradosNaTriagem.length}</p>
           </CardContent>
         </Card>
       </div>
