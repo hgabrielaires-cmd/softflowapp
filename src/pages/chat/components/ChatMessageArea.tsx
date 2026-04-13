@@ -58,12 +58,13 @@ interface Props {
   onEncerrar: () => void;
   onTransferir: () => void;
   onLeaveConversation?: () => void;
+  onFinalizarTriagem?: () => void;
   isLoading?: boolean;
 }
 
 export default function ChatMessageArea({
   conversa, mensagens, userId, userName,
-  onSend, onSendMedia, onIniciarAtendimento, onEncerrar, onTransferir, onLeaveConversation, isLoading,
+  onSend, onSendMedia, onIniciarAtendimento, onEncerrar, onTransferir, onLeaveConversation, onFinalizarTriagem, isLoading,
 }: Props) {
   const { profile } = useAuth();
   const qc = useQueryClient();
@@ -278,9 +279,37 @@ export default function ChatMessageArea({
               <Search className="h-4 w-4" />
             </Button>
             {podeIniciar && (
-              <Button size="sm" onClick={onIniciarAtendimento} disabled={isLoading}>
-                {isLoading ? "Iniciando..." : "Iniciar Atendimento"}
-              </Button>
+              <>
+                <Button size="sm" onClick={onIniciarAtendimento} disabled={isLoading}>
+                  {isLoading ? "Iniciando..." : "Iniciar Atendimento"}
+                </Button>
+                {conversa.status === "bot" && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10">
+                        Finalizar
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Finalizar triagem?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta conversa será encerrada sem enviar pesquisa de satisfação. Use para chats em que o cliente não completou as perguntas do bot.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => onFinalizarTriagem?.()}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Finalizar
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </>
             )}
             {conversa.status === "em_atendimento" && (
               <>
