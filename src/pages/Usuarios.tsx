@@ -71,7 +71,6 @@ export default function Usuarios() {
                 <TableHead>E-mail</TableHead>
                 <TableHead>Cargo</TableHead>
                 <TableHead>Filial</TableHead>
-                <TableHead>Comissão</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -79,13 +78,13 @@ export default function Usuarios() {
             <TableBody>
               {q.loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12">
+                  <TableCell colSpan={6} className="text-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : q.filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     Nenhum usuário encontrado
                   </TableCell>
                 </TableRow>
@@ -105,14 +104,6 @@ export default function Usuarios() {
                         : (user.filiais_vinculadas && user.filiais_vinculadas.length > 0)
                           ? user.filiais_vinculadas.map((f) => f.nome).join(", ")
                           : <span className="text-xs text-muted-foreground">—</span>
-                      }
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {(user as any).is_vendedor
-                        ? (user as any).comissao_implantacao_percentual != null
-                          ? `Imp: ${(user as any).comissao_implantacao_percentual}% / Mens: ${(user as any).comissao_mensalidade_percentual ?? user.comissao_percentual ?? 0}% / Serv: ${(user as any).comissao_servico_percentual ?? 5}%`
-                          : user.comissao_percentual != null ? `${user.comissao_percentual}%` : "—"
-                        : <span className="text-xs text-muted-foreground">—</span>
                       }
                     </TableCell>
                     <TableCell>
