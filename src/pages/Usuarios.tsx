@@ -71,7 +71,6 @@ export default function Usuarios() {
                 <TableHead>E-mail</TableHead>
                 <TableHead>Cargo</TableHead>
                 <TableHead>Filial</TableHead>
-                <TableHead>Comissão</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
