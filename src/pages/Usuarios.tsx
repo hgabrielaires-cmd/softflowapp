@@ -106,14 +106,6 @@ export default function Usuarios() {
                           : <span className="text-xs text-muted-foreground">—</span>
                       }
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {(user as any).is_vendedor
-                        ? (user as any).comissao_implantacao_percentual != null
-                          ? `Imp: ${(user as any).comissao_implantacao_percentual}% / Mens: ${(user as any).comissao_mensalidade_percentual ?? user.comissao_percentual ?? 0}% / Serv: ${(user as any).comissao_servico_percentual ?? 5}%`
-                          : user.comissao_percentual != null ? `${user.comissao_percentual}%` : "—"
-                        : <span className="text-xs text-muted-foreground">—</span>
-                      }
-                    </TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                         user.active ? "bg-sky-100 text-sky-700" : "bg-gray-100 text-gray-500"
