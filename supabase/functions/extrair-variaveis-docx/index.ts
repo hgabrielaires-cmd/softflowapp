@@ -43,8 +43,9 @@ Deno.serve(async (req) => {
     );
 
     const { modelo_id } = await req.json();
-    if (!modelo_id) {
-      return new Response(JSON.stringify({ error: "modelo_id obrigatório" }), {
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!modelo_id || typeof modelo_id !== "string" || !UUID_REGEX.test(modelo_id)) {
+      return new Response(JSON.stringify({ error: "modelo_id inválido" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
