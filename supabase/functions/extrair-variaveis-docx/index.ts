@@ -93,8 +93,9 @@ Deno.serve(async (req) => {
       .download(storagePath);
 
     if (downloadError || !fileData) {
+      console.error("Erro ao baixar arquivo:", downloadError);
       return new Response(
-        JSON.stringify({ error: "Erro ao baixar arquivo: " + downloadError?.message }),
+        JSON.stringify({ error: "Erro ao baixar arquivo" }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
