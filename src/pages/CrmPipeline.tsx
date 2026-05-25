@@ -100,6 +100,18 @@ export default function CrmPipeline() {
     }
   }, [oportunidades, searchParams]);
 
+  // Auto-open Fispal form when navigating from Dashboard with ?fispal=1
+  useEffect(() => {
+    if (searchParams.get("fispal") !== "1") return;
+    if (!etapas.length) return;
+    handleNewFispal();
+    searchParams.delete("fispal");
+    setSearchParams(searchParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [etapas, searchParams]);
+
+
+
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
