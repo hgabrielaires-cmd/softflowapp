@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ export default function CrmPipeline() {
   const queryClient = useQueryClient();
   const { filiaisDoUsuario, filialPadraoId, loading: filiaisLoading } = useUserFiliais();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [selectedFunilId, setSelectedFunilId] = useState<string>("");
   const [search, setSearch] = useState("");
@@ -191,6 +192,7 @@ export default function CrmPipeline() {
   };
 
   const handleSave = (data: Record<string, unknown>) => {
+    const fromFispal = !!fispalPrefill;
     if (editOportunidade) {
       updateMutation.mutate({ id: editOportunidade.id, ...data } as CrmOportunidade, {
         onSuccess: () => setDialogOpen(false),
@@ -199,6 +201,11 @@ export default function CrmPipeline() {
       createMutation.mutate({ funil_id: selectedFunilId, ...data } as CrmOportunidade, {
         onSuccess: (created) => {
           setDialogOpen(false);
+          if (fromFispal) {
+            setFispalPrefill(null);
+            navigate("/dashboard");
+            return;
+          }
           if (created) {
             setDetailOportunidade({
               ...created,
@@ -485,7 +492,13 @@ export default function CrmPipeline() {
 
       <OportunidadeFormDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open && fispalPrefill) {
+            setFispalPrefill(null);
+            navigate("/dashboard");
+          }
+        }}
         etapas={etapas}
         etapaIdInicial={newEtapaId}
         oportunidade={editOportunidade}
