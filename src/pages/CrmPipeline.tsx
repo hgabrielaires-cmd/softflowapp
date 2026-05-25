@@ -529,6 +529,14 @@ export default function CrmPipeline() {
         prefill={fispalPrefill ?? undefined}
         filiais={filiaisDoUsuario}
       />
+
+      <FispalWhatsAppDialog
+        open={fispalWhatsOpen}
+        onOpenChange={setFispalWhatsOpen}
+        contato={fispalContato}
+        vendedorUserId={user?.id || ""}
+        vendedorNome={profile?.full_name || ""}
+      />
     </AppLayout>
   );
 }
