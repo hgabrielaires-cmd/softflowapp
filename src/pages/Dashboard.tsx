@@ -759,13 +759,12 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div>
+        <div className="flex justify-center">
           <Button
-            size="sm"
             onClick={() => navigate("/crm-pipeline?fispal=1")}
-            className="h-9 bg-blue-600 hover:bg-blue-700 text-white"
+            className="h-14 px-8 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white"
           >
-            <Handshake className="h-4 w-4 mr-1" /> Fispal 2026
+            <Handshake className="h-5 w-5 mr-2" /> Fispal 2026
           </Button>
         </div>
 
