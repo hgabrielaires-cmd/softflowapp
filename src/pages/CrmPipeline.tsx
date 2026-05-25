@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
