@@ -18,6 +18,7 @@ import { useCrmPipelineForm } from "./crm-pipeline/useCrmPipelineForm";
 import { PipelineCard } from "./crm-pipeline/components/PipelineCard";
 import { OportunidadeFormDialog } from "./crm-pipeline/components/OportunidadeFormDialog";
 import { OportunidadeDetailView } from "./crm-pipeline/components/OportunidadeDetailView";
+import { FispalWhatsAppDialog } from "./crm-pipeline/components/FispalWhatsAppDialog";
 import { formatValor, totalValorEtapa } from "./crm-pipeline/helpers";
 import type { CrmOportunidade, CrmEtapaSimples } from "./crm-pipeline/types";
 
@@ -38,6 +39,8 @@ export default function CrmPipeline() {
   const [detailDefaultTab, setDetailDefaultTab] = useState<string | undefined>(undefined);
   const [visibleCountMap, setVisibleCountMap] = useState<Record<string, number>>({});
   const [fispalPrefill, setFispalPrefill] = useState<{ origem: string; filial_id?: string; camposByName: Record<string, string> } | null>(null);
+  const [fispalWhatsOpen, setFispalWhatsOpen] = useState(false);
+  const [fispalContato, setFispalContato] = useState<{ nome: string; telefone: string } | null>(null);
 
   // Filtros
   const [filterFilialId, setFilterFilialId] = useState<string>("__all__");
@@ -211,7 +214,12 @@ export default function CrmPipeline() {
           setDialogOpen(false);
           if (fromFispal) {
             setFispalPrefill(null);
-            navigate("/dashboard");
+            const contatos = (data._contatos as Array<{ nome: string; telefone: string }> | undefined) || [];
+            const primeiro = contatos.find(c => c.nome?.trim() && c.telefone?.trim());
+            if (primeiro) {
+              setFispalContato({ nome: primeiro.nome, telefone: primeiro.telefone });
+              setFispalWhatsOpen(true);
+            }
             return;
           }
           if (created) {
@@ -504,7 +512,6 @@ export default function CrmPipeline() {
           setDialogOpen(open);
           if (!open && fispalPrefill) {
             setFispalPrefill(null);
-            navigate("/dashboard");
           }
         }}
         etapas={etapas}
@@ -521,6 +528,14 @@ export default function CrmPipeline() {
         cargos={cargos}
         prefill={fispalPrefill ?? undefined}
         filiais={filiaisDoUsuario}
+      />
+
+      <FispalWhatsAppDialog
+        open={fispalWhatsOpen}
+        onOpenChange={setFispalWhatsOpen}
+        contato={fispalContato}
+        vendedorUserId={user?.id || ""}
+        vendedorNome={profile?.full_name || ""}
       />
     </AppLayout>
   );
