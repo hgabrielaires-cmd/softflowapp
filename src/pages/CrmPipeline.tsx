@@ -153,7 +153,23 @@ export default function CrmPipeline() {
   // Open form
   const handleNewOportunidade = (etapaId?: string) => {
     setEditOportunidade(null);
+    setFispalPrefill(null);
     setNewEtapaId(etapaId || etapas[0]?.id || "");
+    setDialogOpen(true);
+  };
+
+  const handleNewFispal = () => {
+    setEditOportunidade(null);
+    const etapaAgendar = etapas.find(e => e.nome.toLowerCase().includes("agendar reuni"));
+    setNewEtapaId(etapaAgendar?.id || etapas[0]?.id || "");
+    setFispalPrefill({
+      origem: "Feira",
+      camposByName: {
+        origem: "Feira",
+        campanha: "Fispal 2026",
+        canal: "Visitou Stand",
+      },
+    });
     setDialogOpen(true);
   };
 
