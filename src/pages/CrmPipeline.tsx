@@ -175,8 +175,12 @@ export default function CrmPipeline() {
     setEditOportunidade(null);
     const etapaAgendar = etapas.find(e => e.nome.toLowerCase().includes("agendar reuni"));
     setNewEtapaId(etapaAgendar?.id || etapas[0]?.id || "");
+    const filialPrefill =
+      (filialPadraoId && filiaisDoUsuario.some(f => f.id === filialPadraoId) ? filialPadraoId : undefined) ||
+      (filiaisDoUsuario.length === 1 ? filiaisDoUsuario[0].id : undefined);
     setFispalPrefill({
       origem: "Feira",
+      filial_id: filialPrefill,
       camposByName: {
         origem: "Feira",
         campanha: "Fispal 2026",
