@@ -214,7 +214,12 @@ export default function CrmPipeline() {
           setDialogOpen(false);
           if (fromFispal) {
             setFispalPrefill(null);
-            navigate("/dashboard");
+            const contatos = (data._contatos as Array<{ nome: string; telefone: string }> | undefined) || [];
+            const primeiro = contatos.find(c => c.nome?.trim() && c.telefone?.trim());
+            if (primeiro) {
+              setFispalContato({ nome: primeiro.nome, telefone: primeiro.telefone });
+              setFispalWhatsOpen(true);
+            }
             return;
           }
           if (created) {
