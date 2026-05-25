@@ -18,6 +18,7 @@ import { useCrmPipelineForm } from "./crm-pipeline/useCrmPipelineForm";
 import { PipelineCard } from "./crm-pipeline/components/PipelineCard";
 import { OportunidadeFormDialog } from "./crm-pipeline/components/OportunidadeFormDialog";
 import { OportunidadeDetailView } from "./crm-pipeline/components/OportunidadeDetailView";
+import { FispalWhatsAppDialog } from "./crm-pipeline/components/FispalWhatsAppDialog";
 import { formatValor, totalValorEtapa } from "./crm-pipeline/helpers";
 import type { CrmOportunidade, CrmEtapaSimples } from "./crm-pipeline/types";
 
