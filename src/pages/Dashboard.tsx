@@ -123,6 +123,7 @@ type DialogType = "pedidos" | "upsell" | "upgrade" | "contratos" | "descontos" |
 
 export default function Dashboard() {
   const { profile, roles, isAdmin, user } = useAuth();
+  const navigate = useNavigate();
   const firstName = profile?.full_name?.split(" ")[0] || "usuário";
   const { filiaisDoUsuario, filialPadraoId, isGlobal } = useUserFiliais();
 
