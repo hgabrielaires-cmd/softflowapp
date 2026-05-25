@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +23,7 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  Handshake,
 } from "lucide-react";
 import {
   Select,
