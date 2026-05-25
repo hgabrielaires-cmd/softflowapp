@@ -192,6 +192,7 @@ export default function CrmPipeline() {
   };
 
   const handleSave = (data: Record<string, unknown>) => {
+    const fromFispal = !!fispalPrefill;
     if (editOportunidade) {
       updateMutation.mutate({ id: editOportunidade.id, ...data } as CrmOportunidade, {
         onSuccess: () => setDialogOpen(false),
@@ -200,6 +201,11 @@ export default function CrmPipeline() {
       createMutation.mutate({ funil_id: selectedFunilId, ...data } as CrmOportunidade, {
         onSuccess: (created) => {
           setDialogOpen(false);
+          if (fromFispal) {
+            setFispalPrefill(null);
+            navigate("/dashboard");
+            return;
+          }
           if (created) {
             setDetailOportunidade({
               ...created,
