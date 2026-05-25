@@ -39,6 +39,8 @@ export default function CrmPipeline() {
   const [detailDefaultTab, setDetailDefaultTab] = useState<string | undefined>(undefined);
   const [visibleCountMap, setVisibleCountMap] = useState<Record<string, number>>({});
   const [fispalPrefill, setFispalPrefill] = useState<{ origem: string; filial_id?: string; camposByName: Record<string, string> } | null>(null);
+  const [fispalWhatsOpen, setFispalWhatsOpen] = useState(false);
+  const [fispalContato, setFispalContato] = useState<{ nome: string; telefone: string } | null>(null);
 
   // Filtros
   const [filterFilialId, setFilterFilialId] = useState<string>("__all__");
