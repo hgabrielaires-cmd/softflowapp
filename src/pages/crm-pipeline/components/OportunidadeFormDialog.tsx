@@ -144,7 +144,7 @@ export function OportunidadeFormDialog({
       } else {
         setTitulo(prefill?.titulo || "");
         setObservacoes("");
-        setFilialId("");
+        setFilialId(prefill?.filial_id && filiais.some(f => f.id === prefill.filial_id) ? prefill.filial_id! : "");
         setClienteId("");
         setResponsavelId(currentUserId || "");
         setEtapaId(etapaIdInicial || etapas[0]?.id || "");
