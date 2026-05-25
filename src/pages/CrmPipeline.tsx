@@ -492,7 +492,13 @@ export default function CrmPipeline() {
 
       <OportunidadeFormDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open && fispalPrefill) {
+            setFispalPrefill(null);
+            navigate("/dashboard");
+          }
+        }}
         etapas={etapas}
         etapaIdInicial={newEtapaId}
         oportunidade={editOportunidade}
