@@ -36,6 +36,7 @@ export default function CrmPipeline() {
   const [newEtapaId, setNewEtapaId] = useState<string>("");
   const [detailDefaultTab, setDetailDefaultTab] = useState<string | undefined>(undefined);
   const [visibleCountMap, setVisibleCountMap] = useState<Record<string, number>>({});
+  const [fispalPrefill, setFispalPrefill] = useState<{ origem: string; camposByName: Record<string, string> } | null>(null);
 
   // Filtros
   const [filterFilialId, setFilterFilialId] = useState<string>("__all__");
@@ -152,7 +153,23 @@ export default function CrmPipeline() {
   // Open form
   const handleNewOportunidade = (etapaId?: string) => {
     setEditOportunidade(null);
+    setFispalPrefill(null);
     setNewEtapaId(etapaId || etapas[0]?.id || "");
+    setDialogOpen(true);
+  };
+
+  const handleNewFispal = () => {
+    setEditOportunidade(null);
+    const etapaAgendar = etapas.find(e => e.nome.toLowerCase().includes("agendar reuni"));
+    setNewEtapaId(etapaAgendar?.id || etapas[0]?.id || "");
+    setFispalPrefill({
+      origem: "Feira",
+      camposByName: {
+        origem: "Feira",
+        campanha: "Fispal 2026",
+        canal: "Visitou Stand",
+      },
+    });
     setDialogOpen(true);
   };
 
@@ -346,6 +363,14 @@ export default function CrmPipeline() {
           <Button size="sm" className="h-9 shrink-0 w-full sm:w-auto" onClick={() => handleNewOportunidade()}>
             <Plus className="h-4 w-4 mr-1" /> Nova Oportunidade
           </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="h-9 shrink-0 w-full sm:w-auto"
+            onClick={handleNewFispal}
+          >
+            <Plus className="h-4 w-4 mr-1" /> Fispal 2026
+          </Button>
         </div>
 
         {/* Kanban */}
@@ -469,6 +494,8 @@ export default function CrmPipeline() {
         camposPersonalizados={camposPersonalizados}
         segmentos={segmentos}
         cargos={cargos}
+        prefill={fispalPrefill ?? undefined}
+        filiais={filiaisDoUsuario}
       />
     </AppLayout>
   );

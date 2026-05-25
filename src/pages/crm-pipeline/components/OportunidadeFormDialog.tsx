@@ -51,6 +51,8 @@ interface Props {
     origem?: string;
     origemLocked?: boolean;
     conversa_id?: string;
+    /** Map de nome do campo personalizado (case-insensitive) -> valor */
+    camposByName?: Record<string, string>;
   };
   filiais?: { id: string; nome: string }[];
 }
@@ -159,6 +161,15 @@ export function OportunidadeFormDialog({
           if (origemCampo) {
             const matchOrigem = origemCampo.opcoes?.find((o: string) => o.toLowerCase() === "chat softplus");
             initialCampos[origemCampo.id] = matchOrigem || "Chat Softplus";
+          }
+        }
+        // Pre-fill by field name (overrides defaults acima)
+        if (prefill?.camposByName) {
+          for (const [nome, valor] of Object.entries(prefill.camposByName)) {
+            const campo = camposPersonalizados.find(c => c.nome.toLowerCase() === nome.toLowerCase());
+            if (!campo) continue;
+            const match = campo.opcoes?.find((o: string) => o.toLowerCase() === valor.toLowerCase());
+            initialCampos[campo.id] = match || valor;
           }
         }
         setCamposValues(initialCampos);
