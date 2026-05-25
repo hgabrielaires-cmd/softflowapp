@@ -26,6 +26,7 @@ export default function CrmPipeline() {
   const queryClient = useQueryClient();
   const { filiaisDoUsuario, filialPadraoId, loading: filiaisLoading } = useUserFiliais();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [selectedFunilId, setSelectedFunilId] = useState<string>("");
   const [search, setSearch] = useState("");
