@@ -163,6 +163,15 @@ export function OportunidadeFormDialog({
             initialCampos[origemCampo.id] = matchOrigem || "Chat Softplus";
           }
         }
+        // Pre-fill by field name (overrides defaults acima)
+        if (prefill?.camposByName) {
+          for (const [nome, valor] of Object.entries(prefill.camposByName)) {
+            const campo = camposPersonalizados.find(c => c.nome.toLowerCase() === nome.toLowerCase());
+            if (!campo) continue;
+            const match = campo.opcoes?.find((o: string) => o.toLowerCase() === valor.toLowerCase());
+            initialCampos[campo.id] = match || valor;
+          }
+        }
         setCamposValues(initialCampos);
         setContatos(prefill?.contatos && prefill.contatos.length > 0 ? prefill.contatos : [emptyContato()]);
         setTried(false);
