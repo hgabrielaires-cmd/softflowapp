@@ -44,8 +44,8 @@ export function FispalWhatsAppDialog({ open, onOpenChange, contato, vendedorUser
         return;
       }
       const texto = data.conteudo
-        .replaceAll("{contato.nome}", contato?.nome || "")
-        .replaceAll("{vendedor.nome}", vendedorNome || "");
+        .split("{contato.nome}").join(contato?.nome || "")
+        .split("{vendedor.nome}").join(vendedorNome || "");
       setMensagem(texto);
       setLoading(false);
     })();
