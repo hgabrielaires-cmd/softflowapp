@@ -759,6 +759,17 @@ export default function Dashboard() {
           </div>
         </div>
 
+        <div>
+          <Button
+            size="sm"
+            onClick={() => navigate("/crm-pipeline?fispal=1")}
+            className="h-9 bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Handshake className="h-4 w-4 mr-1" /> Fispal 2026
+          </Button>
+        </div>
+
+
         {/* KPI Cards - Row 1 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard
