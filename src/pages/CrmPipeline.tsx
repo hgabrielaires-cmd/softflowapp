@@ -494,6 +494,8 @@ export default function CrmPipeline() {
         camposPersonalizados={camposPersonalizados}
         segmentos={segmentos}
         cargos={cargos}
+        prefill={fispalPrefill ?? undefined}
+        filiais={filiaisDoUsuario}
       />
     </AppLayout>
   );
