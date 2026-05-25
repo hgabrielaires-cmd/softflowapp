@@ -512,7 +512,6 @@ export default function CrmPipeline() {
           setDialogOpen(open);
           if (!open && fispalPrefill) {
             setFispalPrefill(null);
-            navigate("/dashboard");
           }
         }}
         etapas={etapas}
