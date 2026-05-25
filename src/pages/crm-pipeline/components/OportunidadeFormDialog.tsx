@@ -51,6 +51,8 @@ interface Props {
     origem?: string;
     origemLocked?: boolean;
     conversa_id?: string;
+    /** Map de nome do campo personalizado (case-insensitive) -> valor */
+    camposByName?: Record<string, string>;
   };
   filiais?: { id: string; nome: string }[];
 }
