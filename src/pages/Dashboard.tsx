@@ -759,14 +759,16 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="flex justify-center">
-          <Button
-            onClick={() => navigate("/crm-pipeline?fispal=1")}
-            className="h-14 px-8 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <Handshake className="h-5 w-5 mr-2" /> Fispal 2026
-          </Button>
-        </div>
+        {roles.includes("vendedor") && (
+          <div className="flex justify-center">
+            <Button
+              onClick={() => navigate("/crm-pipeline?fispal=1")}
+              className="h-14 px-8 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Handshake className="h-5 w-5 mr-2" /> Fispal 2026
+            </Button>
+          </div>
+        )}
 
 
         {/* KPI Cards - Row 1 */}
