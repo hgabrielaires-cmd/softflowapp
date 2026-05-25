@@ -759,7 +759,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {roles.includes("vendedor") && (
+        {(profile as any)?.is_vendedor === true && (
           <div className="flex justify-center">
             <Button
               onClick={() => navigate("/crm-pipeline?fispal=1")}
