@@ -180,7 +180,7 @@ export function OportunidadeFormDialog({
         setPhoneIgnorado({});
       }
     }
-  }, [open, oportunidade, etapaIdInicial, etapas, camposPersonalizados, prefill, currentUserId]);
+  }, [open, oportunidade, etapaIdInicial, etapas, camposPersonalizados, prefill, currentUserId, filiais]);
 
   const updateContato = (index: number, field: keyof ContatoLocal, value: string) => {
     setContatos(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c));

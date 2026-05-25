@@ -104,12 +104,12 @@ export default function CrmPipeline() {
   // Auto-open Fispal form when navigating from Dashboard with ?fispal=1
   useEffect(() => {
     if (searchParams.get("fispal") !== "1") return;
-    if (!etapas.length) return;
+    if (!etapas.length || filiaisLoading) return;
     handleNewFispal();
     searchParams.delete("fispal");
     setSearchParams(searchParams, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [etapas, searchParams]);
+  }, [etapas, filiaisLoading, searchParams]);
 
 
 
@@ -175,7 +175,11 @@ export default function CrmPipeline() {
     setEditOportunidade(null);
     const etapaAgendar = etapas.find(e => e.nome.toLowerCase().includes("agendar reuni"));
     setNewEtapaId(etapaAgendar?.id || etapas[0]?.id || "");
+    const filialFavoritaValida = profile?.filial_favorita_id && filiaisDoUsuario.some(f => f.id === profile.filial_favorita_id)
+      ? profile.filial_favorita_id
+      : undefined;
     const filialPrefill =
+      filialFavoritaValida ||
       (filialPadraoId && filiaisDoUsuario.some(f => f.id === filialPadraoId) ? filialPadraoId : undefined) ||
       (filiaisDoUsuario.length === 1 ? filiaisDoUsuario[0].id : undefined);
     setFispalPrefill({
