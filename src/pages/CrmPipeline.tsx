@@ -363,14 +363,6 @@ export default function CrmPipeline() {
           <Button size="sm" className="h-9 shrink-0 w-full sm:w-auto" onClick={() => handleNewOportunidade()}>
             <Plus className="h-4 w-4 mr-1" /> Nova Oportunidade
           </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="h-9 shrink-0 w-full sm:w-auto"
-            onClick={handleNewFispal}
-          >
-            <Plus className="h-4 w-4 mr-1" /> Fispal 2026
-          </Button>
         </div>
 
         {/* Kanban */}
