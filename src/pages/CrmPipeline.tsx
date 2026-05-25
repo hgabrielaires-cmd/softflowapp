@@ -37,7 +37,7 @@ export default function CrmPipeline() {
   const [newEtapaId, setNewEtapaId] = useState<string>("");
   const [detailDefaultTab, setDetailDefaultTab] = useState<string | undefined>(undefined);
   const [visibleCountMap, setVisibleCountMap] = useState<Record<string, number>>({});
-  const [fispalPrefill, setFispalPrefill] = useState<{ origem: string; camposByName: Record<string, string> } | null>(null);
+  const [fispalPrefill, setFispalPrefill] = useState<{ origem: string; filial_id?: string; camposByName: Record<string, string> } | null>(null);
 
   // Filtros
   const [filterFilialId, setFilterFilialId] = useState<string>("__all__");
@@ -175,8 +175,12 @@ export default function CrmPipeline() {
     setEditOportunidade(null);
     const etapaAgendar = etapas.find(e => e.nome.toLowerCase().includes("agendar reuni"));
     setNewEtapaId(etapaAgendar?.id || etapas[0]?.id || "");
+    const filialPrefill =
+      (filialPadraoId && filiaisDoUsuario.some(f => f.id === filialPadraoId) ? filialPadraoId : undefined) ||
+      (filiaisDoUsuario.length === 1 ? filiaisDoUsuario[0].id : undefined);
     setFispalPrefill({
       origem: "Feira",
+      filial_id: filialPrefill,
       camposByName: {
         origem: "Feira",
         campanha: "Fispal 2026",
