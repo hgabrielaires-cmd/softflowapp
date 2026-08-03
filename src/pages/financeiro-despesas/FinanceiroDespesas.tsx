@@ -61,6 +61,22 @@ export default function FinanceiroDespesas() {
 
   const temFiltro = JSON.stringify(filtros) !== JSON.stringify(emptyDespesaFiltros);
 
+  if (permsLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center py-20">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // Acesso direto pela URL sem permissão de menu volta ao dashboard
+  if (permissions !== null && !permissions.has("menu.despesas")) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+
   return (
     <AppLayout>
       <div className="space-y-6">
