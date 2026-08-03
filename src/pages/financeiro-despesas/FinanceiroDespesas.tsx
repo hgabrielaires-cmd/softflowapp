@@ -54,7 +54,15 @@ export default function FinanceiroDespesas() {
     setPage(1);
   };
 
-  const filtradas = useMemo(() => aplicarFiltrosDespesas(despesas, filtros), [despesas, filtros]);
+  const filtradas = useMemo(
+    () =>
+      aplicarFiltrosDespesas(despesas, filtros).sort((a, b) => {
+        const venc = a.data_vencimento.localeCompare(b.data_vencimento);
+        if (venc !== 0) return venc;
+        return (a.parcela_numero || 0) - (b.parcela_numero || 0);
+      }),
+    [despesas, filtros],
+  );
   const totalPages = Math.ceil(filtradas.length / ITEMS_PER_PAGE) || 1;
   const paginadas = filtradas.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
   const totalValor = filtradas.reduce((acc, d) => acc + Number(d.valor), 0);
