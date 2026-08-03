@@ -396,6 +396,20 @@ export async function relatorioPendentes(supabase: any, periodo?: Periodo): Prom
 
   let msg = cab;
 
+  if (vencidas.length) {
+    msg +=
+      `🔴 *VENCIDAS*\n` +
+      tabela(
+        ["Fornecedor", "Valor", "Venceu"],
+        vencidas.slice(0, 15).map((l) => [
+          nome(l.fornecedor_id).slice(0, 22),
+          moeda(Number(l.valor ?? 0)),
+          `${br(l.data_vencimento, true)} ⚠️`,
+        ]),
+        [1],
+      ) +
+      `\n\n${SEP}\n\n`;
+  }
 
   if (emAberto.length) {
     msg +=
@@ -412,23 +426,10 @@ export async function relatorioPendentes(supabase: any, periodo?: Periodo): Prom
       `\n\n${SEP}\n\n`;
   }
 
-  if (vencidas.length) {
-    msg +=
-      `🔴 *VENCIDAS*\n` +
-      tabela(
-        ["Fornecedor", "Valor", "Venceu"],
-        vencidas.slice(0, 15).map((l) => [
-          nome(l.fornecedor_id).slice(0, 22),
-          moeda(Number(l.valor ?? 0)),
-          `${br(l.data_vencimento, true)} ⚠️`,
-        ]),
-        [1],
-      ) +
-      `\n\n${SEP}\n\n`;
-  }
-
-  msg += `💸 Total pendente: *${moeda(totalPendente)}*`;
-  if (totalVencido) msg += `\n⚠️ Vencido: *${moeda(totalVencido)}*`;
+  if (totalVencido) msg += `⚠️ Vencido: *${moeda(totalVencido)}*\n`;
+  if (totalAberto) msg += `🟡 A vencer: *${moeda(totalAberto)}*\n`;
+  msg += `💸 *Total pendente: ${moeda(totalPendente)}*\n\n${RODAPE}`;
 
   return msg;
+
 }
