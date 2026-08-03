@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PERIODOS_RECORRENCIA } from "../constants";
+import { ParcelasPaginacao, fatiar } from "./ParcelasPaginacao";
 import { ANEXO_ACCEPT, ANEXO_MAX_MB, formatBRL, formatDataBR, parseValor, validarAnexo } from "../helpers";
 
 import type { DespesaWizardState, FornecedorOption } from "../types";
@@ -42,6 +44,10 @@ export function StepRevisao({
   contas,
   centrosCusto,
 }: Props) {
+  const [porPagina, setPorPagina] = useState("5");
+  const [pagina, setPagina] = useState(1);
+  const { visiveis, totalPaginas } = fatiar(state.parcelas, porPagina, pagina);
+
   const nomeCentro = (id: string) => {
     const c = centrosCusto.find((x) => x.id === id);
     return c ? `${c.codigo ? c.codigo + " — " : ""}${c.nome}` : "—";
@@ -90,6 +96,7 @@ export function StepRevisao({
       </div>
 
       {state.recorrente && state.parcelas.length > 0 && (
+        <div className="space-y-2">
         <div className="rounded-lg border border-border overflow-x-auto">
           <Table>
             <TableHeader>
@@ -100,7 +107,7 @@ export function StepRevisao({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {state.parcelas.map((p) => (
+              {visiveis.map((p) => (
                 <TableRow key={p.numero}>
                   <TableCell>{p.numero}/{state.parcelas.length}</TableCell>
                   <TableCell>{formatDataBR(p.data_vencimento)}</TableCell>
@@ -109,6 +116,15 @@ export function StepRevisao({
               ))}
             </TableBody>
           </Table>
+        </div>
+        <ParcelasPaginacao
+          total={state.parcelas.length}
+          porPagina={porPagina}
+          setPorPagina={setPorPagina}
+          pagina={Math.min(pagina, totalPaginas)}
+          setPagina={setPagina}
+          totalPaginas={totalPaginas}
+        />
         </div>
       )}
 
