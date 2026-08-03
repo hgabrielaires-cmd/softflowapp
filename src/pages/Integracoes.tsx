@@ -127,6 +127,38 @@ const integrationDefs: IntegrationDef[] = [
       "10GB gratuitos por mês",
     ],
   },
+  {
+    key: "telegram",
+    icon: <img src={logoTelegram} alt="Telegram" className="h-20 w-20 object-contain" />,
+    hasLogo: true,
+    title: "Telegram",
+    description: "Recebimento de comprovantes via bot",
+    accentColor: "bg-[#0088cc]",
+    tokenLabel: "",
+    tokenPlaceholder: "",
+    details: [
+      "Recebimento de comprovantes via foto/PDF",
+      "Lançamento automático de despesas",
+      "Reconhecimento inteligente por IA",
+      "Memória de fornecedores e plano de contas",
+    ],
+  },
+  {
+    key: "anthropic",
+    icon: <img src={logoAnthropic} alt="Claude" className="h-20 w-20 object-contain rounded-2xl" />,
+    hasLogo: true,
+    title: "Claude (Anthropic)",
+    description: "Leitura inteligente de documentos",
+    accentColor: "bg-[#D97757]",
+    tokenLabel: "",
+    tokenPlaceholder: "",
+    details: [
+      "Leitura inteligente de comprovantes e NFs",
+      "Extração: valor, CNPJ, data, tipo pagamento",
+      "Reconhecimento de notas fiscais complexas",
+      "Modelo atual: claude-sonnet-4-6",
+    ],
+  },
 ];
 // ── WhatsApp Config Dialog (Evolution API) ──
 
