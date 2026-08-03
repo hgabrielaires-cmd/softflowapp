@@ -244,6 +244,7 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
                 formasPagamento={formasAtivas}
                 contas={contasAtivas}
                 centrosCusto={centrosAtivos}
+                filiais={filiaisDoUsuario}
               />
             )}
           </div>

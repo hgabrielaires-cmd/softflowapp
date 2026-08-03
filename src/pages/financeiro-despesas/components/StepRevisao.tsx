@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,7 @@ interface Props {
   formasPagamento: FormaPagamento[];
   contas: ContaFinanceira[];
   centrosCusto: CentroCusto[];
+  filiais: { id: string; nome: string }[];
 }
 
 function Linha({ label, valor }: { label: string; valor: string }) {
@@ -43,6 +45,7 @@ export function StepRevisao({
   formasPagamento,
   contas,
   centrosCusto,
+  filiais,
 }: Props) {
   const [porPagina, setPorPagina] = useState("5");
   const [pagina, setPagina] = useState(1);
@@ -55,8 +58,22 @@ export function StepRevisao({
 
   const periodoLabel = PERIODOS_RECORRENCIA.find((p) => p.value === state.periodo)?.label || "";
 
+  const nomeFilial = filiais.find((f) => f.id === state.filial_id)?.nome;
+
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3 sm:p-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Building2 className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Filial do lançamento</p>
+          <p className="text-base font-semibold text-foreground break-words sm:text-lg">
+            {nomeFilial || "Não informada"}
+          </p>
+        </div>
+      </div>
+
       <div className="rounded-lg border border-border p-3 sm:p-4">
         <Linha label="Valor" valor={formatBRL(parseValor(state.valor))} />
         <Linha label="Data de emissão" valor={formatDataBR(state.data_emissao)} />
