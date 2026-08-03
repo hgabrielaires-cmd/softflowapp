@@ -32,7 +32,7 @@ export function useDespesaForm() {
         })
         .select("id, nome_fantasia, razao_social, cnpj_cpf")
         .single();
-      if (error) throw error;
+      if (error) throw new Error("Não foi possível cadastrar o fornecedor. Verifique os dados informados.");
       return data;
     },
     onSuccess: () => {
@@ -40,6 +40,7 @@ export function useDespesaForm() {
       queryClient.invalidateQueries({ queryKey: ["despesas_fornecedores_options"] });
     },
     onError: (e: Error) => toast.error(e.message || "Erro ao cadastrar fornecedor"),
+
   });
 
   const salvarDespesaMut = useMutation({
@@ -93,7 +94,7 @@ export function useDespesaForm() {
         .from("fin_despesas")
         .insert(rows)
         .select("id");
-      if (error) throw error;
+      if (error) throw new Error("Não foi possível salvar o lançamento. Verifique os dados e tente novamente.");
 
       const rateios = state.ratear
         ? state.rateios
@@ -113,7 +114,7 @@ export function useDespesaForm() {
         );
         if (rateioRows.length > 0) {
           const { error: rErr } = await supabase.from("fin_despesa_rateios").insert(rateioRows);
-          if (rErr) throw rErr;
+          if (rErr) throw new Error("O rateio por centro de custo é inválido. Ele deve somar 100%.");
         }
       }
     },
@@ -122,6 +123,7 @@ export function useDespesaForm() {
       queryClient.invalidateQueries({ queryKey: ["fin_despesas"] });
     },
     onError: (e: Error) => toast.error(e.message || "Erro ao salvar lançamento"),
+
   });
 
   return { criarFornecedorMut, salvarDespesaMut };
