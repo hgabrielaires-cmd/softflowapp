@@ -89,7 +89,16 @@ export function DespesaQuitarDialog({ despesa, open, onOpenChange }: Props) {
     setJurosPerc(valorOriginal > 0 ? ((val / valorOriginal) * 100).toFixed(4).replace(".", ",") : "0");
   };
 
+  const irParaConta = () => {
+    if (!dataPagamento) return toast.error("Informe a data do pagamento");
+    if (temJuros && juros > 0 && !planoJuros) {
+      return toast.error("Selecione o plano de contas dos juros");
+    }
+    setEtapaConta(true);
+  };
+
   const confirmar = async () => {
+    if (!contaPagamento) return toast.error("Selecione a conta financeira do pagamento");
     await quitarDespesaMut.mutateAsync({
       despesa,
       data_pagamento: dataPagamento,
@@ -97,6 +106,7 @@ export function DespesaQuitarDialog({ despesa, open, onOpenChange }: Props) {
       juros_valor: juros,
       plano_conta_juros_id: temJuros && juros > 0 ? planoJuros || null : null,
       valor_pago: totalLiquido,
+      conta_financeira_id: contaPagamento,
     });
     onOpenChange(false);
   };
