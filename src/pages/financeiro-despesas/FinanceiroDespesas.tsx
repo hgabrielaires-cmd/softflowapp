@@ -293,8 +293,10 @@ export default function FinanceiroDespesas() {
                     <TableCell>{d.parcela_numero}/{d.parcela_total}</TableCell>
                     <TableCell className="text-right">{formatBRL(Number(d.valor))}</TableCell>
                     <TableCell>
-                      <Badge variant={statusBadgeVariant(d)}>
-                        {STATUS_DESPESA.find((s) => s.value === d.status)?.label || d.status}
+                      <Badge variant={statusBadgeVariant(d)} className={statusBadgeClass(d)}>
+                        {despesaVencida(d)
+                          ? "Vencido"
+                          : STATUS_DESPESA.find((s) => s.value === d.status)?.label || d.status}
                       </Badge>
                     </TableCell>
                     {temAcoes && (
