@@ -23,12 +23,13 @@ interface Props {
 
 function Linha({ label, valor }: { label: string; valor: string }) {
   return (
-    <div className="flex justify-between gap-4 py-1 text-sm">
+    <div className="flex flex-col gap-0.5 py-1 text-sm sm:flex-row sm:justify-between sm:gap-4">
       <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium text-right">{valor || "—"}</span>
+      <span className="font-medium break-words sm:text-right">{valor || "—"}</span>
     </div>
   );
 }
+
 
 export function StepRevisao({
   state,
@@ -50,7 +51,7 @@ export function StepRevisao({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-border p-4">
+      <div className="rounded-lg border border-border p-3 sm:p-4">
         <Linha label="Valor" valor={formatBRL(parseValor(state.valor))} />
         <Linha label="Data de emissão" valor={formatDataBR(state.data_emissao)} />
         <Linha label="Data de vencimento" valor={formatDataBR(state.data_vencimento)} />
@@ -89,7 +90,7 @@ export function StepRevisao({
       </div>
 
       {state.recorrente && state.parcelas.length > 0 && (
-        <div className="rounded-lg border border-border">
+        <div className="rounded-lg border border-border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

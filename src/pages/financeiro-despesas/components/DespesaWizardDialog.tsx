@@ -130,21 +130,21 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Lançamento de despesa</DialogTitle>
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] sm:max-w-3xl max-h-[92dvh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-base sm:text-lg">Lançamento de despesa</DialogTitle>
           </DialogHeader>
 
           {/* Indicador de progresso */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {WIZARD_STEPS.map((s, i) => {
               const concluido = step > s.numero;
               const atual = step === s.numero;
               return (
-                <div key={s.numero} className="flex flex-1 items-center gap-2">
+                <div key={s.numero} className="flex flex-1 items-center gap-1.5 sm:gap-2">
                   <div
                     className={cn(
-                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-medium",
+                      "flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full border text-xs sm:text-sm font-medium",
                       atual && "bg-primary text-primary-foreground border-primary",
                       concluido && "bg-primary/10 text-primary border-primary",
                       !atual && !concluido && "text-muted-foreground border-border",
@@ -154,8 +154,8 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
                   </div>
                   <span
                     className={cn(
-                      "text-xs sm:text-sm",
-                      atual ? "font-medium text-foreground" : "text-muted-foreground",
+                      "text-xs sm:text-sm truncate",
+                      atual ? "font-medium text-foreground inline" : "text-muted-foreground hidden sm:inline",
                     )}
                   >
                     {s.label}
@@ -165,6 +165,7 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
               );
             })}
           </div>
+
 
           <div className="pt-2">
             {step === 1 && (
@@ -203,22 +204,24 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
             )}
           </div>
 
-          <div className="flex justify-between pt-4">
+          <div className="flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-between">
             <Button
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => (step === 1 ? onOpenChange(false) : setStep((s) => s - 1))}
             >
               {step === 1 ? "Cancelar" : "Voltar"}
             </Button>
             {step < 4 ? (
-              <Button onClick={avancar}>Avançar</Button>
+              <Button className="w-full sm:w-auto" onClick={avancar}>Avançar</Button>
             ) : (
-              <Button onClick={salvar} disabled={salvarDespesaMut.isPending}>
+              <Button className="w-full sm:w-auto" onClick={salvar} disabled={salvarDespesaMut.isPending}>
                 {salvarDespesaMut.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 Salvar lançamento
               </Button>
             )}
           </div>
+
         </DialogContent>
       </Dialog>
 
