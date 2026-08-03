@@ -1,0 +1,1 @@
+ALTER TABLE public.telegram_pendencias ADD COLUMN IF NOT EXISTS filial_id uuid;

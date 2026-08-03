@@ -5667,6 +5667,7 @@ export type Database = {
           created_at: string
           dados_extraidos: Json | null
           etapa: string
+          filial_id: string | null
           forma_pagamento_id: string | null
           fornecedor_id: string | null
           fornecedor_nome: string | null
@@ -5689,6 +5690,7 @@ export type Database = {
           created_at?: string
           dados_extraidos?: Json | null
           etapa?: string
+          filial_id?: string | null
           forma_pagamento_id?: string | null
           fornecedor_id?: string | null
           fornecedor_nome?: string | null
@@ -5711,6 +5713,7 @@ export type Database = {
           created_at?: string
           dados_extraidos?: Json | null
           etapa?: string
+          filial_id?: string | null
           forma_pagamento_id?: string | null
           fornecedor_id?: string | null
           fornecedor_nome?: string | null
