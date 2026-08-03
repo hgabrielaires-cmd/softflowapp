@@ -42,9 +42,14 @@ export function useChatMediaActions() {
         .upload(path, file, { contentType: file.type });
       if (uploadError) throw new Error("Erro no upload: " + uploadError.message);
 
-      // 2. Get public URL
+      // 2. URLs: pública (referência persistida) e assinada (para a Evolution buscar o arquivo)
       const { data: urlData } = supabase.storage.from("chat-midias").getPublicUrl(path);
       const publicUrl = urlData.publicUrl;
+
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from("chat-midias")
+        .createSignedUrl(path, 3600);
+      if (signedError) throw new Error("Erro ao gerar link da mídia: " + signedError.message);
 
       // 3. Send via Evolution API
       const mediatype = getEvolutionMediaType(file);
@@ -54,7 +59,7 @@ export function useChatMediaActions() {
           instance_name: instanceName,
           number: numero,
           mediatype,
-          media: publicUrl,
+          media: signedData.signedUrl,
           fileName: file.name,
           caption: caption || undefined,
         },
