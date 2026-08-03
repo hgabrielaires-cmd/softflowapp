@@ -214,18 +214,19 @@ export default function FinanceiroDespesas() {
                 <TableHead>Parcela</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
                 <TableHead>Status</TableHead>
+                {temAcoes && <TableHead className="w-[90px] text-right">Ações</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={temAcoes ? 8 : 7} className="text-center py-10 text-muted-foreground">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : paginadas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={temAcoes ? 8 : 7} className="text-center py-10 text-muted-foreground">
                     Nenhuma despesa encontrada.
                   </TableCell>
                 </TableRow>
@@ -243,6 +244,32 @@ export default function FinanceiroDespesas() {
                         {STATUS_DESPESA.find((s) => s.value === d.status)?.label || d.status}
                       </Badge>
                     </TableCell>
+                    {temAcoes && (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          {canEditar && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Editar despesa"
+                              onClick={() => setEditando(d)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canExcluir && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Excluir despesa"
+                              onClick={() => setExcluindo(d)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
@@ -259,6 +286,17 @@ export default function FinanceiroDespesas() {
       </div>
 
       <DespesaWizardDialog open={wizardOpen} onOpenChange={setWizardOpen} />
+      <DespesaEditDialog
+        despesa={editando}
+        open={!!editando}
+        onOpenChange={(o) => !o && setEditando(null)}
+      />
+      <DespesaDeleteDialog
+        despesa={excluindo}
+        open={!!excluindo}
+        onOpenChange={(o) => !o && setExcluindo(null)}
+      />
+
     </AppLayout>
   );
 }
