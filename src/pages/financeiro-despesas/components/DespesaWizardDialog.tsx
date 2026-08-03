@@ -16,6 +16,7 @@ import { Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
+import { useUserFiliais } from "@/hooks/useUserFiliais";
 import {
   useCentrosCustoQuery,
   useContasFinanceirasQuery,
@@ -53,6 +54,7 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
   const { data: contas = [] } = useContasFinanceirasQuery();
   const { data: centrosCusto = [] } = useCentrosCustoQuery();
   const { salvarDespesaMut } = useDespesaForm();
+  const { filiaisDoUsuario, filialPadraoId, loading: filiaisLoading } = useUserFiliais();
 
   const setState = (patch: Partial<DespesaWizardState>) =>
     setStateRaw((prev) => ({ ...prev, ...patch }));
@@ -73,6 +75,18 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
       setAnexo(null);
     }
   }, [open]);
+
+  // Filial padrão: favorita do perfil (ou única disponível)
+  useEffect(() => {
+    if (!open || filiaisLoading) return;
+    setStateRaw((prev) => {
+      if (prev.filial_id) return prev;
+      const padrao =
+        (filialPadraoId && filiaisDoUsuario.some((f) => f.id === filialPadraoId) && filialPadraoId) ||
+        (filiaisDoUsuario.length === 1 ? filiaisDoUsuario[0].id : "");
+      return padrao ? { ...prev, filial_id: padrao } : prev;
+    });
+  }, [open, filiaisLoading, filialPadraoId, filiaisDoUsuario]);
 
   // Centro de custo padrão: CC1 (empresa toda) com 100%
   useEffect(() => {
@@ -103,6 +117,7 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
     if (step === 1) {
       if (parseValor(state.valor) <= 0) return toast.error("Informe o valor da despesa"), false;
       if (!state.data_vencimento) return toast.error("Informe a data de vencimento"), false;
+      if (!state.filial_id) return toast.error("Selecione a filial"), false;
       if (!state.fornecedor_id) return toast.error("Selecione o fornecedor"), false;
     }
     if (step === 2) {
@@ -198,6 +213,7 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
                 state={state}
                 setState={setState}
                 fornecedores={fornecedores}
+                filiais={filiaisDoUsuario}
                 onNovoFornecedor={() => setFornecedorDialog(true)}
               />
             )}

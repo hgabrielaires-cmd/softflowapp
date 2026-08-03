@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
@@ -13,10 +14,11 @@ interface Props {
   state: DespesaWizardState;
   setState: (patch: Partial<DespesaWizardState>) => void;
   fornecedores: FornecedorOption[];
+  filiais: { id: string; nome: string }[];
   onNovoFornecedor: () => void;
 }
 
-export function StepDados({ state, setState, fornecedores, onNovoFornecedor }: Props) {
+export function StepDados({ state, setState, fornecedores, filiais, onNovoFornecedor }: Props) {
   const [openCombo, setOpenCombo] = useState(false);
 
   const selecionado = useMemo(
@@ -48,6 +50,18 @@ export function StepDados({ state, setState, fornecedores, onNovoFornecedor }: P
             onChange={(e) => setState({ data_vencimento: e.target.value })}
           />
         </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Filial *</Label>
+        <Select value={state.filial_id} onValueChange={(v) => setState({ filial_id: v })}>
+          <SelectTrigger><SelectValue placeholder="Selecione a filial" /></SelectTrigger>
+          <SelectContent>
+            {filiais.map((f) => (
+              <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-1.5">
