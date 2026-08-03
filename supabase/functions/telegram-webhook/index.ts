@@ -1124,6 +1124,32 @@ async function processarResposta(
   text: string,
   pendencia: any,
 ) {
+  // ── Período personalizado do relatório de vendas ──
+  if (pendencia.etapa === "venda_periodo_custom") {
+    const m = text.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})/);
+    if (!m) {
+      await sendMessage(token, chatId, "⚠️ Formato inválido. Digite:\n`DD/MM/AAAA DD/MM/AAAA`");
+      return ok();
+    }
+    const toISO = (v: string) => {
+      const [dd, mm, aaaa] = v.split("/");
+      return `${aaaa}-${mm}-${dd}`;
+    };
+    await supabase
+      .from("telegram_pendencias")
+      .update({ status: "concluido" })
+      .eq("id", pendencia.id);
+    await executarRelatorioVendas(
+      supabase,
+      token,
+      chatId,
+      pendencia.filial_id ?? null,
+      { inicio: toISO(m[1]), fim: toISO(m[2]), label: `${m[1]} a ${m[2]}` },
+      null,
+    );
+    return ok();
+  }
+
   // ── Período personalizado de relatório ──
   if (pendencia.etapa === "aguardando_periodo_custom") {
     const matchDatas = text.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})/);
