@@ -4,8 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Loader2 } from "lucide-react";
-import { usePlanoContasQuery } from "@/pages/financeiro-parametros/useFinanceiroParametrosQueries";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Check, CheckCircle2, ChevronsUpDown, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import {
+  useContasFinanceirasQuery,
+  usePlanoContasQuery,
+} from "@/pages/financeiro-parametros/useFinanceiroParametrosQueries";
 import { formatBRL, formatDataBR, hojeISO, parseValor } from "../helpers";
 import { useDespesaMutations } from "../useDespesaMutations";
 import type { DespesaRegistro } from "../types";
@@ -29,16 +43,21 @@ export function DespesaQuitarDialog({ despesa, open, onOpenChange }: Props) {
   const [dataPagamento, setDataPagamento] = useState(hojeISO());
   const [temJuros, setTemJuros] = useState(false);
   const [planoJuros, setPlanoJuros] = useState("");
+  const [planoOpen, setPlanoOpen] = useState(false);
   const [jurosPerc, setJurosPerc] = useState("0");
   const [jurosValor, setJurosValor] = useState("0");
+  const [etapaConta, setEtapaConta] = useState(false);
+  const [contaPagamento, setContaPagamento] = useState("");
 
   const { data: planoContas = [] } = usePlanoContasQuery();
+  const { data: contas = [] } = useContasFinanceirasQuery();
   const { quitarDespesaMut } = useDespesaMutations();
 
   const planoContasLancaveis = useMemo(
     () => planoContas.filter((p) => p.ativo && p.aceita_lancamento),
     [planoContas],
   );
+  const contasAtivas = useMemo(() => contas.filter((c) => c.ativo), [contas]);
 
   useEffect(() => {
     if (open) {
@@ -47,8 +66,10 @@ export function DespesaQuitarDialog({ despesa, open, onOpenChange }: Props) {
       setPlanoJuros("");
       setJurosPerc("0");
       setJurosValor("0");
+      setEtapaConta(false);
+      setContaPagamento(despesa?.conta_financeira_id || "");
     }
-  }, [open]);
+  }, [open, despesa]);
 
   if (!despesa) return null;
 
@@ -68,7 +89,16 @@ export function DespesaQuitarDialog({ despesa, open, onOpenChange }: Props) {
     setJurosPerc(valorOriginal > 0 ? ((val / valorOriginal) * 100).toFixed(4).replace(".", ",") : "0");
   };
 
+  const irParaConta = () => {
+    if (!dataPagamento) return toast.error("Informe a data do pagamento");
+    if (temJuros && juros > 0 && !planoJuros) {
+      return toast.error("Selecione o plano de contas dos juros");
+    }
+    setEtapaConta(true);
+  };
+
   const confirmar = async () => {
+    if (!contaPagamento) return toast.error("Selecione a conta financeira do pagamento");
     await quitarDespesaMut.mutateAsync({
       despesa,
       data_pagamento: dataPagamento,
@@ -76,6 +106,7 @@ export function DespesaQuitarDialog({ despesa, open, onOpenChange }: Props) {
       juros_valor: juros,
       plano_conta_juros_id: temJuros && juros > 0 ? planoJuros || null : null,
       valor_pago: totalLiquido,
+      conta_financeira_id: contaPagamento,
     });
     onOpenChange(false);
   };
@@ -124,14 +155,55 @@ export function DespesaQuitarDialog({ despesa, open, onOpenChange }: Props) {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label className="text-xs">Plano de contas dos juros</Label>
-                <Select value={planoJuros} onValueChange={setPlanoJuros}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {planoContasLancaveis.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={planoOpen} onOpenChange={setPlanoOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-full justify-between font-normal",
+                        !planoJuros && "text-muted-foreground",
+                      )}
+                    >
+                      <span className="truncate">
+                        {planoJuros ? planoNome(planoJuros) : "Pesquisar plano de contas..."}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command
+                      filter={(value, search) =>
+                        value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+                      }
+                    >
+                      <CommandInput placeholder="Digite o código ou o nome..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum plano de contas encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          {planoContasLancaveis.map((p) => (
+                            <CommandItem
+                              key={p.id}
+                              value={`${p.codigo} ${p.nome}`}
+                              onSelect={() => {
+                                setPlanoJuros(p.id);
+                                setPlanoOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  planoJuros === p.id ? "opacity-100" : "opacity-0",
+                                )}
+                              />
+                              <span className="truncate">{p.codigo} — {p.nome}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Juros (%)</Label>
@@ -150,18 +222,42 @@ export function DespesaQuitarDialog({ despesa, open, onOpenChange }: Props) {
           </div>
         </div>
 
+        {etapaConta && (
+          <div className="space-y-1.5 rounded-lg border border-primary/30 bg-primary/5 p-3 sm:p-4">
+            <Label className="text-sm font-medium">Por qual conta financeira será o pagamento?</Label>
+            <Select value={contaPagamento} onValueChange={setContaPagamento}>
+              <SelectTrigger><SelectValue placeholder="Selecione a conta" /></SelectTrigger>
+              <SelectContent>
+                {contasAtivas.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-          <Button variant="outline" className="w-full sm:w-auto" onClick={() => onOpenChange(false)}>
-            Cancelar
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={() => (etapaConta ? setEtapaConta(false) : onOpenChange(false))}
+          >
+            {etapaConta ? "Voltar" : "Cancelar"}
           </Button>
-          <Button className="w-full sm:w-auto" onClick={confirmar} disabled={quitarDespesaMut.isPending}>
-            {quitarDespesaMut.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-            )}
-            Confirmar pagamento
-          </Button>
+          {etapaConta ? (
+            <Button className="w-full sm:w-auto" onClick={confirmar} disabled={quitarDespesaMut.isPending}>
+              {quitarDespesaMut.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+              )}
+              Confirmar pagamento
+            </Button>
+          ) : (
+            <Button className="w-full sm:w-auto" onClick={irParaConta}>
+              Confirmar
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
