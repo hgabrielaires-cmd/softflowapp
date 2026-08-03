@@ -20,7 +20,7 @@ import {
   usePlanoContasQuery,
 } from "@/pages/financeiro-parametros/useFinanceiroParametrosQueries";
 import { FILTRO_TODOS, ITEMS_PER_PAGE, STATUS_DESPESA, emptyDespesaFiltros } from "./constants";
-import { aplicarFiltrosDespesas, formatBRL, formatDataBR, statusBadgeVariant } from "./helpers";
+import { aplicarFiltrosDespesas, formatBRL, formatDataBR, periodoMesAtual, statusBadgeVariant } from "./helpers";
 import { useAuth } from "@/context/AuthContext";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
 import { useMenuPermissions } from "@/hooks/useMenuPermissions";
@@ -31,7 +31,7 @@ export default function FinanceiroDespesas() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editando, setEditando] = useState<DespesaRegistro | null>(null);
   const [excluindo, setExcluindo] = useState<DespesaRegistro | null>(null);
-  const [filtros, setFiltrosRaw] = useState(emptyDespesaFiltros);
+  const [filtros, setFiltrosRaw] = useState({ ...emptyDespesaFiltros, ...periodoMesAtual() });
   const [page, setPage] = useState(1);
 
   const { roles } = useAuth();
@@ -54,7 +54,15 @@ export default function FinanceiroDespesas() {
     setPage(1);
   };
 
-  const filtradas = useMemo(() => aplicarFiltrosDespesas(despesas, filtros), [despesas, filtros]);
+  const filtradas = useMemo(
+    () =>
+      aplicarFiltrosDespesas(despesas, filtros).sort((a, b) => {
+        const venc = a.data_vencimento.localeCompare(b.data_vencimento);
+        if (venc !== 0) return venc;
+        return (a.parcela_numero || 0) - (b.parcela_numero || 0);
+      }),
+    [despesas, filtros],
+  );
   const totalPages = Math.ceil(filtradas.length / ITEMS_PER_PAGE) || 1;
   const paginadas = filtradas.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
   const totalValor = filtradas.reduce((acc, d) => acc + Number(d.valor), 0);
