@@ -134,6 +134,114 @@ function tecladoPlanos(planos: Plano[], pagina: number, escolhidoId: string | nu
   return { inline_keyboard: rows };
 }
 
+// ── Seleção de período dos relatórios ────────────────────────────────────
+type RelatorioTipo = "dre" | "categorias" | "maiores" | "status" | "pendentes";
+
+function getPeriodo(tipo: string): Periodo {
+  const hoje = new Date();
+  const fmt = (dt: Date) => dt.toISOString().slice(0, 10);
+
+  switch (tipo) {
+    case "ontem": {
+      const ontem = new Date(hoje);
+      ontem.setDate(hoje.getDate() - 1);
+      return { inicio: fmt(ontem), fim: fmt(ontem), label: "Ontem" };
+    }
+    case "semana": {
+      const ini = new Date(hoje);
+      ini.setDate(hoje.getDate() - hoje.getDay());
+      return { inicio: fmt(ini), fim: fmt(hoje), label: "Esta Semana" };
+    }
+    case "semana_ant": {
+      const ini = new Date(hoje);
+      ini.setDate(hoje.getDate() - hoje.getDay() - 7);
+      const fim = new Date(ini);
+      fim.setDate(ini.getDate() + 6);
+      return { inicio: fmt(ini), fim: fmt(fim), label: "Semana Passada" };
+    }
+    case "mes": {
+      const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+      return { inicio: fmt(ini), fim: fmt(hoje), label: "Este Mês" };
+    }
+    case "mes_ant": {
+      const ini = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+      const fim = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
+      return { inicio: fmt(ini), fim: fmt(fim), label: "Mês Passado" };
+    }
+    case "hoje":
+    default:
+      return { inicio: fmt(hoje), fim: fmt(hoje), label: "Hoje" };
+  }
+}
+
+function tecladoPeriodo(relatorio: string) {
+  return {
+    inline_keyboard: [
+      [
+        { text: "📅 Hoje", callback_data: `periodo_hoje_${relatorio}` },
+        { text: "📅 Ontem", callback_data: `periodo_ontem_${relatorio}` },
+      ],
+      [
+        { text: "📆 Esta Semana", callback_data: `periodo_semana_${relatorio}` },
+        { text: "📆 Semana Passada", callback_data: `periodo_semana_ant_${relatorio}` },
+      ],
+      [
+        { text: "🗓️ Este Mês", callback_data: `periodo_mes_${relatorio}` },
+        { text: "🗓️ Mês Passado", callback_data: `periodo_mes_ant_${relatorio}` },
+      ],
+      [{ text: "✏️ Personalizado", callback_data: `periodo_custom_${relatorio}` }],
+    ],
+  };
+}
+
+async function perguntarPeriodo(
+  token: string,
+  chatId: number,
+  relatorio: string,
+  messageId?: number | null,
+) {
+  const texto = "📅 *Qual período deseja analisar?*";
+  if (messageId) await editMessage(token, chatId, messageId, texto, tecladoPeriodo(relatorio));
+  else await sendMessage(token, chatId, texto, tecladoPeriodo(relatorio));
+}
+
+async function executarRelatorio(
+  tipo: string,
+  periodo: Periodo,
+  supabase: any,
+  token: string,
+  chatId: number,
+  messageId?: number | null,
+) {
+  let texto: string;
+  switch (tipo) {
+    case "dre":
+      texto = await relatorioDre(supabase, periodo);
+      break;
+    case "categorias":
+      texto = await relatorioCategorias(supabase, periodo);
+      break;
+    case "maiores":
+      texto = await relatorioMaiores(supabase, periodo);
+      break;
+    case "status":
+      texto = await relatorioStatus(supabase, periodo);
+      break;
+    case "pendentes":
+      texto = await relatorioPendentes(supabase, periodo);
+      break;
+    default:
+      return;
+  }
+
+  const teclado = {
+    inline_keyboard: [[{ text: "🔄 Mudar Período", callback_data: `mudar_${tipo}` }]],
+  };
+  if (messageId) await editMessage(token, chatId, messageId, texto, teclado);
+  else await sendMessage(token, chatId, texto, teclado);
+}
+
+
 function docRecebedor(dados: Record<string, any>): { doc: string | null; tipoPessoa: "pf" | "pj" | null } {
   const cnpj = dados.cnpj_recebedor ? String(dados.cnpj_recebedor).replace(/\D/g, "") : "";
   const cpf = dados.cpf_recebedor ? String(dados.cpf_recebedor).replace(/\D/g, "") : "";
