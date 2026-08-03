@@ -243,7 +243,7 @@ const App = () => {
               path="/despesas"
               element={
                 <ProtectedRoute>
-                  <ComingSoon module="Financeiro" title="Despesas" description="Em desenvolvimento. Lançamento e controle de despesas." />
+                  <FinanceiroDespesas />
                 </ProtectedRoute>
               }
             />
