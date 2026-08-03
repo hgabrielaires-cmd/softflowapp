@@ -3,6 +3,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const TELEGRAM_API = "https://api.telegram.org/bot";
+const PLANOS_POR_PAGINA = 8;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,12 +17,64 @@ function ok(body: unknown = { ok: true }) {
   });
 }
 
-async function sendMessage(token: string, chatId: number, text: string, parseMode = "Markdown") {
-  await fetch(`${TELEGRAM_API}${token}/sendMessage`, {
+async function sendMessage(
+  token: string,
+  chatId: number,
+  text: string,
+  replyMarkup?: unknown,
+  parseMode = "Markdown",
+): Promise<number | null> {
+  try {
+    const res = await fetch(`${TELEGRAM_API}${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: parseMode,
+        ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    return json?.result?.message_id ?? null;
+  } catch (e) {
+    console.error("[telegram] sendMessage:", (e as Error).message);
+    return null;
+  }
+}
+
+async function editMessage(
+  token: string,
+  chatId: number,
+  messageId: number,
+  text: string,
+  replyMarkup?: unknown,
+) {
+  const res = await fetch(`${TELEGRAM_API}${token}/editMessageText`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: parseMode }),
-  }).catch((e) => console.error("[telegram] sendMessage:", (e as Error).message));
+    body: JSON.stringify({
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      parse_mode: "Markdown",
+      reply_markup: replyMarkup ?? { inline_keyboard: [] },
+    }),
+  }).catch((e) => {
+    console.error("[telegram] editMessageText:", (e as Error).message);
+    return null;
+  });
+  if (res && !res.ok) {
+    console.error("[telegram] editMessageText:", JSON.stringify(await res.json()).slice(0, 300));
+  }
+}
+
+async function answerCallback(token: string, callbackId: string, text: string) {
+  await fetch(`${TELEGRAM_API}${token}/answerCallbackQuery`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ callback_query_id: callbackId, text }),
+  }).catch((e) => console.error("[telegram] answerCallbackQuery:", (e as Error).message));
 }
 
 function formatMoeda(valor: number) {
@@ -36,6 +89,53 @@ function toBase64(buffer: ArrayBuffer) {
     bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
   }
   return btoa(bin);
+}
+
+type Plano = { id: string; codigo: string; nome: string };
+
+async function listarPlanos(supabase: any): Promise<Plano[]> {
+  const { data } = await supabase
+    .from("fin_plano_contas")
+    .select("id, nome, codigo")
+    .eq("tipo", "despesa")
+    .eq("aceita_lancamento", true)
+    .eq("ativo", true)
+    .order("codigo");
+  return (data ?? []) as Plano[];
+}
+
+// Teclado com a página de planos + navegação
+function tecladoPlanos(planos: Plano[], pagina: number, escolhidoId: string | null) {
+  const totalPaginas = Math.max(1, Math.ceil(planos.length / PLANOS_POR_PAGINA));
+  const page = Math.min(Math.max(pagina, 0), totalPaginas - 1);
+  const slice = planos.slice(page * PLANOS_POR_PAGINA, (page + 1) * PLANOS_POR_PAGINA);
+
+  const rows: Array<Array<{ text: string; callback_data: string }>> = slice.map((p) => [
+    {
+      text: `${p.id === escolhidoId ? "✅ " : ""}${p.codigo} — ${p.nome}`.slice(0, 60),
+      callback_data: `pl_${p.id}`,
+    },
+  ]);
+
+  const nav: Array<{ text: string; callback_data: string }> = [];
+  if (page > 0) nav.push({ text: "⬆️ Anteriores", callback_data: `pg_${page - 1}` });
+  if (page < totalPaginas - 1) nav.push({ text: "⬇️ Ver mais planos", callback_data: `pg_${page + 1}` });
+  if (nav.length) rows.push(nav);
+
+  if (escolhidoId) rows.push([{ text: "✅ CONFIRMAR LANÇAMENTO", callback_data: "ok" }]);
+
+  return { inline_keyboard: rows };
+}
+
+function resumoComprovante(dados: Record<string, any>, fornecedorNome?: string | null) {
+  return (
+    `✅ *Comprovante reconhecido!*\n\n` +
+    `💰 *Valor:* ${formatMoeda(dados.valor)}\n` +
+    `📅 *Data:* ${dados.data || "hoje"}\n` +
+    `🧾 *Tipo:* ${String(dados.tipo ?? "").toUpperCase()}\n` +
+    `🏢 *Destinatário:* ${fornecedorNome || dados.nome_recebedor || "não identificado"}\n` +
+    (dados.cnpj_recebedor ? `🔢 *CNPJ/CPF:* ${dados.cnpj_recebedor}\n` : "")
+  );
 }
 
 Deno.serve(async (req) => {
@@ -57,7 +157,10 @@ Deno.serve(async (req) => {
     const res = await fetch(`${TELEGRAM_API}${token}/setWebhook`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: webhookUrl, allowed_updates: ["message", "edited_message"] }),
+      body: JSON.stringify({
+        url: webhookUrl,
+        allowed_updates: ["message", "edited_message", "callback_query"],
+      }),
     });
     return ok(await res.json());
   }
@@ -74,13 +177,14 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => null);
     console.log("[telegram] Update:", JSON.stringify(body ?? {}).slice(0, 300));
 
-    const message = body?.message ?? body?.edited_message;
+    const callbackQuery = body?.callback_query;
+    const message = body?.message ?? body?.edited_message ?? callbackQuery?.message;
     if (!message) return ok();
 
     const chatId = message.chat?.id as number;
-    const userId = message.from?.id as number;
+    const userId = (callbackQuery?.from?.id ?? message.from?.id) as number;
     const text = String(message.text ?? "").trim();
-    const firstName = message.from?.first_name ?? "";
+    const firstName = callbackQuery?.from?.first_name ?? message.from?.first_name ?? "";
 
     // ── Config da integração + IDs autorizados ──
     const { data: cfgTelegram } = await supabase
@@ -99,8 +203,14 @@ Deno.serve(async (req) => {
     const authorizedIds = idsRaw.split(",").map((s) => s.trim()).filter(Boolean);
 
     if (authorizedIds.length > 0 && !authorizedIds.includes(String(userId))) {
-      await sendMessage(token, chatId, "⛔ Acesso não autorizado.");
+      if (callbackQuery) await answerCallback(token, callbackQuery.id, "⛔ Acesso não autorizado.");
+      else await sendMessage(token, chatId, "⛔ Acesso não autorizado.");
       return ok();
+    }
+
+    // ── Clique em botão inline ──
+    if (callbackQuery) {
+      return await processarCallback(supabase, token, chatId, callbackQuery);
     }
 
     // ── Modelo da IA ──
@@ -332,24 +442,14 @@ Retorne APENAS JSON válido sem markdown:
       planoMemoria = mem;
     }
 
-    const [
-      { data: formasPagto },
-      { data: contasFinanceiras },
-      { data: centrosCusto },
-      { data: planosContas },
-    ] = await Promise.all([
-      supabase.from("fin_formas_pagamento").select("id, nome, tipo").eq("ativo", true),
-      supabase.from("fin_contas_financeiras").select("id, nome, tipo").eq("ativo", true),
-      supabase.from("fin_centros_custo").select("id, nome").eq("ativo", true),
-      supabase
-        .from("fin_plano_contas")
-        .select("id, nome, codigo")
-        .eq("tipo", "despesa")
-        .eq("aceita_lancamento", true)
-        .eq("ativo", true)
-        .order("codigo")
-        .limit(15),
-    ]);
+    const [{ data: formasPagto }, { data: contasFinanceiras }, { data: centrosCusto }] =
+      await Promise.all([
+        supabase.from("fin_formas_pagamento").select("id, nome, tipo").eq("ativo", true),
+        supabase.from("fin_contas_financeiras").select("id, nome, tipo").eq("ativo", true),
+        supabase.from("fin_centros_custo").select("id, nome").eq("ativo", true),
+      ]);
+
+    const planos = await listarPlanos(supabase);
 
     // ── Forma de pagamento ──
     const tipoMap: Record<string, string[]> = {
@@ -367,44 +467,62 @@ Retorne APENAS JSON válido sem markdown:
       if (found) formaPagtoId = found.id;
     }
 
-    await supabase.from("telegram_pendencias").insert({
-      chat_id: chatId,
-      user_id: userId,
-      dados_extraidos: { ...dados, cnpj_recebedor: cnpj },
-      fornecedor_id: fornecedor?.id ?? null,
-      fornecedor_nome: fornecedor?.nome_fantasia ?? dados.nome_recebedor ?? null,
-      forma_pagamento_id: formaPagtoId,
-      conta_financeira_id: contasFinanceiras?.[0]?.id ?? null,
-      centro_custo_id: centrosCusto?.[0]?.id ?? null,
-      plano_conta_sugerido_id: planoMemoria?.plano_conta_id ?? fornecedor?.plano_conta_id ?? null,
-      anexo_url: anexoUrl,
-      status: "aguardando_resposta",
-      etapa: "plano_contas",
-    });
+    const planoSugeridoId: string | null =
+      planoMemoria?.plano_conta_id ?? fornecedor?.plano_conta_id ?? null;
+    const planoSugerido = planos.find((p) => p.id === planoSugeridoId) ?? null;
 
-    let msgResumo =
-      `✅ *Comprovante lido com sucesso!*\n\n` +
-      `💰 *Valor:* ${formatMoeda(dados.valor)}\n` +
-      `📅 *Data:* ${dados.data || "hoje"}\n` +
-      `🧾 *Tipo:* ${String(dados.tipo ?? "").toUpperCase()}\n` +
-      `🏢 *Recebedor:* ${dados.nome_recebedor || "não identificado"}\n`;
+    const { data: novaPendencia } = await supabase
+      .from("telegram_pendencias")
+      .insert({
+        chat_id: chatId,
+        user_id: userId,
+        dados_extraidos: { ...dados, cnpj_recebedor: cnpj },
+        fornecedor_id: fornecedor?.id ?? null,
+        fornecedor_nome: fornecedor?.nome_fantasia ?? dados.nome_recebedor ?? null,
+        forma_pagamento_id: formaPagtoId,
+        conta_financeira_id: contasFinanceiras?.[0]?.id ?? null,
+        centro_custo_id: centrosCusto?.[0]?.id ?? null,
+        plano_conta_sugerido_id: planoSugeridoId,
+        anexo_url: anexoUrl,
+        status: "aguardando_resposta",
+        etapa: "plano_contas",
+        plano_pagina: 0,
+      })
+      .select("id")
+      .single();
 
-    if (fornecedor) msgResumo += `✓ Fornecedor encontrado: *${fornecedor.nome_fantasia}*\n`;
+    let msg = resumoComprovante(dados, fornecedor?.nome_fantasia);
+    let teclado: unknown;
 
-    const planoSug = planoMemoria?.fin_plano_contas;
-    if (planoSug) {
-      msgResumo +=
-        `\n💡 *Plano de contas sugerido:*\n_${planoSug.codigo} — ${planoSug.nome}_\n\n` +
-        `Confirma? Digite *S* para sim ou o *número* de outro plano abaixo:`;
+    if (fornecedor && planoSugerido) {
+      msg +=
+        `\n✓ Fornecedor encontrado: *${fornecedor.nome_fantasia}*\n` +
+        `📁 Plano sugerido: *${planoSugerido.codigo} — ${planoSugerido.nome}*\n\n` +
+        `Confirma este plano ou selecione outro:`;
+      teclado = {
+        inline_keyboard: [
+          [
+            {
+              text: `✅ Confirmar — ${planoSugerido.codigo} ${planoSugerido.nome}`.slice(0, 60),
+              callback_data: "sug",
+            },
+          ],
+          [{ text: "🔄 Escolher outro plano", callback_data: "outro" }],
+        ],
+      };
     } else {
-      msgResumo += `\n📁 *Para qual plano de contas devo lançar?*\nDigite o número:`;
+      if (fornecedor) msg += `\n✓ Fornecedor encontrado: *${fornecedor.nome_fantasia}*\n`;
+      msg += `\n📁 *Selecione o plano de contas:*`;
+      teclado = tecladoPlanos(planos, 0, null);
     }
 
-    const planosLista = (planosContas ?? [])
-      .map((p: any, i: number) => `${i + 1}. ${p.codigo} — ${p.nome}`)
-      .join("\n");
-
-    await sendMessage(token, chatId, `${msgResumo}\n\n${planosLista}`);
+    const messageId = await sendMessage(token, chatId, msg, teclado);
+    if (messageId && novaPendencia?.id) {
+      await supabase
+        .from("telegram_pendencias")
+        .update({ message_id: messageId })
+        .eq("id", novaPendencia.id);
+    }
     return ok();
   } catch (err) {
     console.error("[telegram] Erro:", (err as Error).message);
@@ -412,7 +530,120 @@ Retorne APENAS JSON válido sem markdown:
   }
 });
 
-// ── Processar resposta do usuário ──
+// ── Processar clique em botão inline ──
+async function processarCallback(
+  supabase: any,
+  token: string,
+  chatId: number,
+  callbackQuery: any,
+) {
+  const data = String(callbackQuery.data ?? "");
+  const messageId = callbackQuery.message?.message_id as number;
+
+  const { data: pendencia } = await supabase
+    .from("telegram_pendencias")
+    .select("*")
+    .eq("chat_id", chatId)
+    .eq("status", "aguardando_resposta")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!pendencia) {
+    await answerCallback(token, callbackQuery.id, "⚠️ Nenhum lançamento pendente.");
+    return ok();
+  }
+
+  const planos = await listarPlanos(supabase);
+  const dados = pendencia.dados_extraidos ?? {};
+
+  // Confirmar plano sugerido → lança direto
+  if (data === "sug" && pendencia.plano_conta_sugerido_id) {
+    await answerCallback(token, callbackQuery.id, "✅ Confirmado!");
+    const plano = planos.find((p) => p.id === pendencia.plano_conta_sugerido_id) ?? null;
+    return await finalizarLancamento(
+      supabase,
+      token,
+      chatId,
+      pendencia,
+      pendencia.plano_conta_sugerido_id,
+      plano ? `${plano.codigo} — ${plano.nome}` : "Plano selecionado",
+      messageId,
+    );
+  }
+
+  // Escolher outro plano / navegar páginas
+  if (data === "outro" || data.startsWith("pg_")) {
+    const pagina = data === "outro" ? 0 : parseInt(data.slice(3), 10) || 0;
+    await answerCallback(token, callbackQuery.id, "📁");
+    await supabase
+      .from("telegram_pendencias")
+      .update({ plano_pagina: pagina })
+      .eq("id", pendencia.id);
+
+    const escolhido = pendencia.plano_conta_escolhido_id ?? null;
+    const planoEscolhido = planos.find((p) => p.id === escolhido) ?? null;
+    const texto =
+      resumoComprovante(dados, pendencia.fornecedor_nome) +
+      (planoEscolhido
+        ? `\n📁 *Plano selecionado:* ${planoEscolhido.codigo} — ${planoEscolhido.nome}\n\nConfirme o lançamento:`
+        : `\n📁 *Selecione o plano de contas:*`);
+    await editMessage(token, chatId, messageId, texto, tecladoPlanos(planos, pagina, escolhido));
+    return ok();
+  }
+
+  // Selecionar um plano
+  if (data.startsWith("pl_")) {
+    const planoId = data.slice(3);
+    const plano = planos.find((p) => p.id === planoId) ?? null;
+    if (!plano) {
+      await answerCallback(token, callbackQuery.id, "⚠️ Plano inválido.");
+      return ok();
+    }
+    await answerCallback(token, callbackQuery.id, "✅ Selecionado!");
+    await supabase
+      .from("telegram_pendencias")
+      .update({ plano_conta_escolhido_id: planoId })
+      .eq("id", pendencia.id);
+
+    const texto =
+      resumoComprovante(dados, pendencia.fornecedor_nome) +
+      `\n📁 *Plano selecionado:* ${plano.codigo} — ${plano.nome}\n\nConfirme o lançamento:`;
+    await editMessage(
+      token,
+      chatId,
+      messageId,
+      texto,
+      tecladoPlanos(planos, pendencia.plano_pagina ?? 0, planoId),
+    );
+    return ok();
+  }
+
+  // Confirmar lançamento
+  if (data === "ok") {
+    const planoId = pendencia.plano_conta_escolhido_id ?? pendencia.plano_conta_sugerido_id;
+    if (!planoId) {
+      await answerCallback(token, callbackQuery.id, "⚠️ Selecione um plano primeiro.");
+      return ok();
+    }
+    await answerCallback(token, callbackQuery.id, "⏳ Lançando...");
+    const plano = planos.find((p) => p.id === planoId) ?? null;
+    return await finalizarLancamento(
+      supabase,
+      token,
+      chatId,
+      pendencia,
+      planoId,
+      plano ? `${plano.codigo} — ${plano.nome}` : "Plano selecionado",
+      messageId,
+    );
+  }
+
+  await answerCallback(token, callbackQuery.id, "");
+  return ok();
+}
+
+// ── Processar resposta em texto (compatibilidade) ──
 async function processarResposta(
   supabase: any,
   token: string,
@@ -422,30 +653,21 @@ async function processarResposta(
 ) {
   if (pendencia.etapa !== "plano_contas") return ok();
 
-  const { data: planos } = await supabase
-    .from("fin_plano_contas")
-    .select("id, nome, codigo")
-    .eq("tipo", "despesa")
-    .eq("aceita_lancamento", true)
-    .eq("ativo", true)
-    .order("codigo")
-    .limit(15);
+  const planos = await listarPlanos(supabase);
+  const pagina = pendencia.plano_pagina ?? 0;
+  const visiveis = planos.slice(pagina * PLANOS_POR_PAGINA, (pagina + 1) * PLANOS_POR_PAGINA);
 
   let planoId: string | null = null;
   let planoNome = "";
 
   if (text.toUpperCase() === "S" && pendencia.plano_conta_sugerido_id) {
     planoId = pendencia.plano_conta_sugerido_id;
-    const { data: plano } = await supabase
-      .from("fin_plano_contas")
-      .select("codigo, nome")
-      .eq("id", planoId)
-      .maybeSingle();
+    const plano = planos.find((p) => p.id === planoId);
     planoNome = plano ? `${plano.codigo} — ${plano.nome}` : "Plano selecionado";
   } else {
     const num = parseInt(text, 10);
-    if (num >= 1 && num <= (planos?.length ?? 0)) {
-      const plano = planos![num - 1];
+    if (num >= 1 && num <= visiveis.length) {
+      const plano = visiveis[num - 1];
       planoId = plano.id;
       planoNome = `${plano.codigo} — ${plano.nome}`;
     }
@@ -455,13 +677,32 @@ async function processarResposta(
     await sendMessage(
       token,
       chatId,
-      `❌ Opção inválida. Digite o número do plano (1-${planos?.length ?? 15}) ou *S* para confirmar a sugestão.`,
+      `❌ Opção inválida. Use os *botões* acima para escolher o plano de contas.`,
     );
     return ok();
   }
 
+  return await finalizarLancamento(supabase, token, chatId, pendencia, planoId, planoNome);
+}
+
+// ── Lançar a despesa ──
+async function finalizarLancamento(
+  supabase: any,
+  token: string,
+  chatId: number,
+  pendencia: any,
+  planoId: string,
+  planoNome: string,
+  messageId?: number,
+) {
   const dados = pendencia.dados_extraidos ?? {};
   const hoje = new Date().toISOString().slice(0, 10);
+
+  const responder = async (texto: string) => {
+    const mid = messageId ?? pendencia.message_id;
+    if (mid) await editMessage(token, chatId, mid, texto);
+    else await sendMessage(token, chatId, texto);
+  };
 
   let fornecedorId = pendencia.fornecedor_id;
   if (!fornecedorId && dados.nome_recebedor) {
@@ -481,9 +722,7 @@ async function processarResposta(
   }
 
   if (!fornecedorId) {
-    await sendMessage(
-      token,
-      chatId,
+    await responder(
       `❌ Não foi possível identificar o fornecedor.\nAcesse o Softflow para lançar manualmente.`,
     );
     await supabase.from("telegram_pendencias").update({ status: "erro" }).eq("id", pendencia.id);
@@ -515,7 +754,7 @@ async function processarResposta(
 
   if (despesaErr) {
     console.error("[telegram] Erro ao inserir despesa:", despesaErr.message);
-    await sendMessage(token, chatId, `❌ Erro ao lançar despesa: ${despesaErr.message}`);
+    await responder(`❌ Erro ao lançar despesa: ${despesaErr.message}`);
     return ok();
   }
 
@@ -548,10 +787,8 @@ async function processarResposta(
     .update({ status: "concluido", plano_conta_id: planoId })
     .eq("id", pendencia.id);
 
-  await sendMessage(
-    token,
-    chatId,
-    `✅ *Despesa lançada com sucesso!*\n\n` +
+  await responder(
+    `✅ *Despesa lançada!*\n\n` +
       `🏢 *Fornecedor:* ${pendencia.fornecedor_nome || dados.nome_recebedor}\n` +
       `💸 *Valor pago:* ${formatMoeda(dados.valor)}\n` +
       `📅 *Data:* ${dados.data || hoje}\n` +
