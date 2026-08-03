@@ -457,6 +457,13 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "chat_conversas_atendente_id_fkey"
+            columns: ["atendente_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_comissoes"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "chat_conversas_cliente_id_fkey"
             columns: ["cliente_id"]
             isOneToOne: false
@@ -523,6 +530,13 @@ export type Database = {
             columns: ["atribuido_a"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "chat_fila_atribuido_a_fkey"
+            columns: ["atribuido_a"]
+            isOneToOne: false
+            referencedRelation: "profiles_comissoes"
             referencedColumns: ["user_id"]
           },
           {
@@ -711,6 +725,13 @@ export type Database = {
             columns: ["atendente_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "chat_mensagens_atendente_id_fkey"
+            columns: ["atendente_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_comissoes"
             referencedColumns: ["user_id"]
           },
           {
@@ -5638,6 +5659,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "setores_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_comissoes"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       solicitacoes_desconto: {
@@ -5980,6 +6008,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "ticket_comentarios_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_comissoes"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       ticket_curtidas: {
@@ -6043,6 +6078,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "ticket_seguidores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_comissoes"
             referencedColumns: ["user_id"]
           },
         ]
@@ -6292,7 +6334,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_comissoes: {
+        Row: {
+          comissao_implantacao_percentual: number | null
+          comissao_mensalidade_percentual: number | null
+          comissao_percentual: number | null
+          comissao_servico_percentual: number | null
+          desconto_limite_implantacao: number | null
+          desconto_limite_mensalidade: number | null
+          user_id: string | null
+        }
+        Insert: {
+          comissao_implantacao_percentual?: number | null
+          comissao_mensalidade_percentual?: number | null
+          comissao_percentual?: number | null
+          comissao_servico_percentual?: number | null
+          desconto_limite_implantacao?: number | null
+          desconto_limite_mensalidade?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          comissao_implantacao_percentual?: number | null
+          comissao_mensalidade_percentual?: number | null
+          comissao_percentual?: number | null
+          comissao_servico_percentual?: number | null
+          desconto_limite_implantacao?: number | null
+          desconto_limite_mensalidade?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_login_blocked: { Args: { p_email: string }; Returns: boolean }
