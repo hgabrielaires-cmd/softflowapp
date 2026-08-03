@@ -24,6 +24,7 @@ export const DESPESAS_ANEXOS_BUCKET = "financeiro-anexos";
 export function emptyDespesaWizard(hoje: string): DespesaWizardState {
   return {
     valor: "",
+    filial_id: "",
     data_emissao: hoje,
     data_vencimento: hoje,
     codigo_barras: "",
@@ -64,6 +65,7 @@ export const emptyDespesaFiltros: DespesaFiltros = {
   data_inicio: "",
   data_fim: "",
   fornecedor_id: FILTRO_TODOS,
+  filial_id: FILTRO_TODOS,
   centro_custo_id: FILTRO_TODOS,
   plano_conta_id: FILTRO_TODOS,
   forma_pagamento_id: FILTRO_TODOS,
@@ -93,6 +95,7 @@ export const CAMPOS_AUDITORIA_LABEL: Record<string, string> = {
   forma_pagamento_id: "Forma de pagamento",
   conta_financeira_id: "Conta financeira",
   descricao: "Descrição",
+  filial_id: "Filial",
   grupo_id: "Grupo (recorrência)",
   parcela: "Parcela",
 };

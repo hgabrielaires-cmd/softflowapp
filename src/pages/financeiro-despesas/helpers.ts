@@ -140,6 +140,7 @@ export function aplicarFiltrosDespesas(
     if (f.data_inicio && dataBase < f.data_inicio) return false;
     if (f.data_fim && dataBase > f.data_fim) return false;
     if (f.fornecedor_id !== FILTRO_TODOS && d.fornecedor_id !== f.fornecedor_id) return false;
+    if (f.filial_id !== FILTRO_TODOS && d.filial_id !== f.filial_id) return false;
     if (f.plano_conta_id !== FILTRO_TODOS && d.plano_conta_id !== f.plano_conta_id) return false;
     if (f.forma_pagamento_id !== FILTRO_TODOS && d.forma_pagamento_id !== f.forma_pagamento_id) return false;
     if (f.status !== FILTRO_TODOS && d.status !== f.status) return false;

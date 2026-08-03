@@ -72,6 +72,7 @@ export function useDespesaForm() {
 
       const rows = parcelas.map((p) => ({
         grupo_id: grupoId,
+        filial_id: state.filial_id || null,
         fornecedor_id: state.fornecedor_id,
         plano_conta_id: state.plano_conta_id,
         forma_pagamento_id: state.forma_pagamento_id,
