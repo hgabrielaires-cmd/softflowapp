@@ -2735,6 +2735,180 @@ export type Database = {
           },
         ]
       }
+      fin_centros_custo: {
+        Row: {
+          ativo: boolean
+          codigo: string | null
+          created_at: string
+          descricao: string | null
+          filial_id: string | null
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          codigo?: string | null
+          created_at?: string
+          descricao?: string | null
+          filial_id?: string | null
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          codigo?: string | null
+          created_at?: string
+          descricao?: string | null
+          filial_id?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_centros_custo_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_contas_financeiras: {
+        Row: {
+          agencia: string | null
+          ativo: boolean
+          banco: string | null
+          created_at: string
+          filial_id: string | null
+          id: string
+          nome: string
+          numero_conta: string | null
+          saldo_inicial: number
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          agencia?: string | null
+          ativo?: boolean
+          banco?: string | null
+          created_at?: string
+          filial_id?: string | null
+          id?: string
+          nome: string
+          numero_conta?: string | null
+          saldo_inicial?: number
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          agencia?: string | null
+          ativo?: boolean
+          banco?: string | null
+          created_at?: string
+          filial_id?: string | null
+          id?: string
+          nome?: string
+          numero_conta?: string | null
+          saldo_inicial?: number
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_contas_financeiras_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_formas_pagamento: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          exige_conta: boolean
+          id: string
+          nome: string
+          ordem: number
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          exige_conta?: boolean
+          id?: string
+          nome: string
+          ordem?: number
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          exige_conta?: boolean
+          id?: string
+          nome?: string
+          ordem?: number
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      fin_plano_contas: {
+        Row: {
+          aceita_lancamento: boolean
+          ativo: boolean
+          codigo: string
+          created_at: string
+          id: string
+          nivel: number
+          nome: string
+          ordem: number
+          parent_id: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          aceita_lancamento?: boolean
+          ativo?: boolean
+          codigo: string
+          created_at?: string
+          id?: string
+          nivel?: number
+          nome: string
+          ordem?: number
+          parent_id?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          aceita_lancamento?: boolean
+          ativo?: boolean
+          codigo?: string
+          created_at?: string
+          id?: string
+          nivel?: number
+          nome?: string
+          ordem?: number
+          parent_id?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_plano_contas_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "fin_plano_contas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fornecedores: {
         Row: {
           ativo: boolean
