@@ -5671,8 +5671,11 @@ export type Database = {
           fornecedor_id: string | null
           fornecedor_nome: string | null
           id: string
+          message_id: number | null
+          plano_conta_escolhido_id: string | null
           plano_conta_id: string | null
           plano_conta_sugerido_id: string | null
+          plano_pagina: number
           status: string
           updated_at: string
           user_id: number
@@ -5689,8 +5692,11 @@ export type Database = {
           fornecedor_id?: string | null
           fornecedor_nome?: string | null
           id?: string
+          message_id?: number | null
+          plano_conta_escolhido_id?: string | null
           plano_conta_id?: string | null
           plano_conta_sugerido_id?: string | null
+          plano_pagina?: number
           status?: string
           updated_at?: string
           user_id: number
@@ -5707,8 +5713,11 @@ export type Database = {
           fornecedor_id?: string | null
           fornecedor_nome?: string | null
           id?: string
+          message_id?: number | null
+          plano_conta_escolhido_id?: string | null
           plano_conta_id?: string | null
           plano_conta_sugerido_id?: string | null
+          plano_pagina?: number
           status?: string
           updated_at?: string
           user_id?: number
