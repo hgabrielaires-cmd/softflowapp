@@ -681,6 +681,61 @@ async function processarCallback(
   const data = String(callbackQuery.data ?? "");
   const messageId = callbackQuery.message?.message_id as number;
 
+  // ── Seleção de período dos relatórios ──
+  const matchPeriodo = data.match(
+    /^periodo_(.+)_(dre|categorias|maiores|status|pendentes)$/,
+  );
+  if (matchPeriodo) {
+    const tipoPeriodo = matchPeriodo[1];
+    const relatorio = matchPeriodo[2];
+
+    if (tipoPeriodo === "custom") {
+      await answerCallback(token, callbackQuery.id, "✏️");
+      await supabase
+        .from("telegram_pendencias")
+        .update({ status: "cancelado" })
+        .eq("chat_id", chatId)
+        .eq("status", "aguardando_resposta")
+        .eq("etapa", "aguardando_periodo_custom");
+      await supabase.from("telegram_pendencias").insert({
+        chat_id: chatId,
+        user_id: callbackQuery.from?.id ?? chatId,
+        etapa: "aguardando_periodo_custom",
+        status: "aguardando_resposta",
+        dados_extraidos: { relatorio },
+      });
+      await editMessage(
+        token,
+        chatId,
+        messageId,
+        "✏️ *Período personalizado*\n\n" +
+          "Digite no formato:\n" +
+          "`DD/MM/AAAA DD/MM/AAAA`\n\n" +
+          "Exemplo:\n" +
+          "`01/07/2026 31/07/2026`",
+      );
+      return ok();
+    }
+
+    await answerCallback(token, callbackQuery.id, "⏳ Gerando...");
+    await executarRelatorio(
+      relatorio,
+      getPeriodo(tipoPeriodo),
+      supabase,
+      token,
+      chatId,
+      messageId,
+    );
+    return ok();
+  }
+
+  const matchMudar = data.match(/^mudar_(dre|categorias|maiores|status|pendentes)$/);
+  if (matchMudar) {
+    await answerCallback(token, callbackQuery.id, "📅");
+    await perguntarPeriodo(token, chatId, matchMudar[1], messageId);
+    return ok();
+  }
+
   const { data: pendencia } = await supabase
     .from("telegram_pendencias")
     .select("*")
@@ -792,6 +847,39 @@ async function processarResposta(
   text: string,
   pendencia: any,
 ) {
+  // ── Período personalizado de relatório ──
+  if (pendencia.etapa === "aguardando_periodo_custom") {
+    const matchDatas = text.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})/);
+    if (!matchDatas) {
+      await sendMessage(
+        token,
+        chatId,
+        "⚠️ Formato inválido. Digite:\n`DD/MM/AAAA DD/MM/AAAA`",
+      );
+      return ok();
+    }
+    const toISO = (v: string) => {
+      const [dd, mm, aaaa] = v.split("/");
+      return `${aaaa}-${mm}-${dd}`;
+    };
+    const periodo: Periodo = {
+      inicio: toISO(matchDatas[1]),
+      fim: toISO(matchDatas[2]),
+      label: `${matchDatas[1]} a ${matchDatas[2]}`,
+    };
+    const relatorio = (pendencia.dados_extraidos as Record<string, unknown> | null)?.relatorio as
+      | string
+      | undefined;
+    await supabase
+      .from("telegram_pendencias")
+      .update({ status: "concluido" })
+      .eq("id", pendencia.id);
+    if (relatorio) {
+      await executarRelatorio(relatorio, periodo, supabase, token, chatId, null);
+    }
+    return ok();
+  }
+
   if (pendencia.etapa !== "plano_contas") return ok();
 
   const planos = await listarPlanos(supabase);
