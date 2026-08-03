@@ -95,3 +95,23 @@ export interface DespesaEditState {
   descricao: string;
   status: string;
 }
+
+// ─── Auditoria (audit_logs / entity_type = fin_despesas) ──────────────────
+
+export type AuditoriaAcao = "despesa_created" | "despesa_updated" | "despesa_deleted";
+
+export interface AuditoriaDespesaRegistro {
+  id: string;
+  created_at: string;
+  user_id: string | null;
+  action: string;
+  entity_id: string | null;
+  details: Record<string, unknown> | null;
+}
+
+export interface AuditoriaFiltros {
+  data_inicio: string;
+  data_fim: string;
+  user_id: string;
+  acao: string;
+}

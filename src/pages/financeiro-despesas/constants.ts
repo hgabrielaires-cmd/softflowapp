@@ -69,3 +69,30 @@ export const emptyDespesaFiltros: DespesaFiltros = {
   forma_pagamento_id: FILTRO_TODOS,
   status: FILTRO_TODOS,
 };
+
+export const ACOES_AUDITORIA = [
+  { value: "despesa_created", label: "Inclusão" },
+  { value: "despesa_updated", label: "Edição" },
+  { value: "despesa_deleted", label: "Exclusão" },
+];
+
+export const emptyAuditoriaFiltros: AuditoriaFiltros = {
+  data_inicio: "",
+  data_fim: "",
+  user_id: FILTRO_TODOS,
+  acao: FILTRO_TODOS,
+};
+
+export const CAMPOS_AUDITORIA_LABEL: Record<string, string> = {
+  valor: "Valor",
+  data_vencimento: "Vencimento",
+  data_emissao: "Emissão",
+  status: "Status",
+  fornecedor_id: "Fornecedor",
+  plano_conta_id: "Plano de contas",
+  forma_pagamento_id: "Forma de pagamento",
+  conta_financeira_id: "Conta financeira",
+  descricao: "Descrição",
+  grupo_id: "Grupo (recorrência)",
+  parcela: "Parcela",
+};
