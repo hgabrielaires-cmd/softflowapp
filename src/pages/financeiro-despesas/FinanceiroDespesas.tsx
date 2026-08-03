@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/TablePagination";
 import { CheckCircle2, History, Pencil, Plus, Search, TrendingDown, Trash2, X } from "lucide-react";
 import { DespesaWizardDialog } from "./components/DespesaWizardDialog";
@@ -36,6 +36,7 @@ export default function FinanceiroDespesas() {
   const [quitando, setQuitando] = useState<DespesaRegistro | null>(null);
   const [filtros, setFiltrosRaw] = useState({ ...emptyDespesaFiltros, ...periodoMesAtual() });
   const [page, setPage] = useState(1);
+  const [porPagina, setPorPagina] = useState(5);
 
   const { roles } = useAuth();
   const { permissions, loading: permsLoading } = useMenuPermissions(roles);
@@ -67,9 +68,11 @@ export default function FinanceiroDespesas() {
       }),
     [despesas, filtros],
   );
-  const totalPages = Math.ceil(filtradas.length / ITEMS_PER_PAGE) || 1;
-  const paginadas = filtradas.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filtradas.length / porPagina) || 1;
+  const paginaAtual = Math.min(page, totalPages);
+  const paginadas = filtradas.slice((paginaAtual - 1) * porPagina, paginaAtual * porPagina);
   const totalValor = filtradas.reduce((acc, d) => acc + Number(d.valor), 0);
+  const totalValorPagina = paginadas.reduce((acc, d) => acc + Number(d.valor), 0);
 
   const temFiltro = JSON.stringify(filtros) !== JSON.stringify(emptyDespesaFiltros);
 
@@ -340,14 +343,48 @@ export default function FinanceiroDespesas() {
                 ))
               )}
             </TableBody>
+            {paginadas.length > 0 && (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={4} className="font-medium">
+                    Total da página: {paginadas.length} lançamento(s)
+                  </TableCell>
+                  <TableCell className="text-right font-medium">{formatBRL(totalValorPagina)}</TableCell>
+                  <TableCell colSpan={temAcoes ? 3 : 2} />
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={4} className="font-semibold">
+                    Total geral: {filtradas.length} lançamento(s)
+                  </TableCell>
+                  <TableCell className="text-right font-semibold">{formatBRL(totalValor)}</TableCell>
+                  <TableCell colSpan={temAcoes ? 3 : 2} />
+                </TableRow>
+              </TableFooter>
+            )}
           </Table>
-          <TablePagination
-            currentPage={page}
-            totalPages={totalPages}
-            totalItems={filtradas.length}
-            itemsPerPage={ITEMS_PER_PAGE}
-            onPageChange={setPage}
-          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-border">
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">Linhas por página</Label>
+              <Select
+                value={String(porPagina)}
+                onValueChange={(v) => { setPorPagina(Number(v)); setPage(1); }}
+              >
+                <SelectTrigger className="h-8 w-20"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[5, 10, 20, 50, 100].map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <TablePagination
+              currentPage={paginaAtual}
+              totalPages={totalPages}
+              totalItems={filtradas.length}
+              itemsPerPage={porPagina}
+              onPageChange={setPage}
+            />
+          </div>
         </div>
       </div>
 
