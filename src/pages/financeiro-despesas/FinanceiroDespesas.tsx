@@ -36,6 +36,7 @@ export default function FinanceiroDespesas() {
   const [quitando, setQuitando] = useState<DespesaRegistro | null>(null);
   const [filtros, setFiltrosRaw] = useState({ ...emptyDespesaFiltros, ...periodoMesAtual() });
   const [page, setPage] = useState(1);
+  const [porPagina, setPorPagina] = useState(5);
 
   const { roles } = useAuth();
   const { permissions, loading: permsLoading } = useMenuPermissions(roles);
