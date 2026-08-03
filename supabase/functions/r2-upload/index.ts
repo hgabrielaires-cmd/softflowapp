@@ -85,8 +85,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch R2 credentials
-    const { data: r2Config, error: r2Error } = await supabase
+    // Fetch R2 credentials (admin-only table: read with service role after auth check)
+    const adminClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: r2Config, error: r2Error } = await adminClient
       .from("r2_config")
       .select("*")
       .eq("ativo", true)

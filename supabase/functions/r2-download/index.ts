@@ -63,7 +63,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: r2Config, error: r2Error } = await supabase
+    // r2_config é restrito a admins: ler com service role após validar o token
+    const adminClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: r2Config, error: r2Error } = await adminClient
       .from("r2_config")
       .select("public_url, endpoint")
       .eq("ativo", true)
