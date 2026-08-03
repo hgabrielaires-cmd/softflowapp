@@ -121,6 +121,8 @@ interface ContratoInfo {
 
 type DialogType = "pedidos" | "upsell" | "upgrade" | "contratos" | "descontos" | "plano" | "tipo" | "cancelados" | null;
 
+const MOSTRAR_BOTAO_FISPAL = false;
+
 export default function Dashboard() {
   const { profile, roles, isAdmin, user } = useAuth();
   const navigate = useNavigate();
