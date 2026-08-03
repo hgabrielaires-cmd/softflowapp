@@ -44,6 +44,8 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
   const [state, setStateRaw] = useState<DespesaWizardState>(() => emptyDespesaWizard(hojeISO()));
   const [anexo, setAnexo] = useState<File | null>(null);
   const [fornecedorDialog, setFornecedorDialog] = useState(false);
+  const [confirmarCancelamento, setConfirmarCancelamento] = useState(false);
+
 
   const { data: fornecedores = [] } = useFornecedoresOptionsQuery();
   const { data: planoContas = [] } = usePlanoContasQuery();
