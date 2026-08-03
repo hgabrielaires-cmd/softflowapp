@@ -70,7 +70,8 @@ interface DialogProps {
 
 export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSaved }: DialogProps) {
   const [ativo, setAtivo] = useState(false);
-  const [authorizedIds, setAuthorizedIds] = useState("");
+  const [ids, setIds] = useState<string[]>([]);
+  const [novoId, setNovoId] = useState("");
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [registering, setRegistering] = useState(false);
@@ -78,9 +79,25 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
 
   useEffect(() => {
     setAtivo(initialConfig?.ativo ?? false);
-    setAuthorizedIds(String(initialConfig?.config?.authorized_ids ?? "738302128"));
+    const raw = initialConfig?.config?.authorized_ids;
+    const arr = Array.isArray(raw)
+      ? raw.map((v: unknown) => String(v))
+      : String(raw ?? "").split(",");
+    setIds(arr.map((s) => s.trim()).filter(Boolean));
+    setNovoId("");
     setResult(null);
   }, [initialConfig, open]);
+
+  function addId() {
+    const v = novoId.trim();
+    if (!v) return;
+    if (ids.includes(v)) {
+      toast.error("Este ID já está na lista");
+      return;
+    }
+    setIds([...ids, v]);
+    setNovoId("");
+  }
 
   async function handleTest() {
     setTesting(true);
