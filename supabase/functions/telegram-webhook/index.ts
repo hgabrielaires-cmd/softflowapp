@@ -399,7 +399,9 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    if (pendencia && text && !text.startsWith("/")) {
+    const textoMenu = ["📊 DRE", "📁 Categorias", "🏆 Maiores Gastos", "📋 Pendentes", "💰 Status", "❓ Ajuda"];
+    if (pendencia && text && !text.startsWith("/") && !textoMenu.includes(text)) {
+
       return await processarResposta(supabase, token, chatId, text, pendencia);
     }
 
