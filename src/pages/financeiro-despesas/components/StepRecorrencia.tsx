@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -5,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PERIODOS_RECORRENCIA } from "../constants";
 import { formatBRL } from "../helpers";
+import { ParcelasPaginacao, fatiar } from "./ParcelasPaginacao";
 import type { DespesaWizardState, RecorrenciaPeriodo } from "../types";
 
 interface Props {
@@ -14,6 +16,10 @@ interface Props {
 }
 
 export function StepRecorrencia({ state, setState, onRecorrenciaChange }: Props) {
+  const [porPagina, setPorPagina] = useState("5");
+  const [pagina, setPagina] = useState(1);
+  const { visiveis, totalPaginas } = fatiar(state.parcelas, porPagina, pagina);
+
   const editarParcela = (numero: number, data: string) => {
     setState({
       parcelas: state.parcelas.map((p) => (p.numero === numero ? { ...p, data_vencimento: data } : p)),
@@ -78,7 +84,7 @@ export function StepRecorrencia({ state, setState, onRecorrenciaChange }: Props)
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {state.parcelas.map((p) => (
+                {visiveis.map((p) => (
                   <TableRow key={p.numero}>
                     <TableCell className="whitespace-nowrap">{p.numero}/{state.parcelas.length}</TableCell>
                     <TableCell>
@@ -96,6 +102,14 @@ export function StepRecorrencia({ state, setState, onRecorrenciaChange }: Props)
             </Table>
           </div>
 
+          <ParcelasPaginacao
+            total={state.parcelas.length}
+            porPagina={porPagina}
+            setPorPagina={setPorPagina}
+            pagina={Math.min(pagina, totalPaginas)}
+            setPagina={setPagina}
+            totalPaginas={totalPaginas}
+          />
         </>
       )}
     </div>
