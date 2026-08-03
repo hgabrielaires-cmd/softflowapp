@@ -78,7 +78,7 @@ function br(iso: string, curto = false) {
   return curto ? `${dd}/${m}` : `${dd}/${m}/${y}`;
 }
 
-export type Periodo = { inicio: string; fim: string; label: string };
+export type Periodo = { inicio: string; fim: string; label: string; tipo?: string };
 
 export function periodoSemana() {
   const hoje = new Date();
@@ -366,8 +366,20 @@ export async function relatorioStatus(supabase: any, periodo?: Periodo): Promise
 
 // ── /pendentes ────────────────────────────────────────────────────────────
 export async function relatorioPendentes(supabase: any, periodo?: Periodo): Promise<string> {
-  const { inicio, fim, label } = periodo ?? periodoPadrao();
+  const base = periodo ?? periodoPadrao();
   const hoje = d(new Date());
+
+  // Pendentes é uma "foto" de vencimentos: para Hoje/Ontem mostramos tudo em
+  // aberto do início do mês corrente até a data escolhida.
+  let inicio = base.inicio;
+  let fim = base.fim;
+  let label = base.label;
+  if (base.tipo === "hoje" || base.tipo === "ontem") {
+    inicio = inicioMes();
+    fim = base.fim;
+    label = `${base.label} (até ${br(fim)})`;
+  }
+
   const [{ data }, fornecedores] = await Promise.all([
     supabase
       .from("fin_despesas")
@@ -378,6 +390,7 @@ export async function relatorioPendentes(supabase: any, periodo?: Periodo): Prom
       .order("data_vencimento"),
     mapaFornecedores(supabase),
   ]);
+
 
   const cab = `📋 *DESPESAS PENDENTES*\n_${label}: ${br(inicio)} a ${br(fim)}_\n\n${SEP}\n\n`;
 
