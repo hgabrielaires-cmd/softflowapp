@@ -157,7 +157,8 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
     try {
       await saveIntegracao("telegram", ativo, {
         ...(initialConfig?.config ?? {}),
-        authorized_ids: ids.join(","),
+        authorized_ids: ids.map((x) => x.id).join(","),
+        authorized_list: ids,
       });
       toast.success("Configuração do Telegram salva!");
       onSaved();
@@ -205,7 +206,20 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
                     addId();
                   }
                 }}
-                placeholder="Ex.: 738302128"
+                placeholder="ID (ex.: 738302128)"
+                className="flex-1"
+              />
+              <Input
+                value={novoNome}
+                onChange={(e) => setNovoNome(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addId();
+                  }
+                }}
+                placeholder="Nome"
+                className="flex-1"
               />
               <Button type="button" variant="outline" size="icon" onClick={addId} aria-label="Adicionar ID">
                 <Plus className="h-4 w-4" />
@@ -213,19 +227,22 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
             </div>
             {ids.length > 0 ? (
               <div className="space-y-1.5">
-                {ids.map((id) => (
+                {ids.map((item) => (
                   <div
-                    key={id}
+                    key={item.id}
                     className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
                   >
-                    <span className="font-mono">{id}</span>
+                    <div className="flex flex-col">
+                      <span className="font-mono">{item.id}</span>
+                      {item.nome && <span className="text-xs text-muted-foreground">{item.nome}</span>}
+                    </div>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive"
-                      onClick={() => setIds(ids.filter((x) => x !== id))}
-                      aria-label={`Remover ${id}`}
+                      onClick={() => setIds(ids.filter((x) => x.id !== item.id))}
+                      aria-label={`Remover ${item.id}`}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -235,6 +252,7 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
             ) : (
               <p className="text-xs text-muted-foreground">Nenhum ID autorizado cadastrado</p>
             )}
+
             <p className="text-xs text-muted-foreground">Seu ID do Telegram (@userinfobot)</p>
           </div>
 
