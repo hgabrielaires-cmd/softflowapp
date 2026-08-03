@@ -72,7 +72,8 @@ export default function FinanceiroDespesas() {
   const paginaAtual = Math.min(page, totalPages);
   const paginadas = filtradas.slice((paginaAtual - 1) * porPagina, paginaAtual * porPagina);
   const totalValor = filtradas.reduce((acc, d) => acc + Number(d.valor), 0);
-  const totalValorPagina = paginadas.reduce((acc, d) => acc + Number(d.valor), 0);
+  const totalPago = filtradas.filter((d) => d.status === "pago").reduce((acc, d) => acc + Number(d.valor), 0);
+  const totalAberto = filtradas.filter((d) => d.status === "aberto").reduce((acc, d) => acc + Number(d.valor), 0);
 
   const temFiltro = JSON.stringify(filtros) !== JSON.stringify(emptyDespesaFiltros);
 
@@ -347,16 +348,23 @@ export default function FinanceiroDespesas() {
               <TableFooter>
                 <TableRow>
                   <TableCell colSpan={4} className="font-medium">
-                    Total da página: {paginadas.length} lançamento(s)
+                    TOTAL DE DESPESAS: {filtradas.length} lançamento(s)
                   </TableCell>
-                  <TableCell className="text-right font-medium">{formatBRL(totalValorPagina)}</TableCell>
+                  <TableCell className="text-right font-medium">{formatBRL(totalValor)}</TableCell>
                   <TableCell colSpan={temAcoes ? 3 : 2} />
                 </TableRow>
                 <TableRow>
-                  <TableCell colSpan={4} className="font-semibold">
-                    Total geral: {filtradas.length} lançamento(s)
+                  <TableCell colSpan={4} className="font-semibold text-success">
+                    TOTAL PAGAS
                   </TableCell>
-                  <TableCell className="text-right font-semibold">{formatBRL(totalValor)}</TableCell>
+                  <TableCell className="text-right font-semibold text-success">{formatBRL(totalPago)}</TableCell>
+                  <TableCell colSpan={temAcoes ? 3 : 2} />
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={4} className="font-semibold text-destructive">
+                    TOTAL EM ABERTAS
+                  </TableCell>
+                  <TableCell className="text-right font-semibold text-destructive">{formatBRL(totalAberto)}</TableCell>
                   <TableCell colSpan={temAcoes ? 3 : 2} />
                 </TableRow>
               </TableFooter>
