@@ -22,6 +22,8 @@ import { FispalWhatsAppDialog } from "./crm-pipeline/components/FispalWhatsAppDi
 import { formatValor, totalValorEtapa } from "./crm-pipeline/helpers";
 import type { CrmOportunidade, CrmEtapaSimples } from "./crm-pipeline/types";
 
+const ATALHO_FISPAL_ATIVO = false;
+
 export default function CrmPipeline() {
   const { profile, user, roles } = useAuth();
   const queryClient = useQueryClient();
