@@ -156,3 +156,58 @@ export function aplicarFiltrosDespesas(
     return true;
   });
 }
+
+// ─── Auditoria ────────────────────────────────────────────────────────────
+
+export function formatDataHoraBR(iso: string): string {
+  return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
+export function acaoAuditoriaLabel(action: string): string {
+  switch (action) {
+    case "despesa_created": return "Inclusão";
+    case "despesa_updated": return "Edição";
+    case "despesa_deleted": return "Exclusão";
+    default: return action;
+  }
+}
+
+export function acaoBadgeVariant(action: string): "default" | "secondary" | "destructive" | "outline" {
+  if (action === "despesa_deleted") return "destructive";
+  if (action === "despesa_created") return "default";
+  return "secondary";
+}
+
+interface AuditoriaLookups {
+  fornecedores: { id: string; nome_fantasia: string }[];
+  planoContas: { id: string; codigo: string; nome: string }[];
+  formasPagamento: { id: string; nome: string }[];
+  contas: { id: string; nome: string }[];
+  centrosCusto: { id: string; nome: string }[];
+}
+
+/** Converte um valor bruto do audit_logs em texto legível (resolve ids e formatos). */
+export function formatValorAuditoria(campo: string, valor: unknown, l: AuditoriaLookups): string {
+  if (valor === null || valor === undefined || valor === "") return "—";
+  switch (campo) {
+    case "valor":
+      return formatBRL(Number(valor));
+    case "data_vencimento":
+    case "data_emissao":
+      return formatDataBR(String(valor));
+    case "fornecedor_id":
+      return l.fornecedores.find((f) => f.id === valor)?.nome_fantasia || String(valor);
+    case "plano_conta_id": {
+      const p = l.planoContas.find((x) => x.id === valor);
+      return p ? `${p.codigo} — ${p.nome}` : String(valor);
+    }
+    case "forma_pagamento_id":
+      return l.formasPagamento.find((x) => x.id === valor)?.nome || String(valor);
+    case "conta_financeira_id":
+      return l.contas.find((x) => x.id === valor)?.nome || String(valor);
+    case "centro_custo_id":
+      return l.centrosCusto.find((x) => x.id === valor)?.nome || String(valor);
+    default:
+      return typeof valor === "object" ? JSON.stringify(valor) : String(valor);
+  }
+}
