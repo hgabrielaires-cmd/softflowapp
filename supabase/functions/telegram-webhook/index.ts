@@ -1,6 +1,13 @@
 // ─── Edge Function: Telegram Webhook (financeiro) ─────────────────────────
 // Recebe comprovantes/NF pelo Telegram, lê com Claude Vision e lança despesa.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  relatorioCategorias,
+  relatorioDre,
+  relatorioMaiores,
+  relatorioPendentes,
+  relatorioStatus,
+} from "./relatorios.ts";
 
 const TELEGRAM_API = "https://api.telegram.org/bot";
 const PLANOS_POR_PAGINA = 8;
@@ -272,43 +279,41 @@ Deno.serve(async (req) => {
           `• Comprovante de pagamento (PIX/Boleto/TED)\n` +
           `• Nota fiscal\n\n` +
           `Vou processar e lançar automaticamente no sistema! 🚀\n\n` +
-          `Comandos:\n` +
-          `/status — Ver resumo financeiro`,
+          `📊 *Relatórios:*\n` +
+          `/status — Resumo financeiro\n` +
+          `/dre — DRE da semana\n` +
+          `/categorias — Despesas por plano de contas\n` +
+          `/maiores — Maiores gastos da semana\n` +
+          `/pendentes — Despesas em aberto e vencidas`,
       );
       return ok();
     }
 
     if (text === "/status") {
-      const { count: totalPendentes } = await supabase
-        .from("fin_despesas")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "aberto");
-
-      const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-        .toISOString()
-        .slice(0, 10);
-
-      const { data: totalMes } = await supabase
-        .from("fin_despesas")
-        .select("valor_pago")
-        .eq("status", "pago")
-        .gte("data_pagamento", inicioMes);
-
-      const somaMes = (totalMes ?? []).reduce(
-        (s: number, d: { valor_pago: number | null }) => s + Number(d.valor_pago ?? 0),
-        0,
-      );
-
-      await sendMessage(
-        token,
-        chatId,
-        `📊 *Status Financeiro*\n\n` +
-          `📋 Despesas em aberto: *${totalPendentes ?? 0}*\n` +
-          `💸 Pago este mês: *${formatMoeda(somaMes)}*\n\n` +
-          `_Atualizado agora_`,
-      );
+      await sendMessage(token, chatId, await relatorioStatus(supabase));
       return ok();
     }
+
+    if (text === "/categorias") {
+      await sendMessage(token, chatId, await relatorioCategorias(supabase));
+      return ok();
+    }
+
+    if (text === "/dre") {
+      await sendMessage(token, chatId, await relatorioDre(supabase));
+      return ok();
+    }
+
+    if (text === "/maiores") {
+      await sendMessage(token, chatId, await relatorioMaiores(supabase));
+      return ok();
+    }
+
+    if (text === "/pendentes") {
+      await sendMessage(token, chatId, await relatorioPendentes(supabase));
+      return ok();
+    }
+
 
     // ── Foto ou documento ──
     const caption = String(message.caption ?? message.text ?? "").trim();
@@ -321,7 +326,7 @@ Deno.serve(async (req) => {
       await sendMessage(
         token,
         chatId,
-        `📎 Envie uma *foto* ou *PDF* do comprovante.\n\nComandos: /start /status`,
+        `📎 Envie uma *foto* ou *PDF* do comprovante.\n\nComandos: /start /status /dre /categorias /maiores /pendentes`,
       );
       return ok();
     }
