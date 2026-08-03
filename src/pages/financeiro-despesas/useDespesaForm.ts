@@ -2,8 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DESPESAS_ANEXOS_BUCKET } from "./constants";
-import { parseValor } from "./helpers";
+import { parseValor, sanitizeFileName, validarAnexo } from "./helpers";
 import type { DespesaWizardState, FornecedorRapidoForm } from "./types";
+
 
 interface SalvarDespesaArgs {
   state: DespesaWizardState;
@@ -44,16 +45,23 @@ export function useDespesaForm() {
   const salvarDespesaMut = useMutation({
     mutationFn: async ({ state, anexo, userId }: SalvarDespesaArgs) => {
       const valor = parseValor(state.valor);
+      if (valor <= 0) throw new Error("Informe um valor maior que zero.");
+      if (!state.fornecedor_id || !state.plano_conta_id || !state.forma_pagamento_id || !state.conta_financeira_id) {
+        throw new Error("Preencha fornecedor, plano de contas, forma de pagamento e conta financeira.");
+      }
 
       let anexoUrl: string | null = null;
       if (anexo) {
-        const path = `despesas/${crypto.randomUUID()}-${anexo.name}`;
+        const erroAnexo = validarAnexo(anexo);
+        if (erroAnexo) throw new Error(erroAnexo);
+        const path = `despesas/${crypto.randomUUID()}-${sanitizeFileName(anexo.name)}`;
         const { error: upErr } = await supabase.storage
           .from(DESPESAS_ANEXOS_BUCKET)
-          .upload(path, anexo);
-        if (upErr) throw upErr;
+          .upload(path, anexo, { contentType: anexo.type, upsert: false });
+        if (upErr) throw new Error("Não foi possível enviar o anexo. Tente novamente.");
         anexoUrl = path;
       }
+
 
       const grupoId = crypto.randomUUID();
       const parcelas =
