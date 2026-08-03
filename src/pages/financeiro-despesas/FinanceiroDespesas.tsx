@@ -23,6 +23,8 @@ import { FILTRO_TODOS, ITEMS_PER_PAGE, STATUS_DESPESA, emptyDespesaFiltros } fro
 import { aplicarFiltrosDespesas, formatBRL, formatDataBR, statusBadgeVariant } from "./helpers";
 import { useAuth } from "@/context/AuthContext";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
+import { useMenuPermissions } from "@/hooks/useMenuPermissions";
+import { Navigate } from "react-router-dom";
 import type { DespesaRegistro } from "./types";
 
 export default function FinanceiroDespesas() {
@@ -33,8 +35,10 @@ export default function FinanceiroDespesas() {
   const [page, setPage] = useState(1);
 
   const { roles } = useAuth();
+  const { permissions, loading: permsLoading } = useMenuPermissions(roles);
   const { canIncluir, canEditar, canExcluir } = useCrudPermissions("despesas", roles);
   const temAcoes = canEditar || canExcluir;
+
 
 
   const { data: despesas = [], isLoading } = useDespesasQuery();
