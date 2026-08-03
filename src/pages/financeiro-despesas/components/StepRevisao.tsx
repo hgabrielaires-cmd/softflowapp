@@ -51,7 +51,7 @@ export function StepRevisao({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-border p-4">
+      <div className="rounded-lg border border-border p-3 sm:p-4">
         <Linha label="Valor" valor={formatBRL(parseValor(state.valor))} />
         <Linha label="Data de emissão" valor={formatDataBR(state.data_emissao)} />
         <Linha label="Data de vencimento" valor={formatDataBR(state.data_vencimento)} />
@@ -90,7 +90,7 @@ export function StepRevisao({
       </div>
 
       {state.recorrente && state.parcelas.length > 0 && (
-        <div className="rounded-lg border border-border">
+        <div className="rounded-lg border border-border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
