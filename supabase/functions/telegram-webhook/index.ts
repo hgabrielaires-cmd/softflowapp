@@ -748,6 +748,12 @@ async function finalizarLancamento(
     return ok();
   }
 
+  let descricaoDespesa =
+    `${String(dados.tipo ?? "PAGAMENTO").toUpperCase()} de ${nomeOrigem} para ` +
+    `${dados.nome_recebedor || pendencia.fornecedor_nome || "fornecedor"} ` +
+    `no valor de ${formatMoeda(dados.valor)}`;
+  if (observacao) descricaoDespesa += ` (${observacao})`;
+
   const { data: despesa, error: despesaErr } = await supabase
     .from("fin_despesas")
     .insert({
