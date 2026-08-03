@@ -491,6 +491,7 @@ Retorne APENAS JSON válido sem markdown:
         centro_custo_id: centrosCusto?.[0]?.id ?? null,
         plano_conta_sugerido_id: planoSugeridoId,
         anexo_url: anexoUrl,
+        observacao_usuario: caption || null,
         status: "aguardando_resposta",
         etapa: "plano_contas",
         plano_pagina: 0,
@@ -498,7 +499,7 @@ Retorne APENAS JSON válido sem markdown:
       .select("id")
       .single();
 
-    let msg = resumoComprovante(dados, fornecedor?.nome_fantasia);
+    let msg = resumoComprovante(dados, fornecedor?.nome_fantasia, caption);
     let teclado: unknown;
 
     if (fornecedor && planoSugerido) {
