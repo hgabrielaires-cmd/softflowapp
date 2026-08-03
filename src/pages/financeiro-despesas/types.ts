@@ -22,6 +22,7 @@ export interface ParcelaPreview {
 
 export interface DespesaWizardState {
   valor: string;
+  filial_id: string;
   data_emissao: string;
   data_vencimento: string;
   codigo_barras: string;
@@ -55,6 +56,7 @@ export interface FornecedorRapidoForm {
 export interface DespesaRegistro {
   id: string;
   grupo_id: string;
+  filial_id: string | null;
   fornecedor_id: string;
   plano_conta_id: string;
   forma_pagamento_id: string;
@@ -77,6 +79,7 @@ export interface DespesaFiltros {
   data_inicio: string;
   data_fim: string;
   fornecedor_id: string;
+  filial_id: string;
   centro_custo_id: string;
   plano_conta_id: string;
   forma_pagamento_id: string;
