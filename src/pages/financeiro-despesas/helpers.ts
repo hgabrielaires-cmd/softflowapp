@@ -8,6 +8,42 @@ export function hojeISO(): string {
   return format(new Date(), "yyyy-MM-dd");
 }
 
+// ─── Anexo ────────────────────────────────────────────────────────────────
+
+export const ANEXO_MAX_MB = 10;
+export const ANEXO_TIPOS_ACEITOS = [
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+];
+export const ANEXO_ACCEPT = ".pdf,.png,.jpg,.jpeg,.webp";
+
+/** Remove caracteres perigosos (path traversal) do nome do arquivo. */
+export function sanitizeFileName(nome: string): string {
+  const base = nome.split(/[\\/]/).pop() || "arquivo";
+  return (
+    base
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9._-]/g, "_")
+      .replace(/_{2,}/g, "_")
+      .slice(-120) || "arquivo"
+  );
+}
+
+/** Retorna a mensagem de erro do anexo, ou null se estiver válido. */
+export function validarAnexo(file: File): string | null {
+  if (!ANEXO_TIPOS_ACEITOS.includes(file.type)) {
+    return "Formato não suportado. Envie PDF, PNG, JPG ou WEBP.";
+  }
+  if (file.size > ANEXO_MAX_MB * 1024 * 1024) {
+    return `O arquivo deve ter no máximo ${ANEXO_MAX_MB} MB.`;
+  }
+  return null;
+}
+
+
 export function parseValor(valor: string): number {
   const normalized = valor.replace(/\./g, "").replace(",", ".").replace(/[^\d.-]/g, "");
   const n = Number(normalized);

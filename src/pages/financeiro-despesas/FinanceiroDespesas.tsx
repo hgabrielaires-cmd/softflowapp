@@ -19,11 +19,16 @@ import {
 } from "@/pages/financeiro-parametros/useFinanceiroParametrosQueries";
 import { FILTRO_TODOS, ITEMS_PER_PAGE, STATUS_DESPESA, emptyDespesaFiltros } from "./constants";
 import { aplicarFiltrosDespesas, formatBRL, formatDataBR, statusBadgeVariant } from "./helpers";
+import { useAuth } from "@/context/AuthContext";
+import { useCrudPermissions } from "@/hooks/useCrudPermissions";
 
 export default function FinanceiroDespesas() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [filtros, setFiltrosRaw] = useState(emptyDespesaFiltros);
   const [page, setPage] = useState(1);
+
+  const { roles } = useAuth();
+  const { canIncluir } = useCrudPermissions("despesas", roles);
 
   const { data: despesas = [], isLoading } = useDespesasQuery();
   const { data: fornecedores = [] } = useFornecedoresOptionsQuery();
@@ -31,6 +36,7 @@ export default function FinanceiroDespesas() {
   const { data: formasPagamento = [] } = useFormasPagamentoQuery();
   const { data: centrosCusto = [] } = useCentrosCustoQuery();
   const { data: contas = [] } = useContasFinanceirasQuery();
+
 
   const setFiltros = (patch: Partial<typeof emptyDespesaFiltros>) => {
     setFiltrosRaw((prev) => ({ ...prev, ...patch }));
@@ -56,9 +62,12 @@ export default function FinanceiroDespesas() {
               Lançamento e controle de despesas
             </p>
           </div>
-          <Button onClick={() => setWizardOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Novo
-          </Button>
+          {canIncluir && (
+            <Button onClick={() => setWizardOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" /> Novo
+            </Button>
+          )}
+
         </div>
 
         {/* Filtros */}

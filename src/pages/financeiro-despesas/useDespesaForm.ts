@@ -2,8 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DESPESAS_ANEXOS_BUCKET } from "./constants";
-import { parseValor } from "./helpers";
+import { parseValor, sanitizeFileName, validarAnexo } from "./helpers";
 import type { DespesaWizardState, FornecedorRapidoForm } from "./types";
+
 
 interface SalvarDespesaArgs {
   state: DespesaWizardState;
@@ -31,7 +32,7 @@ export function useDespesaForm() {
         })
         .select("id, nome_fantasia, razao_social, cnpj_cpf")
         .single();
-      if (error) throw error;
+      if (error) throw new Error("Não foi possível cadastrar o fornecedor. Verifique os dados informados.");
       return data;
     },
     onSuccess: () => {
@@ -39,21 +40,29 @@ export function useDespesaForm() {
       queryClient.invalidateQueries({ queryKey: ["despesas_fornecedores_options"] });
     },
     onError: (e: Error) => toast.error(e.message || "Erro ao cadastrar fornecedor"),
+
   });
 
   const salvarDespesaMut = useMutation({
     mutationFn: async ({ state, anexo, userId }: SalvarDespesaArgs) => {
       const valor = parseValor(state.valor);
+      if (valor <= 0) throw new Error("Informe um valor maior que zero.");
+      if (!state.fornecedor_id || !state.plano_conta_id || !state.forma_pagamento_id || !state.conta_financeira_id) {
+        throw new Error("Preencha fornecedor, plano de contas, forma de pagamento e conta financeira.");
+      }
 
       let anexoUrl: string | null = null;
       if (anexo) {
-        const path = `despesas/${crypto.randomUUID()}-${anexo.name}`;
+        const erroAnexo = validarAnexo(anexo);
+        if (erroAnexo) throw new Error(erroAnexo);
+        const path = `despesas/${crypto.randomUUID()}-${sanitizeFileName(anexo.name)}`;
         const { error: upErr } = await supabase.storage
           .from(DESPESAS_ANEXOS_BUCKET)
-          .upload(path, anexo);
-        if (upErr) throw upErr;
+          .upload(path, anexo, { contentType: anexo.type, upsert: false });
+        if (upErr) throw new Error("Não foi possível enviar o anexo. Tente novamente.");
         anexoUrl = path;
       }
+
 
       const grupoId = crypto.randomUUID();
       const parcelas =
@@ -85,7 +94,7 @@ export function useDespesaForm() {
         .from("fin_despesas")
         .insert(rows)
         .select("id");
-      if (error) throw error;
+      if (error) throw new Error("Não foi possível salvar o lançamento. Verifique os dados e tente novamente.");
 
       const rateios = state.ratear
         ? state.rateios
@@ -105,7 +114,7 @@ export function useDespesaForm() {
         );
         if (rateioRows.length > 0) {
           const { error: rErr } = await supabase.from("fin_despesa_rateios").insert(rateioRows);
-          if (rErr) throw rErr;
+          if (rErr) throw new Error("O rateio por centro de custo é inválido. Ele deve somar 100%.");
         }
       }
     },
@@ -114,6 +123,7 @@ export function useDespesaForm() {
       queryClient.invalidateQueries({ queryKey: ["fin_despesas"] });
     },
     onError: (e: Error) => toast.error(e.message || "Erro ao salvar lançamento"),
+
   });
 
   return { criarFornecedorMut, salvarDespesaMut };
