@@ -127,16 +127,22 @@ function tecladoPlanos(planos: Plano[], pagina: number, escolhidoId: string | nu
   return { inline_keyboard: rows };
 }
 
-function resumoComprovante(dados: Record<string, any>, fornecedorNome?: string | null) {
+function resumoComprovante(
+  dados: Record<string, any>,
+  fornecedorNome?: string | null,
+  observacao?: string | null,
+) {
   return (
     `✅ *Comprovante reconhecido!*\n\n` +
     `💰 *Valor:* ${formatMoeda(dados.valor)}\n` +
     `📅 *Data:* ${dados.data || "hoje"}\n` +
     `🧾 *Tipo:* ${String(dados.tipo ?? "").toUpperCase()}\n` +
     `🏢 *Destinatário:* ${fornecedorNome || dados.nome_recebedor || "não identificado"}\n` +
-    (dados.cnpj_recebedor ? `🔢 *CNPJ/CPF:* ${dados.cnpj_recebedor}\n` : "")
+    (dados.cnpj_recebedor ? `🔢 *CNPJ/CPF:* ${dados.cnpj_recebedor}\n` : "") +
+    (observacao ? `📝 *Obs:* ${observacao}\n` : "")
   );
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
