@@ -127,6 +127,9 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
       if (!rateioValido(state.ratear, state.rateios))
         return toast.error("O rateio deve somar 100% e ter centros selecionados"), false;
     }
+    if (step === 3 && state.recorrente && (!state.vezes || state.vezes < 1)) {
+      return toast.error("Informe um número de vezes maior ou igual a 1"), false;
+    }
     return true;
   };
 

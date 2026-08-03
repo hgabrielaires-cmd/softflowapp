@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -17,6 +17,12 @@ interface Props {
 
 export function StepRecorrencia({ state, setState, onRecorrenciaChange }: Props) {
   const [porPagina, setPorPagina] = useState("5");
+  const [vezesTexto, setVezesTexto] = useState(String(state.vezes ?? ""));
+
+  // Mantém o campo sincronizado quando o valor muda fora do input
+  useEffect(() => {
+    setVezesTexto((prev) => (Number(prev) === state.vezes ? prev : String(state.vezes ?? "")));
+  }, [state.vezes]);
   const [pagina, setPagina] = useState(1);
   const { visiveis, totalPaginas } = fatiar(state.parcelas, porPagina, pagina);
 
@@ -68,8 +74,18 @@ export function StepRecorrencia({ state, setState, onRecorrenciaChange }: Props)
               <Input
                 type="number"
                 min={1}
-                value={state.vezes}
-                onChange={(e) => onRecorrenciaChange({ vezes: Math.max(1, Number(e.target.value) || 1) })}
+                value={vezesTexto}
+                onChange={(e) => {
+                  const texto = e.target.value;
+                  setVezesTexto(texto);
+                  const n = Number(texto);
+                  onRecorrenciaChange({ vezes: texto === "" || !Number.isFinite(n) ? 0 : Math.floor(n) });
+                }}
+                onBlur={() => {
+                  if (state.vezes >= 1) return;
+                  setVezesTexto("1");
+                  onRecorrenciaChange({ vezes: 1 });
+                }}
               />
             </div>
           </div>
