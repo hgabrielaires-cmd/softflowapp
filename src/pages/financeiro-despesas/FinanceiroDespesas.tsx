@@ -62,9 +62,12 @@ export default function FinanceiroDespesas() {
               Lançamento e controle de despesas
             </p>
           </div>
-          <Button onClick={() => setWizardOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Novo
-          </Button>
+          {canIncluir && (
+            <Button onClick={() => setWizardOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" /> Novo
+            </Button>
+          )}
+
         </div>
 
         {/* Filtros */}
