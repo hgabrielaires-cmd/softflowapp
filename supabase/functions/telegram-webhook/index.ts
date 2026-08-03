@@ -25,6 +25,16 @@ function ok(body: unknown = { ok: true }) {
   });
 }
 
+const MENU_TECLADO = {
+  keyboard: [
+    [{ text: "📊 DRE" }, { text: "📁 Categorias" }],
+    [{ text: "🏆 Maiores Gastos" }, { text: "📋 Pendentes" }],
+    [{ text: "💰 Status" }, { text: "❓ Ajuda" }],
+  ],
+  resize_keyboard: true,
+  is_persistent: true,
+};
+
 async function sendMessage(
   token: string,
   chatId: number,
@@ -40,9 +50,10 @@ async function sendMessage(
         chat_id: chatId,
         text,
         parse_mode: parseMode,
-        ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+        reply_markup: replyMarkup ?? MENU_TECLADO,
       }),
     });
+
     const json = await res.json().catch(() => ({}));
     return json?.result?.message_id ?? null;
   } catch (e) {
@@ -388,7 +399,9 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    if (pendencia && text && !text.startsWith("/")) {
+    const textoMenu = ["📊 DRE", "📁 Categorias", "🏆 Maiores Gastos", "📋 Pendentes", "💰 Status", "❓ Ajuda"];
+    if (pendencia && text && !text.startsWith("/") && !textoMenu.includes(text)) {
+
       return await processarResposta(supabase, token, chatId, text, pendencia);
     }
 
@@ -419,12 +432,31 @@ Deno.serve(async (req) => {
       "/dre": "dre",
       "/maiores": "maiores",
       "/pendentes": "pendentes",
+      "📊 DRE": "dre",
+      "📁 Categorias": "categorias",
+      "🏆 Maiores Gastos": "maiores",
+      "📋 Pendentes": "pendentes",
+      "💰 Status": "status",
     };
+
+    if (text && (text === "❓ Ajuda" || text === "/ajuda" || text === "/help")) {
+      await sendMessage(
+        token,
+        chatId,
+        `❓ *Ajuda*\n\n` +
+          `📸 Envie foto ou PDF de comprovante para lançar despesa.\n\n` +
+          `📊 *Relatórios:*\n` +
+          `/status • /dre • /categorias • /maiores • /pendentes\n\n` +
+          `Use os botões abaixo para acesso rápido.`,
+      );
+      return ok();
+    }
 
     if (text && comandoRelatorio[text]) {
       await perguntarPeriodo(token, chatId, comandoRelatorio[text]);
       return ok();
     }
+
 
 
     // ── Foto ou documento ──
