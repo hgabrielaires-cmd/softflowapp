@@ -6,6 +6,7 @@ import { STATUS_LABELS, ChatStatus } from "../types";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Lock } from "lucide-react";
+import { ChatMedia } from "./ChatMedia";
 
 interface Props {
   conversaId: string | null;

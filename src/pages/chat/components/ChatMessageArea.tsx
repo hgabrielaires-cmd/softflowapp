@@ -11,6 +11,7 @@ import { ChatConversa, ChatMensagem, STATUS_COLORS, STATUS_LABELS, ChatStatus } 
 import { formatarTelefone } from "../helpers";
 import { format } from "date-fns";
 import ChatInputArea from "./ChatInputArea";
+import { ChatMedia } from "./ChatMedia";
 import { toast } from "sonner";
 import {
   AlertDialog,
