@@ -222,18 +222,42 @@ export function DespesaQuitarDialog({ despesa, open, onOpenChange }: Props) {
           </div>
         </div>
 
+        {etapaConta && (
+          <div className="space-y-1.5 rounded-lg border border-primary/30 bg-primary/5 p-3 sm:p-4">
+            <Label className="text-sm font-medium">Por qual conta financeira será o pagamento?</Label>
+            <Select value={contaPagamento} onValueChange={setContaPagamento}>
+              <SelectTrigger><SelectValue placeholder="Selecione a conta" /></SelectTrigger>
+              <SelectContent>
+                {contasAtivas.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-          <Button variant="outline" className="w-full sm:w-auto" onClick={() => onOpenChange(false)}>
-            Cancelar
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={() => (etapaConta ? setEtapaConta(false) : onOpenChange(false))}
+          >
+            {etapaConta ? "Voltar" : "Cancelar"}
           </Button>
-          <Button className="w-full sm:w-auto" onClick={confirmar} disabled={quitarDespesaMut.isPending}>
-            {quitarDespesaMut.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-            )}
-            Confirmar pagamento
-          </Button>
+          {etapaConta ? (
+            <Button className="w-full sm:w-auto" onClick={confirmar} disabled={quitarDespesaMut.isPending}>
+              {quitarDespesaMut.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+              )}
+              Confirmar pagamento
+            </Button>
+          ) : (
+            <Button className="w-full sm:w-auto" onClick={irParaConta}>
+              Confirmar
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
