@@ -9,9 +9,21 @@ import { FormasPagamentoTab } from "./components/FormasPagamentoTab";
 import { ContasFinanceirasTab } from "./components/ContasFinanceirasTab";
 
 export default function FinanceiroParametros() {
-  const { isAdmin } = useAuth();
+  const { roles } = useAuth();
+  const { permissions, loading: permsLoading } = useMenuPermissions(roles);
 
-  if (!isAdmin) return <Navigate to="/dashboard" replace />;
+  if (permsLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center py-20">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const podeAcessar = permissions === null || permissions.has("menu.financeiro_parametros");
+  if (!podeAcessar) return <Navigate to="/dashboard" replace />;
 
   return (
     <AppLayout>
