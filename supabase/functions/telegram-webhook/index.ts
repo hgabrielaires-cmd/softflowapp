@@ -7,6 +7,7 @@ import {
   relatorioMaiores,
   relatorioPendentes,
   relatorioStatus,
+  type Periodo,
 } from "./relatorios.ts";
 
 const TELEGRAM_API = "https://api.telegram.org/bot";
@@ -133,6 +134,114 @@ function tecladoPlanos(planos: Plano[], pagina: number, escolhidoId: string | nu
 
   return { inline_keyboard: rows };
 }
+
+// ── Seleção de período dos relatórios ────────────────────────────────────
+type RelatorioTipo = "dre" | "categorias" | "maiores" | "status" | "pendentes";
+
+function getPeriodo(tipo: string): Periodo {
+  const hoje = new Date();
+  const fmt = (dt: Date) => dt.toISOString().slice(0, 10);
+
+  switch (tipo) {
+    case "ontem": {
+      const ontem = new Date(hoje);
+      ontem.setDate(hoje.getDate() - 1);
+      return { inicio: fmt(ontem), fim: fmt(ontem), label: "Ontem" };
+    }
+    case "semana": {
+      const ini = new Date(hoje);
+      ini.setDate(hoje.getDate() - hoje.getDay());
+      return { inicio: fmt(ini), fim: fmt(hoje), label: "Esta Semana" };
+    }
+    case "semana_ant": {
+      const ini = new Date(hoje);
+      ini.setDate(hoje.getDate() - hoje.getDay() - 7);
+      const fim = new Date(ini);
+      fim.setDate(ini.getDate() + 6);
+      return { inicio: fmt(ini), fim: fmt(fim), label: "Semana Passada" };
+    }
+    case "mes": {
+      const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+      return { inicio: fmt(ini), fim: fmt(hoje), label: "Este Mês" };
+    }
+    case "mes_ant": {
+      const ini = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+      const fim = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
+      return { inicio: fmt(ini), fim: fmt(fim), label: "Mês Passado" };
+    }
+    case "hoje":
+    default:
+      return { inicio: fmt(hoje), fim: fmt(hoje), label: "Hoje" };
+  }
+}
+
+function tecladoPeriodo(relatorio: string) {
+  return {
+    inline_keyboard: [
+      [
+        { text: "📅 Hoje", callback_data: `periodo_hoje_${relatorio}` },
+        { text: "📅 Ontem", callback_data: `periodo_ontem_${relatorio}` },
+      ],
+      [
+        { text: "📆 Esta Semana", callback_data: `periodo_semana_${relatorio}` },
+        { text: "📆 Semana Passada", callback_data: `periodo_semana_ant_${relatorio}` },
+      ],
+      [
+        { text: "🗓️ Este Mês", callback_data: `periodo_mes_${relatorio}` },
+        { text: "🗓️ Mês Passado", callback_data: `periodo_mes_ant_${relatorio}` },
+      ],
+      [{ text: "✏️ Personalizado", callback_data: `periodo_custom_${relatorio}` }],
+    ],
+  };
+}
+
+async function perguntarPeriodo(
+  token: string,
+  chatId: number,
+  relatorio: string,
+  messageId?: number | null,
+) {
+  const texto = "📅 *Qual período deseja analisar?*";
+  if (messageId) await editMessage(token, chatId, messageId, texto, tecladoPeriodo(relatorio));
+  else await sendMessage(token, chatId, texto, tecladoPeriodo(relatorio));
+}
+
+async function executarRelatorio(
+  tipo: string,
+  periodo: Periodo,
+  supabase: any,
+  token: string,
+  chatId: number,
+  messageId?: number | null,
+) {
+  let texto: string;
+  switch (tipo) {
+    case "dre":
+      texto = await relatorioDre(supabase, periodo);
+      break;
+    case "categorias":
+      texto = await relatorioCategorias(supabase, periodo);
+      break;
+    case "maiores":
+      texto = await relatorioMaiores(supabase, periodo);
+      break;
+    case "status":
+      texto = await relatorioStatus(supabase, periodo);
+      break;
+    case "pendentes":
+      texto = await relatorioPendentes(supabase, periodo);
+      break;
+    default:
+      return;
+  }
+
+  const teclado = {
+    inline_keyboard: [[{ text: "🔄 Mudar Período", callback_data: `mudar_${tipo}` }]],
+  };
+  if (messageId) await editMessage(token, chatId, messageId, texto, teclado);
+  else await sendMessage(token, chatId, texto, teclado);
+}
+
 
 function docRecebedor(dados: Record<string, any>): { doc: string | null; tipoPessoa: "pf" | "pj" | null } {
   const cnpj = dados.cnpj_recebedor ? String(dados.cnpj_recebedor).replace(/\D/g, "") : "";
@@ -289,28 +398,16 @@ Deno.serve(async (req) => {
       return ok();
     }
 
-    if (text === "/status") {
-      await sendMessage(token, chatId, await relatorioStatus(supabase));
-      return ok();
-    }
+    const comandoRelatorio: Record<string, RelatorioTipo> = {
+      "/status": "status",
+      "/categorias": "categorias",
+      "/dre": "dre",
+      "/maiores": "maiores",
+      "/pendentes": "pendentes",
+    };
 
-    if (text === "/categorias") {
-      await sendMessage(token, chatId, await relatorioCategorias(supabase));
-      return ok();
-    }
-
-    if (text === "/dre") {
-      await sendMessage(token, chatId, await relatorioDre(supabase));
-      return ok();
-    }
-
-    if (text === "/maiores") {
-      await sendMessage(token, chatId, await relatorioMaiores(supabase));
-      return ok();
-    }
-
-    if (text === "/pendentes") {
-      await sendMessage(token, chatId, await relatorioPendentes(supabase));
+    if (text && comandoRelatorio[text]) {
+      await perguntarPeriodo(token, chatId, comandoRelatorio[text]);
       return ok();
     }
 
@@ -584,6 +681,61 @@ async function processarCallback(
   const data = String(callbackQuery.data ?? "");
   const messageId = callbackQuery.message?.message_id as number;
 
+  // ── Seleção de período dos relatórios ──
+  const matchPeriodo = data.match(
+    /^periodo_(.+)_(dre|categorias|maiores|status|pendentes)$/,
+  );
+  if (matchPeriodo) {
+    const tipoPeriodo = matchPeriodo[1];
+    const relatorio = matchPeriodo[2];
+
+    if (tipoPeriodo === "custom") {
+      await answerCallback(token, callbackQuery.id, "✏️");
+      await supabase
+        .from("telegram_pendencias")
+        .update({ status: "cancelado" })
+        .eq("chat_id", chatId)
+        .eq("status", "aguardando_resposta")
+        .eq("etapa", "aguardando_periodo_custom");
+      await supabase.from("telegram_pendencias").insert({
+        chat_id: chatId,
+        user_id: callbackQuery.from?.id ?? chatId,
+        etapa: "aguardando_periodo_custom",
+        status: "aguardando_resposta",
+        dados_extraidos: { relatorio },
+      });
+      await editMessage(
+        token,
+        chatId,
+        messageId,
+        "✏️ *Período personalizado*\n\n" +
+          "Digite no formato:\n" +
+          "`DD/MM/AAAA DD/MM/AAAA`\n\n" +
+          "Exemplo:\n" +
+          "`01/07/2026 31/07/2026`",
+      );
+      return ok();
+    }
+
+    await answerCallback(token, callbackQuery.id, "⏳ Gerando...");
+    await executarRelatorio(
+      relatorio,
+      getPeriodo(tipoPeriodo),
+      supabase,
+      token,
+      chatId,
+      messageId,
+    );
+    return ok();
+  }
+
+  const matchMudar = data.match(/^mudar_(dre|categorias|maiores|status|pendentes)$/);
+  if (matchMudar) {
+    await answerCallback(token, callbackQuery.id, "📅");
+    await perguntarPeriodo(token, chatId, matchMudar[1], messageId);
+    return ok();
+  }
+
   const { data: pendencia } = await supabase
     .from("telegram_pendencias")
     .select("*")
@@ -695,6 +847,39 @@ async function processarResposta(
   text: string,
   pendencia: any,
 ) {
+  // ── Período personalizado de relatório ──
+  if (pendencia.etapa === "aguardando_periodo_custom") {
+    const matchDatas = text.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})/);
+    if (!matchDatas) {
+      await sendMessage(
+        token,
+        chatId,
+        "⚠️ Formato inválido. Digite:\n`DD/MM/AAAA DD/MM/AAAA`",
+      );
+      return ok();
+    }
+    const toISO = (v: string) => {
+      const [dd, mm, aaaa] = v.split("/");
+      return `${aaaa}-${mm}-${dd}`;
+    };
+    const periodo: Periodo = {
+      inicio: toISO(matchDatas[1]),
+      fim: toISO(matchDatas[2]),
+      label: `${matchDatas[1]} a ${matchDatas[2]}`,
+    };
+    const relatorio = (pendencia.dados_extraidos as Record<string, unknown> | null)?.relatorio as
+      | string
+      | undefined;
+    await supabase
+      .from("telegram_pendencias")
+      .update({ status: "concluido" })
+      .eq("id", pendencia.id);
+    if (relatorio) {
+      await executarRelatorio(relatorio, periodo, supabase, token, chatId, null);
+    }
+    return ok();
+  }
+
   if (pendencia.etapa !== "plano_contas") return ok();
 
   const planos = await listarPlanos(supabase);
