@@ -108,6 +108,7 @@ export default function CrmPipeline() {
 
   // Auto-open Fispal form when navigating from Dashboard with ?fispal=1
   useEffect(() => {
+    if (!ATALHO_FISPAL_ATIVO) return;
     if (searchParams.get("fispal") !== "1") return;
     if (!etapas.length || filiaisLoading) return;
     handleNewFispal();
