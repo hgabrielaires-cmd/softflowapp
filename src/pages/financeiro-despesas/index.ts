@@ -6,3 +6,6 @@ export { useDespesasQuery, useFornecedoresOptionsQuery } from "./useDespesasQuer
 export { useDespesaForm } from "./useDespesaForm";
 export { DespesaWizardDialog } from "./components/DespesaWizardDialog";
 export { FornecedorRapidoDialog } from "./components/FornecedorRapidoDialog";
+export { useDespesaMutations } from "./useDespesaMutations";
+export { DespesaEditDialog } from "./components/DespesaEditDialog";
+export { DespesaDeleteDialog } from "./components/DespesaDeleteDialog";

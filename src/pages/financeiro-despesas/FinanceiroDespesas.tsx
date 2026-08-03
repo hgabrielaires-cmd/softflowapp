@@ -7,10 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/TablePagination";
-import { Plus, Search, TrendingDown, X } from "lucide-react";
+import { Pencil, Plus, Search, TrendingDown, Trash2, X } from "lucide-react";
 import { DespesaWizardDialog } from "./components/DespesaWizardDialog";
-import { useDespesasQuery } from "./useDespesasQueries";
-import { useFornecedoresOptionsQuery } from "./useDespesasQueries";
+import { DespesaEditDialog } from "./components/DespesaEditDialog";
+import { DespesaDeleteDialog } from "./components/DespesaDeleteDialog";
+import { useDespesasQuery, useFornecedoresOptionsQuery } from "./useDespesasQueries";
+
 import {
   useCentrosCustoQuery,
   useContasFinanceirasQuery,
@@ -21,14 +23,23 @@ import { FILTRO_TODOS, ITEMS_PER_PAGE, STATUS_DESPESA, emptyDespesaFiltros } fro
 import { aplicarFiltrosDespesas, formatBRL, formatDataBR, statusBadgeVariant } from "./helpers";
 import { useAuth } from "@/context/AuthContext";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
+import { useMenuPermissions } from "@/hooks/useMenuPermissions";
+import { Navigate } from "react-router-dom";
+import type { DespesaRegistro } from "./types";
 
 export default function FinanceiroDespesas() {
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [editando, setEditando] = useState<DespesaRegistro | null>(null);
+  const [excluindo, setExcluindo] = useState<DespesaRegistro | null>(null);
   const [filtros, setFiltrosRaw] = useState(emptyDespesaFiltros);
   const [page, setPage] = useState(1);
 
   const { roles } = useAuth();
-  const { canIncluir } = useCrudPermissions("despesas", roles);
+  const { permissions, loading: permsLoading } = useMenuPermissions(roles);
+  const { canIncluir, canEditar, canExcluir } = useCrudPermissions("despesas", roles);
+  const temAcoes = canEditar || canExcluir;
+
+
 
   const { data: despesas = [], isLoading } = useDespesasQuery();
   const { data: fornecedores = [] } = useFornecedoresOptionsQuery();
@@ -49,6 +60,22 @@ export default function FinanceiroDespesas() {
   const totalValor = filtradas.reduce((acc, d) => acc + Number(d.valor), 0);
 
   const temFiltro = JSON.stringify(filtros) !== JSON.stringify(emptyDespesaFiltros);
+
+  if (permsLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center py-20">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // Acesso direto pela URL sem permissão de menu volta ao dashboard
+  if (permissions !== null && !permissions.has("menu.despesas")) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
 
   return (
     <AppLayout>
@@ -207,18 +234,19 @@ export default function FinanceiroDespesas() {
                 <TableHead>Parcela</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
                 <TableHead>Status</TableHead>
+                {temAcoes && <TableHead className="w-[90px] text-right">Ações</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={temAcoes ? 8 : 7} className="text-center py-10 text-muted-foreground">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : paginadas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={temAcoes ? 8 : 7} className="text-center py-10 text-muted-foreground">
                     Nenhuma despesa encontrada.
                   </TableCell>
                 </TableRow>
@@ -236,6 +264,32 @@ export default function FinanceiroDespesas() {
                         {STATUS_DESPESA.find((s) => s.value === d.status)?.label || d.status}
                       </Badge>
                     </TableCell>
+                    {temAcoes && (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          {canEditar && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Editar despesa"
+                              onClick={() => setEditando(d)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canExcluir && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Excluir despesa"
+                              onClick={() => setExcluindo(d)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
@@ -252,6 +306,17 @@ export default function FinanceiroDespesas() {
       </div>
 
       <DespesaWizardDialog open={wizardOpen} onOpenChange={setWizardOpen} />
+      <DespesaEditDialog
+        despesa={editando}
+        open={!!editando}
+        onOpenChange={(o) => !o && setEditando(null)}
+      />
+      <DespesaDeleteDialog
+        despesa={excluindo}
+        open={!!excluindo}
+        onOpenChange={(o) => !o && setExcluindo(null)}
+      />
+
     </AppLayout>
   );
 }

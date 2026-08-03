@@ -81,3 +81,17 @@ export interface DespesaFiltros {
   forma_pagamento_id: string;
   status: string;
 }
+
+export type EscopoParcelas = "parcela" | "futuras";
+
+export interface DespesaEditState {
+  fornecedor_id: string;
+  plano_conta_id: string;
+  forma_pagamento_id: string;
+  conta_financeira_id: string;
+  valor: string;
+  data_emissao: string;
+  data_vencimento: string;
+  descricao: string;
+  status: string;
+}
