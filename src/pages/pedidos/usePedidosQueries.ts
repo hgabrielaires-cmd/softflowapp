@@ -2,6 +2,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Cliente, Filial, Profile, Contrato } from "@/lib/supabase-types";
+import { PROFILE_PUBLIC_COLUMNS } from "@/lib/supabase-types";
 import type { PedidoWithJoins, ModuloOpcional, ModuloAdicionadoItem } from "./types";
 
 interface ServicoCatalogo {
@@ -100,7 +101,7 @@ export function usePedidosQueries(): UsePedidosQueriesReturn {
       supabase.from("clientes").select("*").eq("ativo", true).order("nome_fantasia"),
       supabase.from("planos").select("*").eq("ativo", true).order("ordem").order("nome"),
       supabase.from("filiais").select("*").eq("ativa", true).order("nome"),
-      supabase.from("profiles").select("*").eq("active", true).order("full_name"),
+      supabase.from("profiles").select(PROFILE_PUBLIC_COLUMNS).eq("active", true).order("full_name"),
       supabase.from("servicos").select("id, nome, valor, unidade_medida").eq("ativo", true).order("nome"),
     ]);
 

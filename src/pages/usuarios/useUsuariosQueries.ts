@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { AppRole, Filial } from "@/lib/supabase-types";
+import { AppRole, Filial, PROFILE_PUBLIC_COLUMNS, PROFILE_COMISSAO_COLUMNS } from "@/lib/supabase-types";
 import { toast } from "sonner";
 import { ITEMS_PER_PAGE } from "./constants";
 import type { UserWithRoles, MesaOption, SetorOption } from "./types";
