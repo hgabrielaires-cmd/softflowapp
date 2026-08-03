@@ -3256,6 +3256,7 @@ export type Database = {
       integracoes_config: {
         Row: {
           ativo: boolean
+          config: Json
           created_at: string
           id: string
           nome: string
@@ -3265,6 +3266,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          config?: Json
           created_at?: string
           id?: string
           nome: string
@@ -3274,6 +3276,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          config?: Json
           created_at?: string
           id?: string
           nome?: string
