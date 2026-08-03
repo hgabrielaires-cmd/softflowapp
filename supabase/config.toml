@@ -35,3 +35,9 @@ verify_jwt = false
 
 [functions.evolution-webhook]
 verify_jwt = false
+
+[functions.integracoes-teste]
+verify_jwt = false
+
+[functions.telegram-webhook]
+verify_jwt = false
