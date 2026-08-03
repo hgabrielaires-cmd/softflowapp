@@ -29,7 +29,8 @@ const MENU_TECLADO = {
   keyboard: [
     [{ text: "📊 DRE" }, { text: "📁 Categorias" }],
     [{ text: "🏆 Maiores Gastos" }, { text: "📋 Pendentes" }],
-    [{ text: "💰 Status" }, { text: "❓ Ajuda" }],
+    [{ text: "💰 Status" }, { text: "🛒 Vendas" }],
+    [{ text: "❓ Ajuda" }],
   ],
   resize_keyboard: true,
   is_persistent: true,
