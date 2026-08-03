@@ -110,7 +110,7 @@ export function usePedidosQueries(): UsePedidosQueriesReturn {
     setClientes((clientesData || []) as Cliente[]);
     setPlanos(planosData || []);
     setFiliais((filiaisData || []) as Filial[]);
-    setVendedores((vendedoresData || []) as Profile[]);
+    setVendedores((vendedoresData || []) as unknown as Profile[]);
     setServicosCatalogo((servicosData || []) as ServicoCatalogo[]);
 
     // Fetch ZapSign status for orders
