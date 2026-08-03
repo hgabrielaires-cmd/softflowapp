@@ -270,6 +270,89 @@ async function executarRelatorio(
   else await sendMessage(token, chatId, texto, teclado);
 }
 
+// ── Relatório de Vendas: filial → período → relatório ────────────────────
+const TECLADO_PERIODO_VENDAS = {
+  inline_keyboard: [
+    [
+      { text: "📅 Hoje", callback_data: "vp_hoje" },
+      { text: "📅 Ontem", callback_data: "vp_ontem" },
+    ],
+    [
+      { text: "📆 Esta Semana", callback_data: "vp_semana" },
+      { text: "📆 Semana Passada", callback_data: "vp_semana_ant" },
+    ],
+    [
+      { text: "🗓️ Este Mês", callback_data: "vp_mes" },
+      { text: "🗓️ Mês Passado", callback_data: "vp_mes_ant" },
+    ],
+    [{ text: "✏️ Personalizado", callback_data: "vp_custom" }],
+  ],
+};
+
+async function perguntarFilialVendas(
+  supabase: any,
+  token: string,
+  chatId: number,
+  userId: number,
+  messageId?: number | null,
+) {
+  const { data: filiais } = await supabase
+    .from("filiais")
+    .select("id, nome")
+    .eq("ativa", true)
+    .order("nome");
+
+  const teclado = {
+    inline_keyboard: [
+      [{ text: "🏢 Todas as Filiais", callback_data: "vf_todas" }],
+      ...((filiais ?? []) as Array<{ id: string; nome: string }>).map((f) => [
+        { text: `🏢 ${f.nome}`.slice(0, 60), callback_data: `vf_${f.id}` },
+      ]),
+    ],
+  };
+
+  await supabase
+    .from("telegram_pendencias")
+    .update({ status: "cancelado" })
+    .eq("chat_id", chatId)
+    .eq("status", "aguardando_resposta")
+    .in("etapa", ["venda_filial", "venda_periodo", "venda_periodo_custom"]);
+
+  await supabase.from("telegram_pendencias").insert({
+    chat_id: chatId,
+    user_id: userId,
+    etapa: "venda_filial",
+    status: "aguardando_resposta",
+  });
+
+  const texto = "🛒 *Relatório de Vendas*\n\nSelecione a filial:";
+  if (messageId) await editMessage(token, chatId, messageId, texto, teclado);
+  else await sendMessage(token, chatId, texto, teclado);
+}
+
+async function executarRelatorioVendas(
+  supabase: any,
+  token: string,
+  chatId: number,
+  filialId: string | null,
+  periodo: Periodo,
+  messageId?: number | null,
+) {
+  const texto = await relatorioVendas(supabase, filialId, periodo);
+  const teclado = {
+    inline_keyboard: [
+      [
+        { text: "🔄 Mudar Período", callback_data: "mudar_vendas" },
+        { text: "🏢 Mudar Filial", callback_data: "reiniciar_vendas" },
+      ],
+    ],
+  };
+  if (messageId) await editMessage(token, chatId, messageId, texto, teclado);
+  else await sendMessage(token, chatId, texto, teclado);
+}
+
+
+
 
 function docRecebedor(dados: Record<string, any>): { doc: string | null; tipoPessoa: "pf" | "pj" | null } {
   const cnpj = dados.cnpj_recebedor ? String(dados.cnpj_recebedor).replace(/\D/g, "") : "";
