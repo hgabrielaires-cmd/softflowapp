@@ -16,6 +16,15 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
@@ -29,12 +38,13 @@ import {
 import { toast } from "sonner";
 import {
   Plus, Search, Pencil, Building2, Phone, Mail, Loader2, MapPin,
-  MoreHorizontal, CheckCircle, XCircle, Trash2, Truck,
+  MoreHorizontal, CheckCircle, XCircle, Trash2, Truck, Check, ChevronsUpDown,
 } from "lucide-react";
 import { format } from "date-fns";
 import { usePlanoContasQuery } from "@/pages/financeiro-parametros/useFinanceiroParametrosQueries";
 import { ptBR } from "date-fns/locale";
 import { TablePagination } from "@/components/TablePagination";
+import { cn } from "@/lib/utils";
 
 const UF_LIST = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
@@ -107,6 +117,8 @@ export default function Fornecedores() {
   const [cepError, setCepError] = useState("");
   const [cnpjError, setCnpjError] = useState("");
   const { data: planoContas = [] } = usePlanoContasQuery();
+  const [planoOpen, setPlanoOpen] = useState(false);
+  const planoSelecionado = planoContas.find((p) => p.id === form.plano_conta_id);
 
   async function loadData() {
     setLoading(true);
@@ -594,18 +606,74 @@ export default function Fornecedores() {
             {/* Plano de contas */}
             <div>
               <Label>Plano de contas padrão</Label>
-              <Select
-                value={form.plano_conta_id || "__none__"}
-                onValueChange={(v) => setForm((f) => ({ ...f, plano_conta_id: v === "__none__" ? "" : v }))}
-              >
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Nenhum</SelectItem>
-                  {planoContas.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={planoOpen} onOpenChange={setPlanoOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={planoOpen}
+                    className={cn(
+                      "w-full justify-between font-normal",
+                      !planoSelecionado && "text-muted-foreground",
+                    )}
+                  >
+                    <span className="truncate">
+                      {planoSelecionado
+                        ? `${planoSelecionado.codigo} — ${planoSelecionado.nome}`
+                        : "Selecione"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command
+                    filter={(value, search) =>
+                      value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+                    }
+                  >
+                    <CommandInput placeholder="Buscar por código ou nome..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhum plano encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="__none__"
+                          onSelect={() => {
+                            setForm((f) => ({ ...f, plano_conta_id: "" }));
+                            setPlanoOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              !form.plano_conta_id ? "opacity-100" : "opacity-0",
+                            )}
+                          />
+                          Nenhum
+                        </CommandItem>
+                        {planoContas.map((p) => (
+                          <CommandItem
+                            key={p.id}
+                            value={`${p.codigo} ${p.nome}`}
+                            onSelect={() => {
+                              setForm((f) => ({ ...f, plano_conta_id: p.id }));
+                              setPlanoOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                form.plano_conta_id === p.id ? "opacity-100" : "opacity-0",
+                              )}
+                            />
+                            {p.codigo} — {p.nome}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Observações */}
