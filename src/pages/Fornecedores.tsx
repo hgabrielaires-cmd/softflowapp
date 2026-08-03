@@ -16,6 +16,15 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
@@ -29,12 +38,13 @@ import {
 import { toast } from "sonner";
 import {
   Plus, Search, Pencil, Building2, Phone, Mail, Loader2, MapPin,
-  MoreHorizontal, CheckCircle, XCircle, Trash2, Truck,
+  MoreHorizontal, CheckCircle, XCircle, Trash2, Truck, Check, ChevronsUpDown,
 } from "lucide-react";
 import { format } from "date-fns";
 import { usePlanoContasQuery } from "@/pages/financeiro-parametros/useFinanceiroParametrosQueries";
 import { ptBR } from "date-fns/locale";
 import { TablePagination } from "@/components/TablePagination";
+import { cn } from "@/lib/utils";
 
 const UF_LIST = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
