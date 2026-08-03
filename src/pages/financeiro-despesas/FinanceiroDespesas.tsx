@@ -364,7 +364,7 @@ export default function FinanceiroDespesas() {
                   <TableCell colSpan={4} className="font-semibold text-destructive">
                     TOTAL EM ABERTAS
                   </TableCell>
-                  <TableCell className="text-right font-semibold text-destructive">{formatBRL(totalAberto + totalCancelado)}</TableCell>
+                  <TableCell className="text-right font-semibold text-destructive">{formatBRL(totalAberto)}</TableCell>
                   <TableCell colSpan={temAcoes ? 3 : 2} />
                 </TableRow>
               </TableFooter>
