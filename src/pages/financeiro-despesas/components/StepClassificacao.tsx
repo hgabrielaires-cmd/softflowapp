@@ -121,12 +121,14 @@ export function StepClassificacao({
         ) : (
           <div className="space-y-2">
             {state.rateios.map((linha, index) => (
-              <div key={index} className="flex items-center gap-2">
+              <div key={index} className="flex flex-wrap items-center gap-2">
                 <Select
                   value={linha.centro_custo_id}
                   onValueChange={(v) => updateLinha(index, { centro_custo_id: v })}
                 >
-                  <SelectTrigger className="flex-1"><SelectValue placeholder="Centro de custo" /></SelectTrigger>
+                  <SelectTrigger className="w-full min-w-0 sm:flex-1 sm:w-auto">
+                    <SelectValue placeholder="Centro de custo" />
+                  </SelectTrigger>
                   <SelectContent>
                     {centrosCusto.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
@@ -135,25 +137,28 @@ export function StepClassificacao({
                     ))}
                   </SelectContent>
                 </Select>
-                <Input
-                  className="w-24"
-                  inputMode="decimal"
-                  value={String(linha.percentual)}
-                  onChange={(e) => updateLinha(index, { percentual: Number(e.target.value.replace(",", ".")) || 0 })}
-                />
-                <span className="text-sm text-muted-foreground">%</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  disabled={state.rateios.length <= 1}
-                  onClick={() => removeLinha(index)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex flex-1 items-center gap-2">
+                  <Input
+                    className="w-20 sm:w-24"
+                    inputMode="decimal"
+                    value={String(linha.percentual)}
+                    onChange={(e) => updateLinha(index, { percentual: Number(e.target.value.replace(",", ".")) || 0 })}
+                  />
+                  <span className="text-sm text-muted-foreground">%</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="ml-auto sm:ml-0"
+                    disabled={state.rateios.length <= 1}
+                    onClick={() => removeLinha(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
-            <div className="flex items-center justify-between pt-1">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
               <Button type="button" variant="outline" size="sm" onClick={addLinha}>
                 <Plus className="h-4 w-4 mr-1" /> Adicionar centro de custo
               </Button>
@@ -166,6 +171,7 @@ export function StepClassificacao({
                 Total: {total}%
               </span>
             </div>
+
           </div>
         )}
       </div>
