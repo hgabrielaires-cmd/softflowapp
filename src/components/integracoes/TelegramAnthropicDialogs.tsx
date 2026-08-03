@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Info, CheckCircle2, XCircle, Webhook, Zap } from "lucide-react";
+import { Loader2, Info, CheckCircle2, XCircle, Webhook, Zap, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import logoTelegram from "@/assets/logo-telegram.svg";
@@ -144,7 +144,7 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
     try {
       await saveIntegracao("telegram", ativo, {
         ...(initialConfig?.config ?? {}),
-        authorized_ids: authorizedIds.trim(),
+        authorized_ids: ids.join(","),
       });
       toast.success("Configuração do Telegram salva!");
       onSaved();
@@ -182,13 +182,49 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
 
           <div className="space-y-2">
             <Label className="text-sm font-medium">IDs Autorizados</Label>
-            <Input
-              value={authorizedIds}
-              onChange={(e) => setAuthorizedIds(e.target.value)}
-              placeholder="IDs separados por vírgula"
-            />
+            <div className="flex gap-2">
+              <Input
+                value={novoId}
+                onChange={(e) => setNovoId(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addId();
+                  }
+                }}
+                placeholder="Ex.: 738302128"
+              />
+              <Button type="button" variant="outline" size="icon" onClick={addId} aria-label="Adicionar ID">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            {ids.length > 0 ? (
+              <div className="space-y-1.5">
+                {ids.map((id) => (
+                  <div
+                    key={id}
+                    className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
+                  >
+                    <span className="font-mono">{id}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive"
+                      onClick={() => setIds(ids.filter((x) => x !== id))}
+                      aria-label={`Remover ${id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Nenhum ID autorizado cadastrado</p>
+            )}
             <p className="text-xs text-muted-foreground">Seu ID do Telegram (@userinfobot)</p>
           </div>
+
 
           <InfoCard>
             Token do Bot está configurado como secret no backend (<code>TELEGRAM_BOT_TOKEN</code>).
