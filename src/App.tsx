@@ -54,6 +54,7 @@ const DashboardCrm = React.lazy(() => import("./pages/DashboardCrm"));
 const Chat = React.lazy(() => import("./pages/Chat"));
 const ChatParametros = React.lazy(() => import("./pages/chat-parametros"));
 const FinanceiroParametros = React.lazy(() => import("./pages/financeiro-parametros"));
+const FinanceiroDespesas = React.lazy(() => import("./pages/financeiro-despesas"));
 
 function PageLoader() {
   return (
@@ -243,7 +244,7 @@ const App = () => {
               path="/despesas"
               element={
                 <ProtectedRoute>
-                  <ComingSoon module="Financeiro" title="Despesas" description="Em desenvolvimento. Lançamento e controle de despesas." />
+                  <FinanceiroDespesas />
                 </ProtectedRoute>
               }
             />

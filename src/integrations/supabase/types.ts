@@ -2826,6 +2826,146 @@ export type Database = {
           },
         ]
       }
+      fin_despesa_rateios: {
+        Row: {
+          centro_custo_id: string
+          created_at: string
+          despesa_id: string
+          id: string
+          percentual: number
+        }
+        Insert: {
+          centro_custo_id: string
+          created_at?: string
+          despesa_id: string
+          id?: string
+          percentual?: number
+        }
+        Update: {
+          centro_custo_id?: string
+          created_at?: string
+          despesa_id?: string
+          id?: string
+          percentual?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_despesa_rateios_centro_custo_id_fkey"
+            columns: ["centro_custo_id"]
+            isOneToOne: false
+            referencedRelation: "fin_centros_custo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_despesa_rateios_despesa_id_fkey"
+            columns: ["despesa_id"]
+            isOneToOne: false
+            referencedRelation: "fin_despesas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_despesas: {
+        Row: {
+          anexo_url: string | null
+          codigo_barras: string | null
+          conta_financeira_id: string
+          created_at: string
+          created_by: string | null
+          data_emissao: string
+          data_vencimento: string
+          descricao: string | null
+          forma_pagamento_id: string
+          fornecedor_id: string
+          grupo_id: string
+          id: string
+          parcela_numero: number
+          parcela_total: number
+          plano_conta_id: string
+          recorrencia_periodo: string | null
+          recorrencia_vezes: number | null
+          recorrente: boolean
+          status: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          anexo_url?: string | null
+          codigo_barras?: string | null
+          conta_financeira_id: string
+          created_at?: string
+          created_by?: string | null
+          data_emissao?: string
+          data_vencimento: string
+          descricao?: string | null
+          forma_pagamento_id: string
+          fornecedor_id: string
+          grupo_id?: string
+          id?: string
+          parcela_numero?: number
+          parcela_total?: number
+          plano_conta_id: string
+          recorrencia_periodo?: string | null
+          recorrencia_vezes?: number | null
+          recorrente?: boolean
+          status?: string
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          anexo_url?: string | null
+          codigo_barras?: string | null
+          conta_financeira_id?: string
+          created_at?: string
+          created_by?: string | null
+          data_emissao?: string
+          data_vencimento?: string
+          descricao?: string | null
+          forma_pagamento_id?: string
+          fornecedor_id?: string
+          grupo_id?: string
+          id?: string
+          parcela_numero?: number
+          parcela_total?: number
+          plano_conta_id?: string
+          recorrencia_periodo?: string | null
+          recorrencia_vezes?: number | null
+          recorrente?: boolean
+          status?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_despesas_conta_financeira_id_fkey"
+            columns: ["conta_financeira_id"]
+            isOneToOne: false
+            referencedRelation: "fin_contas_financeiras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_despesas_forma_pagamento_id_fkey"
+            columns: ["forma_pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "fin_formas_pagamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_despesas_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_despesas_plano_conta_id_fkey"
+            columns: ["plano_conta_id"]
+            isOneToOne: false
+            referencedRelation: "fin_plano_contas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fin_formas_pagamento: {
         Row: {
           ativo: boolean
