@@ -53,6 +53,7 @@ const AgendaCrm = React.lazy(() => import("./pages/AgendaCrm"));
 const DashboardCrm = React.lazy(() => import("./pages/DashboardCrm"));
 const Chat = React.lazy(() => import("./pages/Chat"));
 const ChatParametros = React.lazy(() => import("./pages/chat-parametros"));
+const FinanceiroParametros = React.lazy(() => import("./pages/financeiro-parametros"));
 
 function PageLoader() {
   return (
@@ -430,6 +431,15 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/financeiro-parametros"
+              element={
+                <ProtectedRoute>
+                  <FinanceiroParametros />
+                </ProtectedRoute>
+              }
+            />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
