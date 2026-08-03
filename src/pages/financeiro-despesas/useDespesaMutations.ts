@@ -97,11 +97,13 @@ export function useDespesaMutations() {
       juros_valor: number;
       plano_conta_juros_id: string | null;
       valor_pago: number;
+      conta_financeira_id: string;
     }) => {
       if (!args.data_pagamento) throw new Error("Informe a data do pagamento.");
       if (args.juros_valor > 0 && !args.plano_conta_juros_id) {
         throw new Error("Selecione o plano de contas dos juros.");
       }
+      if (!args.conta_financeira_id) throw new Error("Selecione a conta financeira do pagamento.");
       const { error } = await supabase
         .from("fin_despesas")
         .update({
@@ -111,6 +113,7 @@ export function useDespesaMutations() {
           juros_percentual: args.juros_percentual,
           juros_valor: args.juros_valor,
           plano_conta_juros_id: args.plano_conta_juros_id,
+          conta_financeira_id: args.conta_financeira_id,
         })
         .eq("id", args.despesa.id);
       if (error) throw new Error("Não foi possível quitar a despesa. Verifique suas permissões.");
