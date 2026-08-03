@@ -417,6 +417,11 @@ export default function FinanceiroDespesas() {
         open={!!editando}
         onOpenChange={(o) => !o && setEditando(null)}
       />
+      <DespesaViewDialog
+        despesa={visualizando}
+        open={!!visualizando}
+        onOpenChange={(o) => !o && setVisualizando(null)}
+      />
       <DespesaDeleteDialog
         despesa={excluindo}
         open={!!excluindo}
