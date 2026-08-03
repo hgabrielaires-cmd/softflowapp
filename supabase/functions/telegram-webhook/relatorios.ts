@@ -88,7 +88,7 @@ export function periodoSemana() {
 }
 
 function periodoPadrao(): Periodo {
-  const { inicio, fim, label } = periodo ?? periodoPadrao();
+  const { inicio, fim } = periodoSemana();
   return { inicio, fim, label: "Últimos 7 dias" };
 }
 
