@@ -524,6 +524,11 @@ Deno.serve(async (req) => {
       "💰 Status": "status",
     };
 
+    if (text === "🛒 Vendas" || text === "/vendas") {
+      await perguntarFilialVendas(supabase, token, chatId, userId);
+      return ok();
+    }
+
     if (text && (text === "❓ Ajuda" || text === "/ajuda" || text === "/help")) {
       await sendMessage(
         token,
@@ -531,7 +536,7 @@ Deno.serve(async (req) => {
         `❓ *Ajuda*\n\n` +
           `📸 Envie foto ou PDF de comprovante para lançar despesa.\n\n` +
           `📊 *Relatórios:*\n` +
-          `/status • /dre • /categorias • /maiores • /pendentes\n\n` +
+          `/status • /dre • /categorias • /maiores • /pendentes • /vendas\n\n` +
           `Use os botões abaixo para acesso rápido.`,
       );
       return ok();
