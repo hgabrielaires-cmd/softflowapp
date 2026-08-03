@@ -81,15 +81,14 @@ export default function ChatHistoricoDrawer({ conversaId, open, onClose, protoco
                       ? "bg-[hsl(var(--primary))] text-primary-foreground rounded-br-md"
                       : "bg-muted text-foreground rounded-bl-md"
                   )}>
-                    {msg.tipo === "imagem" && msg.media_url && <img src={msg.media_url} alt="" className="rounded-lg max-w-full max-h-40 mb-1" />}
-                    {msg.tipo === "audio" && msg.media_url && <audio controls src={msg.media_url} className="max-w-full mb-1" />}
-                    {msg.tipo === "video" && msg.media_url && (
-                      <video controls className="rounded-lg max-w-full mb-1" style={{ maxHeight: "200px" }}>
-                        <source src={msg.media_url} type={msg.media_tipo || "video/mp4"} />
-                      </video>
-                    )}
-                    {msg.tipo === "documento" && msg.media_url && (
-                      <a href={msg.media_url} target="_blank" rel="noreferrer" className="text-xs underline mb-1 block">📄 {msg.media_nome || "Documento"}</a>
+                    {msg.media_url && ["imagem", "audio", "video", "documento"].includes(msg.tipo) && (
+                      <ChatMedia
+                        tipo={msg.tipo}
+                        url={msg.media_url}
+                        mediaTipo={msg.media_tipo}
+                        nome={msg.media_nome}
+                        compact
+                      />
                     )}
                     {msg.conteudo && <p className="text-sm whitespace-pre-wrap">{msg.conteudo}</p>}
                     <p className={cn("text-[10px] mt-0.5", isAtendente ? "text-primary-foreground/70" : "text-muted-foreground")}>

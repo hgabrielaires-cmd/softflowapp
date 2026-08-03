@@ -411,29 +411,21 @@ export default function ChatMessageArea({
                   : "bg-muted text-foreground rounded-bl-md",
                 isCurrentMatch && "ring-2 ring-yellow-400"
               )}>
-                {msg.tipo === "imagem" && msg.media_url && (
-                  <img
-                    src={msg.media_url} alt=""
-                    className="rounded-lg max-w-full max-h-60 mb-1 cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => setImagemFull(msg.media_url)}
+                {msg.media_url && ["imagem", "audio", "video", "documento"].includes(msg.tipo) && (
+                  <ChatMedia
+                    tipo={msg.tipo}
+                    url={msg.media_url}
+                    mediaTipo={msg.media_tipo}
+                    nome={msg.media_nome}
+                    onImageClick={(u) => setImagemFull(u)}
+                    docContent={
+                      <>
+                        {getDocIcon(msg.media_nome)}
+                        <span className="truncate flex-1">{msg.media_nome || "Documento"}</span>
+                        <Download className="h-3 w-3 flex-shrink-0" />
+                      </>
+                    }
                   />
-                )}
-                {msg.tipo === "audio" && msg.media_url && (
-                  <audio controls src={msg.media_url} className="max-w-full mb-1" />
-                )}
-                {msg.tipo === "video" && msg.media_url && (
-                  <video controls className="rounded-lg max-w-full mb-1" style={{ maxHeight: "300px" }}>
-                    <source src={msg.media_url} type={msg.media_tipo || "video/mp4"} />
-                    Seu navegador não suporta vídeo.
-                  </video>
-                )}
-                {msg.tipo === "documento" && msg.media_url && (
-                  <a href={msg.media_url} target="_blank" rel="noreferrer"
-                    className="flex items-center gap-2 text-xs mb-1 p-2 rounded bg-background/10 hover:bg-background/20 transition-colors">
-                    {getDocIcon(msg.media_nome)}
-                    <span className="truncate flex-1">{msg.media_nome || "Documento"}</span>
-                    <Download className="h-3 w-3 flex-shrink-0" />
-                  </a>
                 )}
                 {renderConteudo(msg.conteudo)}
                 <p className={cn(
