@@ -2875,6 +2875,7 @@ export type Database = {
           data_emissao: string
           data_vencimento: string
           descricao: string | null
+          filial_id: string | null
           forma_pagamento_id: string
           fornecedor_id: string
           grupo_id: string
@@ -2898,6 +2899,7 @@ export type Database = {
           data_emissao?: string
           data_vencimento: string
           descricao?: string | null
+          filial_id?: string | null
           forma_pagamento_id: string
           fornecedor_id: string
           grupo_id?: string
@@ -2921,6 +2923,7 @@ export type Database = {
           data_emissao?: string
           data_vencimento?: string
           descricao?: string | null
+          filial_id?: string | null
           forma_pagamento_id?: string
           fornecedor_id?: string
           grupo_id?: string
@@ -2941,6 +2944,13 @@ export type Database = {
             columns: ["conta_financeira_id"]
             isOneToOne: false
             referencedRelation: "fin_contas_financeiras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_despesas_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
             referencedColumns: ["id"]
           },
           {
