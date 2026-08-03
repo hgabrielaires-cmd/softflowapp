@@ -55,6 +55,9 @@ export interface DespesaRegistro {
   id: string;
   grupo_id: string;
   fornecedor_id: string;
+  plano_conta_id: string;
+  forma_pagamento_id: string;
+  conta_financeira_id: string;
   valor: number;
   data_emissao: string;
   data_vencimento: string;
@@ -64,4 +67,17 @@ export interface DespesaRegistro {
   parcela_total: number;
   created_at: string;
   fornecedores?: { nome_fantasia: string } | null;
+  fin_despesa_rateios?: { centro_custo_id: string }[] | null;
+}
+
+export interface DespesaFiltros {
+  busca: string;
+  base_data: "vencimento" | "emissao";
+  data_inicio: string;
+  data_fim: string;
+  fornecedor_id: string;
+  centro_custo_id: string;
+  plano_conta_id: string;
+  forma_pagamento_id: string;
+  status: string;
 }

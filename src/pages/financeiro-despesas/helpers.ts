@@ -1,7 +1,8 @@
 // ─── Helpers puros do módulo Despesas ─────────────────────────────────────
 
 import { addDays, addMonths, addWeeks, format, parseISO } from "date-fns";
-import type { ParcelaPreview, RateioLinha, RecorrenciaPeriodo } from "./types";
+import type { DespesaFiltros, DespesaRegistro, ParcelaPreview, RateioLinha, RecorrenciaPeriodo } from "./types";
+import { FILTRO_TODOS } from "./constants";
 
 export function hojeISO(): string {
   return format(new Date(), "yyyy-MM-dd");
@@ -83,4 +84,39 @@ export function rateioValido(ratear: boolean, linhas: RateioLinha[]): boolean {
   if (!ratear) return true;
   if (linhas.some((l) => !l.centro_custo_id)) return false;
   return totalRateio(linhas) === 100;
+}
+
+/** Variante do badge de status considerando vencimento em aberto. */
+export function statusBadgeVariant(d: DespesaRegistro): "default" | "secondary" | "destructive" | "outline" {
+  if (d.status === "pago") return "default";
+  if (d.status === "cancelado") return "outline";
+  return d.data_vencimento < hojeISO() ? "destructive" : "secondary";
+}
+
+/** Aplica os filtros da lista de despesas (client-side). */
+export function aplicarFiltrosDespesas(
+  despesas: DespesaRegistro[],
+  f: DespesaFiltros,
+): DespesaRegistro[] {
+  const busca = f.busca.trim().toLowerCase();
+  return despesas.filter((d) => {
+    const dataBase = f.base_data === "emissao" ? d.data_emissao : d.data_vencimento;
+    if (f.data_inicio && dataBase < f.data_inicio) return false;
+    if (f.data_fim && dataBase > f.data_fim) return false;
+    if (f.fornecedor_id !== FILTRO_TODOS && d.fornecedor_id !== f.fornecedor_id) return false;
+    if (f.plano_conta_id !== FILTRO_TODOS && d.plano_conta_id !== f.plano_conta_id) return false;
+    if (f.forma_pagamento_id !== FILTRO_TODOS && d.forma_pagamento_id !== f.forma_pagamento_id) return false;
+    if (f.status !== FILTRO_TODOS && d.status !== f.status) return false;
+    if (
+      f.centro_custo_id !== FILTRO_TODOS &&
+      !(d.fin_despesa_rateios || []).some((r) => r.centro_custo_id === f.centro_custo_id)
+    ) {
+      return false;
+    }
+    if (busca) {
+      const alvo = `${d.fornecedores?.nome_fantasia || ""} ${d.descricao || ""}`.toLowerCase();
+      if (!alvo.includes(busca)) return false;
+    }
+    return true;
+  });
 }
