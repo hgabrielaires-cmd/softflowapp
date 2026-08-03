@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 import { Button } from "@/components/ui/button";
 import { Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -220,7 +231,7 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
             <Button
               variant="outline"
               className="w-full sm:w-auto"
-              onClick={() => (step === 1 ? onOpenChange(false) : setStep((s) => s - 1))}
+              onClick={() => (step === 1 ? setConfirmarCancelamento(true) : setStep((s) => s - 1))}
             >
               {step === 1 ? "Cancelar" : "Voltar"}
             </Button>
@@ -237,11 +248,34 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
         </DialogContent>
       </Dialog>
 
+      <AlertDialog open={confirmarCancelamento} onOpenChange={setConfirmarCancelamento}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar lançamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              As informações preenchidas serão perdidas e você voltará para a lista de despesas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Não</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmarCancelamento(false);
+                onOpenChange(false);
+              }}
+            >
+              Sim, cancelar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <FornecedorRapidoDialog
         open={fornecedorDialog}
         onOpenChange={setFornecedorDialog}
         onCreated={onFornecedorCriado}
       />
+
     </>
   );
 }
