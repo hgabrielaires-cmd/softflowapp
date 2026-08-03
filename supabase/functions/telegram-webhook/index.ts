@@ -760,7 +760,7 @@ async function finalizarLancamento(
       data_emissao: dados.data || hoje,
       data_vencimento: dados.data || hoje,
       data_pagamento: dados.data || hoje,
-      descricao: dados.descricao || "Lançado via Telegram",
+      descricao: descricaoDespesa,
       codigo_barras: dados.codigo_barras || null,
       anexo_url: pendencia.anexo_url || null,
       status: "pago",
