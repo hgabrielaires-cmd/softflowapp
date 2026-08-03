@@ -72,7 +72,9 @@ export default function FinanceiroDespesas() {
   const paginaAtual = Math.min(page, totalPages);
   const paginadas = filtradas.slice((paginaAtual - 1) * porPagina, paginaAtual * porPagina);
   const totalValor = filtradas.reduce((acc, d) => acc + Number(d.valor), 0);
-  const totalValorPagina = paginadas.reduce((acc, d) => acc + Number(d.valor), 0);
+  const totalPago = filtradas.filter((d) => d.status === "pago").reduce((acc, d) => acc + Number(d.valor), 0);
+  const totalAberto = filtradas.filter((d) => d.status === "aberto").reduce((acc, d) => acc + Number(d.valor), 0);
+  const totalCancelado = filtradas.filter((d) => d.status === "cancelado").reduce((acc, d) => acc + Number(d.valor), 0);
 
   const temFiltro = JSON.stringify(filtros) !== JSON.stringify(emptyDespesaFiltros);
 
