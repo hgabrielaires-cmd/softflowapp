@@ -1,9 +1,19 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Check, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { distribuirRateio, totalRateio } from "../helpers";
 import type { DespesaWizardState } from "../types";
@@ -28,6 +38,8 @@ export function StepClassificacao({
 }: Props) {
   const total = totalRateio(state.rateios);
   const centroPadrao = state.rateios[0]?.centro_custo_id || "";
+  const [planoOpen, setPlanoOpen] = useState(false);
+  const planoSelecionado = planoContas.find((p) => p.id === state.plano_conta_id);
 
   const toggleRateio = (checked: boolean) => {
     if (checked) {
@@ -58,16 +70,58 @@ export function StepClassificacao({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label>Plano de contas *</Label>
-          <Select value={state.plano_conta_id} onValueChange={(v) => setState({ plano_conta_id: v })}>
-            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-            <SelectContent>
-              {planoContas.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.codigo} — {p.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={planoOpen} onOpenChange={setPlanoOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={planoOpen}
+                className={cn(
+                  "w-full justify-between font-normal",
+                  !planoSelecionado && "text-muted-foreground",
+                )}
+              >
+                <span className="truncate">
+                  {planoSelecionado
+                    ? `${planoSelecionado.codigo} — ${planoSelecionado.nome}`
+                    : "Selecione"}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+              <Command
+                filter={(value, search) =>
+                  value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+                }
+              >
+                <CommandInput placeholder="Buscar por código ou nome..." />
+                <CommandList>
+                  <CommandEmpty>Nenhum plano encontrado.</CommandEmpty>
+                  <CommandGroup>
+                    {planoContas.map((p) => (
+                      <CommandItem
+                        key={p.id}
+                        value={`${p.codigo} ${p.nome}`}
+                        onSelect={() => {
+                          setState({ plano_conta_id: p.id });
+                          setPlanoOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            state.plano_conta_id === p.id ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                        {p.codigo} — {p.nome}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="space-y-1.5">
           <Label>Forma de pagamento *</Label>
