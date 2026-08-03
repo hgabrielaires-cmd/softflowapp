@@ -1371,6 +1371,10 @@ export default function Integracoes() {
                     setAsaasDialogOpen(true);
                   } else if (def.key === "r2") {
                     setR2DialogOpen(true);
+                  } else if (def.key === "telegram") {
+                    setTelegramDialogOpen(true);
+                  } else if (def.key === "anthropic") {
+                    setAnthropicDialogOpen(true);
                   } else {
                     setSelectedDef(def);
                     setDialogOpen(true);
