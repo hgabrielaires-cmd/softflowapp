@@ -27,12 +27,14 @@ import { useAuth } from "@/context/AuthContext";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
 import { useMenuPermissions } from "@/hooks/useMenuPermissions";
+import { usePermission } from "@/hooks/usePermission";
 import { Link, Navigate } from "react-router-dom";
 import type { DespesaRegistro } from "./types";
 
 export default function FinanceiroDespesas() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editando, setEditando] = useState<DespesaRegistro | null>(null);
+  const [visualizando, setVisualizando] = useState<DespesaRegistro | null>(null);
   const [excluindo, setExcluindo] = useState<DespesaRegistro | null>(null);
   const [quitando, setQuitando] = useState<DespesaRegistro | null>(null);
   const [filtros, setFiltrosRaw] = useState({ ...emptyDespesaFiltros, ...periodoMesAtual() });
@@ -42,7 +44,8 @@ export default function FinanceiroDespesas() {
   const { roles } = useAuth();
   const { permissions, loading: permsLoading } = useMenuPermissions(roles);
   const { canIncluir, canEditar, canExcluir } = useCrudPermissions("despesas", roles);
-  const temAcoes = canEditar || canExcluir;
+  const { allowed: canEditarPaga } = usePermission("crud.despesas.editar_paga", roles);
+  const temAcoes = true;
 
 
 
