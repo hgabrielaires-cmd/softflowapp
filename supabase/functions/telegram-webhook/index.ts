@@ -7,6 +7,7 @@ import {
   relatorioMaiores,
   relatorioPendentes,
   relatorioStatus,
+  type Periodo,
 } from "./relatorios.ts";
 
 const TELEGRAM_API = "https://api.telegram.org/bot";
@@ -397,28 +398,16 @@ Deno.serve(async (req) => {
       return ok();
     }
 
-    if (text === "/status") {
-      await sendMessage(token, chatId, await relatorioStatus(supabase));
-      return ok();
-    }
+    const comandoRelatorio: Record<string, RelatorioTipo> = {
+      "/status": "status",
+      "/categorias": "categorias",
+      "/dre": "dre",
+      "/maiores": "maiores",
+      "/pendentes": "pendentes",
+    };
 
-    if (text === "/categorias") {
-      await sendMessage(token, chatId, await relatorioCategorias(supabase));
-      return ok();
-    }
-
-    if (text === "/dre") {
-      await sendMessage(token, chatId, await relatorioDre(supabase));
-      return ok();
-    }
-
-    if (text === "/maiores") {
-      await sendMessage(token, chatId, await relatorioMaiores(supabase));
-      return ok();
-    }
-
-    if (text === "/pendentes") {
-      await sendMessage(token, chatId, await relatorioPendentes(supabase));
+    if (text && comandoRelatorio[text]) {
+      await perguntarPeriodo(token, chatId, comandoRelatorio[text]);
       return ok();
     }
 
