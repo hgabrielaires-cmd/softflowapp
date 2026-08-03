@@ -47,7 +47,7 @@ export function DespesaEditDialog({ despesa, open, onOpenChange }: Props) {
         plano_conta_id: despesa.plano_conta_id,
         forma_pagamento_id: despesa.forma_pagamento_id,
         conta_financeira_id: despesa.conta_financeira_id,
-        valor: String(despesa.valor),
+        valor: Number(despesa.valor).toFixed(2).replace(".", ","),
         data_emissao: despesa.data_emissao,
         data_vencimento: despesa.data_vencimento,
         descricao: despesa.descricao || "",
@@ -92,7 +92,17 @@ export function DespesaEditDialog({ despesa, open, onOpenChange }: Props) {
 
           <div className="space-y-1.5">
             <Label className="text-xs">Valor (R$)</Label>
-            <Input value={state.valor} onChange={(e) => setState({ valor: e.target.value })} />
+            <Input
+              inputMode="decimal"
+              value={state.valor}
+              onChange={(e) => setState({ valor: e.target.value })}
+              onBlur={(e) => {
+                const n = Number(e.target.value.replace(/\./g, "").replace(",", "."));
+                if (!isNaN(n) && e.target.value.trim() !== "") {
+                  setState({ valor: n.toFixed(2).replace(".", ",") });
+                }
+              }}
+            />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Status</Label>
