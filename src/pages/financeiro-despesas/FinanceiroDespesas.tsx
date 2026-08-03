@@ -23,14 +23,19 @@ import { FILTRO_TODOS, ITEMS_PER_PAGE, STATUS_DESPESA, emptyDespesaFiltros } fro
 import { aplicarFiltrosDespesas, formatBRL, formatDataBR, statusBadgeVariant } from "./helpers";
 import { useAuth } from "@/context/AuthContext";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
+import type { DespesaRegistro } from "./types";
 
 export default function FinanceiroDespesas() {
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [editando, setEditando] = useState<DespesaRegistro | null>(null);
+  const [excluindo, setExcluindo] = useState<DespesaRegistro | null>(null);
   const [filtros, setFiltrosRaw] = useState(emptyDespesaFiltros);
   const [page, setPage] = useState(1);
 
   const { roles } = useAuth();
-  const { canIncluir } = useCrudPermissions("despesas", roles);
+  const { canIncluir, canEditar, canExcluir } = useCrudPermissions("despesas", roles);
+  const temAcoes = canEditar || canExcluir;
+
 
   const { data: despesas = [], isLoading } = useDespesasQuery();
   const { data: fornecedores = [] } = useFornecedoresOptionsQuery();
