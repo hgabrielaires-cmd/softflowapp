@@ -94,14 +94,15 @@ export function StepClassificacao({
         </Select>
       </div>
 
-      <div className="rounded-lg border border-border p-4 space-y-3">
-        <div className="flex items-center justify-between">
+      <div className="rounded-lg border border-border p-3 sm:p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Label className="text-sm font-medium">Centro de custo</Label>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Ratear entre centros de custo</span>
             <Switch checked={state.ratear} onCheckedChange={toggleRateio} />
           </div>
         </div>
+
 
         {!state.ratear ? (
           <Select
