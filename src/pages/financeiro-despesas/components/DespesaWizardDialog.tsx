@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 import { Button } from "@/components/ui/button";
 import { Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -33,6 +44,8 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
   const [state, setStateRaw] = useState<DespesaWizardState>(() => emptyDespesaWizard(hojeISO()));
   const [anexo, setAnexo] = useState<File | null>(null);
   const [fornecedorDialog, setFornecedorDialog] = useState(false);
+  const [confirmarCancelamento, setConfirmarCancelamento] = useState(false);
+
 
   const { data: fornecedores = [] } = useFornecedoresOptionsQuery();
   const { data: planoContas = [] } = usePlanoContasQuery();
@@ -127,10 +140,22 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
 
   const onFornecedorCriado = (novo: FornecedorOption) => setState({ fornecedor_id: novo.id });
 
+  // Fechar só via X ou Cancelar, sempre com confirmação
+  const handleOpenChange = (next: boolean) => {
+    if (next) return onOpenChange(true);
+    setConfirmarCancelamento(true);
+  };
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] sm:max-w-3xl max-h-[92dvh] overflow-y-auto p-4 sm:p-6">
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent
+          className="w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] sm:max-w-3xl max-h-[92dvh] overflow-y-auto p-4 sm:p-6"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+
           <DialogHeader className="text-left">
             <DialogTitle className="text-base sm:text-lg">Lançamento de despesa</DialogTitle>
           </DialogHeader>
@@ -208,7 +233,7 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
             <Button
               variant="outline"
               className="w-full sm:w-auto"
-              onClick={() => (step === 1 ? onOpenChange(false) : setStep((s) => s - 1))}
+              onClick={() => (step === 1 ? setConfirmarCancelamento(true) : setStep((s) => s - 1))}
             >
               {step === 1 ? "Cancelar" : "Voltar"}
             </Button>
@@ -225,11 +250,34 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
         </DialogContent>
       </Dialog>
 
+      <AlertDialog open={confirmarCancelamento} onOpenChange={setConfirmarCancelamento}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar lançamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              As informações preenchidas serão perdidas e você voltará para a lista de despesas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Não</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmarCancelamento(false);
+                onOpenChange(false);
+              }}
+            >
+              Sim, cancelar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <FornecedorRapidoDialog
         open={fornecedorDialog}
         onOpenChange={setFornecedorDialog}
         onCreated={onFornecedorCriado}
       />
+
     </>
   );
 }
