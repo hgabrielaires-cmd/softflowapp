@@ -329,6 +329,33 @@ export async function relatorioStatus(supabase: any, periodo?: Periodo): Promise
     minute: "2-digit",
   });
 
+  // Saldo das contas financeiras (livro caixa)
+  const { data: contas } = await supabase
+    .from("fin_contas_financeiras")
+    .select("id, nome")
+    .eq("ativo", true)
+    .order("nome");
+
+  const saldos = await Promise.all(
+    ((contas ?? []) as Array<{ id: string; nome: string }>).map(async (conta) => {
+      const { data } = await supabase.rpc("fn_saldo_conta", { p_conta_id: conta.id });
+      return { nome: conta.nome, saldo: Number(data ?? 0) };
+    }),
+  );
+  const saldoTotal = saldos.reduce((s, c) => s + c.saldo, 0);
+
+  const blocoSaldos = saldos.length
+    ? `\n${SEP}\n\n🏦 *SALDO DAS CONTAS*\n` +
+      bloco(
+        [
+          ...saldos.map((c) => [c.nome, moeda(c.saldo)] as [string, string]),
+          ["──────────────────", "───────────"],
+          ["Total", moeda(saldoTotal)],
+        ],
+        [1],
+      )
+    : "";
+
   return (
     `💰 *STATUS FINANCEIRO*\n_${label} • Atualizado: ${agora}_\n\n` +
     `${SEP}\n\n📅 *PERÍODO SELECIONADO*\n` +
@@ -360,6 +387,7 @@ export async function relatorioStatus(supabase: any, periodo?: Periodo): Promise
       ],
       [1],
     ) +
+    blocoSaldos +
     `\n${RODAPE}`
   );
 }

@@ -3031,6 +3031,95 @@ export type Database = {
         }
         Relationships: []
       }
+      fin_movimentacoes: {
+        Row: {
+          anexo_url: string | null
+          categoria: string | null
+          conta_destino_id: string | null
+          conta_financeira_id: string
+          created_at: string
+          created_by: string | null
+          data_movimentacao: string
+          descricao: string | null
+          filial_id: string | null
+          id: string
+          observacao: string | null
+          origem: string | null
+          origem_id: string | null
+          plano_conta_id: string | null
+          tipo: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          anexo_url?: string | null
+          categoria?: string | null
+          conta_destino_id?: string | null
+          conta_financeira_id: string
+          created_at?: string
+          created_by?: string | null
+          data_movimentacao?: string
+          descricao?: string | null
+          filial_id?: string | null
+          id?: string
+          observacao?: string | null
+          origem?: string | null
+          origem_id?: string | null
+          plano_conta_id?: string | null
+          tipo: string
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          anexo_url?: string | null
+          categoria?: string | null
+          conta_destino_id?: string | null
+          conta_financeira_id?: string
+          created_at?: string
+          created_by?: string | null
+          data_movimentacao?: string
+          descricao?: string | null
+          filial_id?: string | null
+          id?: string
+          observacao?: string | null
+          origem?: string | null
+          origem_id?: string | null
+          plano_conta_id?: string | null
+          tipo?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_movimentacoes_conta_destino_id_fkey"
+            columns: ["conta_destino_id"]
+            isOneToOne: false
+            referencedRelation: "fin_contas_financeiras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_movimentacoes_conta_financeira_id_fkey"
+            columns: ["conta_financeira_id"]
+            isOneToOne: false
+            referencedRelation: "fin_contas_financeiras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_movimentacoes_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_movimentacoes_plano_conta_id_fkey"
+            columns: ["plano_conta_id"]
+            isOneToOne: false
+            referencedRelation: "fin_plano_contas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fin_plano_contas: {
         Row: {
           aceita_lancamento: boolean
@@ -6214,6 +6303,10 @@ export type Database = {
       criar_conversa_grupo: {
         Args: { p_nome: string; p_participantes: string[] }
         Returns: string
+      }
+      fn_saldo_conta: {
+        Args: { p_conta_id: string; p_data?: string }
+        Returns: number
       }
       get_cron_secret: { Args: never; Returns: string }
       has_permission: {
