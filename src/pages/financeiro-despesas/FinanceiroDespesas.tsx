@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/TablePagination";
-import { History, Pencil, Plus, Search, TrendingDown, Trash2, X } from "lucide-react";
+import { CheckCircle2, History, Pencil, Plus, Search, TrendingDown, Trash2, X } from "lucide-react";
 import { DespesaWizardDialog } from "./components/DespesaWizardDialog";
 import { DespesaEditDialog } from "./components/DespesaEditDialog";
 import { DespesaDeleteDialog } from "./components/DespesaDeleteDialog";
+import { DespesaQuitarDialog } from "./components/DespesaQuitarDialog";
 import { useDespesasQuery, useFornecedoresOptionsQuery } from "./useDespesasQueries";
 
 import {
