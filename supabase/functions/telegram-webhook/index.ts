@@ -292,6 +292,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Foto ou documento ──
+    const caption = String(message.caption ?? message.text ?? "").trim();
     const photo = message.photo as Array<{ file_id: string }> | undefined;
     const document = message.document as
       | { file_id: string; mime_type?: string }
