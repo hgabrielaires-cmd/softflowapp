@@ -78,7 +78,7 @@ function br(iso: string, curto = false) {
   return curto ? `${dd}/${m}` : `${dd}/${m}/${y}`;
 }
 
-export type Periodo = { inicio: string; fim: string; label: string };
+export type Periodo = { inicio: string; fim: string; label: string; tipo?: string };
 
 export function periodoSemana() {
   const hoje = new Date();
