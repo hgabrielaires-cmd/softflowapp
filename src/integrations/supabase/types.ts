@@ -5616,6 +5616,105 @@ export type Database = {
           },
         ]
       }
+      telegram_memoria: {
+        Row: {
+          cnpj_fornecedor: string
+          created_at: string
+          fornecedor_id: string | null
+          id: string
+          plano_conta_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          cnpj_fornecedor: string
+          created_at?: string
+          fornecedor_id?: string | null
+          id?: string
+          plano_conta_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cnpj_fornecedor?: string
+          created_at?: string
+          fornecedor_id?: string | null
+          id?: string
+          plano_conta_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_memoria_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_memoria_plano_conta_id_fkey"
+            columns: ["plano_conta_id"]
+            isOneToOne: false
+            referencedRelation: "fin_plano_contas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_pendencias: {
+        Row: {
+          anexo_url: string | null
+          centro_custo_id: string | null
+          chat_id: number
+          conta_financeira_id: string | null
+          created_at: string
+          dados_extraidos: Json | null
+          etapa: string
+          forma_pagamento_id: string | null
+          fornecedor_id: string | null
+          fornecedor_nome: string | null
+          id: string
+          plano_conta_id: string | null
+          plano_conta_sugerido_id: string | null
+          status: string
+          updated_at: string
+          user_id: number
+        }
+        Insert: {
+          anexo_url?: string | null
+          centro_custo_id?: string | null
+          chat_id: number
+          conta_financeira_id?: string | null
+          created_at?: string
+          dados_extraidos?: Json | null
+          etapa?: string
+          forma_pagamento_id?: string | null
+          fornecedor_id?: string | null
+          fornecedor_nome?: string | null
+          id?: string
+          plano_conta_id?: string | null
+          plano_conta_sugerido_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: number
+        }
+        Update: {
+          anexo_url?: string | null
+          centro_custo_id?: string | null
+          chat_id?: number
+          conta_financeira_id?: string | null
+          created_at?: string
+          dados_extraidos?: Json | null
+          etapa?: string
+          forma_pagamento_id?: string | null
+          fornecedor_id?: string | null
+          fornecedor_nome?: string | null
+          id?: string
+          plano_conta_id?: string | null
+          plano_conta_sugerido_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: number
+        }
+        Relationships: []
+      }
       template_clauses: {
         Row: {
           ativo: boolean
