@@ -1,5 +1,6 @@
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
+import { useMenuPermissions } from "@/hooks/useMenuPermissions";
 import { Navigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ListTree, Layers, CreditCard, Landmark } from "lucide-react";
