@@ -118,9 +118,25 @@ export function useDespesaMutations() {
         .eq("id", args.despesa.id);
       if (error) throw new Error("Não foi possível quitar a despesa. Verifique suas permissões.");
     },
-    onSuccess: () => {
+    onSuccess: async (_r, args) => {
       toast.success("Pagamento confirmado!");
-      invalidate();
+      queryClient.setQueryData<DespesaRegistro[]>(["fin_despesas"], (old) =>
+        (old || []).map((d) =>
+          d.id === args.despesa.id
+            ? {
+                ...d,
+                status: "pago",
+                data_pagamento: args.data_pagamento,
+                valor_pago: args.valor_pago,
+                juros_percentual: args.juros_percentual,
+                juros_valor: args.juros_valor,
+                plano_conta_juros_id: args.plano_conta_juros_id,
+                conta_financeira_id: args.conta_financeira_id,
+              }
+            : d,
+        ),
+      );
+      await queryClient.refetchQueries({ queryKey: ["fin_despesas"] });
     },
     onError: (e: Error) => toast.error(e.message || "Erro ao quitar despesa"),
   });
