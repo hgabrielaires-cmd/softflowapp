@@ -447,7 +447,18 @@ Retorne APENAS JSON válido sem markdown:
         .eq("cnpj_cpf", cnpj)
         .maybeSingle();
       fornecedor = forn;
+      if (!fornecedor) {
+        // fallback: documentos gravados com máscara (pontos/traços/barra)
+        const { data: forn2 } = await supabase
+          .from("fornecedores")
+          .select("id, nome_fantasia, cnpj_cpf, plano_conta_id")
+          .ilike("cnpj_cpf", `%${cnpj}%`)
+          .limit(1)
+          .maybeSingle();
+        fornecedor = forn2;
+      }
     }
+
     if (!fornecedor && dados.nome_recebedor) {
       const { data: forn } = await supabase
         .from("fornecedores")
