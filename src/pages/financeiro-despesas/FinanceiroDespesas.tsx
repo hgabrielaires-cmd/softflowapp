@@ -74,7 +74,6 @@ export default function FinanceiroDespesas() {
   const totalValor = filtradas.reduce((acc, d) => acc + Number(d.valor), 0);
   const totalPago = filtradas.filter((d) => d.status === "pago").reduce((acc, d) => acc + Number(d.valor), 0);
   const totalAberto = filtradas.filter((d) => d.status === "aberto").reduce((acc, d) => acc + Number(d.valor), 0);
-  const totalCancelado = filtradas.filter((d) => d.status === "cancelado").reduce((acc, d) => acc + Number(d.valor), 0);
 
   const temFiltro = JSON.stringify(filtros) !== JSON.stringify(emptyDespesaFiltros);
 
