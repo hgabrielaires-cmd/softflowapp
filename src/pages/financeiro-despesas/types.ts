@@ -68,6 +68,11 @@ export interface DespesaRegistro {
   status: string;
   parcela_numero: number;
   parcela_total: number;
+  data_pagamento?: string | null;
+  valor_pago?: number | null;
+  juros_percentual?: number | null;
+  juros_valor?: number | null;
+  plano_conta_juros_id?: string | null;
   created_at: string;
   fornecedores?: { nome_fantasia: string } | null;
   fin_despesa_rateios?: { centro_custo_id: string }[] | null;

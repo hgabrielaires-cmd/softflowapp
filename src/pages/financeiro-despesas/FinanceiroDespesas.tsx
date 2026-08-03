@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/TablePagination";
-import { History, Pencil, Plus, Search, TrendingDown, Trash2, X } from "lucide-react";
+import { CheckCircle2, History, Pencil, Plus, Search, TrendingDown, Trash2, X } from "lucide-react";
 import { DespesaWizardDialog } from "./components/DespesaWizardDialog";
 import { DespesaEditDialog } from "./components/DespesaEditDialog";
 import { DespesaDeleteDialog } from "./components/DespesaDeleteDialog";
+import { DespesaQuitarDialog } from "./components/DespesaQuitarDialog";
 import { useDespesasQuery, useFornecedoresOptionsQuery } from "./useDespesasQueries";
 
 import {
@@ -32,6 +33,7 @@ export default function FinanceiroDespesas() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editando, setEditando] = useState<DespesaRegistro | null>(null);
   const [excluindo, setExcluindo] = useState<DespesaRegistro | null>(null);
+  const [quitando, setQuitando] = useState<DespesaRegistro | null>(null);
   const [filtros, setFiltrosRaw] = useState({ ...emptyDespesaFiltros, ...periodoMesAtual() });
   const [page, setPage] = useState(1);
 
@@ -265,7 +267,7 @@ export default function FinanceiroDespesas() {
                 <TableHead>Parcela</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
                 <TableHead>Status</TableHead>
-                {temAcoes && <TableHead className="w-[90px] text-right">Ações</TableHead>}
+                {temAcoes && <TableHead className="w-[130px] text-right">Ações</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -308,6 +310,17 @@ export default function FinanceiroDespesas() {
                               <Pencil className="h-4 w-4" />
                             </Button>
                           )}
+                          {canEditar && d.status === "aberto" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Quitar despesa"
+                              title="Quitar"
+                              onClick={() => setQuitando(d)}
+                            >
+                              <CheckCircle2 className="h-4 w-4 text-success" />
+                            </Button>
+                          )}
                           {canExcluir && (
                             <Button
                               variant="ghost"
@@ -346,6 +359,11 @@ export default function FinanceiroDespesas() {
         despesa={excluindo}
         open={!!excluindo}
         onOpenChange={(o) => !o && setExcluindo(null)}
+      />
+      <DespesaQuitarDialog
+        despesa={quitando}
+        open={!!quitando}
+        onOpenChange={(o) => !o && setQuitando(null)}
       />
 
     </AppLayout>
