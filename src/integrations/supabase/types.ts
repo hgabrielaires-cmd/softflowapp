@@ -3066,6 +3066,7 @@ export type Database = {
           nome_fantasia: string
           numero: string | null
           observacoes: string | null
+          plano_conta_id: string | null
           razao_social: string | null
           telefone: string | null
           uf: string | null
@@ -3087,6 +3088,7 @@ export type Database = {
           nome_fantasia: string
           numero?: string | null
           observacoes?: string | null
+          plano_conta_id?: string | null
           razao_social?: string | null
           telefone?: string | null
           uf?: string | null
@@ -3108,12 +3110,21 @@ export type Database = {
           nome_fantasia?: string
           numero?: string | null
           observacoes?: string | null
+          plano_conta_id?: string | null
           razao_social?: string | null
           telefone?: string | null
           uf?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fornecedores_plano_conta_id_fkey"
+            columns: ["plano_conta_id"]
+            isOneToOne: false
+            referencedRelation: "fin_plano_contas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       helpdesk_modelos_ticket: {
         Row: {
