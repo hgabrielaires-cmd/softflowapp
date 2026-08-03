@@ -89,5 +89,38 @@ export function useDespesaMutations() {
     onError: (e: Error) => toast.error(e.message || "Erro ao excluir lançamento"),
   });
 
-  return { editarDespesaMut, excluirDespesaMut };
+  const quitarDespesaMut = useMutation({
+    mutationFn: async (args: {
+      despesa: DespesaRegistro;
+      data_pagamento: string;
+      juros_percentual: number;
+      juros_valor: number;
+      plano_conta_juros_id: string | null;
+      valor_pago: number;
+    }) => {
+      if (!args.data_pagamento) throw new Error("Informe a data do pagamento.");
+      if (args.juros_valor > 0 && !args.plano_conta_juros_id) {
+        throw new Error("Selecione o plano de contas dos juros.");
+      }
+      const { error } = await supabase
+        .from("fin_despesas")
+        .update({
+          status: "pago",
+          data_pagamento: args.data_pagamento,
+          valor_pago: args.valor_pago,
+          juros_percentual: args.juros_percentual,
+          juros_valor: args.juros_valor,
+          plano_conta_juros_id: args.plano_conta_juros_id,
+        })
+        .eq("id", args.despesa.id);
+      if (error) throw new Error("Não foi possível quitar a despesa. Verifique suas permissões.");
+    },
+    onSuccess: () => {
+      toast.success("Pagamento confirmado!");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message || "Erro ao quitar despesa"),
+  });
+
+  return { editarDespesaMut, excluirDespesaMut, quitarDespesaMut };
 }
