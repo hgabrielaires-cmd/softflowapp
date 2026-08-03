@@ -1261,6 +1261,8 @@ export default function Integracoes() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [asaasDialogOpen, setAsaasDialogOpen] = useState(false);
+  const [telegramDialogOpen, setTelegramDialogOpen] = useState(false);
+  const [anthropicDialogOpen, setAnthropicDialogOpen] = useState(false);
 
   const [r2DialogOpen, setR2DialogOpen] = useState(false);
   const [r2Config, setR2Config] = useState<any>(null);
