@@ -163,6 +163,10 @@ const MENU_TREE: MenuNode[] = [
     key: "menu.setores", label: "Setores", description: "Gerenciar setores vinculados aos templates de mensagens",
     icon: <Building2 className="h-4 w-4" />,
   },
+  {
+    key: "menu.financeiro_parametros", label: "Parâmetros Financeiros", description: "Plano de contas, centros de custo, formas de pagamento e contas financeiras",
+    icon: <DollarSign className="h-4 w-4" />,
+  },
   // CRM
   {
     key: "menu.crm", label: "CRM", description: "Módulo de gestão comercial (CRM)",
@@ -219,7 +223,7 @@ const MENU_SECTIONS: MenuSection[] = [
     items: MENU_TREE.filter(m =>
       ["menu.filiais", "menu.usuarios", "menu.perfis_usuario", "menu.modelos_contrato",
        "menu.notificacoes", "menu.integracoes", "menu.setores", "menu.jornadas", "menu.mesas_atendimento",
-       "menu.etapas_painel", "menu.segmentos"].includes(m.key)
+       "menu.etapas_painel", "menu.segmentos", "menu.financeiro_parametros"].includes(m.key)
     ),
   },
   {
