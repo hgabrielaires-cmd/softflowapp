@@ -78,11 +78,18 @@ function br(iso: string, curto = false) {
   return curto ? `${dd}/${m}` : `${dd}/${m}/${y}`;
 }
 
+export type Periodo = { inicio: string; fim: string; label: string };
+
 export function periodoSemana() {
   const hoje = new Date();
   const inicio = new Date(hoje);
   inicio.setDate(hoje.getDate() - 6);
   return { inicio: d(inicio), fim: d(hoje) };
+}
+
+function periodoPadrao(): Periodo {
+  const { inicio, fim, label } = periodo ?? periodoPadrao();
+  return { inicio, fim, label: "Últimos 7 dias" };
 }
 
 function inicioMes() {
@@ -141,8 +148,8 @@ function valorDe(dsp: Despesa) {
 }
 
 // ── /categorias ───────────────────────────────────────────────────────────
-export async function relatorioCategorias(supabase: any): Promise<string> {
-  const { inicio, fim } = periodoSemana();
+export async function relatorioCategorias(supabase: any, periodo?: Periodo): Promise<string> {
+  const { inicio, fim, label } = periodo ?? periodoPadrao();
   const [despesas, planos] = await Promise.all([
     despesasPagas(supabase, inicio, fim),
     mapaPlanos(supabase),
@@ -150,7 +157,7 @@ export async function relatorioCategorias(supabase: any): Promise<string> {
 
   const total = despesas.reduce((s, x) => s + valorDe(x), 0);
   if (!total) {
-    return `📁 *DESPESAS POR PLANO DE CONTAS*\n_Esta semana: ${br(inicio, true)} a ${br(fim)}_\n\n${SEP}\n\nNenhuma despesa paga no período.\n\n${RODAPE}`;
+    return `📁 *DESPESAS POR PLANO DE CONTAS*\n_${label}: ${br(inicio)} a ${br(fim)}_\n\n${SEP}\n\nNenhuma despesa paga no período.\n\n${RODAPE}`;
   }
 
   type Grupo = { codigo: string; nome: string; total: number; subs: Map<string, { nome: string; total: number }> };
@@ -193,7 +200,7 @@ export async function relatorioCategorias(supabase: any): Promise<string> {
     });
 
   return (
-    `📁 *DESPESAS POR PLANO DE CONTAS*\n_Esta semana: ${br(inicio, true)} a ${br(fim)}_\n\n` +
+    `📁 *DESPESAS POR PLANO DE CONTAS*\n_${label}: ${br(inicio)} a ${br(fim)}_\n\n` +
     `${SEP}\n\n` +
     partes.join(`\n\n${SEP}\n\n`) +
     `\n\n${SEP}\n\n💸 *TOTAL DESPESAS*\n${moeda(total)}\n\n${RODAPE}`
@@ -201,8 +208,8 @@ export async function relatorioCategorias(supabase: any): Promise<string> {
 }
 
 // ── /dre ──────────────────────────────────────────────────────────────────
-export async function relatorioDre(supabase: any): Promise<string> {
-  const { inicio, fim } = periodoSemana();
+export async function relatorioDre(supabase: any, periodo?: Periodo): Promise<string> {
+  const { inicio, fim, label } = periodo ?? periodoPadrao();
   const [despesas, planos, totalReceitas] = await Promise.all([
     despesasPagas(supabase, inicio, fim),
     mapaPlanos(supabase),
@@ -231,7 +238,7 @@ export async function relatorioDre(supabase: any): Promise<string> {
   const margem = totalReceitas ? pct(lucro, totalReceitas) : "—";
 
   return (
-    `📊 *DRE — RESULTADO DA SEMANA*\n_${br(inicio)} a ${br(fim)}_\n\n` +
+    `📊 *DRE — RESULTADO*\n_${label}: ${br(inicio)} a ${br(fim)}_\n\n` +
     `${SEP}\n\n💚 *RECEITAS*\n\n` +
     tabela(["Origem", "Valor"], [["Faturamento recebido", moeda(totalReceitas)]], [1]) +
     `\nTotal Receitas: *${moeda(totalReceitas)}*\n\n` +
@@ -249,8 +256,8 @@ export async function relatorioDre(supabase: any): Promise<string> {
 }
 
 // ── /maiores ──────────────────────────────────────────────────────────────
-export async function relatorioMaiores(supabase: any): Promise<string> {
-  const { inicio, fim } = periodoSemana();
+export async function relatorioMaiores(supabase: any, periodo?: Periodo): Promise<string> {
+  const { inicio, fim, label } = periodo ?? periodoPadrao();
   const [despesas, fornecedores] = await Promise.all([
     despesasPagas(supabase, inicio, fim),
     mapaFornecedores(supabase),
@@ -258,7 +265,7 @@ export async function relatorioMaiores(supabase: any): Promise<string> {
 
   const total = despesas.reduce((s, x) => s + valorDe(x), 0);
   if (!total) {
-    return `🏆 *MAIORES GASTOS DA SEMANA*\n_${br(inicio, true)} a ${br(fim, true)}_\n\n${SEP}\n\nNenhuma despesa paga no período.\n\n${RODAPE}`;
+    return `🏆 *MAIORES GASTOS*\n_${label}: ${br(inicio)} a ${br(fim)}_\n\n${SEP}\n\nNenhuma despesa paga no período.\n\n${RODAPE}`;
   }
 
   const porFornecedor = new Map<string, number>();
@@ -278,18 +285,18 @@ export async function relatorioMaiores(supabase: any): Promise<string> {
   ]);
 
   return (
-    `🏆 *MAIORES GASTOS DA SEMANA*\n_${br(inicio, true)} a ${br(fim, true)}_\n\n` +
+    `🏆 *MAIORES GASTOS*\n_${label}: ${br(inicio)} a ${br(fim)}_\n\n` +
     `${SEP}\n\n` +
     tabela(["#", "Fornecedor", "Valor", "%"], linhas, [2, 3]) +
     `\n\n${SEP}\n\n` +
-    `💡 *Maior gasto:* ${top[0][0]}\n   Representa *${pct(top[0][1], total)}* do total da semana\n\n` +
+    `💡 *Maior gasto:* ${top[0][0]}\n   Representa *${pct(top[0][1], total)}* do total do período\n\n` +
     `💸 *Total top 10:* ${moeda(somaTop)}\n\n${RODAPE}`
   );
 }
 
 // ── /status ───────────────────────────────────────────────────────────────
-export async function relatorioStatus(supabase: any): Promise<string> {
-  const { inicio, fim } = periodoSemana();
+export async function relatorioStatus(supabase: any, periodo?: Periodo): Promise<string> {
+  const { inicio, fim, label } = periodo ?? periodoPadrao();
   const mesIni = inicioMes();
   const hoje = d(new Date());
 
@@ -323,8 +330,8 @@ export async function relatorioStatus(supabase: any): Promise<string> {
   });
 
   return (
-    `💰 *STATUS FINANCEIRO*\n_Atualizado: ${agora}_\n\n` +
-    `${SEP}\n\n📅 *ESTA SEMANA*\n` +
+    `💰 *STATUS FINANCEIRO*\n_${label} • Atualizado: ${agora}_\n\n` +
+    `${SEP}\n\n📅 *PERÍODO SELECIONADO*\n` +
     bloco(
       [
         ["Receitas recebidas", moeda(recSemana)],
@@ -358,7 +365,7 @@ export async function relatorioStatus(supabase: any): Promise<string> {
 }
 
 // ── /pendentes ────────────────────────────────────────────────────────────
-export async function relatorioPendentes(supabase: any): Promise<string> {
+export async function relatorioPendentes(supabase: any, _periodo?: Periodo): Promise<string> {
   const hoje = d(new Date());
   const [{ data }, fornecedores] = await Promise.all([
     supabase
