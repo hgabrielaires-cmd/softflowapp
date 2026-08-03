@@ -343,14 +343,48 @@ export default function FinanceiroDespesas() {
                 ))
               )}
             </TableBody>
+            {paginadas.length > 0 && (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={4} className="font-medium">
+                    Total da página: {paginadas.length} lançamento(s)
+                  </TableCell>
+                  <TableCell className="text-right font-medium">{formatBRL(totalValorPagina)}</TableCell>
+                  <TableCell colSpan={temAcoes ? 3 : 2} />
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={4} className="font-semibold">
+                    Total geral: {filtradas.length} lançamento(s)
+                  </TableCell>
+                  <TableCell className="text-right font-semibold">{formatBRL(totalValor)}</TableCell>
+                  <TableCell colSpan={temAcoes ? 3 : 2} />
+                </TableRow>
+              </TableFooter>
+            )}
           </Table>
-          <TablePagination
-            currentPage={page}
-            totalPages={totalPages}
-            totalItems={filtradas.length}
-            itemsPerPage={ITEMS_PER_PAGE}
-            onPageChange={setPage}
-          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-border">
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">Linhas por página</Label>
+              <Select
+                value={String(porPagina)}
+                onValueChange={(v) => { setPorPagina(Number(v)); setPage(1); }}
+              >
+                <SelectTrigger className="h-8 w-20"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[5, 10, 20, 50, 100].map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <TablePagination
+              currentPage={paginaAtual}
+              totalPages={totalPages}
+              totalItems={filtradas.length}
+              itemsPerPage={porPagina}
+              onPageChange={setPage}
+            />
+          </div>
         </div>
       </div>
 
