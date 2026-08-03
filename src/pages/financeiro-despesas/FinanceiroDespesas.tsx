@@ -21,7 +21,7 @@ import {
   usePlanoContasQuery,
 } from "@/pages/financeiro-parametros/useFinanceiroParametrosQueries";
 import { FILTRO_TODOS, ITEMS_PER_PAGE, STATUS_DESPESA, emptyDespesaFiltros } from "./constants";
-import { aplicarFiltrosDespesas, formatBRL, formatDataBR, periodoMesAtual, statusBadgeVariant } from "./helpers";
+import { aplicarFiltrosDespesas, despesaVencida, formatBRL, formatDataBR, periodoMesAtual, statusBadgeClass, statusBadgeVariant } from "./helpers";
 import { useAuth } from "@/context/AuthContext";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
