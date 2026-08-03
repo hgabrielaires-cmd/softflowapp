@@ -114,6 +114,7 @@ const navGroups: NavGroup[] = [
       { icon: <DollarSign className="h-4 w-4" />, label: "Faturamento", to: "/faturamento", permKey: "menu.faturamento" },
       { icon: <TrendingUp className="h-4 w-4" />, label: "Receitas", to: "/receitas", permKey: "menu.receitas" },
       { icon: <TrendingDown className="h-4 w-4" />, label: "Despesas", to: "/despesas", permKey: "menu.despesas" },
+      { icon: <Landmark className="h-4 w-4" />, label: "Contas Financeiras", to: "/financeiro/contas", permKey: "menu.contas_financeiras" },
       { icon: <BarChart3 className="h-4 w-4" />, label: "DRE", to: "/dre", permKey: "menu.dre" },
     ],
   },
