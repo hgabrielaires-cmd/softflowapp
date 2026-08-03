@@ -43,16 +43,21 @@ export function DespesaQuitarDialog({ despesa, open, onOpenChange }: Props) {
   const [dataPagamento, setDataPagamento] = useState(hojeISO());
   const [temJuros, setTemJuros] = useState(false);
   const [planoJuros, setPlanoJuros] = useState("");
+  const [planoOpen, setPlanoOpen] = useState(false);
   const [jurosPerc, setJurosPerc] = useState("0");
   const [jurosValor, setJurosValor] = useState("0");
+  const [etapaConta, setEtapaConta] = useState(false);
+  const [contaPagamento, setContaPagamento] = useState("");
 
   const { data: planoContas = [] } = usePlanoContasQuery();
+  const { data: contas = [] } = useContasFinanceirasQuery();
   const { quitarDespesaMut } = useDespesaMutations();
 
   const planoContasLancaveis = useMemo(
     () => planoContas.filter((p) => p.ativo && p.aceita_lancamento),
     [planoContas],
   );
+  const contasAtivas = useMemo(() => contas.filter((c) => c.ativo), [contas]);
 
   useEffect(() => {
     if (open) {
@@ -61,8 +66,10 @@ export function DespesaQuitarDialog({ despesa, open, onOpenChange }: Props) {
       setPlanoJuros("");
       setJurosPerc("0");
       setJurosValor("0");
+      setEtapaConta(false);
+      setContaPagamento(despesa?.conta_financeira_id || "");
     }
-  }, [open]);
+  }, [open, despesa]);
 
   if (!despesa) return null;
 
