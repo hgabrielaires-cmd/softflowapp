@@ -365,20 +365,25 @@ export async function relatorioStatus(supabase: any, periodo?: Periodo): Promise
 }
 
 // ── /pendentes ────────────────────────────────────────────────────────────
-export async function relatorioPendentes(supabase: any, _periodo?: Periodo): Promise<string> {
+export async function relatorioPendentes(supabase: any, periodo?: Periodo): Promise<string> {
+  const { inicio, fim, label } = periodo ?? periodoPadrao();
   const hoje = d(new Date());
   const [{ data }, fornecedores] = await Promise.all([
     supabase
       .from("fin_despesas")
       .select("valor, data_vencimento, fornecedor_id")
       .eq("status", "aberto")
+      .gte("data_vencimento", inicio)
+      .lte("data_vencimento", fim)
       .order("data_vencimento"),
     mapaFornecedores(supabase),
   ]);
 
+  const cab = `📋 *DESPESAS PENDENTES*\n_${label}: ${br(inicio)} a ${br(fim)}_\n\n${SEP}\n\n`;
+
   const lista = (data ?? []) as Array<{ valor: number | null; data_vencimento: string; fornecedor_id: string | null }>;
   if (!lista.length) {
-    return `📋 *DESPESAS PENDENTES*\n\n${SEP}\n\n✅ Nenhuma despesa em aberto.\n\n${RODAPE}`;
+    return `${cab}✅ Nenhuma despesa pendente no período.\n\n${RODAPE}`;
   }
 
   const nome = (id: string | null) => (id ? fornecedores.get(id) ?? "—" : "Sem fornecedor");
@@ -387,23 +392,9 @@ export async function relatorioPendentes(supabase: any, _periodo?: Periodo): Pro
 
   const totalPendente = lista.reduce((s, l) => s + Number(l.valor ?? 0), 0);
   const totalVencido = vencidas.reduce((s, l) => s + Number(l.valor ?? 0), 0);
+  const totalAberto = totalPendente - totalVencido;
 
-  let msg = `📋 *DESPESAS PENDENTES*\n\n${SEP}\n\n`;
-
-  if (emAberto.length) {
-    msg +=
-      `🟡 *EM ABERTO*\n` +
-      tabela(
-        ["Fornecedor", "Valor", "Vence"],
-        emAberto.slice(0, 15).map((l) => [
-          nome(l.fornecedor_id).slice(0, 22),
-          moeda(Number(l.valor ?? 0)),
-          br(l.data_vencimento, true),
-        ]),
-        [1],
-      ) +
-      `\n\n${SEP}\n\n`;
-  }
+  let msg = cab;
 
   if (vencidas.length) {
     msg +=
@@ -420,8 +411,25 @@ export async function relatorioPendentes(supabase: any, _periodo?: Periodo): Pro
       `\n\n${SEP}\n\n`;
   }
 
-  msg += `💸 Total pendente: *${moeda(totalPendente)}*`;
-  if (totalVencido) msg += `\n⚠️ Vencido: *${moeda(totalVencido)}*`;
+  if (emAberto.length) {
+    msg +=
+      `🟡 *EM ABERTO*\n` +
+      tabela(
+        ["Fornecedor", "Valor", "Vence"],
+        emAberto.slice(0, 15).map((l) => [
+          nome(l.fornecedor_id).slice(0, 22),
+          moeda(Number(l.valor ?? 0)),
+          br(l.data_vencimento, true),
+        ]),
+        [1],
+      ) +
+      `\n\n${SEP}\n\n`;
+  }
+
+  if (totalVencido) msg += `⚠️ Vencido: *${moeda(totalVencido)}*\n`;
+  if (totalAberto) msg += `🟡 A vencer: *${moeda(totalAberto)}*\n`;
+  msg += `💸 *Total pendente: ${moeda(totalPendente)}*\n\n${RODAPE}`;
 
   return msg;
+
 }
