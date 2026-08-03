@@ -127,6 +127,23 @@ function tecladoPlanos(planos: Plano[], pagina: number, escolhidoId: string | nu
   return { inline_keyboard: rows };
 }
 
+function docRecebedor(dados: Record<string, any>): { doc: string | null; tipoPessoa: "pf" | "pj" | null } {
+  const cnpj = dados.cnpj_recebedor ? String(dados.cnpj_recebedor).replace(/\D/g, "") : "";
+  const cpf = dados.cpf_recebedor ? String(dados.cpf_recebedor).replace(/\D/g, "") : "";
+  const doc = cnpj || cpf || null;
+  if (!doc) return { doc: null, tipoPessoa: null };
+  const tipo = (dados.tipo_pessoa_recebedor === "pf" || dados.tipo_pessoa_recebedor === "pj")
+    ? dados.tipo_pessoa_recebedor
+    : doc.length === 11 ? "pf" : "pj";
+  return { doc, tipoPessoa: tipo };
+}
+
+function formatDoc(doc: string) {
+  if (doc.length === 11) return doc.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+  if (doc.length === 14) return doc.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+  return doc;
+}
+
 function resumoComprovante(
   dados: Record<string, any>,
   fornecedorNome?: string | null,
@@ -137,8 +154,10 @@ function resumoComprovante(
     `💰 *Valor:* ${formatMoeda(dados.valor)}\n` +
     `📅 *Data:* ${dados.data || "hoje"}\n` +
     `🧾 *Tipo:* ${String(dados.tipo ?? "").toUpperCase()}\n` +
-    `🏢 *Destinatário:* ${fornecedorNome || dados.nome_recebedor || "não identificado"}\n` +
-    (dados.cnpj_recebedor ? `🔢 *CNPJ/CPF:* ${dados.cnpj_recebedor}\n` : "") +
+    `${docRecebedor(dados).tipoPessoa === "pf" ? "👤" : "🏢"} *Destinatário${docRecebedor(dados).tipoPessoa === "pf" ? " (PF)" : ""}:* ${fornecedorNome || dados.nome_recebedor || "não identificado"}\n` +
+    (docRecebedor(dados).doc
+      ? `🔢 *${docRecebedor(dados).tipoPessoa === "pf" ? "CPF" : "CNPJ"}:* ${formatDoc(docRecebedor(dados).doc!)}\n`
+      : "") +
     (observacao ? `📝 *Obs:* ${observacao}\n` : "")
   );
 }
@@ -358,8 +377,9 @@ Retorne APENAS JSON válido sem markdown:
   "tipo": "pix"|"boleto"|"ted"|"doc"|"nota_fiscal"|"recibo"|"desconhecido",
   "valor": 0.00,
   "data": "YYYY-MM-DD",
-  "cnpj_recebedor": "apenas números ou null",
-  "cpf_recebedor": "apenas números ou null",
+  "cnpj_recebedor": "apenas CNPJ com 14 dígitos ou null",
+  "cpf_recebedor": "apenas CPF com 11 dígitos ou null",
+  "tipo_pessoa_recebedor": "pf"|"pj"|null,
   "nome_recebedor": "string ou null",
   "banco_pagador": "string ou null",
   "numero_documento": "string ou null",
@@ -417,7 +437,7 @@ Retorne APENAS JSON válido sem markdown:
     }
 
     // ── Fornecedor ──
-    const cnpj = dados.cnpj_recebedor ? String(dados.cnpj_recebedor).replace(/\D/g, "") : null;
+    const { doc: cnpj } = docRecebedor(dados);
     let fornecedor: any = null;
 
     if (cnpj) {
@@ -427,7 +447,18 @@ Retorne APENAS JSON válido sem markdown:
         .eq("cnpj_cpf", cnpj)
         .maybeSingle();
       fornecedor = forn;
+      if (!fornecedor) {
+        // fallback: documentos gravados com máscara (pontos/traços/barra)
+        const { data: forn2 } = await supabase
+          .from("fornecedores")
+          .select("id, nome_fantasia, cnpj_cpf, plano_conta_id")
+          .ilike("cnpj_cpf", `%${cnpj}%`)
+          .limit(1)
+          .maybeSingle();
+        fornecedor = forn2;
+      }
     }
+
     if (!fornecedor && dados.nome_recebedor) {
       const { data: forn } = await supabase
         .from("fornecedores")
@@ -483,7 +514,7 @@ Retorne APENAS JSON válido sem markdown:
       .insert({
         chat_id: chatId,
         user_id: userId,
-        dados_extraidos: { ...dados, cnpj_recebedor: cnpj },
+        dados_extraidos: { ...dados, documento_recebedor: cnpj },
         fornecedor_id: fornecedor?.id ?? null,
         fornecedor_nome: fornecedor?.nome_fantasia ?? dados.nome_recebedor ?? null,
         forma_pagamento_id: formaPagtoId,
@@ -730,7 +761,7 @@ async function finalizarLancamento(
       .insert({
         nome_fantasia: dados.nome_recebedor,
         razao_social: dados.nome_recebedor,
-        cnpj_cpf: dados.cnpj_recebedor || null,
+        cnpj_cpf: docRecebedor(dados).doc ?? "",
         ativo: true,
         plano_conta_id: planoId,
       })
@@ -792,10 +823,11 @@ async function finalizarLancamento(
     if (ratErr) console.error("[telegram] rateio:", ratErr.message);
   }
 
-  if (dados.cnpj_recebedor) {
+  const docMemoria = docRecebedor(dados).doc;
+  if (docMemoria) {
     const { error: memErr } = await supabase.from("telegram_memoria").upsert(
       {
-        cnpj_fornecedor: dados.cnpj_recebedor,
+        cnpj_fornecedor: docMemoria,
         fornecedor_id: fornecedorId,
         plano_conta_id: planoId,
         updated_at: new Date().toISOString(),
