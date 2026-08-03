@@ -127,16 +127,22 @@ function tecladoPlanos(planos: Plano[], pagina: number, escolhidoId: string | nu
   return { inline_keyboard: rows };
 }
 
-function resumoComprovante(dados: Record<string, any>, fornecedorNome?: string | null) {
+function resumoComprovante(
+  dados: Record<string, any>,
+  fornecedorNome?: string | null,
+  observacao?: string | null,
+) {
   return (
     `✅ *Comprovante reconhecido!*\n\n` +
     `💰 *Valor:* ${formatMoeda(dados.valor)}\n` +
     `📅 *Data:* ${dados.data || "hoje"}\n` +
     `🧾 *Tipo:* ${String(dados.tipo ?? "").toUpperCase()}\n` +
     `🏢 *Destinatário:* ${fornecedorNome || dados.nome_recebedor || "não identificado"}\n` +
-    (dados.cnpj_recebedor ? `🔢 *CNPJ/CPF:* ${dados.cnpj_recebedor}\n` : "")
+    (dados.cnpj_recebedor ? `🔢 *CNPJ/CPF:* ${dados.cnpj_recebedor}\n` : "") +
+    (observacao ? `📝 *Obs:* ${observacao}\n` : "")
   );
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -286,6 +292,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Foto ou documento ──
+    const caption = String(message.caption ?? message.text ?? "").trim();
     const photo = message.photo as Array<{ file_id: string }> | undefined;
     const document = message.document as
       | { file_id: string; mime_type?: string }
@@ -484,6 +491,7 @@ Retorne APENAS JSON válido sem markdown:
         centro_custo_id: centrosCusto?.[0]?.id ?? null,
         plano_conta_sugerido_id: planoSugeridoId,
         anexo_url: anexoUrl,
+        observacao_usuario: caption || null,
         status: "aguardando_resposta",
         etapa: "plano_contas",
         plano_pagina: 0,
@@ -491,7 +499,7 @@ Retorne APENAS JSON válido sem markdown:
       .select("id")
       .single();
 
-    let msg = resumoComprovante(dados, fornecedor?.nome_fantasia);
+    let msg = resumoComprovante(dados, fornecedor?.nome_fantasia, caption);
     let teclado: unknown;
 
     if (fornecedor && planoSugerido) {
@@ -697,6 +705,17 @@ async function finalizarLancamento(
 ) {
   const dados = pendencia.dados_extraidos ?? {};
   const hoje = new Date().toISOString().slice(0, 10);
+  const observacao = String(pendencia.observacao_usuario ?? "").trim();
+
+  const { data: filial } = await supabase
+    .from("filiais")
+    .select("nome, razao_social")
+    .eq("ativa", true)
+    .limit(1)
+    .maybeSingle();
+
+  const nomeOrigem =
+    filial?.razao_social || filial?.nome || "SOFTPLUS TECNOLOGIA EM SISTEMAS";
 
   const responder = async (texto: string) => {
     const mid = messageId ?? pendencia.message_id;
@@ -729,6 +748,12 @@ async function finalizarLancamento(
     return ok();
   }
 
+  let descricaoDespesa =
+    `${String(dados.tipo ?? "PAGAMENTO").toUpperCase()} de ${nomeOrigem} para ` +
+    `${dados.nome_recebedor || pendencia.fornecedor_nome || "fornecedor"} ` +
+    `no valor de ${formatMoeda(dados.valor)}`;
+  if (observacao) descricaoDespesa += ` (${observacao})`;
+
   const { data: despesa, error: despesaErr } = await supabase
     .from("fin_despesas")
     .insert({
@@ -741,7 +766,7 @@ async function finalizarLancamento(
       data_emissao: dados.data || hoje,
       data_vencimento: dados.data || hoje,
       data_pagamento: dados.data || hoje,
-      descricao: dados.descricao || "Lançado via Telegram",
+      descricao: descricaoDespesa,
       codigo_barras: dados.codigo_barras || null,
       anexo_url: pendencia.anexo_url || null,
       status: "pago",
@@ -794,6 +819,7 @@ async function finalizarLancamento(
       `📅 *Data:* ${dados.data || hoje}\n` +
       `🧾 *Tipo:* ${String(dados.tipo ?? "").toUpperCase()}\n` +
       `📁 *Plano de contas:* ${planoNome}\n` +
+      (observacao ? `📝 *Obs:* ${observacao}\n` : "") +
       `📎 *Comprovante:* salvo ✓\n\n` +
       `_Lançado no Softflow_ 🚀`,
   );
