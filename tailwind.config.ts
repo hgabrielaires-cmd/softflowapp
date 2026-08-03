@@ -61,6 +61,10 @@ export default {
           DEFAULT: "hsl(var(--accent-emerald))",
           light: "hsl(var(--accent-emerald-light))",
         },
+        paid: {
+          DEFAULT: "hsl(var(--paid))",
+          foreground: "hsl(var(--paid-foreground))",
+        },
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",

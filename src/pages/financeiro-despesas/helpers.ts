@@ -129,6 +129,18 @@ export function statusBadgeVariant(d: DespesaRegistro): "default" | "secondary" 
   return d.data_vencimento < hojeISO() ? "destructive" : "secondary";
 }
 
+/** true quando a parcela está em aberto e já passou do vencimento. */
+export function despesaVencida(d: DespesaRegistro): boolean {
+  return d.status === "aberto" && d.data_vencimento < hojeISO();
+}
+
+/** Classe do badge de status: verde para pago, vermelho para vencido. */
+export function statusBadgeClass(d: DespesaRegistro): string {
+  if (d.status === "pago") return "bg-paid text-paid-foreground hover:bg-paid/90 border-transparent";
+  if (despesaVencida(d)) return "bg-destructive text-destructive-foreground hover:bg-destructive/90 border-transparent";
+  return "";
+}
+
 /** Aplica os filtros da lista de despesas (client-side). */
 export function aplicarFiltrosDespesas(
   despesas: DespesaRegistro[],

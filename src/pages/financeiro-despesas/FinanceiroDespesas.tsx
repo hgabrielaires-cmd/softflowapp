@@ -21,7 +21,7 @@ import {
   usePlanoContasQuery,
 } from "@/pages/financeiro-parametros/useFinanceiroParametrosQueries";
 import { FILTRO_TODOS, ITEMS_PER_PAGE, STATUS_DESPESA, emptyDespesaFiltros } from "./constants";
-import { aplicarFiltrosDespesas, formatBRL, formatDataBR, periodoMesAtual, statusBadgeVariant } from "./helpers";
+import { aplicarFiltrosDespesas, despesaVencida, formatBRL, formatDataBR, periodoMesAtual, statusBadgeClass, statusBadgeVariant } from "./helpers";
 import { useAuth } from "@/context/AuthContext";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
@@ -293,8 +293,10 @@ export default function FinanceiroDespesas() {
                     <TableCell>{d.parcela_numero}/{d.parcela_total}</TableCell>
                     <TableCell className="text-right">{formatBRL(Number(d.valor))}</TableCell>
                     <TableCell>
-                      <Badge variant={statusBadgeVariant(d)}>
-                        {STATUS_DESPESA.find((s) => s.value === d.status)?.label || d.status}
+                      <Badge variant={statusBadgeVariant(d)} className={statusBadgeClass(d)}>
+                        {despesaVencida(d)
+                          ? "Vencido"
+                          : STATUS_DESPESA.find((s) => s.value === d.status)?.label || d.status}
                       </Badge>
                     </TableCell>
                     {temAcoes && (
