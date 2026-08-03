@@ -6056,6 +6056,10 @@ export type Database = {
         Returns: string
       }
       get_cron_secret: { Args: never; Returns: string }
+      has_permission: {
+        Args: { _permissao: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

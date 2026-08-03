@@ -55,6 +55,8 @@ const Chat = React.lazy(() => import("./pages/Chat"));
 const ChatParametros = React.lazy(() => import("./pages/chat-parametros"));
 const FinanceiroParametros = React.lazy(() => import("./pages/financeiro-parametros"));
 const FinanceiroDespesas = React.lazy(() => import("./pages/financeiro-despesas"));
+const DespesasAuditoria = React.lazy(() => import("./pages/financeiro-despesas/DespesasAuditoria"));
+
 
 function PageLoader() {
   return (
@@ -248,6 +250,15 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/despesas/auditoria"
+              element={
+                <ProtectedRoute>
+                  <DespesasAuditoria />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/dre"
               element={

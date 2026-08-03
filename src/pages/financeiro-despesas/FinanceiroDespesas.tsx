@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/TablePagination";
-import { Pencil, Plus, Search, TrendingDown, Trash2, X } from "lucide-react";
+import { History, Pencil, Plus, Search, TrendingDown, Trash2, X } from "lucide-react";
 import { DespesaWizardDialog } from "./components/DespesaWizardDialog";
 import { DespesaEditDialog } from "./components/DespesaEditDialog";
 import { DespesaDeleteDialog } from "./components/DespesaDeleteDialog";
@@ -24,7 +24,7 @@ import { aplicarFiltrosDespesas, formatBRL, formatDataBR, statusBadgeVariant } f
 import { useAuth } from "@/context/AuthContext";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
 import { useMenuPermissions } from "@/hooks/useMenuPermissions";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import type { DespesaRegistro } from "./types";
 
 export default function FinanceiroDespesas() {
@@ -80,7 +80,7 @@ export default function FinanceiroDespesas() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
               <TrendingDown className="h-6 w-6" /> Despesas
@@ -89,13 +89,22 @@ export default function FinanceiroDespesas() {
               Lançamento e controle de despesas
             </p>
           </div>
-          {canIncluir && (
-            <Button onClick={() => setWizardOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" /> Novo
-            </Button>
-          )}
-
+          <div className="flex items-center gap-2">
+            {(permissions === null || permissions.has("menu.despesas_auditoria")) && (
+              <Button variant="outline" asChild>
+                <Link to="/despesas/auditoria">
+                  <History className="h-4 w-4 mr-1" /> Histórico
+                </Link>
+              </Button>
+            )}
+            {canIncluir && (
+              <Button onClick={() => setWizardOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Novo
+              </Button>
+            )}
+          </div>
         </div>
+
 
         {/* Filtros */}
         <div className="rounded-lg border border-border bg-card p-4 space-y-4">
