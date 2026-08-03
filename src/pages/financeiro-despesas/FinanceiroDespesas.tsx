@@ -11,8 +11,8 @@ import { Pencil, Plus, Search, TrendingDown, Trash2, X } from "lucide-react";
 import { DespesaWizardDialog } from "./components/DespesaWizardDialog";
 import { DespesaEditDialog } from "./components/DespesaEditDialog";
 import { DespesaDeleteDialog } from "./components/DespesaDeleteDialog";
+import { useDespesasQuery, useFornecedoresOptionsQuery } from "./useDespesasQueries";
 
-import { useFornecedoresOptionsQuery } from "./useDespesasQueries";
 import {
   useCentrosCustoQuery,
   useContasFinanceirasQuery,
