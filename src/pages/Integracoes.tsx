@@ -4,6 +4,9 @@ import logoWhatsapp from "@/assets/logo-whatsapp.svg";
 import logoBrowserless from "@/assets/logo-browserless.svg";
 import logoAsaas from "@/assets/logo-asaas.svg";
 import logoCloudflare from "@/assets/logo-cloudflare.svg";
+import logoTelegram from "@/assets/logo-telegram.svg";
+import logoAnthropic from "@/assets/logo-anthropic.svg";
+import { TelegramConfigDialog, AnthropicConfigDialog } from "@/components/integracoes/TelegramAnthropicDialogs";
 import { AppLayout } from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -25,6 +28,7 @@ interface IntegrationConfig {
   ativo: boolean;
   token: string | null;
   server_url: string | null;
+  config?: any;
 }
 
 interface IntegrationDef {
@@ -122,6 +126,38 @@ const integrationDefs: IntegrationDef[] = [
       "Documentos e cardápios de clientes",
       "Links diretos para download pelo usuário",
       "10GB gratuitos por mês",
+    ],
+  },
+  {
+    key: "telegram",
+    icon: <img src={logoTelegram} alt="Telegram" className="h-20 w-20 object-contain" />,
+    hasLogo: true,
+    title: "Telegram",
+    description: "Recebimento de comprovantes via bot",
+    accentColor: "bg-[#0088cc]",
+    tokenLabel: "",
+    tokenPlaceholder: "",
+    details: [
+      "Recebimento de comprovantes via foto/PDF",
+      "Lançamento automático de despesas",
+      "Reconhecimento inteligente por IA",
+      "Memória de fornecedores e plano de contas",
+    ],
+  },
+  {
+    key: "anthropic",
+    icon: <img src={logoAnthropic} alt="Claude" className="h-20 w-20 object-contain rounded-2xl" />,
+    hasLogo: true,
+    title: "Claude (Anthropic)",
+    description: "Leitura inteligente de documentos",
+    accentColor: "bg-[#D97757]",
+    tokenLabel: "",
+    tokenPlaceholder: "",
+    details: [
+      "Leitura inteligente de comprovantes e NFs",
+      "Extração: valor, CNPJ, data, tipo pagamento",
+      "Reconhecimento de notas fiscais complexas",
+      "Modelo atual: claude-sonnet-4-6",
     ],
   },
 ];
@@ -1226,6 +1262,8 @@ export default function Integracoes() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [asaasDialogOpen, setAsaasDialogOpen] = useState(false);
+  const [telegramDialogOpen, setTelegramDialogOpen] = useState(false);
+  const [anthropicDialogOpen, setAnthropicDialogOpen] = useState(false);
 
   const [r2DialogOpen, setR2DialogOpen] = useState(false);
   const [r2Config, setR2Config] = useState<any>(null);
@@ -1334,6 +1372,10 @@ export default function Integracoes() {
                     setAsaasDialogOpen(true);
                   } else if (def.key === "r2") {
                     setR2DialogOpen(true);
+                  } else if (def.key === "telegram") {
+                    setTelegramDialogOpen(true);
+                  } else if (def.key === "anthropic") {
+                    setAnthropicDialogOpen(true);
                   } else {
                     setSelectedDef(def);
                     setDialogOpen(true);
@@ -1365,6 +1407,23 @@ export default function Integracoes() {
         onOpenChange={(v) => { setR2DialogOpen(v); if (!v) loadConfigs(); }}
         initialConfig={r2Config}
       />
+
+      {/* Telegram Drawer */}
+      <TelegramConfigDialog
+        open={telegramDialogOpen}
+        onOpenChange={setTelegramDialogOpen}
+        initialConfig={configs.find((c) => c.nome === "telegram") ?? null}
+        onSaved={loadConfigs}
+      />
+
+      {/* Claude (Anthropic) Drawer */}
+      <AnthropicConfigDialog
+        open={anthropicDialogOpen}
+        onOpenChange={setAnthropicDialogOpen}
+        initialConfig={configs.find((c) => c.nome === "anthropic") ?? null}
+        onSaved={loadConfigs}
+      />
+
 
       {/* Generic Dialog */}
       {selectedDef && (
