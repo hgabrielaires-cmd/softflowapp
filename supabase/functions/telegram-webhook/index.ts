@@ -430,12 +430,31 @@ Deno.serve(async (req) => {
       "/dre": "dre",
       "/maiores": "maiores",
       "/pendentes": "pendentes",
+      "📊 DRE": "dre",
+      "📁 Categorias": "categorias",
+      "🏆 Maiores Gastos": "maiores",
+      "📋 Pendentes": "pendentes",
+      "💰 Status": "status",
     };
+
+    if (text && (text === "❓ Ajuda" || text === "/ajuda" || text === "/help")) {
+      await sendMessage(
+        token,
+        chatId,
+        `❓ *Ajuda*\n\n` +
+          `📸 Envie foto ou PDF de comprovante para lançar despesa.\n\n` +
+          `📊 *Relatórios:*\n` +
+          `/status • /dre • /categorias • /maiores • /pendentes\n\n` +
+          `Use os botões abaixo para acesso rápido.`,
+      );
+      return ok();
+    }
 
     if (text && comandoRelatorio[text]) {
       await perguntarPeriodo(token, chatId, comandoRelatorio[text]);
       return ok();
     }
+
 
 
     // ── Foto ou documento ──
