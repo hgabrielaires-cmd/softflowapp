@@ -211,3 +211,17 @@ export function formatValorAuditoria(campo: string, valor: unknown, l: Auditoria
       return typeof valor === "object" ? JSON.stringify(valor) : String(valor);
   }
 }
+
+// ─── Período padrão: mês atual ────────────────────────────────────────────
+
+export function periodoMesAtual(): { data_inicio: string; data_fim: string } {
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const mes = hoje.getMonth();
+  const iso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return {
+    data_inicio: iso(new Date(ano, mes, 1)),
+    data_fim: iso(new Date(ano, mes + 1, 0)),
+  };
+}
