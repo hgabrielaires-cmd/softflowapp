@@ -267,7 +267,7 @@ export default function FinanceiroDespesas() {
                 <TableHead>Parcela</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
                 <TableHead>Status</TableHead>
-                {temAcoes && <TableHead className="w-[90px] text-right">Ações</TableHead>}
+                {temAcoes && <TableHead className="w-[130px] text-right">Ações</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -310,6 +310,17 @@ export default function FinanceiroDespesas() {
                               <Pencil className="h-4 w-4" />
                             </Button>
                           )}
+                          {canEditar && d.status === "aberto" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Quitar despesa"
+                              title="Quitar"
+                              onClick={() => setQuitando(d)}
+                            >
+                              <CheckCircle2 className="h-4 w-4 text-success" />
+                            </Button>
+                          )}
                           {canExcluir && (
                             <Button
                               variant="ghost"
@@ -348,6 +359,11 @@ export default function FinanceiroDespesas() {
         despesa={excluindo}
         open={!!excluindo}
         onOpenChange={(o) => !o && setExcluindo(null)}
+      />
+      <DespesaQuitarDialog
+        despesa={quitando}
+        open={!!quitando}
+        onOpenChange={(o) => !o && setQuitando(null)}
       />
 
     </AppLayout>
