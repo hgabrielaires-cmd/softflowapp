@@ -68,10 +68,13 @@ interface DialogProps {
   onSaved: () => void;
 }
 
+type TelegramId = { id: string; nome: string };
+
 export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSaved }: DialogProps) {
   const [ativo, setAtivo] = useState(false);
-  const [ids, setIds] = useState<string[]>([]);
+  const [ids, setIds] = useState<TelegramId[]>([]);
   const [novoId, setNovoId] = useState("");
+  const [novoNome, setNovoNome] = useState("");
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [registering, setRegistering] = useState(false);
@@ -79,25 +82,35 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
 
   useEffect(() => {
     setAtivo(initialConfig?.ativo ?? false);
-    const raw = initialConfig?.config?.authorized_ids;
-    const arr = Array.isArray(raw)
-      ? raw.map((v: unknown) => String(v))
-      : String(raw ?? "").split(",");
-    setIds(arr.map((s) => s.trim()).filter(Boolean));
+    const lista = initialConfig?.config?.authorized_list;
+    if (Array.isArray(lista) && lista.length > 0) {
+      setIds(
+        lista
+          .map((item: any) => ({ id: String(item?.id ?? "").trim(), nome: String(item?.nome ?? "").trim() }))
+          .filter((item) => item.id),
+      );
+    } else {
+      const raw = initialConfig?.config?.authorized_ids;
+      const arr = Array.isArray(raw) ? raw.map((v: unknown) => String(v)) : String(raw ?? "").split(",");
+      setIds(arr.map((s) => s.trim()).filter(Boolean).map((id) => ({ id, nome: "" })));
+    }
     setNovoId("");
+    setNovoNome("");
     setResult(null);
   }, [initialConfig, open]);
 
   function addId() {
     const v = novoId.trim();
     if (!v) return;
-    if (ids.includes(v)) {
+    if (ids.some((x) => x.id === v)) {
       toast.error("Este ID já está na lista");
       return;
     }
-    setIds([...ids, v]);
+    setIds([...ids, { id: v, nome: novoNome.trim() }]);
     setNovoId("");
+    setNovoNome("");
   }
+
 
   async function handleTest() {
     setTesting(true);
