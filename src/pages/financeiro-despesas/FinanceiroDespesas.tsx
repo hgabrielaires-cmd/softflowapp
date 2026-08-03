@@ -22,6 +22,7 @@ import {
 import { FILTRO_TODOS, ITEMS_PER_PAGE, STATUS_DESPESA, emptyDespesaFiltros } from "./constants";
 import { aplicarFiltrosDespesas, formatBRL, formatDataBR, periodoMesAtual, statusBadgeVariant } from "./helpers";
 import { useAuth } from "@/context/AuthContext";
+import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
 import { useMenuPermissions } from "@/hooks/useMenuPermissions";
 import { Link, Navigate } from "react-router-dom";
@@ -47,6 +48,7 @@ export default function FinanceiroDespesas() {
   const { data: formasPagamento = [] } = useFormasPagamentoQuery();
   const { data: centrosCusto = [] } = useCentrosCustoQuery();
   const { data: contas = [] } = useContasFinanceirasQuery();
+  const { filiaisDoUsuario } = useUserFiliais();
 
 
   const setFiltros = (patch: Partial<typeof emptyDespesaFiltros>) => {
@@ -160,7 +162,19 @@ export default function FinanceiroDespesas() {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Filial</Label>
+              <Select value={filtros.filial_id} onValueChange={(v) => setFiltros({ filial_id: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={FILTRO_TODOS}>Todas</SelectItem>
+                  {filiaisDoUsuario.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Fornecedor</Label>
               <Select value={filtros.fornecedor_id} onValueChange={(v) => setFiltros({ fornecedor_id: v })}>
