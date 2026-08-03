@@ -254,3 +254,14 @@ export interface JornadaAtividade {
   created_at: string;
   updated_at: string;
 }
+
+/**
+ * Colunas de profiles legíveis por qualquer usuário autenticado.
+ * Percentuais de comissão e limites de desconto são restritos no banco
+ * e devem ser lidos pela view `profiles_comissoes` (próprio usuário, admin ou gestor).
+ */
+export const PROFILE_PUBLIC_COLUMNS =
+  "id, user_id, full_name, email, filial, avatar_url, active, created_at, updated_at, filial_id, filial_favorita_id, gestor_desconto, permitir_cnpj_duplicado, recebe_comissao, telefone, deve_trocar_senha, permite_enviar_espelho_whatsapp, acesso_global, is_tecnico, tipo_tecnico, is_vendedor, mesa_favorita_id, permite_resetar_projeto, permite_ver_valores_projeto, permite_cancelar_projeto, funil_favorito_id, is_atendente_chat, chat_status, chat_last_heartbeat, setor_id";
+
+export const PROFILE_COMISSAO_COLUMNS =
+  "user_id, comissao_percentual, comissao_implantacao_percentual, comissao_mensalidade_percentual, comissao_servico_percentual, desconto_limite_implantacao, desconto_limite_mensalidade";
