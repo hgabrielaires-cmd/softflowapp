@@ -38,6 +38,8 @@ export function StepClassificacao({
 }: Props) {
   const total = totalRateio(state.rateios);
   const centroPadrao = state.rateios[0]?.centro_custo_id || "";
+  const [planoOpen, setPlanoOpen] = useState(false);
+  const planoSelecionado = planoContas.find((p) => p.id === state.plano_conta_id);
 
   const toggleRateio = (checked: boolean) => {
     if (checked) {
