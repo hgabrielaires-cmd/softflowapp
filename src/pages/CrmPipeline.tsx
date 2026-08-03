@@ -178,6 +178,7 @@ export default function CrmPipeline() {
   };
 
   const handleNewFispal = () => {
+    if (!ATALHO_FISPAL_ATIVO) return;
     setEditOportunidade(null);
     const etapaAgendar = etapas.find(e => e.nome.toLowerCase().includes("agendar reuni"));
     setNewEtapaId(etapaAgendar?.id || etapas[0]?.id || "");
