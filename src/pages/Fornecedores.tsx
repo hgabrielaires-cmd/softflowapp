@@ -117,6 +117,8 @@ export default function Fornecedores() {
   const [cepError, setCepError] = useState("");
   const [cnpjError, setCnpjError] = useState("");
   const { data: planoContas = [] } = usePlanoContasQuery();
+  const [planoOpen, setPlanoOpen] = useState(false);
+  const planoSelecionado = planoContas.find((p) => p.id === form.plano_conta_id);
 
   async function loadData() {
     setLoading(true);
