@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard, Users, ShoppingCart, DollarSign, Calendar, Building2,
   ChevronLeft, ChevronRight, ChevronDown, LogOut, Bell, User, Menu,
-  UserCheck, BookOpen, Headphones, Ticket, FileText, TrendingUp, TrendingDown,
+  UserCheck, BookOpen, Headphones, Ticket, FileText, TrendingUp, TrendingDown, Landmark,
   BarChart3, Plug, ListOrdered, Inbox, Percent, Check, X,
   Info, AlertTriangle, Zap, Globe, Wrench, Trash2, Eye, Heart, MessageSquare, Send,
 } from "lucide-react";
