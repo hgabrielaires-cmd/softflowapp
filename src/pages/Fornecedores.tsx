@@ -159,6 +159,18 @@ export default function Fornecedores() {
     }
   }
 
+  function formatarTelefoneBrasilApi(raw: string | null | undefined): string {
+    if (!raw) return "";
+    const digits = String(raw).replace(/\D/g, "");
+    if (digits.length === 10) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+    if (digits.length === 11) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    }
+    return raw;
+  }
+
   async function handleCnpjBlur() {
     const cnpj = form.cnpj_cpf.replace(/\D/g, "");
     if (cnpj.length !== 14) return;
@@ -170,9 +182,7 @@ export default function Fornecedores() {
         setCnpjError("CNPJ não encontrado");
       } else {
         const data = await res.json();
-        const telefoneApi = data.ddd_telefone_1
-          ? `(${data.ddd_telefone_1}) ${data.telefone_1 || ""}`.trim()
-          : "";
+        const telefoneApi = formatarTelefoneBrasilApi(data.ddd_telefone_1);
         const logradouroApi = data.logradouro
           ? `${data.tipo_logradouro || ""} ${data.logradouro}`.trim()
           : "";
