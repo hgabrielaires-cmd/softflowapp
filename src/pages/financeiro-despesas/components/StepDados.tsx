@@ -84,7 +84,10 @@ export function StepDados({ state, setState, fornecedores, onNovoFornecedor }: P
                         key={f.id}
                         value={`${f.nome_fantasia} ${f.cnpj_cpf}`}
                         onSelect={() => {
-                          setState({ fornecedor_id: f.id });
+                          setState({
+                            fornecedor_id: f.id,
+                            ...(f.plano_conta_id ? { plano_conta_id: f.plano_conta_id } : {}),
+                          });
                           setOpenCombo(false);
                         }}
                       >

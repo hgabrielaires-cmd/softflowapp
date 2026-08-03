@@ -32,6 +32,7 @@ import {
   MoreHorizontal, CheckCircle, XCircle, Trash2, Truck,
 } from "lucide-react";
 import { format } from "date-fns";
+import { usePlanoContasQuery } from "@/pages/financeiro-parametros/useFinanceiroParametrosQueries";
 import { ptBR } from "date-fns/locale";
 import { TablePagination } from "@/components/TablePagination";
 
@@ -57,6 +58,7 @@ const emptyForm = {
   complemento: "",
   bairro: "",
   observacoes: "",
+  plano_conta_id: "",
   ativo: true,
 };
 
@@ -77,6 +79,7 @@ interface Fornecedor {
   uf: string | null;
   cep: string | null;
   observacoes: string | null;
+  plano_conta_id: string | null;
   ativo: boolean;
   created_at: string;
   updated_at: string;
@@ -103,6 +106,7 @@ export default function Fornecedores() {
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [cepError, setCepError] = useState("");
   const [cnpjError, setCnpjError] = useState("");
+  const { data: planoContas = [] } = usePlanoContasQuery();
 
   async function loadData() {
     setLoading(true);
@@ -207,6 +211,7 @@ export default function Fornecedores() {
       complemento: f.complemento || "",
       bairro: f.bairro || "",
       observacoes: f.observacoes || "",
+      plano_conta_id: f.plano_conta_id || "",
       ativo: f.ativo,
     });
     setCepError("");
@@ -236,6 +241,7 @@ export default function Fornecedores() {
       uf: form.uf || null,
       cep: form.cep.trim() || null,
       observacoes: form.observacoes.trim() || null,
+      plano_conta_id: form.plano_conta_id || null,
       ativo: form.ativo,
     };
 
@@ -583,6 +589,23 @@ export default function Fornecedores() {
                   </Select>
                 </div>
               </div>
+            </div>
+
+            {/* Plano de contas */}
+            <div>
+              <Label>Plano de contas padrão</Label>
+              <Select
+                value={form.plano_conta_id || "__none__"}
+                onValueChange={(v) => setForm((f) => ({ ...f, plano_conta_id: v === "__none__" ? "" : v }))}
+              >
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Nenhum</SelectItem>
+                  {planoContas.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Observações */}
