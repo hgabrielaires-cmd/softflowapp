@@ -259,6 +259,14 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/financeiro/contas"
+              element={
+                <ProtectedRoute>
+                  <ContasFinanceiras />
+                </ProtectedRoute>
+              }
+            />
 
             <Route
               path="/dre"
