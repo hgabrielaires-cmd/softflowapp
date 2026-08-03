@@ -141,39 +141,54 @@ type RelatorioTipo = "dre" | "categorias" | "maiores" | "status" | "pendentes";
 function getPeriodo(tipo: string): Periodo {
   const hoje = new Date();
   const fmt = (dt: Date) => dt.toISOString().slice(0, 10);
+  const br = (iso: string) => iso.split("-").reverse().join("/");
 
   switch (tipo) {
     case "ontem": {
       const ontem = new Date(hoje);
       ontem.setDate(hoje.getDate() - 1);
-      return { inicio: fmt(ontem), fim: fmt(ontem), label: "Ontem" };
+      return { inicio: fmt(ontem), fim: fmt(ontem), label: "Ontem", tipo };
     }
     case "semana": {
       const ini = new Date(hoje);
       ini.setDate(hoje.getDate() - hoje.getDay());
-      return { inicio: fmt(ini), fim: fmt(hoje), label: "Esta Semana" };
+      const fim = new Date(ini);
+      fim.setDate(ini.getDate() + 6);
+      return {
+        inicio: fmt(ini),
+        fim: fmt(fim),
+        label: `Esta Semana (${br(fmt(ini))} a ${br(fmt(fim))})`,
+        tipo,
+      };
     }
     case "semana_ant": {
       const ini = new Date(hoje);
       ini.setDate(hoje.getDate() - hoje.getDay() - 7);
       const fim = new Date(ini);
       fim.setDate(ini.getDate() + 6);
-      return { inicio: fmt(ini), fim: fmt(fim), label: "Semana Passada" };
+      return { inicio: fmt(ini), fim: fmt(fim), label: "Semana Passada", tipo };
     }
     case "mes": {
       const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-      return { inicio: fmt(ini), fim: fmt(hoje), label: "Este Mês" };
+      const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+      return {
+        inicio: fmt(ini),
+        fim: fmt(fim),
+        label: `Este Mês (${br(fmt(ini))} a ${br(fmt(fim))})`,
+        tipo,
+      };
     }
     case "mes_ant": {
       const ini = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
       const fim = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
-      return { inicio: fmt(ini), fim: fmt(fim), label: "Mês Passado" };
+      return { inicio: fmt(ini), fim: fmt(fim), label: "Mês Passado", tipo };
     }
     case "hoje":
     default:
-      return { inicio: fmt(hoje), fim: fmt(hoje), label: "Hoje" };
+      return { inicio: fmt(hoje), fim: fmt(hoje), label: "Hoje", tipo: "hoje" };
   }
 }
+
 
 function tecladoPeriodo(relatorio: string) {
   return {
