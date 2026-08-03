@@ -2873,6 +2873,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           data_emissao: string
+          data_pagamento: string | null
           data_vencimento: string
           descricao: string | null
           filial_id: string | null
@@ -2880,15 +2881,19 @@ export type Database = {
           fornecedor_id: string
           grupo_id: string
           id: string
+          juros_percentual: number
+          juros_valor: number
           parcela_numero: number
           parcela_total: number
           plano_conta_id: string
+          plano_conta_juros_id: string | null
           recorrencia_periodo: string | null
           recorrencia_vezes: number | null
           recorrente: boolean
           status: string
           updated_at: string
           valor: number
+          valor_pago: number | null
         }
         Insert: {
           anexo_url?: string | null
@@ -2897,6 +2902,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data_emissao?: string
+          data_pagamento?: string | null
           data_vencimento: string
           descricao?: string | null
           filial_id?: string | null
@@ -2904,15 +2910,19 @@ export type Database = {
           fornecedor_id: string
           grupo_id?: string
           id?: string
+          juros_percentual?: number
+          juros_valor?: number
           parcela_numero?: number
           parcela_total?: number
           plano_conta_id: string
+          plano_conta_juros_id?: string | null
           recorrencia_periodo?: string | null
           recorrencia_vezes?: number | null
           recorrente?: boolean
           status?: string
           updated_at?: string
           valor?: number
+          valor_pago?: number | null
         }
         Update: {
           anexo_url?: string | null
@@ -2921,6 +2931,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data_emissao?: string
+          data_pagamento?: string | null
           data_vencimento?: string
           descricao?: string | null
           filial_id?: string | null
@@ -2928,15 +2939,19 @@ export type Database = {
           fornecedor_id?: string
           grupo_id?: string
           id?: string
+          juros_percentual?: number
+          juros_valor?: number
           parcela_numero?: number
           parcela_total?: number
           plano_conta_id?: string
+          plano_conta_juros_id?: string | null
           recorrencia_periodo?: string | null
           recorrencia_vezes?: number | null
           recorrente?: boolean
           status?: string
           updated_at?: string
           valor?: number
+          valor_pago?: number | null
         }
         Relationships: [
           {
@@ -2970,6 +2985,13 @@ export type Database = {
           {
             foreignKeyName: "fin_despesas_plano_conta_id_fkey"
             columns: ["plano_conta_id"]
+            isOneToOne: false
+            referencedRelation: "fin_plano_contas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_despesas_plano_conta_juros_id_fkey"
+            columns: ["plano_conta_juros_id"]
             isOneToOne: false
             referencedRelation: "fin_plano_contas"
             referencedColumns: ["id"]
