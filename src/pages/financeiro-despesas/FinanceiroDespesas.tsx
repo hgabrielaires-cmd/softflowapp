@@ -67,9 +67,11 @@ export default function FinanceiroDespesas() {
       }),
     [despesas, filtros],
   );
-  const totalPages = Math.ceil(filtradas.length / ITEMS_PER_PAGE) || 1;
-  const paginadas = filtradas.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filtradas.length / porPagina) || 1;
+  const paginaAtual = Math.min(page, totalPages);
+  const paginadas = filtradas.slice((paginaAtual - 1) * porPagina, paginaAtual * porPagina);
   const totalValor = filtradas.reduce((acc, d) => acc + Number(d.valor), 0);
+  const totalValorPagina = paginadas.reduce((acc, d) => acc + Number(d.valor), 0);
 
   const temFiltro = JSON.stringify(filtros) !== JSON.stringify(emptyDespesaFiltros);
 
