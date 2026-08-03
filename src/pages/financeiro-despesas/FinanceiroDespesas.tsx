@@ -323,7 +323,7 @@ export default function FinanceiroDespesas() {
                               <CheckCircle2 className="h-4 w-4 text-success" />
                             </Button>
                           )}
-                          {canExcluir && (
+                          {canExcluir && d.status !== "pago" && (
                             <Button
                               variant="ghost"
                               size="icon"
