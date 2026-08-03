@@ -28,6 +28,7 @@ interface IntegrationConfig {
   ativo: boolean;
   token: string | null;
   server_url: string | null;
+  config?: any;
 }
 
 interface IntegrationDef {
