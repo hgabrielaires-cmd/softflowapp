@@ -1,6 +1,6 @@
 // ─── Constantes do módulo Despesas ────────────────────────────────────────
 
-import type { DespesaFiltros, DespesaWizardState, RecorrenciaPeriodo } from "./types";
+import type { AuditoriaFiltros, DespesaFiltros, DespesaWizardState, RecorrenciaPeriodo } from "./types";
 
 export const WIZARD_STEPS = [
   { numero: 1, label: "Dados" },
