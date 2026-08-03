@@ -127,10 +127,22 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
 
   const onFornecedorCriado = (novo: FornecedorOption) => setState({ fornecedor_id: novo.id });
 
+  // Fechar só via X ou Cancelar, sempre com confirmação
+  const handleOpenChange = (next: boolean) => {
+    if (next) return onOpenChange(true);
+    setConfirmarCancelamento(true);
+  };
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] sm:max-w-3xl max-h-[92dvh] overflow-y-auto p-4 sm:p-6">
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent
+          className="w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] sm:max-w-3xl max-h-[92dvh] overflow-y-auto p-4 sm:p-6"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+
           <DialogHeader className="text-left">
             <DialogTitle className="text-base sm:text-lg">Lançamento de despesa</DialogTitle>
           </DialogHeader>
