@@ -251,6 +251,15 @@ const App = () => {
               }
             />
             <Route
+              path="/despesas/auditoria"
+              element={
+                <ProtectedRoute>
+                  <DespesasAuditoria />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
               path="/dre"
               element={
                 <ProtectedRoute>
