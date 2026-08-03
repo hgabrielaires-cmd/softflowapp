@@ -9,6 +9,7 @@ import {
   relatorioStatus,
   type Periodo,
 } from "./relatorios.ts";
+import { relatorioVendas } from "./vendas.ts";
 
 const TELEGRAM_API = "https://api.telegram.org/bot";
 const PLANOS_POR_PAGINA = 8;
@@ -29,7 +30,8 @@ const MENU_TECLADO = {
   keyboard: [
     [{ text: "📊 DRE" }, { text: "📁 Categorias" }],
     [{ text: "🏆 Maiores Gastos" }, { text: "📋 Pendentes" }],
-    [{ text: "💰 Status" }, { text: "❓ Ajuda" }],
+    [{ text: "💰 Status" }, { text: "🛒 Vendas" }],
+    [{ text: "❓ Ajuda" }],
   ],
   resize_keyboard: true,
   is_persistent: true,
@@ -268,6 +270,89 @@ async function executarRelatorio(
   else await sendMessage(token, chatId, texto, teclado);
 }
 
+// ── Relatório de Vendas: filial → período → relatório ────────────────────
+const TECLADO_PERIODO_VENDAS = {
+  inline_keyboard: [
+    [
+      { text: "📅 Hoje", callback_data: "vp_hoje" },
+      { text: "📅 Ontem", callback_data: "vp_ontem" },
+    ],
+    [
+      { text: "📆 Esta Semana", callback_data: "vp_semana" },
+      { text: "📆 Semana Passada", callback_data: "vp_semana_ant" },
+    ],
+    [
+      { text: "🗓️ Este Mês", callback_data: "vp_mes" },
+      { text: "🗓️ Mês Passado", callback_data: "vp_mes_ant" },
+    ],
+    [{ text: "✏️ Personalizado", callback_data: "vp_custom" }],
+  ],
+};
+
+async function perguntarFilialVendas(
+  supabase: any,
+  token: string,
+  chatId: number,
+  userId: number,
+  messageId?: number | null,
+) {
+  const { data: filiais } = await supabase
+    .from("filiais")
+    .select("id, nome")
+    .eq("ativa", true)
+    .order("nome");
+
+  const teclado = {
+    inline_keyboard: [
+      [{ text: "🏢 Todas as Filiais", callback_data: "vf_todas" }],
+      ...((filiais ?? []) as Array<{ id: string; nome: string }>).map((f) => [
+        { text: `🏢 ${f.nome}`.slice(0, 60), callback_data: `vf_${f.id}` },
+      ]),
+    ],
+  };
+
+  await supabase
+    .from("telegram_pendencias")
+    .update({ status: "cancelado" })
+    .eq("chat_id", chatId)
+    .eq("status", "aguardando_resposta")
+    .in("etapa", ["venda_filial", "venda_periodo", "venda_periodo_custom"]);
+
+  await supabase.from("telegram_pendencias").insert({
+    chat_id: chatId,
+    user_id: userId,
+    etapa: "venda_filial",
+    status: "aguardando_resposta",
+  });
+
+  const texto = "🛒 *Relatório de Vendas*\n\nSelecione a filial:";
+  if (messageId) await editMessage(token, chatId, messageId, texto, teclado);
+  else await sendMessage(token, chatId, texto, teclado);
+}
+
+async function executarRelatorioVendas(
+  supabase: any,
+  token: string,
+  chatId: number,
+  filialId: string | null,
+  periodo: Periodo,
+  messageId?: number | null,
+) {
+  const texto = await relatorioVendas(supabase, filialId, periodo);
+  const teclado = {
+    inline_keyboard: [
+      [
+        { text: "🔄 Mudar Período", callback_data: "mudar_vendas" },
+        { text: "🏢 Mudar Filial", callback_data: "reiniciar_vendas" },
+      ],
+    ],
+  };
+  if (messageId) await editMessage(token, chatId, messageId, texto, teclado);
+  else await sendMessage(token, chatId, texto, teclado);
+}
+
+
+
 
 function docRecebedor(dados: Record<string, any>): { doc: string | null; tipoPessoa: "pf" | "pj" | null } {
   const cnpj = dados.cnpj_recebedor ? String(dados.cnpj_recebedor).replace(/\D/g, "") : "";
@@ -399,7 +484,7 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const textoMenu = ["📊 DRE", "📁 Categorias", "🏆 Maiores Gastos", "📋 Pendentes", "💰 Status", "❓ Ajuda"];
+    const textoMenu = ["📊 DRE", "📁 Categorias", "🏆 Maiores Gastos", "📋 Pendentes", "💰 Status", "🛒 Vendas", "❓ Ajuda"];
     if (pendencia && text && !text.startsWith("/") && !textoMenu.includes(text)) {
 
       return await processarResposta(supabase, token, chatId, text, pendencia);
@@ -439,6 +524,11 @@ Deno.serve(async (req) => {
       "💰 Status": "status",
     };
 
+    if (text === "🛒 Vendas" || text === "/vendas") {
+      await perguntarFilialVendas(supabase, token, chatId, userId);
+      return ok();
+    }
+
     if (text && (text === "❓ Ajuda" || text === "/ajuda" || text === "/help")) {
       await sendMessage(
         token,
@@ -446,7 +536,7 @@ Deno.serve(async (req) => {
         `❓ *Ajuda*\n\n` +
           `📸 Envie foto ou PDF de comprovante para lançar despesa.\n\n` +
           `📊 *Relatórios:*\n` +
-          `/status • /dre • /categorias • /maiores • /pendentes\n\n` +
+          `/status • /dre • /categorias • /maiores • /pendentes • /vendas\n\n` +
           `Use os botões abaixo para acesso rápido.`,
       );
       return ok();
@@ -783,6 +873,146 @@ async function processarCallback(
     return ok();
   }
 
+  // ── Relatório de Vendas ──
+  const userIdCb = (callbackQuery.from?.id ?? chatId) as number;
+
+  if (data === "reiniciar_vendas") {
+    await answerCallback(token, callbackQuery.id, "🏢");
+    await perguntarFilialVendas(supabase, token, chatId, userIdCb, messageId);
+    return ok();
+  }
+
+  if (data.startsWith("vf_") || data.startsWith("vp_") || data === "mudar_vendas") {
+    const { data: pendVenda } = await supabase
+      .from("telegram_pendencias")
+      .select("*")
+      .eq("chat_id", chatId)
+      .eq("status", "aguardando_resposta")
+      .in("etapa", ["venda_filial", "venda_periodo", "venda_periodo_custom"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (data.startsWith("vf_")) {
+      const parte = data.slice(3);
+      const filialId = parte === "todas" ? null : parte;
+      await answerCallback(token, callbackQuery.id, "📅");
+
+      if (pendVenda?.id) {
+        await supabase
+          .from("telegram_pendencias")
+          .update({ filial_id: filialId, etapa: "venda_periodo" })
+          .eq("id", pendVenda.id);
+      } else {
+        await supabase.from("telegram_pendencias").insert({
+          chat_id: chatId,
+          user_id: userIdCb,
+          etapa: "venda_periodo",
+          filial_id: filialId,
+          status: "aguardando_resposta",
+        });
+      }
+
+      let nomeFilial = "Todas as Filiais";
+      if (filialId) {
+        const { data: f } = await supabase
+          .from("filiais")
+          .select("nome")
+          .eq("id", filialId)
+          .maybeSingle();
+        nomeFilial = f?.nome || "Filial";
+      }
+
+      await editMessage(
+        token,
+        chatId,
+        messageId,
+        `🛒 *Relatório de Vendas*\n🏢 ${nomeFilial}\n\n📅 Selecione o período:`,
+        TECLADO_PERIODO_VENDAS,
+      );
+      return ok();
+    }
+
+    if (data === "mudar_vendas") {
+      await answerCallback(token, callbackQuery.id, "📅");
+      const filialAtual = pendVenda?.filial_id ?? null;
+      if (pendVenda?.id) {
+        await supabase
+          .from("telegram_pendencias")
+          .update({ etapa: "venda_periodo" })
+          .eq("id", pendVenda.id);
+      } else {
+        await supabase.from("telegram_pendencias").insert({
+          chat_id: chatId,
+          user_id: userIdCb,
+          etapa: "venda_periodo",
+          filial_id: filialAtual,
+          status: "aguardando_resposta",
+        });
+      }
+      await editMessage(
+        token,
+        chatId,
+        messageId,
+        "🛒 *Relatório de Vendas*\n\n📅 Selecione o período:",
+        TECLADO_PERIODO_VENDAS,
+      );
+      return ok();
+    }
+
+    // vp_*
+    const tipoPeriodo = data.slice(3);
+    const filialId = pendVenda?.filial_id ?? null;
+
+    if (tipoPeriodo === "custom") {
+      await answerCallback(token, callbackQuery.id, "✏️");
+      if (pendVenda?.id) {
+        await supabase
+          .from("telegram_pendencias")
+          .update({ etapa: "venda_periodo_custom" })
+          .eq("id", pendVenda.id);
+      } else {
+        await supabase.from("telegram_pendencias").insert({
+          chat_id: chatId,
+          user_id: userIdCb,
+          etapa: "venda_periodo_custom",
+          filial_id: filialId,
+          status: "aguardando_resposta",
+        });
+      }
+      await editMessage(
+        token,
+        chatId,
+        messageId,
+        "✏️ *Período personalizado*\n\n" +
+          "Digite no formato:\n" +
+          "`DD/MM/AAAA DD/MM/AAAA`\n\n" +
+          "Exemplo:\n" +
+          "`01/07/2026 31/07/2026`",
+      );
+      return ok();
+    }
+
+    await answerCallback(token, callbackQuery.id, "⏳ Gerando...");
+    await executarRelatorioVendas(
+      supabase,
+      token,
+      chatId,
+      filialId,
+      getPeriodo(tipoPeriodo),
+      messageId,
+    );
+    if (pendVenda?.id) {
+      await supabase
+        .from("telegram_pendencias")
+        .update({ status: "concluido" })
+        .eq("id", pendVenda.id);
+    }
+    return ok();
+  }
+
+
+
   const { data: pendencia } = await supabase
     .from("telegram_pendencias")
     .select("*")
@@ -894,6 +1124,32 @@ async function processarResposta(
   text: string,
   pendencia: any,
 ) {
+  // ── Período personalizado do relatório de vendas ──
+  if (pendencia.etapa === "venda_periodo_custom") {
+    const m = text.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})/);
+    if (!m) {
+      await sendMessage(token, chatId, "⚠️ Formato inválido. Digite:\n`DD/MM/AAAA DD/MM/AAAA`");
+      return ok();
+    }
+    const toISO = (v: string) => {
+      const [dd, mm, aaaa] = v.split("/");
+      return `${aaaa}-${mm}-${dd}`;
+    };
+    await supabase
+      .from("telegram_pendencias")
+      .update({ status: "concluido" })
+      .eq("id", pendencia.id);
+    await executarRelatorioVendas(
+      supabase,
+      token,
+      chatId,
+      pendencia.filial_id ?? null,
+      { inicio: toISO(m[1]), fim: toISO(m[2]), label: `${m[1]} a ${m[2]}` },
+      null,
+    );
+    return ok();
+  }
+
   // ── Período personalizado de relatório ──
   if (pendencia.etapa === "aguardando_periodo_custom") {
     const matchDatas = text.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})/);
