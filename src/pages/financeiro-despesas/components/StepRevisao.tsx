@@ -23,12 +23,13 @@ interface Props {
 
 function Linha({ label, valor }: { label: string; valor: string }) {
   return (
-    <div className="flex justify-between gap-4 py-1 text-sm">
+    <div className="flex flex-col gap-0.5 py-1 text-sm sm:flex-row sm:justify-between sm:gap-4">
       <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium text-right">{valor || "—"}</span>
+      <span className="font-medium break-words sm:text-right">{valor || "—"}</span>
     </div>
   );
 }
+
 
 export function StepRevisao({
   state,

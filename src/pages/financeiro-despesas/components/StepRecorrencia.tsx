@@ -68,11 +68,11 @@ export function StepRecorrencia({ state, setState, onRecorrenciaChange }: Props)
             </div>
           </div>
 
-          <div className="rounded-lg border border-border">
+          <div className="rounded-lg border border-border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-20">Parcela</TableHead>
+                  <TableHead className="w-16 sm:w-20">Parcela</TableHead>
                   <TableHead>Vencimento</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                 </TableRow>
@@ -80,21 +80,22 @@ export function StepRecorrencia({ state, setState, onRecorrenciaChange }: Props)
               <TableBody>
                 {state.parcelas.map((p) => (
                   <TableRow key={p.numero}>
-                    <TableCell>{p.numero}/{state.parcelas.length}</TableCell>
+                    <TableCell className="whitespace-nowrap">{p.numero}/{state.parcelas.length}</TableCell>
                     <TableCell>
                       <Input
                         type="date"
-                        className="w-44"
+                        className="w-36 sm:w-44"
                         value={p.data_vencimento}
                         onChange={(e) => editarParcela(p.numero, e.target.value)}
                       />
                     </TableCell>
-                    <TableCell className="text-right">{formatBRL(p.valor)}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">{formatBRL(p.valor)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
+
         </>
       )}
     </div>
