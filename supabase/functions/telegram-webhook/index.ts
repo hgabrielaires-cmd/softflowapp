@@ -873,6 +873,146 @@ async function processarCallback(
     return ok();
   }
 
+  // ── Relatório de Vendas ──
+  const userIdCb = (callbackQuery.from?.id ?? chatId) as number;
+
+  if (data === "reiniciar_vendas") {
+    await answerCallback(token, callbackQuery.id, "🏢");
+    await perguntarFilialVendas(supabase, token, chatId, userIdCb, messageId);
+    return ok();
+  }
+
+  if (data.startsWith("vf_") || data.startsWith("vp_") || data === "mudar_vendas") {
+    const { data: pendVenda } = await supabase
+      .from("telegram_pendencias")
+      .select("*")
+      .eq("chat_id", chatId)
+      .eq("status", "aguardando_resposta")
+      .in("etapa", ["venda_filial", "venda_periodo", "venda_periodo_custom"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (data.startsWith("vf_")) {
+      const parte = data.slice(3);
+      const filialId = parte === "todas" ? null : parte;
+      await answerCallback(token, callbackQuery.id, "📅");
+
+      if (pendVenda?.id) {
+        await supabase
+          .from("telegram_pendencias")
+          .update({ filial_id: filialId, etapa: "venda_periodo" })
+          .eq("id", pendVenda.id);
+      } else {
+        await supabase.from("telegram_pendencias").insert({
+          chat_id: chatId,
+          user_id: userIdCb,
+          etapa: "venda_periodo",
+          filial_id: filialId,
+          status: "aguardando_resposta",
+        });
+      }
+
+      let nomeFilial = "Todas as Filiais";
+      if (filialId) {
+        const { data: f } = await supabase
+          .from("filiais")
+          .select("nome")
+          .eq("id", filialId)
+          .maybeSingle();
+        nomeFilial = f?.nome || "Filial";
+      }
+
+      await editMessage(
+        token,
+        chatId,
+        messageId,
+        `🛒 *Relatório de Vendas*\n🏢 ${nomeFilial}\n\n📅 Selecione o período:`,
+        TECLADO_PERIODO_VENDAS,
+      );
+      return ok();
+    }
+
+    if (data === "mudar_vendas") {
+      await answerCallback(token, callbackQuery.id, "📅");
+      const filialAtual = pendVenda?.filial_id ?? null;
+      if (pendVenda?.id) {
+        await supabase
+          .from("telegram_pendencias")
+          .update({ etapa: "venda_periodo" })
+          .eq("id", pendVenda.id);
+      } else {
+        await supabase.from("telegram_pendencias").insert({
+          chat_id: chatId,
+          user_id: userIdCb,
+          etapa: "venda_periodo",
+          filial_id: filialAtual,
+          status: "aguardando_resposta",
+        });
+      }
+      await editMessage(
+        token,
+        chatId,
+        messageId,
+        "🛒 *Relatório de Vendas*\n\n📅 Selecione o período:",
+        TECLADO_PERIODO_VENDAS,
+      );
+      return ok();
+    }
+
+    // vp_*
+    const tipoPeriodo = data.slice(3);
+    const filialId = pendVenda?.filial_id ?? null;
+
+    if (tipoPeriodo === "custom") {
+      await answerCallback(token, callbackQuery.id, "✏️");
+      if (pendVenda?.id) {
+        await supabase
+          .from("telegram_pendencias")
+          .update({ etapa: "venda_periodo_custom" })
+          .eq("id", pendVenda.id);
+      } else {
+        await supabase.from("telegram_pendencias").insert({
+          chat_id: chatId,
+          user_id: userIdCb,
+          etapa: "venda_periodo_custom",
+          filial_id: filialId,
+          status: "aguardando_resposta",
+        });
+      }
+      await editMessage(
+        token,
+        chatId,
+        messageId,
+        "✏️ *Período personalizado*\n\n" +
+          "Digite no formato:\n" +
+          "`DD/MM/AAAA DD/MM/AAAA`\n\n" +
+          "Exemplo:\n" +
+          "`01/07/2026 31/07/2026`",
+      );
+      return ok();
+    }
+
+    await answerCallback(token, callbackQuery.id, "⏳ Gerando...");
+    await executarRelatorioVendas(
+      supabase,
+      token,
+      chatId,
+      filialId,
+      getPeriodo(tipoPeriodo),
+      messageId,
+    );
+    if (pendVenda?.id) {
+      await supabase
+        .from("telegram_pendencias")
+        .update({ status: "concluido" })
+        .eq("id", pendVenda.id);
+    }
+    return ok();
+  }
+
+
+
   const { data: pendencia } = await supabase
     .from("telegram_pendencias")
     .select("*")
