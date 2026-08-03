@@ -121,6 +121,8 @@ interface ContratoInfo {
 
 type DialogType = "pedidos" | "upsell" | "upgrade" | "contratos" | "descontos" | "plano" | "tipo" | "cancelados" | null;
 
+const MOSTRAR_BOTAO_FISPAL = false;
+
 export default function Dashboard() {
   const { profile, roles, isAdmin, user } = useAuth();
   const navigate = useNavigate();
@@ -759,7 +761,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {(profile as any)?.is_vendedor === true && (
+        {MOSTRAR_BOTAO_FISPAL && (profile as any)?.is_vendedor === true && (
           <div className="flex justify-center">
             <Button
               onClick={() => navigate("/crm-pipeline?fispal=1")}

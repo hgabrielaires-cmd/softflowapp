@@ -22,6 +22,8 @@ import { FispalWhatsAppDialog } from "./crm-pipeline/components/FispalWhatsAppDi
 import { formatValor, totalValorEtapa } from "./crm-pipeline/helpers";
 import type { CrmOportunidade, CrmEtapaSimples } from "./crm-pipeline/types";
 
+const ATALHO_FISPAL_ATIVO = false;
+
 export default function CrmPipeline() {
   const { profile, user, roles } = useAuth();
   const queryClient = useQueryClient();
@@ -106,6 +108,7 @@ export default function CrmPipeline() {
 
   // Auto-open Fispal form when navigating from Dashboard with ?fispal=1
   useEffect(() => {
+    if (!ATALHO_FISPAL_ATIVO) return;
     if (searchParams.get("fispal") !== "1") return;
     if (!etapas.length || filiaisLoading) return;
     handleNewFispal();
@@ -175,6 +178,7 @@ export default function CrmPipeline() {
   };
 
   const handleNewFispal = () => {
+    if (!ATALHO_FISPAL_ATIVO) return;
     setEditOportunidade(null);
     const etapaAgendar = etapas.find(e => e.nome.toLowerCase().includes("agendar reuni"));
     setNewEtapaId(etapaAgendar?.id || etapas[0]?.id || "");
