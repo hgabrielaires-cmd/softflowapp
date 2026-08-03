@@ -9,6 +9,7 @@ import {
   relatorioStatus,
   type Periodo,
 } from "./relatorios.ts";
+import { relatorioVendas } from "./vendas.ts";
 
 const TELEGRAM_API = "https://api.telegram.org/bot";
 const PLANOS_POR_PAGINA = 8;
