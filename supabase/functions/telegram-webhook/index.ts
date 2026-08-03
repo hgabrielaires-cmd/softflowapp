@@ -705,6 +705,17 @@ async function finalizarLancamento(
 ) {
   const dados = pendencia.dados_extraidos ?? {};
   const hoje = new Date().toISOString().slice(0, 10);
+  const observacao = String(pendencia.observacao_usuario ?? "").trim();
+
+  const { data: filial } = await supabase
+    .from("filiais")
+    .select("nome, razao_social")
+    .eq("ativa", true)
+    .limit(1)
+    .maybeSingle();
+
+  const nomeOrigem =
+    filial?.razao_social || filial?.nome || "SOFTPLUS TECNOLOGIA EM SISTEMAS";
 
   const responder = async (texto: string) => {
     const mid = messageId ?? pendencia.message_id;
