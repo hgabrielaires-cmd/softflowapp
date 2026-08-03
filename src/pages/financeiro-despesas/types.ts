@@ -43,6 +43,7 @@ export interface FornecedorOption {
   nome_fantasia: string;
   razao_social: string | null;
   cnpj_cpf: string;
+  plano_conta_id?: string | null;
 }
 
 export interface FornecedorRapidoForm {

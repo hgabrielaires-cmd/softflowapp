@@ -30,7 +30,7 @@ export function useDespesaForm() {
           telefone: form.telefone.trim() || null,
           ativo: true,
         })
-        .select("id, nome_fantasia, razao_social, cnpj_cpf")
+        .select("id, nome_fantasia, razao_social, cnpj_cpf, plano_conta_id")
         .single();
       if (error) throw new Error("Não foi possível cadastrar o fornecedor. Verifique os dados informados.");
       return data;
@@ -96,6 +96,19 @@ export function useDespesaForm() {
         .select("id");
       if (error) throw new Error("Não foi possível salvar o lançamento. Verifique os dados e tente novamente.");
 
+      // Vincula o plano de contas ao fornecedor quando ele ainda não possui um
+      const { data: forn } = await supabase
+        .from("fornecedores")
+        .select("plano_conta_id")
+        .eq("id", state.fornecedor_id)
+        .maybeSingle();
+      if (forn && !forn.plano_conta_id) {
+        await supabase
+          .from("fornecedores")
+          .update({ plano_conta_id: state.plano_conta_id })
+          .eq("id", state.fornecedor_id);
+      }
+
       const rateios = state.ratear
         ? state.rateios
         : state.rateios.length > 0
@@ -121,6 +134,7 @@ export function useDespesaForm() {
     onSuccess: () => {
       toast.success("Lançamento salvo com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["fin_despesas"] });
+      queryClient.invalidateQueries({ queryKey: ["despesas_fornecedores_options"] });
     },
     onError: (e: Error) => toast.error(e.message || "Erro ao salvar lançamento"),
 

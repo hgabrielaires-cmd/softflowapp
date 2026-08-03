@@ -8,7 +8,7 @@ export function useFornecedoresOptionsQuery() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("fornecedores")
-        .select("id, nome_fantasia, razao_social, cnpj_cpf")
+        .select("id, nome_fantasia, razao_social, cnpj_cpf, plano_conta_id")
         .eq("ativo", true)
         .order("nome_fantasia");
       if (error) throw error;
