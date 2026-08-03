@@ -20,7 +20,7 @@ import {
   usePlanoContasQuery,
 } from "@/pages/financeiro-parametros/useFinanceiroParametrosQueries";
 import { FILTRO_TODOS, ITEMS_PER_PAGE, STATUS_DESPESA, emptyDespesaFiltros } from "./constants";
-import { aplicarFiltrosDespesas, formatBRL, formatDataBR, statusBadgeVariant } from "./helpers";
+import { aplicarFiltrosDespesas, formatBRL, formatDataBR, periodoMesAtual, statusBadgeVariant } from "./helpers";
 import { useAuth } from "@/context/AuthContext";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
 import { useMenuPermissions } from "@/hooks/useMenuPermissions";
