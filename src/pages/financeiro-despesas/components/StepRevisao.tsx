@@ -1,9 +1,11 @@
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PERIODOS_RECORRENCIA } from "../constants";
-import { formatBRL, formatDataBR, parseValor } from "../helpers";
+import { ANEXO_ACCEPT, ANEXO_MAX_MB, formatBRL, formatDataBR, parseValor, validarAnexo } from "../helpers";
+
 import type { DespesaWizardState, FornecedorOption } from "../types";
 import type { CentroCusto, ContaFinanceira, FormaPagamento, PlanoConta } from "@/pages/financeiro-parametros/types";
 
@@ -121,9 +123,28 @@ export function StepRevisao({
 
       <div className="space-y-1.5">
         <Label>Anexo</Label>
-        <Input type="file" onChange={(e) => setAnexo(e.target.files?.[0] || null)} />
+        <Input
+          type="file"
+          accept={ANEXO_ACCEPT}
+          onChange={(e) => {
+            const file = e.target.files?.[0] || null;
+            if (!file) return setAnexo(null);
+            const erro = validarAnexo(file);
+            if (erro) {
+              toast.error(erro);
+              e.target.value = "";
+              setAnexo(null);
+              return;
+            }
+            setAnexo(file);
+          }}
+        />
+        <p className="text-xs text-muted-foreground">
+          PDF ou imagem (PNG, JPG, WEBP) de até {ANEXO_MAX_MB} MB. Opcional.
+        </p>
         {anexo && <p className="text-xs text-muted-foreground">{anexo.name}</p>}
       </div>
+
     </div>
   );
 }
