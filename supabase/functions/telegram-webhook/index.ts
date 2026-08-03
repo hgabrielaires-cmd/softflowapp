@@ -1,6 +1,13 @@
 // ─── Edge Function: Telegram Webhook (financeiro) ─────────────────────────
 // Recebe comprovantes/NF pelo Telegram, lê com Claude Vision e lança despesa.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  relatorioCategorias,
+  relatorioDre,
+  relatorioMaiores,
+  relatorioPendentes,
+  relatorioStatus,
+} from "./relatorios.ts";
 
 const TELEGRAM_API = "https://api.telegram.org/bot";
 const PLANOS_POR_PAGINA = 8;
@@ -272,8 +279,12 @@ Deno.serve(async (req) => {
           `• Comprovante de pagamento (PIX/Boleto/TED)\n` +
           `• Nota fiscal\n\n` +
           `Vou processar e lançar automaticamente no sistema! 🚀\n\n` +
-          `Comandos:\n` +
-          `/status — Ver resumo financeiro`,
+          `📊 *Relatórios:*\n` +
+          `/status — Resumo financeiro\n` +
+          `/dre — DRE da semana\n` +
+          `/categorias — Despesas por plano de contas\n` +
+          `/maiores — Maiores gastos da semana\n` +
+          `/pendentes — Despesas em aberto e vencidas`,
       );
       return ok();
     }
@@ -315,7 +326,7 @@ Deno.serve(async (req) => {
       await sendMessage(
         token,
         chatId,
-        `📎 Envie uma *foto* ou *PDF* do comprovante.\n\nComandos: /start /status`,
+        `📎 Envie uma *foto* ou *PDF* do comprovante.\n\nComandos: /start /status /dre /categorias /maiores /pendentes`,
       );
       return ok();
     }
