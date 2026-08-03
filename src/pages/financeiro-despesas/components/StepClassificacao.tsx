@@ -58,16 +58,58 @@ export function StepClassificacao({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label>Plano de contas *</Label>
-          <Select value={state.plano_conta_id} onValueChange={(v) => setState({ plano_conta_id: v })}>
-            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-            <SelectContent>
-              {planoContas.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.codigo} — {p.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={planoOpen} onOpenChange={setPlanoOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={planoOpen}
+                className={cn(
+                  "w-full justify-between font-normal",
+                  !planoSelecionado && "text-muted-foreground",
+                )}
+              >
+                <span className="truncate">
+                  {planoSelecionado
+                    ? `${planoSelecionado.codigo} — ${planoSelecionado.nome}`
+                    : "Selecione"}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+              <Command
+                filter={(value, search) =>
+                  value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+                }
+              >
+                <CommandInput placeholder="Buscar por código ou nome..." />
+                <CommandList>
+                  <CommandEmpty>Nenhum plano encontrado.</CommandEmpty>
+                  <CommandGroup>
+                    {planoContas.map((p) => (
+                      <CommandItem
+                        key={p.id}
+                        value={`${p.codigo} ${p.nome}`}
+                        onSelect={() => {
+                          setState({ plano_conta_id: p.id });
+                          setPlanoOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            state.plano_conta_id === p.id ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                        {p.codigo} — {p.nome}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="space-y-1.5">
           <Label>Forma de pagamento *</Label>
