@@ -25,6 +25,16 @@ function ok(body: unknown = { ok: true }) {
   });
 }
 
+const MENU_TECLADO = {
+  keyboard: [
+    [{ text: "📊 DRE" }, { text: "📁 Categorias" }],
+    [{ text: "🏆 Maiores Gastos" }, { text: "📋 Pendentes" }],
+    [{ text: "💰 Status" }, { text: "❓ Ajuda" }],
+  ],
+  resize_keyboard: true,
+  is_persistent: true,
+};
+
 async function sendMessage(
   token: string,
   chatId: number,
@@ -40,9 +50,10 @@ async function sendMessage(
         chat_id: chatId,
         text,
         parse_mode: parseMode,
-        ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+        reply_markup: replyMarkup ?? MENU_TECLADO,
       }),
     });
+
     const json = await res.json().catch(() => ({}));
     return json?.result?.message_id ?? null;
   } catch (e) {
