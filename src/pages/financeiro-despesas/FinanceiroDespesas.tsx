@@ -310,7 +310,18 @@ export default function FinanceiroDespesas() {
                     {temAcoes && (
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          {canEditar && (
+                          {d.status === "pago" && !canEditarPaga && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Visualizar despesa"
+                              title="Visualizar"
+                              onClick={() => setVisualizando(d)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canEditar && (d.status !== "pago" || canEditarPaga) && (
                             <Button
                               variant="ghost"
                               size="icon"
