@@ -31,10 +31,21 @@ export function useUsuariosQueries() {
 
   const loadUsers = useCallback(async (filiaisRef: Filial[], mesasRef: MesaOption[]) => {
     setLoading(true);
-    const { data: profiles, error } = await supabase
-      .from("profiles")
-      .select("*, filiais!profiles_filial_id_fkey(nome)")
-      .order("full_name");
+    const [{ data: profilesBase, error }, { data: comissoesData }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select(`${PROFILE_PUBLIC_COLUMNS}, filiais!profiles_filial_id_fkey(nome)`)
+        .order("full_name"),
+      supabase.from("profiles_comissoes").select(PROFILE_COMISSAO_COLUMNS),
+    ]);
+
+    const comissaoMap = new Map<string, any>(
+      ((comissoesData as any[]) || []).map((c) => [c.user_id, c])
+    );
+    const profiles = ((profilesBase as any[]) || []).map((p) => ({
+      ...p,
+      ...(comissaoMap.get(p.user_id) || {}),
+    }));
 
     if (error) {
       toast.error("Erro ao carregar usuários");

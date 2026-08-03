@@ -42,11 +42,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   async function fetchProfile(userId: string): Promise<Profile | null> {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
+    const [{ data: base }, { data: comissoes }] = await Promise.all([
+      supabase.from("profiles").select(PROFILE_PUBLIC_COLUMNS).eq("user_id", userId).single(),
+      supabase
+        .from("profiles_comissoes")
+        .select(PROFILE_COMISSAO_COLUMNS)
+        .eq("user_id", userId)
+        .maybeSingle(),
+    ]);
+    const data = base ? ({ ...(base as any), ...((comissoes as any) || {}) } as any) : null;
     if (data) {
       // Bloquear usuário inativo
       if (data.active === false) {
