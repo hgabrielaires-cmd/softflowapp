@@ -155,14 +155,55 @@ export function DespesaQuitarDialog({ despesa, open, onOpenChange }: Props) {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label className="text-xs">Plano de contas dos juros</Label>
-                <Select value={planoJuros} onValueChange={setPlanoJuros}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {planoContasLancaveis.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={planoOpen} onOpenChange={setPlanoOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-full justify-between font-normal",
+                        !planoJuros && "text-muted-foreground",
+                      )}
+                    >
+                      <span className="truncate">
+                        {planoJuros ? planoNome(planoJuros) : "Pesquisar plano de contas..."}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command
+                      filter={(value, search) =>
+                        value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+                      }
+                    >
+                      <CommandInput placeholder="Digite o código ou o nome..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum plano de contas encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          {planoContasLancaveis.map((p) => (
+                            <CommandItem
+                              key={p.id}
+                              value={`${p.codigo} ${p.nome}`}
+                              onSelect={() => {
+                                setPlanoJuros(p.id);
+                                setPlanoOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  planoJuros === p.id ? "opacity-100" : "opacity-0",
+                                )}
+                              />
+                              <span className="truncate">{p.codigo} — {p.nome}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Juros (%)</Label>
