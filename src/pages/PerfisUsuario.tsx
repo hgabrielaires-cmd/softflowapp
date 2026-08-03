@@ -73,6 +73,8 @@ const MENU_TREE: MenuNode[] = [
       { key: "menu.contratos", label: "Contratos", description: "Visualização e geração de contratos", icon: <FileText className="h-4 w-4" />, children: crudChildren("contratos") },
       { key: "menu.receitas", label: "Receitas", description: "Lançamento e controle de receitas", icon: <TrendingUp className="h-4 w-4" /> },
       { key: "menu.despesas", label: "Despesas", description: "Lançamento e controle de despesas", icon: <TrendingDown className="h-4 w-4" /> },
+      { key: "menu.despesas_auditoria", label: "Histórico de Despesas", description: "Auditoria de inclusões, edições e exclusões de despesas", icon: <TrendingDown className="h-4 w-4" /> },
+
       { key: "menu.dre", label: "DRE", description: "Demonstrativo de Resultado do Exercício", icon: <BarChart3 className="h-4 w-4" /> },
     ],
   },
