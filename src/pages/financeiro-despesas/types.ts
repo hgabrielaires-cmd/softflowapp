@@ -65,3 +65,15 @@ export interface DespesaRegistro {
   created_at: string;
   fornecedores?: { nome_fantasia: string } | null;
 }
+
+export interface DespesaFiltros {
+  busca: string;
+  base_data: "vencimento" | "emissao";
+  data_inicio: string;
+  data_fim: string;
+  fornecedor_id: string;
+  centro_custo_id: string;
+  plano_conta_id: string;
+  forma_pagamento_id: string;
+  status: string;
+}

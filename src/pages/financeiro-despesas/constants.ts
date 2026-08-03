@@ -1,6 +1,6 @@
 // ─── Constantes do módulo Despesas ────────────────────────────────────────
 
-import type { DespesaWizardState, RecorrenciaPeriodo } from "./types";
+import type { DespesaFiltros, DespesaWizardState, RecorrenciaPeriodo } from "./types";
 
 export const WIZARD_STEPS = [
   { numero: 1, label: "Dados" },
@@ -45,4 +45,27 @@ export const emptyFornecedorRapido = {
   nome_fantasia: "",
   cnpj_cpf: "",
   telefone: "",
+};
+
+// ─── Lista / filtros ──────────────────────────────────────────────────────
+
+export const ITEMS_PER_PAGE = 15;
+export const FILTRO_TODOS = "__todos__";
+
+export const STATUS_DESPESA = [
+  { value: "aberto", label: "Em aberto" },
+  { value: "pago", label: "Pago" },
+  { value: "cancelado", label: "Cancelado" },
+];
+
+export const emptyDespesaFiltros: DespesaFiltros = {
+  busca: "",
+  base_data: "vencimento",
+  data_inicio: "",
+  data_fim: "",
+  fornecedor_id: FILTRO_TODOS,
+  centro_custo_id: FILTRO_TODOS,
+  plano_conta_id: FILTRO_TODOS,
+  forma_pagamento_id: FILTRO_TODOS,
+  status: FILTRO_TODOS,
 };
