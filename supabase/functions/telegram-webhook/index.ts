@@ -819,6 +819,7 @@ async function finalizarLancamento(
       `📅 *Data:* ${dados.data || hoje}\n` +
       `🧾 *Tipo:* ${String(dados.tipo ?? "").toUpperCase()}\n` +
       `📁 *Plano de contas:* ${planoNome}\n` +
+      (observacao ? `📝 *Obs:* ${observacao}\n` : "") +
       `📎 *Comprovante:* salvo ✓\n\n` +
       `_Lançado no Softflow_ 🚀`,
   );
