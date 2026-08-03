@@ -233,8 +233,11 @@ export default function DespesasAuditoria() {
         <TablePagination
           currentPage={page}
           totalPages={totalPages}
+          totalItems={filtrados.length}
+          itemsPerPage={ITEMS_PER_PAGE}
           onPageChange={setPage}
         />
+
       </div>
 
       <AuditoriaDetalheDialog
