@@ -1407,6 +1407,23 @@ export default function Integracoes() {
         initialConfig={r2Config}
       />
 
+      {/* Telegram Drawer */}
+      <TelegramConfigDialog
+        open={telegramDialogOpen}
+        onOpenChange={setTelegramDialogOpen}
+        initialConfig={configs.find((c) => c.nome === "telegram") ?? null}
+        onSaved={loadConfigs}
+      />
+
+      {/* Claude (Anthropic) Drawer */}
+      <AnthropicConfigDialog
+        open={anthropicDialogOpen}
+        onOpenChange={setAnthropicDialogOpen}
+        initialConfig={configs.find((c) => c.nome === "anthropic") ?? null}
+        onSaved={loadConfigs}
+      />
+
+
       {/* Generic Dialog */}
       {selectedDef && (
         <ConfigDialog
