@@ -273,10 +273,19 @@ const App = () => {
               path="/dre"
               element={
                 <ProtectedRoute>
-                  <ComingSoon module="Financeiro" title="DRE" description="Em desenvolvimento. Demonstrativo de Resultado do Exercício." />
+                  <DRE />
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/financeiro/dre"
+              element={
+                <ProtectedRoute>
+                  <DRE />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/notificacoes"
               element={
