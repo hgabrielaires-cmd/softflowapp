@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Paperclip } from "lucide-react";
@@ -44,9 +44,8 @@ export function LancamentosDrawer({ open, onOpenChange, titulo, subtitulo, lanca
                 <tr><td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">Nenhum lançamento no período.</td></tr>
               )}
               {ordenados.map((l, i) => (
-                <>
+                <React.Fragment key={l.id}>
                   <tr
-                    key={l.id}
                     onClick={() => setExpandido(expandido === l.id ? null : l.id)}
                     className={`cursor-pointer transition-colors hover:bg-muted/50 ${i % 2 ? "bg-muted/20" : ""}`}
                   >
@@ -90,7 +89,7 @@ export function LancamentosDrawer({ open, onOpenChange, titulo, subtitulo, lanca
                       </td>
                     </tr>
                   )}
-                </>
+                </React.Fragment>
               ))}
             </tbody>
           </table>
