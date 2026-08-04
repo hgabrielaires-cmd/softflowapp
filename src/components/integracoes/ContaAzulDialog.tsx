@@ -317,6 +317,33 @@ export function ContaAzulConfigDialog({ open, onOpenChange, initialConfig, onSav
               )}
             </div>
 
+            <div className="space-y-3 rounded-lg border border-border p-3">
+              <div>
+                <Label className="text-sm">Reprocessar taxas de boleto</Label>
+                <p className="text-xs text-muted-foreground">
+                  Gera as taxas dos recebimentos já importados no mês selecionado (não duplica).
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Select value={String(mesTaxa)} onValueChange={(v) => setMesTaxa(Number(v))}>
+                  <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {MESES.map((m, i) => (<SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  className="w-24"
+                  value={anoTaxa}
+                  onChange={(e) => setAnoTaxa(Number(e.target.value))}
+                />
+                <Button size="sm" variant="outline" onClick={reprocessarTaxas} disabled={reprocessando} className="gap-1.5">
+                  {reprocessando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  Reprocessar
+                </Button>
+              </div>
+            </div>
+
 
             <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
               <Info className="h-4 w-4 mt-0.5 shrink-0" />
