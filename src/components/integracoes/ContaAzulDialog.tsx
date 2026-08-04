@@ -13,6 +13,8 @@ import logoContaAzul from "@/assets/logo-contaazul.svg";
 
 const FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
+const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
 interface ContaAzulConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -49,6 +51,24 @@ export function ContaAzulConfigDialog({ open, onOpenChange, initialConfig, onSav
   const [novoHorario, setNovoHorario] = useState("");
   const [salvandoHorarios, setSalvandoHorarios] = useState(false);
   const [crons, setCrons] = useState<{ jobname: string; schedule: string; active: boolean }[]>([]);
+  const [mesTaxa, setMesTaxa] = useState<number>(new Date().getMonth() + 1);
+  const [anoTaxa, setAnoTaxa] = useState<number>(new Date().getFullYear());
+  const [reprocessando, setReprocessando] = useState(false);
+
+  async function reprocessarTaxas() {
+    if (!filialId) { toast.error("Selecione a filial"); return; }
+    setReprocessando(true);
+    const { data, error } = await supabase.rpc("fn_reprocessar_taxas_boleto", {
+      p_filial_id: filialId,
+      p_mes: mesTaxa,
+      p_ano: anoTaxa,
+    });
+    setReprocessando(false);
+    if (error) { toast.error("Erro ao reprocessar: " + error.message); return; }
+    const res = data as any;
+    if (res?.erro) { toast.error(res.erro); return; }
+    toast.success(`${res?.taxas_criadas ?? 0} taxa(s) lançada(s) · ${res?.ignoradas ?? 0} ignorada(s)`);
+  }
 
   async function carregarHorarios(fId: string) {
     if (!fId) return;
