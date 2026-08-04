@@ -25,7 +25,7 @@ import {
 } from "@/pages/financeiro-parametros/useFinanceiroParametrosQueries";
 import { WIZARD_STEPS, emptyDespesaWizard } from "../constants";
 import { gerarParcelas, hojeISO, parseValor, rateioValido } from "../helpers";
-import { useFornecedoresOptionsQuery } from "../useDespesasQueries";
+import { useContasPadraoFiliaisQuery, useFornecedoresOptionsQuery } from "../useDespesasQueries";
 import { useDespesaForm } from "../useDespesaForm";
 import type { DespesaWizardState, FornecedorOption, RecorrenciaPeriodo } from "../types";
 import { StepDados } from "./StepDados";
@@ -53,6 +53,7 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
   const { data: formasPagamento = [] } = useFormasPagamentoQuery();
   const { data: contas = [] } = useContasFinanceirasQuery();
   const { data: centrosCusto = [] } = useCentrosCustoQuery();
+  const { data: contasPadraoFilial = {} } = useContasPadraoFiliaisQuery();
   const { salvarDespesaMut } = useDespesaForm();
   const { filiaisDoUsuario, filialPadraoId, loading: filiaisLoading } = useUserFiliais();
 
@@ -87,6 +88,16 @@ export function DespesaWizardDialog({ open, onOpenChange }: Props) {
       return padrao ? { ...prev, filial_id: padrao } : prev;
     });
   }, [open, filiaisLoading, filialPadraoId, filiaisDoUsuario]);
+
+  // Conta financeira padrão da filial selecionada
+  useEffect(() => {
+    if (!open || !state.filial_id) return;
+    const padrao = contasPadraoFilial[state.filial_id];
+    if (!padrao) return;
+    setStateRaw((prev) =>
+      prev.conta_financeira_id ? prev : { ...prev, conta_financeira_id: padrao },
+    );
+  }, [open, state.filial_id, contasPadraoFilial]);
 
   // Centro de custo padrão: CC1 (empresa toda) com 100%
   useEffect(() => {

@@ -22,6 +22,7 @@ import {
 } from "@/pages/financeiro-parametros/useFinanceiroParametrosQueries";
 import { formatBRL, formatDataBR, hojeISO, parseValor } from "../helpers";
 import { useDespesaMutations } from "../useDespesaMutations";
+import { useContasPadraoFiliaisQuery } from "../useDespesasQueries";
 import type { DespesaRegistro } from "../types";
 
 interface Props {
@@ -52,6 +53,7 @@ export function DespesaQuitarDialog({ despesa, open, onOpenChange }: Props) {
   const { data: planoContas = [] } = usePlanoContasQuery();
   const { data: contas = [] } = useContasFinanceirasQuery();
   const { quitarDespesaMut } = useDespesaMutations();
+  const { data: contasPadraoFilial = {} } = useContasPadraoFiliaisQuery();
 
   const planoContasLancaveis = useMemo(
     () => planoContas.filter((p) => p.ativo && p.aceita_lancamento),
@@ -67,9 +69,13 @@ export function DespesaQuitarDialog({ despesa, open, onOpenChange }: Props) {
       setJurosPerc("0");
       setJurosValor("0");
       setEtapaConta(false);
-      setContaPagamento(despesa?.conta_financeira_id || "");
+      setContaPagamento(
+        despesa?.conta_financeira_id ||
+          (despesa?.filial_id ? contasPadraoFilial[despesa.filial_id] : "") ||
+          "",
+      );
     }
-  }, [open, despesa]);
+  }, [open, despesa, contasPadraoFilial]);
 
   if (!despesa) return null;
 
