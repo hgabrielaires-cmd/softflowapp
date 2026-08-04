@@ -49,7 +49,7 @@ export function ExtratoTable({ linhas, saldoAnterior, contaId, onSelect }: Props
           </TableRow>
         </TableHeader>
         <TableBody>
-          {mostrarSaldo && (
+          {mostrarSaldo && paginaAtual === 1 && (
             <TableRow className="bg-muted/40">
               <TableCell className="text-xs text-muted-foreground">—</TableCell>
               <TableCell className="text-xs text-muted-foreground">Saldo anterior</TableCell>
@@ -74,7 +74,7 @@ export function ExtratoTable({ linhas, saldoAnterior, contaId, onSelect }: Props
               </TableCell>
             </TableRow>
           ) : (
-            linhas.map((l) => {
+            linhasPagina.map((l) => {
               const entrada = l.efeito >= 0;
               return (
                 <TableRow key={l.id} className="cursor-pointer" onClick={() => onSelect(l)}>
@@ -122,6 +122,37 @@ export function ExtratoTable({ linhas, saldoAnterior, contaId, onSelect }: Props
           )}
         </TableBody>
       </Table>
+
+      {linhas.length > POR_PAGINA && (
+        <div className="flex items-center justify-between gap-3 border-t bg-muted/30 px-4 py-3">
+          <span className="text-xs text-muted-foreground">
+            Mostrando {inicio + 1}–{Math.min(inicio + POR_PAGINA, linhas.length)} de {linhas.length} movimentações
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPagina((p) => Math.max(1, p - 1))}
+              disabled={paginaAtual === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Anterior
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Página {paginaAtual} de {totalPaginas}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+              disabled={paginaAtual === totalPaginas}
+            >
+              Próxima
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
