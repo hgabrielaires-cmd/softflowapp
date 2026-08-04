@@ -35,7 +35,27 @@ export function PlanoContasTab() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
-  const tree = useMemo(() => buildPlanoContasTree(contas), [contas]);
+  const [busca, setBusca] = useState("");
+
+  const contasFiltradas = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return contas;
+    const byId = new Map(contas.map((c) => [c.id, c]));
+    const keep = new Set<string>();
+    for (const c of contas) {
+      const alvo = `${c.codigo ?? ""} ${c.nome ?? ""}`.toLowerCase();
+      if (!alvo.includes(termo)) continue;
+      keep.add(c.id);
+      let pai = c.parent_id ? byId.get(c.parent_id) : undefined;
+      while (pai && !keep.has(pai.id)) {
+        keep.add(pai.id);
+        pai = pai.parent_id ? byId.get(pai.parent_id) : undefined;
+      }
+    }
+    return contas.filter((c) => keep.has(c.id));
+  }, [contas, busca]);
+
+  const tree = useMemo(() => buildPlanoContasTree(contasFiltradas), [contasFiltradas]);
 
   const parentOptions = useMemo(() => {
     const blocked = editing ? collectDescendantIds(contas, editing.id) : new Set<string>();
