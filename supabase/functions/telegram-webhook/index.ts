@@ -1421,13 +1421,15 @@ async function finalizarLancamento(
   };
 
   let fornecedorId = pendencia.fornecedor_id;
-  if (!fornecedorId && dados.nome_recebedor) {
+  const docForn = docRecebedor(dados).doc ?? "";
+  if (!fornecedorId && (dados.nome_recebedor || docForn)) {
+    const nomeForn = dados.nome_recebedor || `Fornecedor ${docForn}`;
     const { data: novoForn, error: fornErr } = await supabase
       .from("fornecedores")
       .insert({
-        nome_fantasia: dados.nome_recebedor,
-        razao_social: dados.nome_recebedor,
-        cnpj_cpf: docRecebedor(dados).doc ?? "",
+        nome_fantasia: nomeForn,
+        razao_social: nomeForn,
+        cnpj_cpf: docForn,
         ativo: true,
         plano_conta_id: planoId,
       })
@@ -1436,6 +1438,7 @@ async function finalizarLancamento(
     if (fornErr) console.error("[telegram] fornecedor:", fornErr.message);
     fornecedorId = novoForn?.id ?? null;
   }
+
 
   if (!fornecedorId) {
     await responder(
