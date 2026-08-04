@@ -91,6 +91,8 @@ export function useReceitasDreQuery(filialId: string, periodo: DrePeriodo, conta
         .from("fin_movimentacoes")
         .select("*, plano:fin_plano_contas(codigo, nome), fornecedor:fornecedores(nome_fantasia, cnpj_cpf)")
         .eq("tipo", "entrada")
+        // ajustes manuais de saldo não são receita
+        .or("categoria.is.null,categoria.neq.ajuste")
         .gte("data_movimentacao", periodo.inicio)
         .lte("data_movimentacao", periodo.fim)
         .order("data_movimentacao", { ascending: false });
@@ -110,7 +112,7 @@ export function useDespesasDreQuery(filialId: string, periodo: DrePeriodo, conta
       let qDespesas = supabase
         .from("fin_despesas")
         .select(
-          "id, valor, valor_pago, data_pagamento, descricao, plano_conta_id, conta_financeira_id, anexo_url, plano:fin_plano_contas(codigo, nome), fornecedor:fornecedores(nome_fantasia, cnpj_cpf)",
+          "id, valor, valor_pago, data_pagamento, descricao, plano_conta_id, conta_financeira_id, anexo_url, plano:fin_plano_contas!fin_despesas_plano_conta_id_fkey(codigo, nome), fornecedor:fornecedores(nome_fantasia, cnpj_cpf)",
         )
         .eq("status", "pago")
         .gte("data_pagamento", periodo.inicio)
