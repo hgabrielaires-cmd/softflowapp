@@ -1003,6 +1003,41 @@ export type Database = {
           },
         ]
       }
+      contaazul_config: {
+        Row: {
+          created_at: string
+          filial_id: string | null
+          horarios_sync: string[]
+          id: string
+          sync_ativo: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          filial_id?: string | null
+          horarios_sync?: string[]
+          id?: string
+          sync_ativo?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          filial_id?: string | null
+          horarios_sync?: string[]
+          id?: string
+          sync_ativo?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contaazul_config_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contaazul_sync_log: {
         Row: {
           created_at: string
@@ -6469,6 +6504,18 @@ export type Database = {
       criar_conversa_grupo: {
         Args: { p_nome: string; p_participantes: string[] }
         Returns: string
+      }
+      fn_listar_crons_contaazul: {
+        Args: never
+        Returns: {
+          active: boolean
+          jobname: string
+          schedule: string
+        }[]
+      }
+      fn_recriar_crons_contaazul: {
+        Args: { p_apikey: string; p_horarios: string[] }
+        Returns: undefined
       }
       fn_saldo_conta: {
         Args: { p_conta_id: string; p_data?: string }
