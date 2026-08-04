@@ -744,7 +744,7 @@ Para NFC-e/cupom fiscal:
       await editMessage(token, chatId, processingMsgId, "✅ Documento lido com sucesso.");
     }
 
-    }
+
 
     // ── Fornecedor ──
     const { doc: cnpj } = docRecebedor(dados);
