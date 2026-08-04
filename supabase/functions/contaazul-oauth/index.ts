@@ -46,14 +46,15 @@ Deno.serve(async (req) => {
     // ── authorize ──
     if (action === "authorize") {
       const filialId = url.searchParams.get("filial_id") || "";
-      const authUrl = new URL(`${CONTAAZUL_AUTH_BASE}/authorize`);
-      authUrl.searchParams.set("client_id", clientId);
+      const authUrl = new URL("https://api.contaazul.com/auth/authorize");
       authUrl.searchParams.set("redirect_uri", redirectUri);
-      authUrl.searchParams.set("response_type", "code");
-      authUrl.searchParams.set("scope", "sales financials");
+      authUrl.searchParams.set("client_id", clientId);
+      authUrl.searchParams.set("scope", "sales");
       authUrl.searchParams.set("state", filialId);
+      authUrl.searchParams.set("response_type", "code");
       return Response.redirect(authUrl.toString(), 302);
     }
+
 
     // ── callback ──
     if (action === "callback") {
