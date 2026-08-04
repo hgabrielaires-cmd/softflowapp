@@ -46,12 +46,12 @@ Deno.serve(async (req) => {
     // ── authorize ──
     if (action === "authorize") {
       const filialId = url.searchParams.get("filial_id") || "";
-      const authUrl = new URL("https://api.contaazul.com/auth/authorize");
-      authUrl.searchParams.set("redirect_uri", redirectUri);
-      authUrl.searchParams.set("client_id", clientId);
-      authUrl.searchParams.set("scope", "sales");
-      authUrl.searchParams.set("state", filialId);
+      const authUrl = new URL("https://auth.contaazul.com/login");
       authUrl.searchParams.set("response_type", "code");
+      authUrl.searchParams.set("client_id", clientId);
+      authUrl.searchParams.set("redirect_uri", redirectUri);
+      authUrl.searchParams.set("state", filialId);
+      authUrl.searchParams.set("scope", "openid profile aws.cognito.signin.user.admin");
       return Response.redirect(authUrl.toString(), 302);
     }
 
