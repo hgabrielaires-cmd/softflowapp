@@ -139,6 +139,13 @@ Deno.serve(async (req) => {
       .eq("filial_id", filialEfetiva)
       .maybeSingle();
 
+    // Fornecedor Conta Azul (para vincular às taxas)
+    const { data: fornecedorCA } = await supabase
+      .from("fornecedores")
+      .select("id")
+      .eq("cnpj_cpf", "05206246000138")
+      .maybeSingle();
+
     for (const r of recebiveis) {
       const origemId = String(r.id ?? r.uuid ?? "");
       if (!origemId) { ignorados++; continue; }
