@@ -218,7 +218,7 @@ Deno.serve(async (req) => {
       status: "sucesso",
     });
 
-    return json({ ok: true, periodo: { inicio, fim }, importados, ignorados, total: recebiveis.length });
+    return json({ ok: true, periodo: { inicio, fim }, importados, ignorados, taxas: taxasLancadas, total: recebiveis.length });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro desconhecido";
     console.error("contaazul-sync:", message);
