@@ -595,7 +595,16 @@ Deno.serve(async (req) => {
       return ok();
     }
 
-    await sendMessage(token, chatId, `⏳ Processando com IA...\nAguarde um momento.`);
+    const processingMsgId = await sendMessage(
+      token,
+      chatId,
+      `⏳ Processando com IA...\nAguarde um momento.`,
+    );
+    const avisar = async (texto: string) => {
+      if (processingMsgId) await editMessage(token, chatId, processingMsgId, texto);
+      else await sendMessage(token, chatId, texto);
+    };
+
 
     let fileId: string;
     let mimeType = "image/jpeg";
