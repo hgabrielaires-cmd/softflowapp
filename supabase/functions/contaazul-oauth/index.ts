@@ -2,11 +2,11 @@
 // Actions: authorize | callback | refresh | sync | status
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  CONTAAZUL_AUTH_BASE,
   contaazulEnv,
   exchangeToken,
   getValidToken,
 } from "../_shared/contaazul.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
