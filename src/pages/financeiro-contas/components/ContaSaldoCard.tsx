@@ -1,5 +1,10 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { ArrowDown, ArrowUp, Landmark } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ArrowDown, ArrowUp, Landmark, Loader2, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { fmtCurrency } from "../helpers";
 import type { ContaResumo } from "../types";
@@ -12,6 +17,24 @@ interface Props {
 
 export function ContaSaldoCard({ conta, selecionada, onSelect }: Props) {
   const positivo = conta.saldo >= 0;
+  const [syncing, setSyncing] = useState(false);
+  const queryClient = useQueryClient();
+  const isContaAzul = conta.nome.toUpperCase().includes("CONTA AZUL");
+
+  async function sincronizar(e: React.MouseEvent) {
+    e.stopPropagation();
+    setSyncing(true);
+    const { data, error } = await supabase.functions.invoke("contaazul-sync", {
+      body: { periodo: "mes", filial_id: null },
+    });
+    setSyncing(false);
+    if (error) { toast.error("Falha na sincronização"); return; }
+    if ((data as any)?.error) { toast.error((data as any).error); return; }
+    toast.success(`Sincronização concluída: ${(data as any)?.importados ?? 0} importados`);
+    queryClient.invalidateQueries({ queryKey: ["fin_saldos_contas"] });
+    queryClient.invalidateQueries({ queryKey: ["fin_movimentacoes"] });
+  }
+
   return (
     <Card
       role="button"
@@ -26,6 +49,19 @@ export function ContaSaldoCard({ conta, selecionada, onSelect }: Props) {
       <div className="flex items-center gap-2 mb-2">
         <Landmark className="h-4 w-4 text-muted-foreground" />
         <p className="text-sm font-semibold text-foreground truncate">{conta.nome}</p>
+        {isContaAzul && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto h-7 px-2"
+            onClick={sincronizar}
+            disabled={syncing}
+            title="Sincronizar com a Conta Azul"
+          >
+            {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            <span className="ml-1 text-xs">Sincronizar</span>
+          </Button>
+        )}
       </div>
       <p className="text-xs text-muted-foreground">Saldo atual</p>
       <p className={cn("text-xl font-bold", positivo ? "text-emerald-600" : "text-destructive")}>
