@@ -2,11 +2,11 @@
 // Actions: authorize | callback | refresh | sync | status
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  CONTAAZUL_AUTH_BASE,
   contaazulEnv,
   exchangeToken,
   getValidToken,
 } from "../_shared/contaazul.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,14 +46,15 @@ Deno.serve(async (req) => {
     // ── authorize ──
     if (action === "authorize") {
       const filialId = url.searchParams.get("filial_id") || "";
-      const authUrl = new URL(`${CONTAAZUL_AUTH_BASE}/authorize`);
-      authUrl.searchParams.set("client_id", clientId);
+      const authUrl = new URL("https://api.contaazul.com/auth/authorize");
       authUrl.searchParams.set("redirect_uri", redirectUri);
-      authUrl.searchParams.set("response_type", "code");
-      authUrl.searchParams.set("scope", "sales financials");
+      authUrl.searchParams.set("client_id", clientId);
+      authUrl.searchParams.set("scope", "sales");
       authUrl.searchParams.set("state", filialId);
+      authUrl.searchParams.set("response_type", "code");
       return Response.redirect(authUrl.toString(), 302);
     }
+
 
     // ── callback ──
     if (action === "callback") {
@@ -66,9 +67,8 @@ Deno.serve(async (req) => {
         grant_type: "authorization_code",
         code,
         redirect_uri: redirectUri,
-        client_id: clientId,
-        client_secret: clientSecret,
       });
+
 
       const payload = {
         filial_id: filialId,
