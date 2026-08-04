@@ -1,10 +1,14 @@
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowDown, ArrowUp, ArrowLeftRight } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowLeftRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ORIGEM_LABELS, TODAS } from "../constants";
 import { fmtCurrency, fmtDate } from "../helpers";
 import type { ExtratoLinha } from "../types";
+
+const POR_PAGINA = 25;
 
 interface Props {
   linhas: ExtratoLinha[];
@@ -15,6 +19,21 @@ interface Props {
 
 export function ExtratoTable({ linhas, saldoAnterior, contaId, onSelect }: Props) {
   const mostrarSaldo = contaId !== TODAS;
+  const [pagina, setPagina] = useState(1);
+
+  const totalPaginas = Math.max(1, Math.ceil(linhas.length / POR_PAGINA));
+
+  useEffect(() => {
+    setPagina(1);
+  }, [linhas, contaId]);
+
+  const paginaAtual = Math.min(pagina, totalPaginas);
+  const inicio = (paginaAtual - 1) * POR_PAGINA;
+  const linhasPagina = useMemo(
+    () => linhas.slice(inicio, inicio + POR_PAGINA),
+    [linhas, inicio],
+  );
+
 
   return (
     <div className="border rounded-xl overflow-hidden">
