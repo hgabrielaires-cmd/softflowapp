@@ -941,10 +941,15 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
     if (planoSugerido) {
       if (fornecedor) msg += `\n✓ Fornecedor encontrado: *${fornecedor.nome_fantasia}*\n`;
       msg +=
-        `\n💡 *Plano sugerido${planoIA ? " pela IA" : ""}:*\n` +
+        (origemSugestao === "fornecedor"
+          ? `\n✓ *Plano do fornecedor:*\n`
+          : origemSugestao === "memoria"
+            ? `\n💾 *Usado anteriormente:*\n`
+            : `\n💡 *Sugerido pela IA:*\n`) +
         `_${planoSugerido.codigo} — ${planoSugerido.nome}_\n` +
-        (planoIA && motivoSugestao ? `_Motivo: ${motivoSugestao}_\n` : "") +
+        (origemSugestao === "ia" && motivoSugestao ? `_Motivo: ${motivoSugestao}_\n` : "") +
         `\nConfirma este plano ou selecione outro:`;
+
       teclado = {
         inline_keyboard: [
           [
