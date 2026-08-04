@@ -66,6 +66,8 @@ export default function Filiais() {
   const assinaturaInputRef = useRef<HTMLInputElement>(null);
   const [etapaInicialId, setEtapaInicialId] = useState<string | null>(null);
   const [etapas, setEtapas] = useState<{ id: string; nome: string; ordem: number }[]>([]);
+  const [contaPadraoId, setContaPadraoId] = useState<string | null>(null);
+  const [contasFinanceiras, setContasFinanceiras] = useState<{ id: string; nome: string }[]>([]);
   const [activeTab, setActiveTab] = useState("geral");
 
 
