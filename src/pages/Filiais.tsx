@@ -80,6 +80,14 @@ export default function Filiais() {
   const [congelarEtapaId, setCongelarEtapaId] = useState<string | null>(null);
   const [margemVendaIdeal, setMargemVendaIdeal] = useState(0);
 
+  // Taxa de boleto
+  const [taxaBoletoAtivo, setTaxaBoletoAtivo] = useState(false);
+  const [taxaBoletoTipo, setTaxaBoletoTipo] = useState("fixo");
+  const [taxaBoletoValor, setTaxaBoletoValor] = useState(3.5);
+  const [taxaBoletoPercentual, setTaxaBoletoPercentual] = useState(0);
+  const [taxaBoletoPlanoContaId, setTaxaBoletoPlanoContaId] = useState<string | null>(null);
+  const [planosDespesa, setPlanosDespesa] = useState<{ id: string; codigo: string; nome: string }[]>([]);
+
   // Régua de cobrança config
   const [reguaAtiva, setReguaAtiva] = useState(true);
   const [diasLembrete1, setDiasLembrete1] = useState(5);
@@ -107,7 +115,18 @@ export default function Filiais() {
     if (data) setContasFinanceiras(data);
   }
 
-  useEffect(() => { loadFiliais(); loadEtapas(); loadContasFinanceiras(); }, []);
+  async function loadPlanosDespesa() {
+    const { data } = await supabase
+      .from("fin_plano_contas")
+      .select("id, codigo, nome")
+      .eq("tipo", "despesa")
+      .eq("aceita_lancamento", true)
+      .eq("ativo", true)
+      .order("codigo");
+    if (data) setPlanosDespesa(data as any);
+  }
+
+  useEffect(() => { loadFiliais(); loadEtapas(); loadContasFinanceiras(); loadPlanosDespesa(); }, []);
 
   function resetForm() {
     setNome(""); setRazaoSocial(""); setResponsavel(""); setAtiva(true); setCnpj(""); setInscricaoEstadual(""); setIeIsento(false);
