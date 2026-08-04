@@ -67,9 +67,8 @@ Deno.serve(async (req) => {
         grant_type: "authorization_code",
         code,
         redirect_uri: redirectUri,
-        client_id: clientId,
-        client_secret: clientSecret,
       });
+
 
       const payload = {
         filial_id: filialId,
