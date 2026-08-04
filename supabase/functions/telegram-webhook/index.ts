@@ -719,12 +719,27 @@ Retorne APENAS JSON válido sem markdown:
       planoMemoria = mem;
     }
 
-    const [{ data: formasPagto }, { data: contasFinanceiras }, { data: centrosCusto }] =
+    const [{ data: formasPagto }, { data: contasFinanceiras }, { data: centrosCusto }, { data: filialPadrao }] =
       await Promise.all([
         supabase.from("fin_formas_pagamento").select("id, nome, tipo").eq("ativo", true),
         supabase.from("fin_contas_financeiras").select("id, nome, tipo").eq("ativo", true),
         supabase.from("fin_centros_custo").select("id, nome").eq("ativo", true),
+        supabase
+          .from("filiais")
+          .select("id, conta_financeira_padrao_id")
+          .eq("ativa", true)
+          .not("conta_financeira_padrao_id", "is", null)
+          .limit(1)
+          .maybeSingle(),
       ]);
+
+    // Conta financeira padrão configurada na filial (fallback: primeira ativa)
+    const contaPadraoId: string | null =
+      (filialPadrao?.conta_financeira_padrao_id &&
+        contasFinanceiras?.some((c: any) => c.id === filialPadrao.conta_financeira_padrao_id)
+        ? filialPadrao.conta_financeira_padrao_id
+        : null) ?? contasFinanceiras?.[0]?.id ?? null;
+
 
     const planos = await listarPlanos(supabase);
 
@@ -757,7 +772,7 @@ Retorne APENAS JSON válido sem markdown:
         fornecedor_id: fornecedor?.id ?? null,
         fornecedor_nome: fornecedor?.nome_fantasia ?? dados.nome_recebedor ?? null,
         forma_pagamento_id: formaPagtoId,
-        conta_financeira_id: contasFinanceiras?.[0]?.id ?? null,
+        conta_financeira_id: contaPadraoId,
         centro_custo_id: centrosCusto?.[0]?.id ?? null,
         plano_conta_sugerido_id: planoSugeridoId,
         anexo_url: anexoUrl,
