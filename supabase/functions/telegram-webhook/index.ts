@@ -371,23 +371,47 @@ function formatDoc(doc: string) {
   return doc;
 }
 
+function descricaoItens(dados: Record<string, any>): string | null {
+  const itens = Array.isArray(dados.itens) ? dados.itens : [];
+  if (!itens.length) return null;
+  return itens
+    .map((i: any) => {
+      const qtd = i?.quantidade ? `${i.quantidade}x ` : "";
+      const unit = i?.valor_unit ? ` R$${formatMoeda(i.valor_unit).replace("R$ ", "")}` : "";
+      return `${qtd}${i?.descricao ?? "item"}${unit}`.trim();
+    })
+    .join(", ");
+}
+
 function resumoComprovante(
   dados: Record<string, any>,
   fornecedorNome?: string | null,
   observacao?: string | null,
 ) {
+  const tipo = String(dados.tipo ?? "").toLowerCase();
+  const isFiscal = tipo === "nfce" || tipo === "nfe" || tipo === "nota_fiscal";
+  const itens = descricaoItens(dados);
+  const rotuloTipo = tipo === "nfce"
+    ? "NFC-e (Cupom Fiscal)"
+    : tipo === "nfe"
+    ? "NF-e (Nota Fiscal)"
+    : String(dados.tipo ?? "").toUpperCase();
+
   return (
-    `✅ *Comprovante reconhecido!*\n\n` +
+    `✅ *${isFiscal ? "Nota fiscal lida com sucesso!" : "Comprovante reconhecido!"}*\n\n` +
     `💰 *Valor:* ${formatMoeda(dados.valor)}\n` +
     `📅 *Data:* ${dados.data || "hoje"}\n` +
-    `🧾 *Tipo:* ${String(dados.tipo ?? "").toUpperCase()}\n` +
-    `${docRecebedor(dados).tipoPessoa === "pf" ? "👤" : "🏢"} *Destinatário${docRecebedor(dados).tipoPessoa === "pf" ? " (PF)" : ""}:* ${fornecedorNome || dados.nome_recebedor || "não identificado"}\n` +
+    `🧾 *Tipo:* ${rotuloTipo}\n` +
+    `${docRecebedor(dados).tipoPessoa === "pf" ? "👤" : isFiscal ? "🏪" : "🏢"} *${isFiscal ? "Estabelecimento" : `Destinatário${docRecebedor(dados).tipoPessoa === "pf" ? " (PF)" : ""}`}:* ${fornecedorNome || dados.nome_recebedor || dados.nome_emitente || "não identificado"}\n` +
     (docRecebedor(dados).doc
       ? `🔢 *${docRecebedor(dados).tipoPessoa === "pf" ? "CPF" : "CNPJ"}:* ${formatDoc(docRecebedor(dados).doc!)}\n`
       : "") +
+    (itens ? `🛍️ *Itens:* ${itens.slice(0, 300)}\n` : "") +
+    (dados.forma_pagamento ? `💳 *Pagamento:* ${dados.forma_pagamento}\n` : "") +
     (observacao ? `📝 *Obs:* ${observacao}\n` : "")
   );
 }
+
 
 
 Deno.serve(async (req) => {
