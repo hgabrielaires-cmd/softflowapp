@@ -137,16 +137,14 @@ async function despesasPagas(supabase: any, inicio: string, fim: string) {
 }
 
 async function receitas(supabase: any, inicio: string, fim: string) {
+  // Receitas = entradas do livro caixa (recebíveis importados, lançamentos manuais)
   const { data } = await supabase
-    .from("faturas")
-    .select("valor_final, valor")
-    .eq("status", "pago")
-    .gte("data_pagamento", inicio)
-    .lte("data_pagamento", fim);
-  return (data ?? []).reduce(
-    (s: number, f: any) => s + Number(f.valor_final ?? f.valor ?? 0),
-    0,
-  );
+    .from("fin_movimentacoes")
+    .select("valor")
+    .eq("tipo", "entrada")
+    .gte("data_movimentacao", inicio)
+    .lte("data_movimentacao", fim);
+  return (data ?? []).reduce((s: number, m: any) => s + Number(m.valor ?? 0), 0);
 }
 
 async function mapaPlanos(supabase: any) {
