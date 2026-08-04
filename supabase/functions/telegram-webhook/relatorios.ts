@@ -289,7 +289,7 @@ export async function relatorioDre(supabase: any, periodo?: Periodo): Promise<st
   return (
     `📊 *DRE — RESULTADO*\n_${label}: ${br(inicio)} a ${br(fim)}_\n\n` +
     `${SEP}\n\n💚 *RECEITAS*\n\n` +
-    tabela(["Origem", "Valor"], [["Faturamento recebido", moeda(totalReceitas)]], [1]) +
+    tabela(["Origem", "Valor"], [["Recebimentos (livro caixa)", moeda(totalReceitas)]], [1]) +
     `\nTotal Receitas: *${moeda(totalReceitas)}*\n\n` +
     `${SEP}\n\n🔴 *DESPESAS*\n\n` +
     (linhasDesp.length
