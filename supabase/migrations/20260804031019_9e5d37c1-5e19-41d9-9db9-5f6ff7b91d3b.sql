@@ -1,0 +1,1 @@
+ALTER TABLE public.filiais ADD COLUMN IF NOT EXISTS conta_financeira_padrao_id uuid REFERENCES public.fin_contas_financeiras(id) ON DELETE SET NULL;
