@@ -32,10 +32,12 @@ export default function Login() {
 
     const clientIp = await getClientIp();
 
-    // Proteção contra brute-force: verificar bloqueio
+    // Proteção contra brute-force: verificar bloqueio (validado no servidor)
     try {
-      const { data: isBlocked } = await supabase.rpc("check_login_blocked", { p_email: email });
-      if (isBlocked) {
+      const { data: guard } = await supabase.functions.invoke("login-guard", {
+        body: { action: "check", email },
+      });
+      if ((guard as any)?.blocked) {
         toast.error("Muitas tentativas de login. Aguarde 5 minutos antes de tentar novamente.");
         setLoading(false);
         return;
@@ -48,7 +50,9 @@ export default function Login() {
     if (error) {
       // Registrar tentativa falhada com IP
       try {
-        await supabase.rpc("record_login_attempt", { p_email: email, p_success: false, p_ip: clientIp });
+        await supabase.functions.invoke("login-guard", {
+          body: { action: "record", email, success: false, ip: clientIp },
+        });
       } catch (e) {
         console.warn("Erro ao registrar tentativa:", e);
       }
@@ -59,10 +63,13 @@ export default function Login() {
 
     // Registrar tentativa bem-sucedida com IP
     try {
-      await supabase.rpc("record_login_attempt", { p_email: email, p_success: true, p_ip: clientIp });
+      await supabase.functions.invoke("login-guard", {
+        body: { action: "record", email, success: true, ip: clientIp },
+      });
     } catch (e) {
       console.warn("Erro ao registrar login:", e);
     }
+
 
     const userId = authData.user?.id;
     if (!userId) {
