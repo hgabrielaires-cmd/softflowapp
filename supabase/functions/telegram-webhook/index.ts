@@ -868,7 +868,7 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
       if (found) formaPagtoId = found.id;
     }
 
-    // ── Sugestão de plano: IA → memória (obs) → memória (CNPJ) → fornecedor ──
+    // ── Sugestão de plano: fornecedor → memória (CNPJ) → memória (obs) → IA ──
     const codigoSugerido = String(dados.plano_conta_sugerido_codigo ?? "").trim();
     const motivoSugestao = String(dados.plano_conta_sugerido_motivo ?? "").trim();
 
@@ -887,7 +887,7 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
     // memória por palavra-chave da observação do usuário
     let planoObsId: string | null = null;
     const obsChave = chaveObservacao(observacaoUsuario);
-    if (!planoIA && obsChave) {
+    if (obsChave) {
       const { data: memObs } = await supabase
         .from("telegram_memoria")
         .select("plano_conta_id")
@@ -897,9 +897,22 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
       planoObsId = memObs?.plano_conta_id ?? null;
     }
 
-    const planoSugeridoId: string | null =
-      planoIA?.id ?? planoObsId ?? planoMemoria?.plano_conta_id ?? fornecedor?.plano_conta_id ?? null;
+    // Prioridade: 1º fornecedor cadastrado, 2º memória (CNPJ/obs), 3º IA
+    let origemSugestao: "fornecedor" | "memoria" | "ia" | null = null;
+    let planoSugeridoId: string | null = null;
+    if (fornecedor?.plano_conta_id) {
+      planoSugeridoId = fornecedor.plano_conta_id;
+      origemSugestao = "fornecedor";
+    } else if (planoMemoria?.plano_conta_id ?? planoObsId) {
+      planoSugeridoId = planoMemoria?.plano_conta_id ?? planoObsId;
+      origemSugestao = "memoria";
+    } else if (planoIA) {
+      planoSugeridoId = planoIA.id;
+      origemSugestao = "ia";
+    }
     const planoSugerido = planos.find((p) => p.id === planoSugeridoId) ?? null;
+    if (!planoSugerido) origemSugestao = null;
+
 
     const { data: novaPendencia } = await supabase
       .from("telegram_pendencias")
