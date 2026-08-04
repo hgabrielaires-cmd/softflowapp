@@ -57,6 +57,7 @@ const FinanceiroParametros = React.lazy(() => import("./pages/financeiro-paramet
 const FinanceiroDespesas = React.lazy(() => import("./pages/financeiro-despesas"));
 const DespesasAuditoria = React.lazy(() => import("./pages/financeiro-despesas/DespesasAuditoria"));
 const ContasFinanceiras = React.lazy(() => import("./pages/financeiro-contas"));
+const DRE = React.lazy(() => import("./pages/financeiro-dre"));
 
 
 function PageLoader() {
