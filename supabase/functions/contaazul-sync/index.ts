@@ -208,6 +208,7 @@ Deno.serve(async (req) => {
             plano_conta_id: paramFilial.taxa_boleto_plano_conta_id,
             origem: "taxa_boleto_contaazul",
             origem_id: origemId,
+            fornecedor_id: fornecedorCA?.id ?? null,
           });
           if (taxaErr) console.error("insert taxa:", taxaErr.message);
           else taxasLancadas++;
