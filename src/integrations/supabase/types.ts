@@ -3194,6 +3194,7 @@ export type Database = {
           data_movimentacao: string
           descricao: string | null
           filial_id: string | null
+          fornecedor_id: string | null
           id: string
           observacao: string | null
           origem: string | null
@@ -3213,6 +3214,7 @@ export type Database = {
           data_movimentacao?: string
           descricao?: string | null
           filial_id?: string | null
+          fornecedor_id?: string | null
           id?: string
           observacao?: string | null
           origem?: string | null
@@ -3232,6 +3234,7 @@ export type Database = {
           data_movimentacao?: string
           descricao?: string | null
           filial_id?: string | null
+          fornecedor_id?: string | null
           id?: string
           observacao?: string | null
           origem?: string | null
@@ -3261,6 +3264,13 @@ export type Database = {
             columns: ["filial_id"]
             isOneToOne: false
             referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_movimentacoes_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
             referencedColumns: ["id"]
           },
           {
