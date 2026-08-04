@@ -355,8 +355,9 @@ async function executarRelatorioVendas(
 
 
 function docRecebedor(dados: Record<string, any>): { doc: string | null; tipoPessoa: "pf" | "pj" | null } {
-  const cnpj = dados.cnpj_recebedor ? String(dados.cnpj_recebedor).replace(/\D/g, "") : "";
+  const cnpj = String(dados.cnpj_recebedor ?? dados.cnpj_emitente ?? "").replace(/\D/g, "");
   const cpf = dados.cpf_recebedor ? String(dados.cpf_recebedor).replace(/\D/g, "") : "";
+
   const doc = cnpj || cpf || null;
   if (!doc) return { doc: null, tipoPessoa: null };
   const tipo = (dados.tipo_pessoa_recebedor === "pf" || dados.tipo_pessoa_recebedor === "pj")
