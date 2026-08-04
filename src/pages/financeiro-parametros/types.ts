@@ -8,6 +8,7 @@ export interface PlanoConta {
   tipo: "receita" | "despesa";
   nivel: number;
   aceita_lancamento: boolean;
+  nao_valoriza_dre: boolean;
   ordem: number;
   ativo: boolean;
   created_at: string;
@@ -56,6 +57,7 @@ export interface PlanoContaFormState {
   nome: string;
   tipo: "receita" | "despesa";
   aceita_lancamento: boolean;
+  nao_valoriza_dre: boolean;
   ativo: boolean;
 }
 
