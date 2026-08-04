@@ -144,6 +144,11 @@ export default function Filiais() {
     setCongelarAcao("manter");
     setCongelarEtapaId(null);
     setMargemVendaIdeal(0);
+    setTaxaBoletoAtivo(false);
+    setTaxaBoletoTipo("fixo");
+    setTaxaBoletoValor(3.5);
+    setTaxaBoletoPercentual(0);
+    setTaxaBoletoPlanoContaId(null);
     setReguaAtiva(true);
     setDiasLembrete1(5);
     setDiasLembreteVencimento(true);
@@ -165,6 +170,11 @@ export default function Filiais() {
       setCongelarAcao((data as any).congelar_acao ?? "manter");
       setCongelarEtapaId((data as any).congelar_etapa_id ?? null);
       setMargemVendaIdeal((data as any).margem_venda_ideal ?? 0);
+      setTaxaBoletoAtivo((data as any).taxa_boleto_ativo ?? false);
+      setTaxaBoletoTipo((data as any).taxa_boleto_tipo ?? "fixo");
+      setTaxaBoletoValor(Number((data as any).taxa_boleto_valor ?? 3.5));
+      setTaxaBoletoPercentual(Number((data as any).taxa_boleto_percentual ?? 0));
+      setTaxaBoletoPlanoContaId((data as any).taxa_boleto_plano_conta_id ?? null);
     }
     // Load cobranca config
     const { data: cobranca } = await supabase.from("cobranca_config").select("*").eq("filial_id", filialId).maybeSingle();
@@ -307,6 +317,11 @@ export default function Filiais() {
       congelar_acao: congelarAcao,
       congelar_etapa_id: congelarAcao === "mover" ? congelarEtapaId : null,
       margem_venda_ideal: margemVendaIdeal,
+      taxa_boleto_ativo: taxaBoletoAtivo,
+      taxa_boleto_tipo: taxaBoletoTipo,
+      taxa_boleto_valor: taxaBoletoValor,
+      taxa_boleto_percentual: taxaBoletoPercentual,
+      taxa_boleto_plano_conta_id: taxaBoletoPlanoContaId,
     };
     const { data: existing } = await supabase.from("filial_parametros").select("id").eq("filial_id", filialId).maybeSingle();
     if (existing) {
