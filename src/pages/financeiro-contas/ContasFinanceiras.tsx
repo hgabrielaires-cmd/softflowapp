@@ -141,6 +141,21 @@ export default function ContasFinanceiras() {
         )}
 
         <Card className="rounded-xl p-4 space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {PRESETS.map((p) => (
+              <Button
+                key={p.key}
+                size="sm"
+                variant={preset === p.key ? "default" : "outline"}
+                onClick={() => {
+                  setPreset(p.key);
+                  setFiltros((f) => ({ ...f, ...periodoPreset(p.key) }));
+                }}
+              >
+                {p.label}
+              </Button>
+            ))}
+          </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5">
               <Label className="text-xs">Conta</Label>
@@ -154,12 +169,13 @@ export default function ContasFinanceiras() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Data início</Label>
-              <Input type="date" value={filtros.data_inicio} onChange={(e) => setFiltros({ ...filtros, data_inicio: e.target.value })} />
+              <Input type="date" value={filtros.data_inicio} onChange={(e) => { setPreset(null); setFiltros({ ...filtros, data_inicio: e.target.value }); }} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Data fim</Label>
-              <Input type="date" value={filtros.data_fim} onChange={(e) => setFiltros({ ...filtros, data_fim: e.target.value })} />
+              <Input type="date" value={filtros.data_fim} onChange={(e) => { setPreset(null); setFiltros({ ...filtros, data_fim: e.target.value }); }} />
             </div>
+
             <div className="space-y-1.5">
               <Label className="text-xs">Tipo</Label>
               <Select value={filtros.tipo} onValueChange={(v) => setFiltros({ ...filtros, tipo: v })}>
