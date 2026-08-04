@@ -2820,6 +2820,11 @@ export type Database = {
           pix_desconto_percentual: number
           regras_padrao_implantacao: string | null
           regras_padrao_mensalidade: string | null
+          taxa_boleto_ativo: boolean
+          taxa_boleto_percentual: number
+          taxa_boleto_plano_conta_id: string | null
+          taxa_boleto_tipo: string
+          taxa_boleto_valor: number
           updated_at: string
         }
         Insert: {
@@ -2833,6 +2838,11 @@ export type Database = {
           pix_desconto_percentual?: number
           regras_padrao_implantacao?: string | null
           regras_padrao_mensalidade?: string | null
+          taxa_boleto_ativo?: boolean
+          taxa_boleto_percentual?: number
+          taxa_boleto_plano_conta_id?: string | null
+          taxa_boleto_tipo?: string
+          taxa_boleto_valor?: number
           updated_at?: string
         }
         Update: {
@@ -2846,6 +2856,11 @@ export type Database = {
           pix_desconto_percentual?: number
           regras_padrao_implantacao?: string | null
           regras_padrao_mensalidade?: string | null
+          taxa_boleto_ativo?: boolean
+          taxa_boleto_percentual?: number
+          taxa_boleto_plano_conta_id?: string | null
+          taxa_boleto_tipo?: string
+          taxa_boleto_valor?: number
           updated_at?: string
         }
         Relationships: [
@@ -2861,6 +2876,13 @@ export type Database = {
             columns: ["filial_id"]
             isOneToOne: true
             referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "filial_parametros_taxa_boleto_plano_conta_id_fkey"
+            columns: ["taxa_boleto_plano_conta_id"]
+            isOneToOne: false
+            referencedRelation: "fin_plano_contas"
             referencedColumns: ["id"]
           },
         ]
@@ -6468,6 +6490,10 @@ export type Database = {
       fn_recriar_crons_contaazul: {
         Args: { p_apikey: string; p_horarios: string[] }
         Returns: undefined
+      }
+      fn_reprocessar_taxas_boleto: {
+        Args: { p_ano: number; p_filial_id: string; p_mes: number }
+        Returns: Json
       }
       fn_saldo_conta: {
         Args: { p_conta_id: string; p_data?: string }

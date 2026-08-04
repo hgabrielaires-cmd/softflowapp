@@ -80,6 +80,14 @@ export default function Filiais() {
   const [congelarEtapaId, setCongelarEtapaId] = useState<string | null>(null);
   const [margemVendaIdeal, setMargemVendaIdeal] = useState(0);
 
+  // Taxa de boleto
+  const [taxaBoletoAtivo, setTaxaBoletoAtivo] = useState(false);
+  const [taxaBoletoTipo, setTaxaBoletoTipo] = useState("fixo");
+  const [taxaBoletoValor, setTaxaBoletoValor] = useState(3.5);
+  const [taxaBoletoPercentual, setTaxaBoletoPercentual] = useState(0);
+  const [taxaBoletoPlanoContaId, setTaxaBoletoPlanoContaId] = useState<string | null>(null);
+  const [planosDespesa, setPlanosDespesa] = useState<{ id: string; codigo: string; nome: string }[]>([]);
+
   // Régua de cobrança config
   const [reguaAtiva, setReguaAtiva] = useState(true);
   const [diasLembrete1, setDiasLembrete1] = useState(5);
@@ -107,7 +115,18 @@ export default function Filiais() {
     if (data) setContasFinanceiras(data);
   }
 
-  useEffect(() => { loadFiliais(); loadEtapas(); loadContasFinanceiras(); }, []);
+  async function loadPlanosDespesa() {
+    const { data } = await supabase
+      .from("fin_plano_contas")
+      .select("id, codigo, nome")
+      .eq("tipo", "despesa")
+      .eq("aceita_lancamento", true)
+      .eq("ativo", true)
+      .order("codigo");
+    if (data) setPlanosDespesa(data as any);
+  }
+
+  useEffect(() => { loadFiliais(); loadEtapas(); loadContasFinanceiras(); loadPlanosDespesa(); }, []);
 
   function resetForm() {
     setNome(""); setRazaoSocial(""); setResponsavel(""); setAtiva(true); setCnpj(""); setInscricaoEstadual(""); setIeIsento(false);
@@ -125,6 +144,11 @@ export default function Filiais() {
     setCongelarAcao("manter");
     setCongelarEtapaId(null);
     setMargemVendaIdeal(0);
+    setTaxaBoletoAtivo(false);
+    setTaxaBoletoTipo("fixo");
+    setTaxaBoletoValor(3.5);
+    setTaxaBoletoPercentual(0);
+    setTaxaBoletoPlanoContaId(null);
     setReguaAtiva(true);
     setDiasLembrete1(5);
     setDiasLembreteVencimento(true);
@@ -146,6 +170,11 @@ export default function Filiais() {
       setCongelarAcao((data as any).congelar_acao ?? "manter");
       setCongelarEtapaId((data as any).congelar_etapa_id ?? null);
       setMargemVendaIdeal((data as any).margem_venda_ideal ?? 0);
+      setTaxaBoletoAtivo((data as any).taxa_boleto_ativo ?? false);
+      setTaxaBoletoTipo((data as any).taxa_boleto_tipo ?? "fixo");
+      setTaxaBoletoValor(Number((data as any).taxa_boleto_valor ?? 3.5));
+      setTaxaBoletoPercentual(Number((data as any).taxa_boleto_percentual ?? 0));
+      setTaxaBoletoPlanoContaId((data as any).taxa_boleto_plano_conta_id ?? null);
     }
     // Load cobranca config
     const { data: cobranca } = await supabase.from("cobranca_config").select("*").eq("filial_id", filialId).maybeSingle();
@@ -288,6 +317,11 @@ export default function Filiais() {
       congelar_acao: congelarAcao,
       congelar_etapa_id: congelarAcao === "mover" ? congelarEtapaId : null,
       margem_venda_ideal: margemVendaIdeal,
+      taxa_boleto_ativo: taxaBoletoAtivo,
+      taxa_boleto_tipo: taxaBoletoTipo,
+      taxa_boleto_valor: taxaBoletoValor,
+      taxa_boleto_percentual: taxaBoletoPercentual,
+      taxa_boleto_plano_conta_id: taxaBoletoPlanoContaId,
     };
     const { data: existing } = await supabase.from("filial_parametros").select("id").eq("filial_id", filialId).maybeSingle();
     if (existing) {
@@ -643,6 +677,75 @@ export default function Filiais() {
                     <p className="text-xs text-muted-foreground">Usada como padrão em despesas e pagamentos desta filial.</p>
                   </div>
                 </div>
+
+                {/* Taxas Bancárias */}
+                <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">Taxas Bancárias</h3>
+                  <div className="flex items-center justify-between rounded-md border border-border p-3">
+                    <div>
+                      <Label className="text-sm">Cobrar taxa por boleto</Label>
+                      <p className="text-xs text-muted-foreground">Lança automaticamente uma saída para cada recebimento importado.</p>
+                    </div>
+                    <Switch checked={taxaBoletoAtivo} onCheckedChange={setTaxaBoletoAtivo} />
+                  </div>
+
+                  {taxaBoletoAtivo && (
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <Label>Tipo de taxa</Label>
+                        <Select value={taxaBoletoTipo} onValueChange={setTaxaBoletoTipo}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="fixo">Valor fixo (R$)</SelectItem>
+                            <SelectItem value="percentual">Percentual (%)</SelectItem>
+                            <SelectItem value="fixo_percentual">Fixo + Percentual</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        {(taxaBoletoTipo === "fixo" || taxaBoletoTipo === "fixo_percentual") && (
+                          <div className="space-y-1.5">
+                            <Label>Valor por boleto (R$)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min={0}
+                              value={taxaBoletoValor}
+                              onChange={(e) => setTaxaBoletoValor(Number(e.target.value))}
+                            />
+                          </div>
+                        )}
+                        {(taxaBoletoTipo === "percentual" || taxaBoletoTipo === "fixo_percentual") && (
+                          <div className="space-y-1.5">
+                            <Label>Percentual (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min={0}
+                              value={taxaBoletoPercentual}
+                              onChange={(e) => setTaxaBoletoPercentual(Number(e.target.value))}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label>Plano de contas *</Label>
+                        <Select value={taxaBoletoPlanoContaId || ""} onValueChange={(v) => setTaxaBoletoPlanoContaId(v || null)}>
+                          <SelectTrigger><SelectValue placeholder="Selecione o plano de contas da taxa" /></SelectTrigger>
+                          <SelectContent>
+                            {planosDespesa.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nome}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">Sugerido: Gateway de Pagamentos / Tarifas Bancárias.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
 
                 {/* Financeiro */}
                 <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">

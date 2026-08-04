@@ -41,6 +41,20 @@ function resolvePeriodo(body: any): { inicio: string; fim: string } {
   }
 }
 
+function calcularTaxaBoleto(
+  valorRecebivel: number,
+  config: { tipo: string; valor: number; percentual: number },
+): number {
+  if (config.tipo === "fixo") return config.valor;
+  if (config.tipo === "percentual") {
+    return Math.round(valorRecebivel * (config.percentual / 100) * 100) / 100;
+  }
+  if (config.tipo === "fixo_percentual") {
+    return Math.round((config.valor + valorRecebivel * (config.percentual / 100)) * 100) / 100;
+  }
+  return 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -112,6 +126,18 @@ Deno.serve(async (req) => {
 
     let importados = 0;
     let ignorados = 0;
+    let taxasLancadas = 0;
+
+    const filialEfetiva = filialId ?? token.filial_id ?? conta.filial_id;
+
+    // Configuração de taxa de boleto da filial
+    const { data: paramFilial } = await supabase
+      .from("filial_parametros")
+      .select(
+        "taxa_boleto_ativo, taxa_boleto_tipo, taxa_boleto_valor, taxa_boleto_percentual, taxa_boleto_plano_conta_id",
+      )
+      .eq("filial_id", filialEfetiva)
+      .maybeSingle();
 
     for (const r of recebiveis) {
       const origemId = String(r.id ?? r.uuid ?? "");
@@ -127,14 +153,14 @@ Deno.serve(async (req) => {
       if (existente) { ignorados++; continue; }
 
       const valor = Number(r.pago ?? r.total ?? 0);
-      const dataMov = String(r.data_vencimento ?? fim).split("T")[0];
+      const dataMov = String(r.data_pagamento ?? r.data_vencimento ?? fim).split("T")[0];
       if (!valor) { ignorados++; continue; }
 
       const cliente = r.cliente?.nome ? ` — ${r.cliente.nome}` : "";
 
       const { error: insErr } = await supabase.from("fin_movimentacoes").insert({
         conta_financeira_id: conta.id,
-        filial_id: filialId ?? token.filial_id ?? conta.filial_id,
+        filial_id: filialEfetiva,
         tipo: "entrada",
         valor,
         data_movimentacao: dataMov,
@@ -145,9 +171,43 @@ Deno.serve(async (req) => {
         origem_id: origemId,
       });
 
-      if (insErr) { ignorados++; console.error("insert mov:", insErr.message); }
-      else importados++;
+      if (insErr) { ignorados++; console.error("insert mov:", insErr.message); continue; }
+      importados++;
+
+      // Taxa de boleto
+      if (paramFilial?.taxa_boleto_ativo && paramFilial?.taxa_boleto_plano_conta_id) {
+        const valorTaxa = calcularTaxaBoleto(valor, {
+          tipo: paramFilial.taxa_boleto_tipo ?? "fixo",
+          valor: Number(paramFilial.taxa_boleto_valor ?? 3.5),
+          percentual: Number(paramFilial.taxa_boleto_percentual ?? 0),
+        });
+
+        const { data: taxaExiste } = await supabase
+          .from("fin_movimentacoes")
+          .select("id")
+          .eq("origem", "taxa_boleto_contaazul")
+          .eq("origem_id", origemId)
+          .maybeSingle();
+
+        if (!taxaExiste && valorTaxa > 0) {
+          const { error: taxaErr } = await supabase.from("fin_movimentacoes").insert({
+            conta_financeira_id: conta.id,
+            filial_id: filialEfetiva,
+            tipo: "saida",
+            valor: valorTaxa,
+            data_movimentacao: dataMov,
+            descricao: `Taxa Boleto ${r.descricao ?? r.numero_documento ?? ""}`.trim(),
+            categoria: "taxa_bancaria",
+            plano_conta_id: paramFilial.taxa_boleto_plano_conta_id,
+            origem: "taxa_boleto_contaazul",
+            origem_id: origemId,
+          });
+          if (taxaErr) console.error("insert taxa:", taxaErr.message);
+          else taxasLancadas++;
+        }
+      }
     }
+
 
     await supabase.from("contaazul_sync_log").insert({
       filial_id: filialId ?? token.filial_id,
@@ -158,7 +218,7 @@ Deno.serve(async (req) => {
       status: "sucesso",
     });
 
-    return json({ ok: true, periodo: { inicio, fim }, importados, ignorados, total: recebiveis.length });
+    return json({ ok: true, periodo: { inicio, fim }, importados, ignorados, taxas: taxasLancadas, total: recebiveis.length });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro desconhecido";
     console.error("contaazul-sync:", message);
