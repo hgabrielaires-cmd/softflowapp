@@ -1507,10 +1507,17 @@ async function finalizarLancamento(
     );
     if (memErr) console.error("[telegram] memoria:", memErr.message);
 
-    if (docMemoria && fornecedorId) {
-      await supabase.from("fornecedores").update({ plano_conta_id: planoId }).eq("id", fornecedorId);
-    }
   }
+
+  // preenche o plano do fornecedor apenas se ainda não houver um cadastrado
+  if (fornecedorId) {
+    await supabase
+      .from("fornecedores")
+      .update({ plano_conta_id: planoId })
+      .eq("id", fornecedorId)
+      .is("plano_conta_id", null);
+  }
+
 
   await supabase
     .from("telegram_pendencias")
