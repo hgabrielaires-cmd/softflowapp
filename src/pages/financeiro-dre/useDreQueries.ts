@@ -91,6 +91,8 @@ export function useReceitasDreQuery(filialId: string, periodo: DrePeriodo, conta
         .from("fin_movimentacoes")
         .select("*, plano:fin_plano_contas(codigo, nome), fornecedor:fornecedores(nome_fantasia, cnpj_cpf)")
         .eq("tipo", "entrada")
+        // ajustes manuais de saldo não são receita
+        .or("categoria.is.null,categoria.neq.ajuste")
         .gte("data_movimentacao", periodo.inicio)
         .lte("data_movimentacao", periodo.fim)
         .order("data_movimentacao", { ascending: false });
