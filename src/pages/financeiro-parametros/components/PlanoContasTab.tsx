@@ -14,7 +14,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Loader2, ChevronRight, ChevronDown, CornerDownRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, ChevronRight, ChevronDown, CornerDownRight, Search } from "lucide-react";
 import { toast } from "sonner";
 import { usePlanoContasQuery } from "../useFinanceiroParametrosQueries";
 import { useFinanceiroParametrosForm } from "../useFinanceiroParametrosForm";
@@ -95,7 +95,7 @@ export function PlanoContasTab() {
 
   function renderNode(node: PlanoContaNode, depth: number) {
     const hasChildren = node.children.length > 0;
-    const isCollapsed = collapsed.has(node.id);
+    const isCollapsed = !busca.trim() && collapsed.has(node.id);
     return (
       <div key={node.id}>
         <div className="flex items-center gap-2 px-3 py-2.5 hover:bg-muted/50 transition-colors">
@@ -158,8 +158,20 @@ export function PlanoContasTab() {
         </Button>
       </div>
 
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por código ou nome..."
+          className="pl-9"
+        />
+      </div>
+
       {tree.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">Nenhuma conta cadastrada.</p>
+        <p className="text-sm text-muted-foreground text-center py-8">
+          {busca.trim() ? "Nenhuma conta encontrada para a busca." : "Nenhuma conta cadastrada."}
+        </p>
       ) : (
         <div className="border rounded-lg divide-y">{tree.map((n) => renderNode(n, 0))}</div>
       )}
