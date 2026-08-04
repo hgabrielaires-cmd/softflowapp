@@ -41,6 +41,20 @@ function resolvePeriodo(body: any): { inicio: string; fim: string } {
   }
 }
 
+function calcularTaxaBoleto(
+  valorRecebivel: number,
+  config: { tipo: string; valor: number; percentual: number },
+): number {
+  if (config.tipo === "fixo") return config.valor;
+  if (config.tipo === "percentual") {
+    return Math.round(valorRecebivel * (config.percentual / 100) * 100) / 100;
+  }
+  if (config.tipo === "fixo_percentual") {
+    return Math.round((config.valor + valorRecebivel * (config.percentual / 100)) * 100) / 100;
+  }
+  return 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
