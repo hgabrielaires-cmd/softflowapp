@@ -107,13 +107,33 @@ type Despesa = {
 };
 
 async function despesasPagas(supabase: any, inicio: string, fim: string) {
-  const { data } = await supabase
-    .from("fin_despesas")
-    .select("valor, valor_pago, data_pagamento, plano_conta_id, fornecedor_id, status, data_vencimento")
-    .eq("status", "pago")
-    .gte("data_pagamento", inicio)
-    .lte("data_pagamento", fim);
-  return (data ?? []) as Despesa[];
+  const [{ data }, { data: movs }] = await Promise.all([
+    supabase
+      .from("fin_despesas")
+      .select("valor, valor_pago, data_pagamento, plano_conta_id, fornecedor_id, status, data_vencimento")
+      .eq("status", "pago")
+      .gte("data_pagamento", inicio)
+      .lte("data_pagamento", fim),
+    // Saídas do livro caixa que não vieram de fin_despesas (ex.: taxas de boleto)
+    supabase
+      .from("fin_movimentacoes")
+      .select("valor, data_movimentacao, plano_conta_id, fornecedor_id, origem")
+      .eq("tipo", "saida")
+      .neq("origem", "despesa")
+      .gte("data_movimentacao", inicio)
+      .lte("data_movimentacao", fim),
+  ]);
+
+  const extras: Despesa[] = ((movs ?? []) as any[]).map((m) => ({
+    valor: Number(m.valor ?? 0),
+    valor_pago: Number(m.valor ?? 0),
+    data_vencimento: m.data_movimentacao,
+    status: "pago",
+    plano_conta_id: m.plano_conta_id ?? null,
+    fornecedor_id: m.fornecedor_id ?? null,
+  }));
+
+  return [...((data ?? []) as Despesa[]), ...extras];
 }
 
 async function receitas(supabase: any, inicio: string, fim: string) {
