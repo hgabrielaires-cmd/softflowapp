@@ -63,11 +63,11 @@ const PRESETS: { key: PresetKey; label: string }[] = [
 
 export default function ContasFinanceiras() {
   const [filialFiltro, setFilialFiltro] = useState(TODAS);
+  const [preset, setPreset] = useState<PresetKey | null>("mes");
   const [filtros, setFiltros] = useState<ExtratoFiltros>({
     conta_id: TODAS,
     filial_id: TODAS,
-    data_inicio: inicioMesISO(),
-    data_fim: hojeISO(),
+    ...periodoPreset("mes"),
     tipo: TODAS,
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
