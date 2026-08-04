@@ -80,6 +80,7 @@ const MENU_TREE: MenuNode[] = [
         ],
       },
       { key: "menu.despesas_auditoria", label: "Histórico de Despesas", description: "Auditoria de inclusões, edições e exclusões de despesas", icon: <TrendingDown className="h-4 w-4" /> },
+      { key: "menu.contas_financeiras", label: "Contas Financeiras", description: "Livro caixa, saldos e extrato das contas financeiras", icon: <Landmark className="h-4 w-4" /> },
 
       { key: "menu.dre", label: "DRE", description: "Demonstrativo de Resultado do Exercício", icon: <BarChart3 className="h-4 w-4" /> },
     ],
