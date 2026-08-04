@@ -71,27 +71,44 @@ Deno.serve(async (req) => {
 
     if (!conta) return json({ error: "Conta financeira 'CONTA AZUL' não encontrada" }, 400);
 
-    // 3. Recebíveis pagos no período
-    const params = new URLSearchParams({
-      status: "RECEIVED",
-      startDate: inicio,
-      endDate: fim,
-      size: "200",
-    });
-    const res = await fetch(`https://api.contaazul.com/v1/receivables?${params}`, {
-      headers: { Authorization: `Bearer ${token.access_token}` },
-    });
-    const text = await res.text();
-    if (!res.ok) {
-      await supabase.from("contaazul_sync_log").insert({
-        filial_id: filialId ?? token.filial_id, periodo_inicio: inicio, periodo_fim: fim,
-        status: "erro", erro: `[${res.status}] ${text.slice(0, 500)}`,
+    // 3. Recebíveis pagos no período (API v2 — contas a receber)
+    const BASE =
+      "https://api-v2.contaazul.com/v1/financeiro/eventos-financeiros/contas-a-receber/buscar";
+    const recebiveis: any[] = [];
+    let pagina = 1;
+    const tamanho = 100;
+
+    while (pagina <= 50) {
+      const params = new URLSearchParams({
+        pagina: String(pagina),
+        tamanho_pagina: String(tamanho),
+        data_vencimento_de: inicio,
+        data_vencimento_ate: fim,
+        status: "RECEBIDO",
       });
-      return json({ error: "Falha na API Conta Azul", status: res.status, details: text }, res.status);
+      const res = await fetch(`${BASE}?${params}`, {
+        headers: {
+          Authorization: `Bearer ${token.access_token}`,
+          Accept: "application/json",
+        },
+      });
+      const text = await res.text();
+      if (!res.ok) {
+        await supabase.from("contaazul_sync_log").insert({
+          filial_id: filialId ?? token.filial_id, periodo_inicio: inicio, periodo_fim: fim,
+          status: "erro", erro: `[${res.status}] ${text.slice(0, 500)}`,
+        });
+        return json({ error: "Falha na API Conta Azul", status: res.status, details: text }, res.status);
+      }
+
+      const parsed = JSON.parse(text || "{}");
+      const itens: any[] = parsed.itens ?? [];
+      recebiveis.push(...itens);
+      const total = Number(parsed.itens_totais ?? itens.length);
+      if (itens.length < tamanho || recebiveis.length >= total) break;
+      pagina++;
     }
 
-    const parsed = JSON.parse(text || "[]");
-    const recebiveis: any[] = Array.isArray(parsed) ? parsed : (parsed.data ?? parsed.items ?? []);
 
     let importados = 0;
     let ignorados = 0;
