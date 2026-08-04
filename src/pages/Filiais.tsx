@@ -177,6 +177,7 @@ export default function Filiais() {
     setLogoFile(null); setLogoPreview(filial.logo_url || null); setRemoveLogo(false);
     setAssinaturaFile(null); setAssinaturaPreview((filial as any).assinatura_url || null); setRemoveAssinatura(false);
     setEtapaInicialId(filial.etapa_inicial_id || null);
+    setContaPadraoId((filial as any).conta_financeira_padrao_id || null);
     setActiveTab("geral");
     // Reset params then load
     setParcelasMaximasCartao(12);
