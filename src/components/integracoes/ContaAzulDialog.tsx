@@ -247,10 +247,76 @@ export function ContaAzulConfigDialog({ open, onOpenChange, initialConfig, onSav
             <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div>
                 <Label className="text-sm">Sincronização automática diária</Label>
-                <p className="text-xs text-muted-foreground">Todo dia às 08h (BRT)</p>
+                <p className="text-xs text-muted-foreground">Nos horários configurados abaixo (BRT)</p>
               </div>
               <Switch checked={autoSync} onCheckedChange={salvarAutoSync} />
             </div>
+
+            <div className="space-y-3 rounded-lg border border-border p-3">
+              <div>
+                <Label className="flex items-center gap-1.5 text-sm">
+                  <Clock className="h-4 w-4" /> Horários de Sincronização
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  O sistema buscará receitas da Conta Azul nestes horários (BRT)
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                {horarios.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Nenhum horário cadastrado.</p>
+                ) : (
+                  horarios.map((h) => {
+                    const passou = paraMinutos(h) <= minutosAgora();
+                    const proximo = proximoHorario() === h;
+                    return (
+                      <div key={h} className="flex items-center justify-between rounded-md border border-border px-3 py-1.5">
+                        <span className="flex items-center gap-2 text-sm tabular-nums">
+                          <Clock className="h-3.5 w-3.5 text-muted-foreground" /> {h}
+                          {passou ? (
+                            <Badge variant="outline" className="text-[10px]">concluída</Badge>
+                          ) : proximo ? (
+                            <Badge className="text-[10px]">próxima</Badge>
+                          ) : null}
+                        </span>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removerHorario(h)}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <Input
+                  type="time"
+                  value={novoHorario}
+                  onChange={(e) => setNovoHorario(e.target.value)}
+                  className="w-36"
+                />
+                <Button size="sm" variant="outline" onClick={adicionarHorario} className="gap-1.5">
+                  <Plus className="h-3.5 w-3.5" /> Adicionar
+                </Button>
+              </div>
+
+              <Button size="sm" onClick={salvarHorarios} disabled={salvandoHorarios} className="w-full gap-1.5">
+                {salvandoHorarios ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                Salvar Horários
+              </Button>
+
+              {crons.length > 0 && (
+                <div className="rounded-md bg-muted/40 p-2 text-[11px] text-muted-foreground">
+                  <p className="mb-1 font-medium">Agendamentos ativos (UTC):</p>
+                  {crons.map((c) => (
+                    <p key={c.jobname} className="tabular-nums">
+                      {c.jobname} · {c.schedule} {c.active ? "" : "(inativo)"}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
 
             <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
               <Info className="h-4 w-4 mt-0.5 shrink-0" />
