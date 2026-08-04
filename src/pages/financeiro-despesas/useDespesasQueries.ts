@@ -33,3 +33,22 @@ export function useDespesasQuery() {
     },
   });
 }
+
+/** Conta financeira padrão configurada em cada filial. */
+export function useContasPadraoFiliaisQuery() {
+  return useQuery({
+    queryKey: ["filiais_conta_padrao"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("filiais")
+        .select("id, conta_financeira_padrao_id")
+        .eq("ativa", true);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((f: any) => {
+        if (f.conta_financeira_padrao_id) map[f.id] = f.conta_financeira_padrao_id;
+      });
+      return map;
+    },
+  });
+}

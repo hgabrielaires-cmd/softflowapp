@@ -2631,6 +2631,7 @@ export type Database = {
           cidade: string | null
           cnpj: string | null
           complemento: string | null
+          conta_financeira_padrao_id: string | null
           created_at: string
           email: string | null
           etapa_inicial_id: string | null
@@ -2653,6 +2654,7 @@ export type Database = {
           cidade?: string | null
           cnpj?: string | null
           complemento?: string | null
+          conta_financeira_padrao_id?: string | null
           created_at?: string
           email?: string | null
           etapa_inicial_id?: string | null
@@ -2675,6 +2677,7 @@ export type Database = {
           cidade?: string | null
           cnpj?: string | null
           complemento?: string | null
+          conta_financeira_padrao_id?: string | null
           created_at?: string
           email?: string | null
           etapa_inicial_id?: string | null
@@ -2690,6 +2693,13 @@ export type Database = {
           uf?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "filiais_conta_financeira_padrao_id_fkey"
+            columns: ["conta_financeira_padrao_id"]
+            isOneToOne: false
+            referencedRelation: "fin_contas_financeiras"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "filiais_etapa_inicial_id_fkey"
             columns: ["etapa_inicial_id"]
