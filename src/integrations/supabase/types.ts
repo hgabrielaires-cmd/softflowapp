@@ -1003,6 +1003,91 @@ export type Database = {
           },
         ]
       }
+      contaazul_sync_log: {
+        Row: {
+          created_at: string
+          erro: string | null
+          filial_id: string | null
+          id: string
+          periodo_fim: string | null
+          periodo_inicio: string | null
+          registros_ignorados: number
+          registros_importados: number
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          erro?: string | null
+          filial_id?: string | null
+          id?: string
+          periodo_fim?: string | null
+          periodo_inicio?: string | null
+          registros_ignorados?: number
+          registros_importados?: number
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          erro?: string | null
+          filial_id?: string | null
+          id?: string
+          periodo_fim?: string | null
+          periodo_inicio?: string | null
+          registros_ignorados?: number
+          registros_importados?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contaazul_sync_log_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contaazul_tokens: {
+        Row: {
+          access_token: string
+          created_at: string
+          expires_at: string | null
+          filial_id: string | null
+          id: string
+          refresh_token: string | null
+          scope: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expires_at?: string | null
+          filial_id?: string | null
+          id?: string
+          refresh_token?: string | null
+          scope?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expires_at?: string | null
+          filial_id?: string | null
+          id?: string
+          refresh_token?: string | null
+          scope?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contaazul_tokens_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_clauses: {
         Row: {
           ativo: boolean
