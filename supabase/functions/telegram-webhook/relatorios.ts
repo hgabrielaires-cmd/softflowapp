@@ -260,7 +260,13 @@ export async function relatorioDre(supabase: any, periodo?: Periodo): Promise<st
   const grupos = new Map<string, { nome: string; total: number }>();
   for (const dsp of despesas) {
     const plano = dsp.plano_conta_id ? planos.get(dsp.plano_conta_id) : null;
-    const raiz = (plano?.codigo ?? "8").split(".")[0];
+    if (!plano?.codigo) {
+      const g = grupos.get("—") ?? { nome: "Sem categoria", total: 0 };
+      g.total += valorDe(dsp);
+      grupos.set("—", g);
+      continue;
+    }
+    const raiz = plano.codigo.split(".")[0];
     const nomeRaiz =
       [...planos.values()].find((p) => p.codigo === raiz)?.nome ?? "Outros";
     const g = grupos.get(raiz) ?? { nome: nomeRaiz, total: 0 };
@@ -270,8 +276,12 @@ export async function relatorioDre(supabase: any, periodo?: Periodo): Promise<st
 
   const linhasDesp = [...grupos.entries()]
     .filter(([, g]) => g.total > 0)
-    .sort((a, b) => b[1].total - a[1].total)
-    .map(([cod, g]) => [`${cod} ${g.nome}`, moeda(g.total), pct(g.total, totalReceitas)]);
+    .sort((a, b) => (a[0] === "—" ? 1 : b[0] === "—" ? -1 : b[1].total - a[1].total))
+    .map(([cod, g]) => [
+      cod === "—" ? "⚠️ Sem categoria" : `${cod} ${g.nome}`,
+      moeda(g.total),
+      pct(g.total, totalReceitas),
+    ]);
 
   const lucro = totalReceitas - totalDespesas;
   const margem = totalReceitas ? pct(lucro, totalReceitas) : "—";
