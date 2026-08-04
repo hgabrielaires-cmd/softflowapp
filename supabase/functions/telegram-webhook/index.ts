@@ -355,8 +355,9 @@ async function executarRelatorioVendas(
 
 
 function docRecebedor(dados: Record<string, any>): { doc: string | null; tipoPessoa: "pf" | "pj" | null } {
-  const cnpj = dados.cnpj_recebedor ? String(dados.cnpj_recebedor).replace(/\D/g, "") : "";
+  const cnpj = String(dados.cnpj_recebedor ?? dados.cnpj_emitente ?? "").replace(/\D/g, "");
   const cpf = dados.cpf_recebedor ? String(dados.cpf_recebedor).replace(/\D/g, "") : "";
+
   const doc = cnpj || cpf || null;
   if (!doc) return { doc: null, tipoPessoa: null };
   const tipo = (dados.tipo_pessoa_recebedor === "pf" || dados.tipo_pessoa_recebedor === "pj")
@@ -371,23 +372,47 @@ function formatDoc(doc: string) {
   return doc;
 }
 
+function descricaoItens(dados: Record<string, any>): string | null {
+  const itens = Array.isArray(dados.itens) ? dados.itens : [];
+  if (!itens.length) return null;
+  return itens
+    .map((i: any) => {
+      const qtd = i?.quantidade ? `${i.quantidade}x ` : "";
+      const unit = i?.valor_unit ? ` R$${formatMoeda(i.valor_unit).replace("R$ ", "")}` : "";
+      return `${qtd}${i?.descricao ?? "item"}${unit}`.trim();
+    })
+    .join(", ");
+}
+
 function resumoComprovante(
   dados: Record<string, any>,
   fornecedorNome?: string | null,
   observacao?: string | null,
 ) {
+  const tipo = String(dados.tipo ?? "").toLowerCase();
+  const isFiscal = tipo === "nfce" || tipo === "nfe" || tipo === "nota_fiscal";
+  const itens = descricaoItens(dados);
+  const rotuloTipo = tipo === "nfce"
+    ? "NFC-e (Cupom Fiscal)"
+    : tipo === "nfe"
+    ? "NF-e (Nota Fiscal)"
+    : String(dados.tipo ?? "").toUpperCase();
+
   return (
-    `✅ *Comprovante reconhecido!*\n\n` +
+    `✅ *${isFiscal ? "Nota fiscal lida com sucesso!" : "Comprovante reconhecido!"}*\n\n` +
     `💰 *Valor:* ${formatMoeda(dados.valor)}\n` +
     `📅 *Data:* ${dados.data || "hoje"}\n` +
-    `🧾 *Tipo:* ${String(dados.tipo ?? "").toUpperCase()}\n` +
-    `${docRecebedor(dados).tipoPessoa === "pf" ? "👤" : "🏢"} *Destinatário${docRecebedor(dados).tipoPessoa === "pf" ? " (PF)" : ""}:* ${fornecedorNome || dados.nome_recebedor || "não identificado"}\n` +
+    `🧾 *Tipo:* ${rotuloTipo}\n` +
+    `${docRecebedor(dados).tipoPessoa === "pf" ? "👤" : isFiscal ? "🏪" : "🏢"} *${isFiscal ? "Estabelecimento" : `Destinatário${docRecebedor(dados).tipoPessoa === "pf" ? " (PF)" : ""}`}:* ${fornecedorNome || dados.nome_recebedor || dados.nome_emitente || "não identificado"}\n` +
     (docRecebedor(dados).doc
       ? `🔢 *${docRecebedor(dados).tipoPessoa === "pf" ? "CPF" : "CNPJ"}:* ${formatDoc(docRecebedor(dados).doc!)}\n`
       : "") +
+    (itens ? `🛍️ *Itens:* ${itens.slice(0, 300)}\n` : "") +
+    (dados.forma_pagamento ? `💳 *Pagamento:* ${dados.forma_pagamento}\n` : "") +
     (observacao ? `📝 *Obs:* ${observacao}\n` : "")
   );
 }
+
 
 
 Deno.serve(async (req) => {
@@ -570,7 +595,16 @@ Deno.serve(async (req) => {
       return ok();
     }
 
-    await sendMessage(token, chatId, `⏳ Processando com IA...\nAguarde um momento.`);
+    const processingMsgId = await sendMessage(
+      token,
+      chatId,
+      `⏳ Processando com IA...\nAguarde um momento.`,
+    );
+    const avisar = async (texto: string) => {
+      if (processingMsgId) await editMessage(token, chatId, processingMsgId, texto);
+      else await sendMessage(token, chatId, texto);
+    };
+
 
     let fileId: string;
     let mimeType = "image/jpeg";
@@ -610,49 +644,77 @@ Deno.serve(async (req) => {
     }
 
     // ── Claude Vision ──
-    const prompt = `Analise este comprovante/documento financeiro.
+    const prompt = `Analise este documento financeiro.
+Pode ser: comprovante PIX, boleto, TED, DOC, nota fiscal NF-e, cupom fiscal NFC-e, recibo ou qualquer documento de pagamento.
+
 Retorne APENAS JSON válido sem markdown:
 {
-  "tipo": "pix"|"boleto"|"ted"|"doc"|"nota_fiscal"|"recibo"|"desconhecido",
+  "tipo": "pix"|"boleto"|"ted"|"doc"|"nfe"|"nfce"|"recibo"|"desconhecido",
   "valor": 0.00,
   "data": "YYYY-MM-DD",
   "cnpj_recebedor": "apenas CNPJ com 14 dígitos ou null",
   "cpf_recebedor": "apenas CPF com 11 dígitos ou null",
   "tipo_pessoa_recebedor": "pf"|"pj"|null,
   "nome_recebedor": "string ou null",
+  "cnpj_emitente": "apenas números ou null",
+  "nome_emitente": "string ou null",
   "banco_pagador": "string ou null",
   "numero_documento": "string ou null",
+  "chave_acesso": "string ou null",
   "codigo_barras": "string ou null",
+  "itens": [
+    { "descricao": "string", "quantidade": 1, "valor_unit": 0.00, "valor_total": 0.00 }
+  ],
+  "forma_pagamento": "string ou null",
   "descricao": "breve descrição",
   "confianca": "alta"|"media"|"baixa"
-}`;
+}
+
+Para NFC-e/cupom fiscal:
+- nome_recebedor = nome do estabelecimento
+- cnpj_recebedor = CNPJ do emitente
+- valor = valor total pago
+- data = data de emissão`;
 
     const contentBlock = isPdf
       ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } }
       : { type: "image", source: { type: "base64", media_type: mimeType, data: base64 } };
 
-    const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: modelo,
-        max_tokens: 1024,
-        messages: [{ role: "user", content: [contentBlock, { type: "text", text: prompt }] }],
-      }),
-    });
+    let claudeData: Record<string, any> = {};
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
+      const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+        signal: controller.signal,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": anthropicKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: modelo,
+          max_tokens: 1500,
+          messages: [{ role: "user", content: [contentBlock, { type: "text", text: prompt }] }],
+        }),
+      }).finally(() => clearTimeout(timeoutId));
 
-    const claudeData = await claudeRes.json().catch(() => ({}));
-    if (!claudeRes.ok) {
-      console.error("[telegram] Claude erro:", JSON.stringify(claudeData).slice(0, 400));
-      await sendMessage(
-        token,
-        chatId,
-        `❌ Erro na leitura por IA: ${claudeData?.error?.message ?? claudeRes.status}`,
-      );
+      if (!claudeRes.ok) {
+        const erro = await claudeRes.text();
+        console.error("[claude] Erro:", erro.slice(0, 400));
+        await avisar(`❌ Erro ao processar com IA.\nTente novamente em instantes.`);
+        return ok();
+      }
+
+      claudeData = await claudeRes.json();
+      console.log("[claude] Resposta:", JSON.stringify(claudeData).slice(0, 300));
+    } catch (err: any) {
+      console.error("[claude] Falha:", err?.name, err?.message);
+      if (err?.name === "AbortError") {
+        await avisar(`⏱️ Processamento demorou muito.\nTente novamente ou envie em melhor qualidade.`);
+      } else {
+        await avisar(`❌ Erro inesperado: ${err?.message ?? "desconhecido"}\nTente novamente.`);
+      }
       return ok();
     }
 
@@ -667,13 +729,22 @@ Retorne APENAS JSON válido sem markdown:
     console.log("[telegram] Dados extraídos:", JSON.stringify(dados));
 
     if (!dados.valor || dados.tipo === "desconhecido") {
-      await sendMessage(
-        token,
-        chatId,
-        `⚠️ *Não consegui identificar o comprovante.*\n\nPor favor, envie uma imagem mais clara.`,
+      await avisar(
+        `⚠️ *Não consegui identificar o documento.*\n\nPor favor, envie uma imagem mais clara ou o PDF original.`,
       );
       return ok();
     }
+
+    // Para NF-e/NFC-e, montar a descrição com os itens da nota
+    if (dados.tipo === "nfce" || dados.tipo === "nfe") {
+      dados.descricao = descricaoItens(dados) || dados.descricao;
+    }
+
+    if (processingMsgId) {
+      await editMessage(token, chatId, processingMsgId, "✅ Documento lido com sucesso.");
+    }
+
+
 
     // ── Fornecedor ──
     const { doc: cnpj } = docRecebedor(dados);
