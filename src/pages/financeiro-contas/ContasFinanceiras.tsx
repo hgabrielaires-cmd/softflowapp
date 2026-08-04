@@ -9,7 +9,7 @@ import { Loader2, Plus } from "lucide-react";
 import { ContaSaldoCard } from "./components/ContaSaldoCard";
 import { ExtratoTable } from "./components/ExtratoTable";
 import { MovimentacaoDrawer } from "./components/MovimentacaoDrawer";
-import { TODAS, hojeISO } from "./constants";
+import { TODAS } from "./constants";
 import { montarExtrato } from "./helpers";
 import {
   useContasAtivasQuery,
