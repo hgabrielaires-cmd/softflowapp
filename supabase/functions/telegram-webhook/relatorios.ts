@@ -137,16 +137,14 @@ async function despesasPagas(supabase: any, inicio: string, fim: string) {
 }
 
 async function receitas(supabase: any, inicio: string, fim: string) {
+  // Receitas = entradas do livro caixa (recebíveis importados, lançamentos manuais)
   const { data } = await supabase
-    .from("faturas")
-    .select("valor_final, valor")
-    .eq("status", "pago")
-    .gte("data_pagamento", inicio)
-    .lte("data_pagamento", fim);
-  return (data ?? []).reduce(
-    (s: number, f: any) => s + Number(f.valor_final ?? f.valor ?? 0),
-    0,
-  );
+    .from("fin_movimentacoes")
+    .select("valor")
+    .eq("tipo", "entrada")
+    .gte("data_movimentacao", inicio)
+    .lte("data_movimentacao", fim);
+  return (data ?? []).reduce((s: number, m: any) => s + Number(m.valor ?? 0), 0);
 }
 
 async function mapaPlanos(supabase: any) {
@@ -183,9 +181,17 @@ export async function relatorioCategorias(supabase: any, periodo?: Periodo): Pro
   type Grupo = { codigo: string; nome: string; total: number; subs: Map<string, { nome: string; total: number }> };
   const grupos = new Map<string, Grupo>();
 
+  let semPlanoTotal = 0;
+  let semPlanoQtd = 0;
+
   for (const dsp of despesas) {
     const plano = dsp.plano_conta_id ? planos.get(dsp.plano_conta_id) : null;
-    const codigo = plano?.codigo ?? "8";
+    if (!plano?.codigo) {
+      semPlanoTotal += valorDe(dsp);
+      semPlanoQtd += 1;
+      continue;
+    }
+    const codigo = plano.codigo;
     const raiz = codigo.split(".")[0];
     if (!grupos.has(raiz)) {
       grupos.set(raiz, {
@@ -199,7 +205,7 @@ export async function relatorioCategorias(supabase: any, periodo?: Periodo): Pro
     }
     const g = grupos.get(raiz)!;
     g.total += valorDe(dsp);
-    const chave = `${codigo} ${plano?.nome ?? "Sem plano"}`;
+    const chave = `${codigo} ${plano.nome}`;
     const sub = g.subs.get(chave) ?? { nome: chave, total: 0 };
     sub.total += valorDe(dsp);
     g.subs.set(chave, sub);
@@ -218,6 +224,19 @@ export async function relatorioCategorias(supabase: any, periodo?: Periodo): Pro
         tabela(["Subcategoria", "Valor", "%"], linhas, [1, 2])
       );
     });
+
+  if (semPlanoTotal > 0) {
+    partes.push(
+      `⚠️ *SEM CATEGORIA*\n` +
+        `💸 ${moeda(semPlanoTotal)}   📊 ${pct(semPlanoTotal, total)} do total\n\n` +
+        tabela(
+          ["Situação", "Qtd", "Valor"],
+          [["Sem plano de contas", String(semPlanoQtd), moeda(semPlanoTotal)]],
+          [1, 2],
+        ) +
+        `\n_Classifique esses lançamentos para melhorar os relatórios._`,
+    );
+  }
 
   return (
     `📁 *DESPESAS POR PLANO DE CONTAS*\n_${label}: ${br(inicio)} a ${br(fim)}_\n\n` +
@@ -241,7 +260,13 @@ export async function relatorioDre(supabase: any, periodo?: Periodo): Promise<st
   const grupos = new Map<string, { nome: string; total: number }>();
   for (const dsp of despesas) {
     const plano = dsp.plano_conta_id ? planos.get(dsp.plano_conta_id) : null;
-    const raiz = (plano?.codigo ?? "8").split(".")[0];
+    if (!plano?.codigo) {
+      const g = grupos.get("—") ?? { nome: "Sem categoria", total: 0 };
+      g.total += valorDe(dsp);
+      grupos.set("—", g);
+      continue;
+    }
+    const raiz = plano.codigo.split(".")[0];
     const nomeRaiz =
       [...planos.values()].find((p) => p.codigo === raiz)?.nome ?? "Outros";
     const g = grupos.get(raiz) ?? { nome: nomeRaiz, total: 0 };
@@ -251,8 +276,12 @@ export async function relatorioDre(supabase: any, periodo?: Periodo): Promise<st
 
   const linhasDesp = [...grupos.entries()]
     .filter(([, g]) => g.total > 0)
-    .sort((a, b) => b[1].total - a[1].total)
-    .map(([cod, g]) => [`${cod} ${g.nome}`, moeda(g.total), pct(g.total, totalReceitas)]);
+    .sort((a, b) => (a[0] === "—" ? 1 : b[0] === "—" ? -1 : b[1].total - a[1].total))
+    .map(([cod, g]) => [
+      cod === "—" ? "⚠️ Sem categoria" : `${cod} ${g.nome}`,
+      moeda(g.total),
+      pct(g.total, totalReceitas),
+    ]);
 
   const lucro = totalReceitas - totalDespesas;
   const margem = totalReceitas ? pct(lucro, totalReceitas) : "—";
@@ -260,7 +289,7 @@ export async function relatorioDre(supabase: any, periodo?: Periodo): Promise<st
   return (
     `📊 *DRE — RESULTADO*\n_${label}: ${br(inicio)} a ${br(fim)}_\n\n` +
     `${SEP}\n\n💚 *RECEITAS*\n\n` +
-    tabela(["Origem", "Valor"], [["Faturamento recebido", moeda(totalReceitas)]], [1]) +
+    tabela(["Origem", "Valor"], [["Recebimentos (livro caixa)", moeda(totalReceitas)]], [1]) +
     `\nTotal Receitas: *${moeda(totalReceitas)}*\n\n` +
     `${SEP}\n\n🔴 *DESPESAS*\n\n` +
     (linhasDesp.length
