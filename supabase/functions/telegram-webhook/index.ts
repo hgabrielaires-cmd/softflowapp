@@ -114,6 +114,18 @@ function toBase64(buffer: ArrayBuffer) {
 
 type Plano = { id: string; codigo: string; nome: string };
 
+// Palavra-chave normalizada da observação do usuário (para aprendizado)
+function chaveObservacao(obs?: string | null): string | null {
+  const limpo = String(obs ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .trim();
+  if (!limpo) return null;
+  return limpo.split(/\s+/).slice(0, 3).join("_") || null;
+}
+
 async function listarPlanos(supabase: any): Promise<Plano[]> {
   const { data } = await supabase
     .from("fin_plano_contas")
