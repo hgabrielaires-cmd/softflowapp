@@ -45,19 +45,37 @@ export function ContaAzulConfigDialog({ open, onOpenChange, initialConfig, onSav
   const [filiais, setFiliais] = useState<{ id: string; nome: string }[]>([]);
   const [filialId, setFilialId] = useState<string>("");
   const [logs, setLogs] = useState<SyncLog[]>([]);
+  const [horarios, setHorarios] = useState<string[]>([]);
+  const [novoHorario, setNovoHorario] = useState("");
+  const [salvandoHorarios, setSalvandoHorarios] = useState(false);
+  const [crons, setCrons] = useState<{ jobname: string; schedule: string; active: boolean }[]>([]);
+
+  async function carregarHorarios(fId: string) {
+    if (!fId) return;
+    const { data } = await supabase
+      .from("contaazul_config")
+      .select("horarios_sync")
+      .eq("filial_id", fId)
+      .maybeSingle();
+    setHorarios([...((data?.horarios_sync as string[]) ?? [])].sort());
+  }
 
   async function carregar() {
     setLoading(true);
-    const [{ data: tokens }, { data: logsData }, { data: filiaisData }] = await Promise.all([
+    const [{ data: tokens }, { data: logsData }, { data: filiaisData }, { data: cronsData }] = await Promise.all([
       supabase.from("contaazul_tokens").select("filial_id, updated_at").order("updated_at", { ascending: false }),
       supabase.from("contaazul_sync_log").select("*").order("created_at", { ascending: false }).limit(10),
       supabase.from("filiais").select("id, nome").eq("ativa", true).order("nome"),
+      supabase.rpc("fn_listar_crons_contaazul"),
     ]);
     setConectado((tokens?.length ?? 0) > 0);
     setLogs((logsData as SyncLog[]) ?? []);
     setFiliais(filiaisData ?? []);
+    setCrons((cronsData as any[]) ?? []);
     setUltimaSync(logsData?.[0]?.created_at ?? null);
-    if (!filialId && filiaisData?.length) setFilialId(filiaisData[0].id);
+    const fId = filialId || filiaisData?.[0]?.id || "";
+    if (!filialId && fId) setFilialId(fId);
+    await carregarHorarios(fId);
     setLoading(false);
   }
 
@@ -67,8 +85,74 @@ export function ContaAzulConfigDialog({ open, onOpenChange, initialConfig, onSav
   }, [open]);
 
   useEffect(() => {
+    if (open && filialId) carregarHorarios(filialId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filialId]);
+
+  useEffect(() => {
     setAutoSync(initialConfig?.ativo ?? false);
   }, [initialConfig]);
+
+  function adicionarHorario() {
+    if (!novoHorario || !/^\d{2}:\d{2}$/.test(novoHorario)) {
+      toast.error("Informe um horário válido (HH:MM)");
+      return;
+    }
+    if (horarios.includes(novoHorario)) {
+      toast.error("Horário já cadastrado");
+      return;
+    }
+    setHorarios([...horarios, novoHorario].sort());
+    setNovoHorario("");
+  }
+
+  function removerHorario(h: string) {
+    setHorarios(horarios.filter((x) => x !== h));
+  }
+
+  async function salvarHorarios() {
+    if (!filialId) { toast.error("Selecione a filial"); return; }
+    setSalvandoHorarios(true);
+    const { error } = await supabase
+      .from("contaazul_config")
+      .upsert(
+        { filial_id: filialId, horarios_sync: horarios, updated_at: new Date().toISOString() },
+        { onConflict: "filial_id" },
+      );
+    if (error) {
+      setSalvandoHorarios(false);
+      toast.error("Erro ao salvar horários: " + error.message);
+      return;
+    }
+    const { error: rpcErr } = await supabase.rpc("fn_recriar_crons_contaazul", {
+      p_horarios: horarios,
+      p_apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+    });
+    setSalvandoHorarios(false);
+    if (rpcErr) { toast.error("Erro ao recriar agendamentos: " + rpcErr.message); return; }
+    toast.success(
+      horarios.length
+        ? `${horarios.length} horário(s) salvos! Próxima sync: ${proximoHorario() ?? horarios[0]}`
+        : "Agendamentos removidos",
+    );
+    const { data: cronsData } = await supabase.rpc("fn_listar_crons_contaazul");
+    setCrons((cronsData as any[]) ?? []);
+  }
+
+  function minutosAgora() {
+    const n = new Date();
+    return n.getHours() * 60 + n.getMinutes();
+  }
+
+  function paraMinutos(h: string) {
+    const [hh, mm] = h.split(":").map(Number);
+    return hh * 60 + mm;
+  }
+
+  function proximoHorario() {
+    return horarios.find((h) => paraMinutos(h) > minutosAgora());
+  }
+
 
   function conectar() {
     if (!filialId) { toast.error("Selecione a filial"); return; }
