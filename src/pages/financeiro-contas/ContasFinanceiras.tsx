@@ -20,10 +20,46 @@ import {
 } from "./useContasFinanceirasQueries";
 import type { ExtratoFiltros, Movimentacao } from "./types";
 
+function toISO(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().slice(0, 10);
+}
+
 function inicioMesISO() {
   const h = new Date();
-  return new Date(h.getFullYear(), h.getMonth(), 1).toISOString().slice(0, 10);
+  return toISO(new Date(h.getFullYear(), h.getMonth(), 1));
 }
+
+type PresetKey = "hoje" | "ontem" | "mes" | "mes_passado" | "ano";
+
+function periodoPreset(key: PresetKey) {
+  const h = new Date();
+  switch (key) {
+    case "hoje":
+      return { data_inicio: toISO(h), data_fim: toISO(h) };
+    case "ontem": {
+      const o = new Date(h.getFullYear(), h.getMonth(), h.getDate() - 1);
+      return { data_inicio: toISO(o), data_fim: toISO(o) };
+    }
+    case "mes_passado": {
+      const ini = new Date(h.getFullYear(), h.getMonth() - 1, 1);
+      const fim = new Date(h.getFullYear(), h.getMonth(), 0);
+      return { data_inicio: toISO(ini), data_fim: toISO(fim) };
+    }
+    case "ano":
+      return { data_inicio: toISO(new Date(h.getFullYear(), 0, 1)), data_fim: toISO(new Date(h.getFullYear(), 11, 31)) };
+    case "mes":
+    default:
+      return { data_inicio: inicioMesISO(), data_fim: toISO(new Date(h.getFullYear(), h.getMonth() + 1, 0)) };
+  }
+}
+
+const PRESETS: { key: PresetKey; label: string }[] = [
+  { key: "hoje", label: "Hoje" },
+  { key: "ontem", label: "Ontem" },
+  { key: "mes", label: "Mês atual" },
+  { key: "mes_passado", label: "Mês passado" },
+  { key: "ano", label: "Esse ano" },
+];
 
 export default function ContasFinanceiras() {
   const [filialFiltro, setFilialFiltro] = useState(TODAS);
