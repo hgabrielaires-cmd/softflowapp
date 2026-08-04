@@ -913,11 +913,13 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
     let msg = resumoComprovante(dados, fornecedor?.nome_fantasia, caption);
     let teclado: unknown;
 
-    if (fornecedor && planoSugerido) {
+    if (planoSugerido) {
+      if (fornecedor) msg += `\n✓ Fornecedor encontrado: *${fornecedor.nome_fantasia}*\n`;
       msg +=
-        `\n✓ Fornecedor encontrado: *${fornecedor.nome_fantasia}*\n` +
-        `📁 Plano sugerido: *${planoSugerido.codigo} — ${planoSugerido.nome}*\n\n` +
-        `Confirma este plano ou selecione outro:`;
+        `\n💡 *Plano sugerido${planoIA ? " pela IA" : ""}:*\n` +
+        `_${planoSugerido.codigo} — ${planoSugerido.nome}_\n` +
+        (planoIA && motivoSugestao ? `_Motivo: ${motivoSugestao}_\n` : "") +
+        `\nConfirma este plano ou selecione outro:`;
       teclado = {
         inline_keyboard: [
           [
