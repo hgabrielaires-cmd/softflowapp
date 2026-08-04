@@ -9,7 +9,7 @@ import { Loader2, Plus } from "lucide-react";
 import { ContaSaldoCard } from "./components/ContaSaldoCard";
 import { ExtratoTable } from "./components/ExtratoTable";
 import { MovimentacaoDrawer } from "./components/MovimentacaoDrawer";
-import { TODAS, hojeISO } from "./constants";
+import { TODAS } from "./constants";
 import { montarExtrato } from "./helpers";
 import {
   useContasAtivasQuery,
@@ -20,18 +20,54 @@ import {
 } from "./useContasFinanceirasQueries";
 import type { ExtratoFiltros, Movimentacao } from "./types";
 
+function toISO(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().slice(0, 10);
+}
+
 function inicioMesISO() {
   const h = new Date();
-  return new Date(h.getFullYear(), h.getMonth(), 1).toISOString().slice(0, 10);
+  return toISO(new Date(h.getFullYear(), h.getMonth(), 1));
 }
+
+type PresetKey = "hoje" | "ontem" | "mes" | "mes_passado" | "ano";
+
+function periodoPreset(key: PresetKey) {
+  const h = new Date();
+  switch (key) {
+    case "hoje":
+      return { data_inicio: toISO(h), data_fim: toISO(h) };
+    case "ontem": {
+      const o = new Date(h.getFullYear(), h.getMonth(), h.getDate() - 1);
+      return { data_inicio: toISO(o), data_fim: toISO(o) };
+    }
+    case "mes_passado": {
+      const ini = new Date(h.getFullYear(), h.getMonth() - 1, 1);
+      const fim = new Date(h.getFullYear(), h.getMonth(), 0);
+      return { data_inicio: toISO(ini), data_fim: toISO(fim) };
+    }
+    case "ano":
+      return { data_inicio: toISO(new Date(h.getFullYear(), 0, 1)), data_fim: toISO(new Date(h.getFullYear(), 11, 31)) };
+    case "mes":
+    default:
+      return { data_inicio: inicioMesISO(), data_fim: toISO(new Date(h.getFullYear(), h.getMonth() + 1, 0)) };
+  }
+}
+
+const PRESETS: { key: PresetKey; label: string }[] = [
+  { key: "hoje", label: "Hoje" },
+  { key: "ontem", label: "Ontem" },
+  { key: "mes", label: "Mês atual" },
+  { key: "mes_passado", label: "Mês passado" },
+  { key: "ano", label: "Esse ano" },
+];
 
 export default function ContasFinanceiras() {
   const [filialFiltro, setFilialFiltro] = useState(TODAS);
+  const [preset, setPreset] = useState<PresetKey | null>("mes");
   const [filtros, setFiltros] = useState<ExtratoFiltros>({
     conta_id: TODAS,
     filial_id: TODAS,
-    data_inicio: inicioMesISO(),
-    data_fim: hojeISO(),
+    ...periodoPreset("mes"),
     tipo: TODAS,
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -105,6 +141,21 @@ export default function ContasFinanceiras() {
         )}
 
         <Card className="rounded-xl p-4 space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {PRESETS.map((p) => (
+              <Button
+                key={p.key}
+                size="sm"
+                variant={preset === p.key ? "default" : "outline"}
+                onClick={() => {
+                  setPreset(p.key);
+                  setFiltros((f) => ({ ...f, ...periodoPreset(p.key) }));
+                }}
+              >
+                {p.label}
+              </Button>
+            ))}
+          </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5">
               <Label className="text-xs">Conta</Label>
@@ -118,12 +169,13 @@ export default function ContasFinanceiras() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Data início</Label>
-              <Input type="date" value={filtros.data_inicio} onChange={(e) => setFiltros({ ...filtros, data_inicio: e.target.value })} />
+              <Input type="date" value={filtros.data_inicio} onChange={(e) => { setPreset(null); setFiltros({ ...filtros, data_inicio: e.target.value }); }} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Data fim</Label>
-              <Input type="date" value={filtros.data_fim} onChange={(e) => setFiltros({ ...filtros, data_fim: e.target.value })} />
+              <Input type="date" value={filtros.data_fim} onChange={(e) => { setPreset(null); setFiltros({ ...filtros, data_fim: e.target.value }); }} />
             </div>
+
             <div className="space-y-1.5">
               <Label className="text-xs">Tipo</Label>
               <Select value={filtros.tipo} onValueChange={(v) => setFiltros({ ...filtros, tipo: v })}>
