@@ -181,9 +181,17 @@ export async function relatorioCategorias(supabase: any, periodo?: Periodo): Pro
   type Grupo = { codigo: string; nome: string; total: number; subs: Map<string, { nome: string; total: number }> };
   const grupos = new Map<string, Grupo>();
 
+  let semPlanoTotal = 0;
+  let semPlanoQtd = 0;
+
   for (const dsp of despesas) {
     const plano = dsp.plano_conta_id ? planos.get(dsp.plano_conta_id) : null;
-    const codigo = plano?.codigo ?? "8";
+    if (!plano?.codigo) {
+      semPlanoTotal += valorDe(dsp);
+      semPlanoQtd += 1;
+      continue;
+    }
+    const codigo = plano.codigo;
     const raiz = codigo.split(".")[0];
     if (!grupos.has(raiz)) {
       grupos.set(raiz, {
@@ -197,7 +205,7 @@ export async function relatorioCategorias(supabase: any, periodo?: Periodo): Pro
     }
     const g = grupos.get(raiz)!;
     g.total += valorDe(dsp);
-    const chave = `${codigo} ${plano?.nome ?? "Sem plano"}`;
+    const chave = `${codigo} ${plano.nome}`;
     const sub = g.subs.get(chave) ?? { nome: chave, total: 0 };
     sub.total += valorDe(dsp);
     g.subs.set(chave, sub);
@@ -216,6 +224,19 @@ export async function relatorioCategorias(supabase: any, periodo?: Periodo): Pro
         tabela(["Subcategoria", "Valor", "%"], linhas, [1, 2])
       );
     });
+
+  if (semPlanoTotal > 0) {
+    partes.push(
+      `⚠️ *SEM CATEGORIA*\n` +
+        `💸 ${moeda(semPlanoTotal)}   📊 ${pct(semPlanoTotal, total)} do total\n\n` +
+        tabela(
+          ["Situação", "Qtd", "Valor"],
+          [["Sem plano de contas", String(semPlanoQtd), moeda(semPlanoTotal)]],
+          [1, 2],
+        ) +
+        `\n_Classifique esses lançamentos para melhorar os relatórios._`,
+    );
+  }
 
   return (
     `📁 *DESPESAS POR PLANO DE CONTAS*\n_${label}: ${br(inicio)} a ${br(fim)}_\n\n` +
