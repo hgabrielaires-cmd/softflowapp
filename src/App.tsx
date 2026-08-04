@@ -57,6 +57,7 @@ const FinanceiroParametros = React.lazy(() => import("./pages/financeiro-paramet
 const FinanceiroDespesas = React.lazy(() => import("./pages/financeiro-despesas"));
 const DespesasAuditoria = React.lazy(() => import("./pages/financeiro-despesas/DespesasAuditoria"));
 const ContasFinanceiras = React.lazy(() => import("./pages/financeiro-contas"));
+const DRE = React.lazy(() => import("./pages/financeiro-dre"));
 
 
 function PageLoader() {
@@ -272,10 +273,19 @@ const App = () => {
               path="/dre"
               element={
                 <ProtectedRoute>
-                  <ComingSoon module="Financeiro" title="DRE" description="Em desenvolvimento. Demonstrativo de Resultado do Exercício." />
+                  <DRE />
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/financeiro/dre"
+              element={
+                <ProtectedRoute>
+                  <DRE />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/notificacoes"
               element={
