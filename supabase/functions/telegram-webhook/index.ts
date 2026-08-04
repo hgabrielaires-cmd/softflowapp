@@ -868,7 +868,7 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
       if (found) formaPagtoId = found.id;
     }
 
-    // ── Sugestão de plano: IA → memória (obs) → memória (CNPJ) → fornecedor ──
+    // ── Sugestão de plano: fornecedor → memória (CNPJ) → memória (obs) → IA ──
     const codigoSugerido = String(dados.plano_conta_sugerido_codigo ?? "").trim();
     const motivoSugestao = String(dados.plano_conta_sugerido_motivo ?? "").trim();
 
@@ -887,7 +887,7 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
     // memória por palavra-chave da observação do usuário
     let planoObsId: string | null = null;
     const obsChave = chaveObservacao(observacaoUsuario);
-    if (!planoIA && obsChave) {
+    if (obsChave) {
       const { data: memObs } = await supabase
         .from("telegram_memoria")
         .select("plano_conta_id")
@@ -897,9 +897,22 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
       planoObsId = memObs?.plano_conta_id ?? null;
     }
 
-    const planoSugeridoId: string | null =
-      planoIA?.id ?? planoObsId ?? planoMemoria?.plano_conta_id ?? fornecedor?.plano_conta_id ?? null;
+    // Prioridade: 1º fornecedor cadastrado, 2º memória (CNPJ/obs), 3º IA
+    let origemSugestao: "fornecedor" | "memoria" | "ia" | null = null;
+    let planoSugeridoId: string | null = null;
+    if (fornecedor?.plano_conta_id) {
+      planoSugeridoId = fornecedor.plano_conta_id;
+      origemSugestao = "fornecedor";
+    } else if (planoMemoria?.plano_conta_id ?? planoObsId) {
+      planoSugeridoId = planoMemoria?.plano_conta_id ?? planoObsId;
+      origemSugestao = "memoria";
+    } else if (planoIA) {
+      planoSugeridoId = planoIA.id;
+      origemSugestao = "ia";
+    }
     const planoSugerido = planos.find((p) => p.id === planoSugeridoId) ?? null;
+    if (!planoSugerido) origemSugestao = null;
+
 
     const { data: novaPendencia } = await supabase
       .from("telegram_pendencias")
@@ -928,10 +941,15 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
     if (planoSugerido) {
       if (fornecedor) msg += `\n✓ Fornecedor encontrado: *${fornecedor.nome_fantasia}*\n`;
       msg +=
-        `\n💡 *Plano sugerido${planoIA ? " pela IA" : ""}:*\n` +
+        (origemSugestao === "fornecedor"
+          ? `\n✓ *Plano do fornecedor:*\n`
+          : origemSugestao === "memoria"
+            ? `\n💾 *Usado anteriormente:*\n`
+            : `\n💡 *Sugerido pela IA:*\n`) +
         `_${planoSugerido.codigo} — ${planoSugerido.nome}_\n` +
-        (planoIA && motivoSugestao ? `_Motivo: ${motivoSugestao}_\n` : "") +
+        (origemSugestao === "ia" && motivoSugestao ? `_Motivo: ${motivoSugestao}_\n` : "") +
         `\nConfirma este plano ou selecione outro:`;
+
       teclado = {
         inline_keyboard: [
           [
@@ -1403,13 +1421,15 @@ async function finalizarLancamento(
   };
 
   let fornecedorId = pendencia.fornecedor_id;
-  if (!fornecedorId && dados.nome_recebedor) {
+  const docForn = docRecebedor(dados).doc ?? "";
+  if (!fornecedorId && (dados.nome_recebedor || docForn)) {
+    const nomeForn = dados.nome_recebedor || `Fornecedor ${docForn}`;
     const { data: novoForn, error: fornErr } = await supabase
       .from("fornecedores")
       .insert({
-        nome_fantasia: dados.nome_recebedor,
-        razao_social: dados.nome_recebedor,
-        cnpj_cpf: docRecebedor(dados).doc ?? "",
+        nome_fantasia: nomeForn,
+        razao_social: nomeForn,
+        cnpj_cpf: docForn,
         ativo: true,
         plano_conta_id: planoId,
       })
@@ -1418,6 +1438,7 @@ async function finalizarLancamento(
     if (fornErr) console.error("[telegram] fornecedor:", fornErr.message);
     fornecedorId = novoForn?.id ?? null;
   }
+
 
   if (!fornecedorId) {
     await responder(
@@ -1486,10 +1507,17 @@ async function finalizarLancamento(
     );
     if (memErr) console.error("[telegram] memoria:", memErr.message);
 
-    if (docMemoria && fornecedorId) {
-      await supabase.from("fornecedores").update({ plano_conta_id: planoId }).eq("id", fornecedorId);
-    }
   }
+
+  // preenche o plano do fornecedor apenas se ainda não houver um cadastrado
+  if (fornecedorId) {
+    await supabase
+      .from("fornecedores")
+      .update({ plano_conta_id: planoId })
+      .eq("id", fornecedorId)
+      .is("plano_conta_id", null);
+  }
+
 
   await supabase
     .from("telegram_pendencias")
