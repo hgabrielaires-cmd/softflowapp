@@ -673,14 +673,35 @@ Retorne APENAS JSON válido sem markdown:
   ],
   "forma_pagamento": "string ou null",
   "descricao": "breve descrição",
-  "confianca": "alta"|"media"|"baixa"
+  "confianca": "alta"|"media"|"baixa",
+  "plano_conta_sugerido_codigo": "string ou null",
+  "plano_conta_sugerido_motivo": "string ou null"
 }
 
 Para NFC-e/cupom fiscal:
 - nome_recebedor = nome do estabelecimento
 - cnpj_recebedor = CNPJ do emitente
 - valor = valor total pago
-- data = data de emissão`;
+- data = data de emissão
+
+Para sugerir o plano de contas, analise:
+1. A descrição do usuário${observacaoUsuario ? `: "${observacaoUsuario}"` : " (não informada)"}
+2. O tipo de estabelecimento/fornecedor
+3. O item comprado
+
+Planos disponíveis:
+${planosLista}
+
+Exemplos de sugestão:
+- "lampada", "pneu", "óleo", "peça" → código de manutenção veicular
+- "almoço", "restaurante", "refeição" → código de alimentação
+- "uber", "combustível", "gasolina" → código de transporte
+- "hospedagem", "servidor", "cloud" → código de hospedagem
+- "marketing", "publicidade" → código de marketing
+- "internet", "telefone" → código de telecomunicações
+- "material escritório", "papel" → código de material de escritório
+
+Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano mais adequado, ou null se não houver correspondência clara.`;
 
     const contentBlock = isPdf
       ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } }
