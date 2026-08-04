@@ -643,9 +643,15 @@ Deno.serve(async (req) => {
       anexoUrl = signed?.signedUrl ?? storagePath;
     }
 
+    // ── Planos de contas (enviados ao Claude para sugestão) ──
+    const planos = await listarPlanos(supabase);
+    const planosLista = planos.map((p) => `${p.codigo} — ${p.nome}`).join("\n");
+    const observacaoUsuario = (caption ?? "").trim();
+
     // ── Claude Vision ──
     const prompt = `Analise este documento financeiro.
 Pode ser: comprovante PIX, boleto, TED, DOC, nota fiscal NF-e, cupom fiscal NFC-e, recibo ou qualquer documento de pagamento.
+${observacaoUsuario ? `\nO usuário descreveu o gasto assim: "${observacaoUsuario}"\n` : ""}
 
 Retorne APENAS JSON válido sem markdown:
 {
