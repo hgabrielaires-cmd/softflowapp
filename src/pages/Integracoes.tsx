@@ -6,7 +6,9 @@ import logoAsaas from "@/assets/logo-asaas.svg";
 import logoCloudflare from "@/assets/logo-cloudflare.svg";
 import logoTelegram from "@/assets/logo-telegram.svg";
 import logoAnthropic from "@/assets/logo-anthropic.svg";
+import logoContaAzul from "@/assets/logo-contaazul.svg";
 import { TelegramConfigDialog, AnthropicConfigDialog } from "@/components/integracoes/TelegramAnthropicDialogs";
+import { ContaAzulConfigDialog } from "@/components/integracoes/ContaAzulDialog";
 import { AppLayout } from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -158,6 +160,22 @@ const integrationDefs: IntegrationDef[] = [
       "Extração: valor, CNPJ, data, tipo pagamento",
       "Reconhecimento de notas fiscais complexas",
       "Modelo atual: claude-sonnet-4-6",
+    ],
+  },
+  {
+    key: "contaazul",
+    icon: <img src={logoContaAzul} alt="Conta Azul" className="h-20 w-20 object-contain rounded-2xl" />,
+    hasLogo: true,
+    title: "Conta Azul",
+    description: "Importação automática de receitas",
+    accentColor: "bg-[#0066CC]",
+    tokenLabel: "",
+    tokenPlaceholder: "",
+    details: [
+      "Sincronização automática de receitas",
+      "Boletos e PIX pagos: lançamento automático",
+      "Conciliação bancária em tempo real",
+      "Histórico completo de recebimentos",
     ],
   },
 ];
@@ -1264,6 +1282,7 @@ export default function Integracoes() {
   const [asaasDialogOpen, setAsaasDialogOpen] = useState(false);
   const [telegramDialogOpen, setTelegramDialogOpen] = useState(false);
   const [anthropicDialogOpen, setAnthropicDialogOpen] = useState(false);
+  const [contaAzulDialogOpen, setContaAzulDialogOpen] = useState(false);
 
   const [r2DialogOpen, setR2DialogOpen] = useState(false);
   const [r2Config, setR2Config] = useState<any>(null);
@@ -1376,6 +1395,8 @@ export default function Integracoes() {
                     setTelegramDialogOpen(true);
                   } else if (def.key === "anthropic") {
                     setAnthropicDialogOpen(true);
+                  } else if (def.key === "contaazul") {
+                    setContaAzulDialogOpen(true);
                   } else {
                     setSelectedDef(def);
                     setDialogOpen(true);
@@ -1406,6 +1427,14 @@ export default function Integracoes() {
         open={r2DialogOpen}
         onOpenChange={(v) => { setR2DialogOpen(v); if (!v) loadConfigs(); }}
         initialConfig={r2Config}
+      />
+
+      {/* Conta Azul Drawer */}
+      <ContaAzulConfigDialog
+        open={contaAzulDialogOpen}
+        onOpenChange={setContaAzulDialogOpen}
+        initialConfig={configs.find((c) => c.nome === "contaazul") || null}
+        onSaved={loadConfigs}
       />
 
       {/* Telegram Drawer */}
