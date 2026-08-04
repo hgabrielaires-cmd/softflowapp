@@ -1,6 +1,12 @@
 // ─── Edge Function: Conta Azul OAuth ──────────────────────────────────────
-// Actions: authorize | callback | refresh | sync
+// Actions: authorize | callback | refresh | sync | status
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  CONTAAZUL_AUTH_BASE,
+  contaazulEnv,
+  exchangeToken,
+  getValidToken,
+} from "../_shared/contaazul.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,22 +14,11 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const AUTH_BASE = "https://app.contaazul.com/t/contaazul.com/oauth2/v2.0";
-
 function admin() {
   return createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
-}
-
-function env() {
-  return {
-    clientId: Deno.env.get("CONTAAZUL_CLIENT_ID") || "",
-    clientSecret: Deno.env.get("CONTAAZUL_CLIENT_SECRET") || "",
-    redirectUri: Deno.env.get("CONTAAZUL_REDIRECT_URI") || "",
-    appUrl: Deno.env.get("CONTAAZUL_APP_URL") || "https://softflow.app.br",
-  };
 }
 
 function json(body: unknown, status = 200) {
@@ -33,60 +28,13 @@ function json(body: unknown, status = 200) {
   });
 }
 
-async function exchangeToken(params: Record<string, string>) {
-  const res = await fetch(`${AUTH_BASE}/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams(params),
-  });
-  const text = await res.text();
-  if (!res.ok) throw new Error(`Conta Azul token [${res.status}]: ${text}`);
-  return JSON.parse(text);
-}
-
-export async function getValidToken(supabase: any, filialId?: string | null) {
-  let q = supabase.from("contaazul_tokens").select("*").order("updated_at", { ascending: false }).limit(1);
-  if (filialId) q = supabase.from("contaazul_tokens").select("*").eq("filial_id", filialId).limit(1);
-  const { data } = await q;
-  const row = data?.[0];
-  if (!row) return null;
-
-  const expired = row.expires_at ? new Date(row.expires_at).getTime() - 60_000 < Date.now() : false;
-  if (!expired) return row;
-  if (!row.refresh_token) return row;
-
-  const { clientId, clientSecret } = env();
-  const tok = await exchangeToken({
-    grant_type: "refresh_token",
-    refresh_token: row.refresh_token,
-    client_id: clientId,
-    client_secret: clientSecret,
-  });
-
-  const expiresAt = new Date(Date.now() + (tok.expires_in ?? 3600) * 1000).toISOString();
-  const { data: updated } = await supabase
-    .from("contaazul_tokens")
-    .update({
-      access_token: tok.access_token,
-      refresh_token: tok.refresh_token ?? row.refresh_token,
-      expires_at: expiresAt,
-      scope: tok.scope ?? row.scope,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", row.id)
-    .select()
-    .maybeSingle();
-
-  return updated ?? row;
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const url = new URL(req.url);
   const isCallbackPath = url.pathname.endsWith("/callback");
   const action = isCallbackPath ? "callback" : (url.searchParams.get("action") || "status");
-  const { clientId, clientSecret, redirectUri, appUrl } = env();
+  const { clientId, clientSecret, redirectUri, appUrl } = contaazulEnv();
 
   try {
     if (!clientId || !clientSecret || !redirectUri) {
@@ -98,11 +46,11 @@ Deno.serve(async (req) => {
     // ── authorize ──
     if (action === "authorize") {
       const filialId = url.searchParams.get("filial_id") || "";
-      const authUrl = new URL(`${AUTH_BASE}/authorize`);
+      const authUrl = new URL(`${CONTAAZUL_AUTH_BASE}/authorize`);
       authUrl.searchParams.set("client_id", clientId);
       authUrl.searchParams.set("redirect_uri", redirectUri);
       authUrl.searchParams.set("response_type", "code");
-      authUrl.searchParams.set("scope", "sales financials openid profile aws.cognito.signin.user.admin");
+      authUrl.searchParams.set("scope", "sales financials");
       authUrl.searchParams.set("state", filialId);
       return Response.redirect(authUrl.toString(), 302);
     }
@@ -148,10 +96,19 @@ Deno.serve(async (req) => {
 
     // ── refresh ──
     if (action === "refresh") {
-      const filialId = url.searchParams.get("filial_id");
-      const row = await getValidToken(supabase, filialId);
+      const row = await getValidToken(supabase, url.searchParams.get("filial_id"));
       if (!row) return json({ error: "Nenhuma conexão encontrada" }, 404);
       return json({ ok: true, expires_at: row.expires_at });
+    }
+
+    // ── disconnect ──
+    if (action === "disconnect") {
+      const filialId = url.searchParams.get("filial_id");
+      let del = supabase.from("contaazul_tokens").delete();
+      del = filialId ? del.eq("filial_id", filialId) : del.not("id", "is", null);
+      const { error } = await del;
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true });
     }
 
     // ── sync (delega para contaazul-sync) ──
