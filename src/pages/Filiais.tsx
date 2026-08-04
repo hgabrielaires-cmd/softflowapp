@@ -102,8 +102,12 @@ export default function Filiais() {
     if (data) setEtapas(data);
   }
 
+  async function loadContasFinanceiras() {
+    const { data } = await supabase.from("fin_contas_financeiras").select("id, nome").eq("ativo", true).order("nome");
+    if (data) setContasFinanceiras(data);
+  }
 
-  useEffect(() => { loadFiliais(); loadEtapas(); }, []);
+  useEffect(() => { loadFiliais(); loadEtapas(); loadContasFinanceiras(); }, []);
 
   function resetForm() {
     setNome(""); setRazaoSocial(""); setResponsavel(""); setAtiva(true); setCnpj(""); setInscricaoEstadual(""); setIeIsento(false);
@@ -112,6 +116,7 @@ export default function Filiais() {
     setLogoFile(null); setLogoPreview(null); setRemoveLogo(false);
     setAssinaturaFile(null); setAssinaturaPreview(null); setRemoveAssinatura(false);
     setEtapaInicialId(null);
+    setContaPadraoId(null);
     setActiveTab("geral");
     setParcelasMaximasCartao(12);
     setPixDescontoPercentual(0);
