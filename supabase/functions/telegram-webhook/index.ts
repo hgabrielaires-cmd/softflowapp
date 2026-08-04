@@ -856,8 +856,37 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
       if (found) formaPagtoId = found.id;
     }
 
+    // ── Sugestão de plano: IA → memória (obs) → memória (CNPJ) → fornecedor ──
+    const codigoSugerido = String(dados.plano_conta_sugerido_codigo ?? "").trim();
+    const motivoSugestao = String(dados.plano_conta_sugerido_motivo ?? "").trim();
+
+    let planoIA: Plano | null = null;
+    if (codigoSugerido) {
+      planoIA =
+        planos.find((p) => p.codigo === codigoSugerido) ??
+        planos.find(
+          (p) =>
+            p.codigo.toLowerCase() === codigoSugerido.toLowerCase() ||
+            p.nome.toLowerCase().includes(codigoSugerido.toLowerCase()),
+        ) ??
+        null;
+    }
+
+    // memória por palavra-chave da observação do usuário
+    let planoObsId: string | null = null;
+    const obsChave = chaveObservacao(observacaoUsuario);
+    if (!planoIA && obsChave) {
+      const { data: memObs } = await supabase
+        .from("telegram_memoria")
+        .select("plano_conta_id")
+        .eq("observacao_chave", obsChave)
+        .limit(1)
+        .maybeSingle();
+      planoObsId = memObs?.plano_conta_id ?? null;
+    }
+
     const planoSugeridoId: string | null =
-      planoMemoria?.plano_conta_id ?? fornecedor?.plano_conta_id ?? null;
+      planoIA?.id ?? planoObsId ?? planoMemoria?.plano_conta_id ?? fornecedor?.plano_conta_id ?? null;
     const planoSugerido = planos.find((p) => p.id === planoSugeridoId) ?? null;
 
     const { data: novaPendencia } = await supabase
