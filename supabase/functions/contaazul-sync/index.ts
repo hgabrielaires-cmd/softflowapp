@@ -126,9 +126,11 @@ Deno.serve(async (req) => {
 
       if (existente) { ignorados++; continue; }
 
-      const valor = Number(r.amountPaid ?? r.paidValue ?? r.value ?? 0);
-      const dataMov = String(r.paymentDate ?? r.dueDate ?? fim).split("T")[0];
+      const valor = Number(r.pago ?? r.total ?? 0);
+      const dataMov = String(r.data_vencimento ?? fim).split("T")[0];
       if (!valor) { ignorados++; continue; }
+
+      const cliente = r.cliente?.nome ? ` — ${r.cliente.nome}` : "";
 
       const { error: insErr } = await supabase.from("fin_movimentacoes").insert({
         conta_financeira_id: conta.id,
@@ -136,7 +138,8 @@ Deno.serve(async (req) => {
         tipo: "entrada",
         valor,
         data_movimentacao: dataMov,
-        descricao: r.description ?? r.notes ?? "Recebimento Conta Azul",
+        descricao: `${r.descricao ?? "Recebimento Conta Azul"}${cliente}`,
+
         categoria: "receita_fatura",
         origem: "contaazul",
         origem_id: origemId,
