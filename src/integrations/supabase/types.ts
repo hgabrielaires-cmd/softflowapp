@@ -5873,6 +5873,7 @@ export type Database = {
           created_at: string
           fornecedor_id: string | null
           id: string
+          observacao_chave: string | null
           plano_conta_id: string | null
           updated_at: string
         }
@@ -5881,6 +5882,7 @@ export type Database = {
           created_at?: string
           fornecedor_id?: string | null
           id?: string
+          observacao_chave?: string | null
           plano_conta_id?: string | null
           updated_at?: string
         }
@@ -5889,6 +5891,7 @@ export type Database = {
           created_at?: string
           fornecedor_id?: string | null
           id?: string
+          observacao_chave?: string | null
           plano_conta_id?: string | null
           updated_at?: string
         }

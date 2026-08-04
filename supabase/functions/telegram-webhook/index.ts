@@ -114,6 +114,18 @@ function toBase64(buffer: ArrayBuffer) {
 
 type Plano = { id: string; codigo: string; nome: string };
 
+// Palavra-chave normalizada da observação do usuário (para aprendizado)
+function chaveObservacao(obs?: string | null): string | null {
+  const limpo = String(obs ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .trim();
+  if (!limpo) return null;
+  return limpo.split(/\s+/).slice(0, 3).join("_") || null;
+}
+
 async function listarPlanos(supabase: any): Promise<Plano[]> {
   const { data } = await supabase
     .from("fin_plano_contas")
@@ -643,9 +655,15 @@ Deno.serve(async (req) => {
       anexoUrl = signed?.signedUrl ?? storagePath;
     }
 
+    // ── Planos de contas (enviados ao Claude para sugestão) ──
+    const planos = await listarPlanos(supabase);
+    const planosLista = planos.map((p) => `${p.codigo} — ${p.nome}`).join("\n");
+    const observacaoUsuario = (caption ?? "").trim();
+
     // ── Claude Vision ──
     const prompt = `Analise este documento financeiro.
 Pode ser: comprovante PIX, boleto, TED, DOC, nota fiscal NF-e, cupom fiscal NFC-e, recibo ou qualquer documento de pagamento.
+${observacaoUsuario ? `\nO usuário descreveu o gasto assim: "${observacaoUsuario}"\n` : ""}
 
 Retorne APENAS JSON válido sem markdown:
 {
@@ -667,14 +685,35 @@ Retorne APENAS JSON válido sem markdown:
   ],
   "forma_pagamento": "string ou null",
   "descricao": "breve descrição",
-  "confianca": "alta"|"media"|"baixa"
+  "confianca": "alta"|"media"|"baixa",
+  "plano_conta_sugerido_codigo": "string ou null",
+  "plano_conta_sugerido_motivo": "string ou null"
 }
 
 Para NFC-e/cupom fiscal:
 - nome_recebedor = nome do estabelecimento
 - cnpj_recebedor = CNPJ do emitente
 - valor = valor total pago
-- data = data de emissão`;
+- data = data de emissão
+
+Para sugerir o plano de contas, analise:
+1. A descrição do usuário${observacaoUsuario ? `: "${observacaoUsuario}"` : " (não informada)"}
+2. O tipo de estabelecimento/fornecedor
+3. O item comprado
+
+Planos disponíveis:
+${planosLista}
+
+Exemplos de sugestão:
+- "lampada", "pneu", "óleo", "peça" → código de manutenção veicular
+- "almoço", "restaurante", "refeição" → código de alimentação
+- "uber", "combustível", "gasolina" → código de transporte
+- "hospedagem", "servidor", "cloud" → código de hospedagem
+- "marketing", "publicidade" → código de marketing
+- "internet", "telefone" → código de telecomunicações
+- "material escritório", "papel" → código de material de escritório
+
+Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano mais adequado, ou null se não houver correspondência clara.`;
 
     const contentBlock = isPdf
       ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } }
@@ -812,7 +851,6 @@ Para NFC-e/cupom fiscal:
         : null) ?? contasFinanceiras?.[0]?.id ?? null;
 
 
-    const planos = await listarPlanos(supabase);
 
     // ── Forma de pagamento ──
     const tipoMap: Record<string, string[]> = {
@@ -830,8 +868,37 @@ Para NFC-e/cupom fiscal:
       if (found) formaPagtoId = found.id;
     }
 
+    // ── Sugestão de plano: IA → memória (obs) → memória (CNPJ) → fornecedor ──
+    const codigoSugerido = String(dados.plano_conta_sugerido_codigo ?? "").trim();
+    const motivoSugestao = String(dados.plano_conta_sugerido_motivo ?? "").trim();
+
+    let planoIA: Plano | null = null;
+    if (codigoSugerido) {
+      planoIA =
+        planos.find((p) => p.codigo === codigoSugerido) ??
+        planos.find(
+          (p) =>
+            p.codigo.toLowerCase() === codigoSugerido.toLowerCase() ||
+            p.nome.toLowerCase().includes(codigoSugerido.toLowerCase()),
+        ) ??
+        null;
+    }
+
+    // memória por palavra-chave da observação do usuário
+    let planoObsId: string | null = null;
+    const obsChave = chaveObservacao(observacaoUsuario);
+    if (!planoIA && obsChave) {
+      const { data: memObs } = await supabase
+        .from("telegram_memoria")
+        .select("plano_conta_id")
+        .eq("observacao_chave", obsChave)
+        .limit(1)
+        .maybeSingle();
+      planoObsId = memObs?.plano_conta_id ?? null;
+    }
+
     const planoSugeridoId: string | null =
-      planoMemoria?.plano_conta_id ?? fornecedor?.plano_conta_id ?? null;
+      planoIA?.id ?? planoObsId ?? planoMemoria?.plano_conta_id ?? fornecedor?.plano_conta_id ?? null;
     const planoSugerido = planos.find((p) => p.id === planoSugeridoId) ?? null;
 
     const { data: novaPendencia } = await supabase
@@ -858,11 +925,13 @@ Para NFC-e/cupom fiscal:
     let msg = resumoComprovante(dados, fornecedor?.nome_fantasia, caption);
     let teclado: unknown;
 
-    if (fornecedor && planoSugerido) {
+    if (planoSugerido) {
+      if (fornecedor) msg += `\n✓ Fornecedor encontrado: *${fornecedor.nome_fantasia}*\n`;
       msg +=
-        `\n✓ Fornecedor encontrado: *${fornecedor.nome_fantasia}*\n` +
-        `📁 Plano sugerido: *${planoSugerido.codigo} — ${planoSugerido.nome}*\n\n` +
-        `Confirma este plano ou selecione outro:`;
+        `\n💡 *Plano sugerido${planoIA ? " pela IA" : ""}:*\n` +
+        `_${planoSugerido.codigo} — ${planoSugerido.nome}_\n` +
+        (planoIA && motivoSugestao ? `_Motivo: ${motivoSugestao}_\n` : "") +
+        `\nConfirma este plano ou selecione outro:`;
       teclado = {
         inline_keyboard: [
           [
@@ -1403,19 +1472,23 @@ async function finalizarLancamento(
   }
 
   const docMemoria = docRecebedor(dados).doc;
-  if (docMemoria) {
+  const obsChaveMem = chaveObservacao(observacao);
+  if (docMemoria || obsChaveMem) {
     const { error: memErr } = await supabase.from("telegram_memoria").upsert(
       {
-        cnpj_fornecedor: docMemoria,
+        cnpj_fornecedor: docMemoria ?? `obs_${obsChaveMem}`.slice(0, 40),
         fornecedor_id: fornecedorId,
         plano_conta_id: planoId,
+        observacao_chave: obsChaveMem,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "cnpj_fornecedor" },
     );
     if (memErr) console.error("[telegram] memoria:", memErr.message);
 
-    await supabase.from("fornecedores").update({ plano_conta_id: planoId }).eq("id", fornecedorId);
+    if (docMemoria && fornecedorId) {
+      await supabase.from("fornecedores").update({ plano_conta_id: planoId }).eq("id", fornecedorId);
+    }
   }
 
   await supabase
