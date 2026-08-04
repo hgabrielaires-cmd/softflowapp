@@ -1472,19 +1472,23 @@ async function finalizarLancamento(
   }
 
   const docMemoria = docRecebedor(dados).doc;
-  if (docMemoria) {
+  const obsChaveMem = chaveObservacao(observacao);
+  if (docMemoria || obsChaveMem) {
     const { error: memErr } = await supabase.from("telegram_memoria").upsert(
       {
-        cnpj_fornecedor: docMemoria,
+        cnpj_fornecedor: docMemoria ?? `obs_${obsChaveMem}`.slice(0, 40),
         fornecedor_id: fornecedorId,
         plano_conta_id: planoId,
+        observacao_chave: obsChaveMem,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "cnpj_fornecedor" },
     );
     if (memErr) console.error("[telegram] memoria:", memErr.message);
 
-    await supabase.from("fornecedores").update({ plano_conta_id: planoId }).eq("id", fornecedorId);
+    if (docMemoria && fornecedorId) {
+      await supabase.from("fornecedores").update({ plano_conta_id: planoId }).eq("id", fornecedorId);
+    }
   }
 
   await supabase
