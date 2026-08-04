@@ -839,7 +839,6 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
         : null) ?? contasFinanceiras?.[0]?.id ?? null;
 
 
-    const planos = await listarPlanos(supabase);
 
     // ── Forma de pagamento ──
     const tipoMap: Record<string, string[]> = {
