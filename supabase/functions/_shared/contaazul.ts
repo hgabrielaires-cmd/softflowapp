@@ -1,6 +1,5 @@
 // ─── Conta Azul: helpers compartilhados ───────────────────────────────────
-export const CONTAAZUL_AUTH_BASE =
-  "https://app.contaazul.com/t/contaazul.com/oauth2/v2.0";
+export const CONTAAZUL_TOKEN_URL = "https://auth.contaazul.com/oauth2/token";
 
 export function contaazulEnv() {
   return {
@@ -11,10 +10,18 @@ export function contaazulEnv() {
   };
 }
 
-export async function exchangeToken(params: Record<string, string>) {
-  const res = await fetch(`${CONTAAZUL_AUTH_BASE}/token`, {
+export async function exchangeToken(
+  params: Record<string, string>,
+  clientId?: string,
+  clientSecret?: string,
+) {
+  const credentials = btoa(`${clientId ?? contaazulEnv().clientId}:${clientSecret ?? contaazulEnv().clientSecret}`);
+  const res = await fetch(CONTAAZUL_TOKEN_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Authorization": `Basic ${credentials}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
     body: new URLSearchParams(params),
   });
   const text = await res.text();
@@ -37,12 +44,9 @@ export async function getValidToken(supabase: any, filialId?: string | null) {
     : false;
   if (!expired || !row.refresh_token) return row;
 
-  const { clientId, clientSecret } = contaazulEnv();
   const tok = await exchangeToken({
     grant_type: "refresh_token",
     refresh_token: row.refresh_token,
-    client_id: clientId,
-    client_secret: clientSecret,
   });
 
   const { data: updated } = await supabase
