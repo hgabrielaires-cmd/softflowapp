@@ -41,3 +41,9 @@ verify_jwt = false
 
 [functions.telegram-webhook]
 verify_jwt = false
+
+[functions.contaazul-oauth]
+verify_jwt = false
+
+[functions.contaazul-sync]
+verify_jwt = false

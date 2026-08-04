@@ -1,7 +1,7 @@
 // ─── Edge Function: Conta Azul Sync ───────────────────────────────────────
 // Importa recebíveis pagos da Conta Azul para fin_movimentacoes (entradas)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getValidToken } from "../contaazul-oauth/index.ts";
+import { getValidToken } from "../_shared/contaazul.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
