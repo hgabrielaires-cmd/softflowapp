@@ -772,7 +772,7 @@ Retorne APENAS JSON válido sem markdown:
         fornecedor_id: fornecedor?.id ?? null,
         fornecedor_nome: fornecedor?.nome_fantasia ?? dados.nome_recebedor ?? null,
         forma_pagamento_id: formaPagtoId,
-        conta_financeira_id: contasFinanceiras?.[0]?.id ?? null,
+        conta_financeira_id: contaPadraoId,
         centro_custo_id: centrosCusto?.[0]?.id ?? null,
         plano_conta_sugerido_id: planoSugeridoId,
         anexo_url: anexoUrl,
