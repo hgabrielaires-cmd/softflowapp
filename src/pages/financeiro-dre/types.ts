@@ -14,6 +14,7 @@ export interface PlanoConta {
   tipo: string;
   parent_id: string | null;
   nivel: number | null;
+  nao_valoriza_dre?: boolean;
 }
 
 /** Lançamento normalizado (despesa paga ou saída/entrada do livro caixa). */

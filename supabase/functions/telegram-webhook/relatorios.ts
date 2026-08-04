@@ -106,7 +106,17 @@ type Despesa = {
   fornecedor_id: string | null;
 };
 
+/** Planos de contas marcados como "não valoriza DRE" — ignorados nos relatórios. */
+async function planosIgnorados(supabase: any): Promise<Set<string>> {
+  const { data } = await supabase
+    .from("fin_plano_contas")
+    .select("id")
+    .eq("nao_valoriza_dre", true);
+  return new Set(((data ?? []) as any[]).map((p) => p.id as string));
+}
+
 async function despesasPagas(supabase: any, inicio: string, fim: string) {
+  const ignorados = await planosIgnorados(supabase);
   const [{ data }, { data: movs }] = await Promise.all([
     supabase
       .from("fin_despesas")
@@ -133,18 +143,23 @@ async function despesasPagas(supabase: any, inicio: string, fim: string) {
     fornecedor_id: m.fornecedor_id ?? null,
   }));
 
-  return [...((data ?? []) as Despesa[]), ...extras];
+  return [...((data ?? []) as Despesa[]), ...extras].filter(
+    (dsp) => !(dsp.plano_conta_id && ignorados.has(dsp.plano_conta_id)),
+  );
 }
 
 async function receitas(supabase: any, inicio: string, fim: string) {
   // Receitas = entradas do livro caixa (recebíveis importados, lançamentos manuais)
+  const ignorados = await planosIgnorados(supabase);
   const { data } = await supabase
     .from("fin_movimentacoes")
-    .select("valor")
+    .select("valor, categoria, plano_conta_id")
     .eq("tipo", "entrada")
     .gte("data_movimentacao", inicio)
     .lte("data_movimentacao", fim);
-  return (data ?? []).reduce((s: number, m: any) => s + Number(m.valor ?? 0), 0);
+  return (data ?? [])
+    .filter((m: any) => m.categoria !== "ajuste" && !(m.plano_conta_id && ignorados.has(m.plano_conta_id)))
+    .reduce((s: number, m: any) => s + Number(m.valor ?? 0), 0);
 }
 
 async function mapaPlanos(supabase: any) {

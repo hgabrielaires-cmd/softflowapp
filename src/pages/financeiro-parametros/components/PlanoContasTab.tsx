@@ -96,6 +96,9 @@ export function PlanoContasTab() {
           {!node.aceita_lancamento && (
             <Badge variant="outline" className="shrink-0 text-xs">Sintética</Badge>
           )}
+          {node.nao_valoriza_dre && (
+            <Badge variant="secondary" className="shrink-0 text-xs">Não valoriza DRE</Badge>
+          )}
           <Switch
             checked={node.ativo}
             onCheckedChange={(v) => toggleMut.mutate({ id: node.id, ativo: v })}
@@ -190,6 +193,19 @@ export function PlanoContasTab() {
             <div className="flex items-center justify-between">
               <Label className="font-normal">Aceita lançamento (analítica)</Label>
               <Switch checked={form.aceita_lancamento} onCheckedChange={(v) => setForm({ ...form, aceita_lancamento: v })} />
+            </div>
+
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-0.5">
+                <Label className="font-normal">Não valoriza DRE</Label>
+                <p className="text-xs text-muted-foreground">
+                  Lançamentos neste plano não aparecem na DRE (ex: ajustes de saldo, transferências entre contas)
+                </p>
+              </div>
+              <Switch
+                checked={form.nao_valoriza_dre}
+                onCheckedChange={(v) => setForm({ ...form, nao_valoriza_dre: v })}
+              />
             </div>
 
             <div className="flex items-center justify-between">

@@ -85,6 +85,7 @@ export function buildPlanoContaPayload(f: PlanoContaFormState, contas: PlanoCont
     tipo: parent ? parent.tipo : f.tipo,
     nivel: parent ? parent.nivel + 1 : 1,
     aceita_lancamento: f.aceita_lancamento,
+    nao_valoriza_dre: f.nao_valoriza_dre,
     ativo: f.ativo,
   };
 }
@@ -130,6 +131,7 @@ export function planoContaToForm(c: PlanoConta): PlanoContaFormState {
     nome: c.nome,
     tipo: c.tipo,
     aceita_lancamento: c.aceita_lancamento,
+    nao_valoriza_dre: c.nao_valoriza_dre ?? false,
     ativo: c.ativo,
   };
 }

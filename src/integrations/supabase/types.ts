@@ -3289,6 +3289,7 @@ export type Database = {
           codigo: string
           created_at: string
           id: string
+          nao_valoriza_dre: boolean
           nivel: number
           nome: string
           ordem: number
@@ -3302,6 +3303,7 @@ export type Database = {
           codigo: string
           created_at?: string
           id?: string
+          nao_valoriza_dre?: boolean
           nivel?: number
           nome: string
           ordem?: number
@@ -3315,6 +3317,7 @@ export type Database = {
           codigo?: string
           created_at?: string
           id?: string
+          nao_valoriza_dre?: boolean
           nivel?: number
           nome?: string
           ordem?: number

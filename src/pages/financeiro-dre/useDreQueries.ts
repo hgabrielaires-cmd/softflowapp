@@ -54,7 +54,7 @@ export function usePlanoContasDreQuery() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("fin_plano_contas")
-        .select("id, codigo, nome, tipo, parent_id, nivel")
+        .select("id, codigo, nome, tipo, parent_id, nivel, nao_valoriza_dre")
         .order("codigo");
       if (error) throw error;
       return (data || []) as PlanoConta[];
@@ -63,6 +63,11 @@ export function usePlanoContasDreQuery() {
 }
 
 type ContaMap = Record<string, string>;
+
+/** Remove lançamentos cujo plano de contas está marcado como "não valoriza DRE". */
+function semPlanosIgnorados(rows: any[]): any[] {
+  return rows.filter((r) => !r.plano?.nao_valoriza_dre);
+}
 
 function mapMovimentacao(m: any, contas: ContaMap): DreLancamento {
   return {
@@ -89,7 +94,7 @@ export function useReceitasDreQuery(filialId: string, periodo: DrePeriodo, conta
     queryFn: async () => {
       let q = supabase
         .from("fin_movimentacoes")
-        .select("*, plano:fin_plano_contas(codigo, nome), fornecedor:fornecedores(nome_fantasia, cnpj_cpf)")
+        .select("*, plano:fin_plano_contas(codigo, nome, nao_valoriza_dre), fornecedor:fornecedores(nome_fantasia, cnpj_cpf)")
         .eq("tipo", "entrada")
         // ajustes manuais de saldo não são receita
         .or("categoria.is.null,categoria.neq.ajuste")
@@ -99,7 +104,7 @@ export function useReceitasDreQuery(filialId: string, periodo: DrePeriodo, conta
       if (filialId !== TODAS) q = q.eq("filial_id", filialId);
       const { data, error } = await q;
       if (error) throw error;
-      return (data || []).map((m) => mapMovimentacao(m, contas));
+      return semPlanosIgnorados(data || []).map((m) => mapMovimentacao(m, contas));
     },
   });
 }
@@ -112,7 +117,7 @@ export function useDespesasDreQuery(filialId: string, periodo: DrePeriodo, conta
       let qDespesas = supabase
         .from("fin_despesas")
         .select(
-          "id, valor, valor_pago, data_pagamento, descricao, plano_conta_id, conta_financeira_id, anexo_url, plano:fin_plano_contas!fin_despesas_plano_conta_id_fkey(codigo, nome), fornecedor:fornecedores(nome_fantasia, cnpj_cpf)",
+          "id, valor, valor_pago, data_pagamento, descricao, plano_conta_id, conta_financeira_id, anexo_url, plano:fin_plano_contas!fin_despesas_plano_conta_id_fkey(codigo, nome, nao_valoriza_dre), fornecedor:fornecedores(nome_fantasia, cnpj_cpf)",
         )
         .eq("status", "pago")
         .gte("data_pagamento", periodo.inicio)
@@ -121,7 +126,7 @@ export function useDespesasDreQuery(filialId: string, periodo: DrePeriodo, conta
 
       let qSaidas = supabase
         .from("fin_movimentacoes")
-        .select("*, plano:fin_plano_contas(codigo, nome), fornecedor:fornecedores(nome_fantasia, cnpj_cpf)")
+        .select("*, plano:fin_plano_contas(codigo, nome, nao_valoriza_dre), fornecedor:fornecedores(nome_fantasia, cnpj_cpf)")
         .eq("tipo", "saida")
         .neq("origem", "despesa")
         .gte("data_movimentacao", periodo.inicio)
@@ -132,7 +137,7 @@ export function useDespesasDreQuery(filialId: string, periodo: DrePeriodo, conta
       if (resDespesas.error) throw resDespesas.error;
       if (resSaidas.error) throw resSaidas.error;
 
-      const despesas: DreLancamento[] = (resDespesas.data || []).map((d: any) => ({
+      const despesas: DreLancamento[] = semPlanosIgnorados(resDespesas.data || []).map((d: any) => ({
         id: d.id,
         data: String(d.data_pagamento).slice(0, 10),
         valor: Number(d.valor_pago ?? d.valor ?? 0),
@@ -148,7 +153,7 @@ export function useDespesasDreQuery(filialId: string, periodo: DrePeriodo, conta
         origem_tipo: "despesa",
       }));
 
-      const saidas = (resSaidas.data || []).map((m) => mapMovimentacao(m, contas));
+      const saidas = semPlanosIgnorados(resSaidas.data || []).map((m) => mapMovimentacao(m, contas));
 
       return [...despesas, ...saidas].sort((a, b) => (a.data < b.data ? 1 : -1));
     },

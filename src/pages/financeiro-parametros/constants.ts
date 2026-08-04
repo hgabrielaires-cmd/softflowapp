@@ -40,6 +40,7 @@ export const emptyPlanoContaForm: PlanoContaFormState = {
   nome: "",
   tipo: "despesa",
   aceita_lancamento: true,
+  nao_valoriza_dre: false,
   ativo: true,
 };
 
