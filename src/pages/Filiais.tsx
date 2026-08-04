@@ -327,14 +327,14 @@ export default function Filiais() {
         if (assinaturaFile) assinatura_url = await uploadAssinatura(editing.id);
         else if (removeAssinatura) assinatura_url = null;
         const { error } = await supabase.from("filiais")
-          .update({ nome: nome.trim(), razao_social: razaoSocial.trim() || null, responsavel: responsavel.trim() || null, ativa, logo_url, assinatura_url, cnpj: cnpj.trim() || null, inscricao_estadual: ie, etapa_inicial_id: etapaInicialId, ...endereco })
+          .update({ nome: nome.trim(), razao_social: razaoSocial.trim() || null, responsavel: responsavel.trim() || null, ativa, logo_url, assinatura_url, cnpj: cnpj.trim() || null, inscricao_estadual: ie, etapa_inicial_id: etapaInicialId, conta_financeira_padrao_id: contaPadraoId, ...endereco })
           .eq("id", editing.id);
         if (error) throw error;
         await saveParametros(editing.id);
         toast.success("Filial atualizada com sucesso");
       } else {
         const { data: inserted, error } = await supabase.from("filiais")
-          .insert({ nome: nome.trim(), razao_social: razaoSocial.trim() || null, responsavel: responsavel.trim() || null, ativa, cnpj: cnpj.trim() || null, inscricao_estadual: ie, etapa_inicial_id: etapaInicialId, ...endereco })
+          .insert({ nome: nome.trim(), razao_social: razaoSocial.trim() || null, responsavel: responsavel.trim() || null, ativa, cnpj: cnpj.trim() || null, inscricao_estadual: ie, etapa_inicial_id: etapaInicialId, conta_financeira_padrao_id: contaPadraoId, ...endereco })
           .select("id").single();
         if (error) throw error;
         if (inserted) {
@@ -623,6 +623,24 @@ export default function Filiais() {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">Define em qual etapa do painel o contrato será inserido ao ser assinado.</p>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border bg-card p-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">Conta financeira padrão</h3>
+                  <div className="space-y-1.5">
+                    <Label>Conta padrão para lançamentos</Label>
+                    <Select value={contaPadraoId || ""} onValueChange={(v) => setContaPadraoId(v || null)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a conta padrão" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contasFinanceiras.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Usada como padrão em despesas e pagamentos desta filial.</p>
                   </div>
                 </div>
 
