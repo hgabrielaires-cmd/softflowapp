@@ -67,6 +67,7 @@ Deno.serve(async (req) => {
         grant_type: "authorization_code",
         code,
         redirect_uri: redirectUri,
+        client_id: clientId,
       });
 
 
