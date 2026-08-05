@@ -6474,6 +6474,7 @@ export type Database = {
       }
     }
     Functions: {
+      can_access_ticket: { Args: { _ticket_id: string }; Returns: boolean }
       check_login_blocked: { Args: { p_email: string }; Returns: boolean }
       criar_conversa_direta: {
         Args: { p_target_user_id: string }
