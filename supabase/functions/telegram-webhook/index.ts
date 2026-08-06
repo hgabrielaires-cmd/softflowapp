@@ -797,7 +797,12 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
     } catch {
       dados = {};
     }
-    console.log("[telegram] Dados extraídos:", JSON.stringify(dados));
+    console.log("[claude] dados extraídos:", JSON.stringify(dados));
+    console.log("[claude] docs recebedor -> cpf_recebedor:", dados.cpf_recebedor ?? null,
+      "| cnpj_recebedor:", dados.cnpj_recebedor ?? null,
+      "| tipo_pessoa:", dados.tipo_pessoa_recebedor ?? null,
+      "| nome_recebedor:", dados.nome_recebedor ?? null,
+      "| resolvido:", JSON.stringify(docRecebedor(dados)));
 
     if (!dados.valor || dados.tipo === "desconhecido") {
       await avisar(
