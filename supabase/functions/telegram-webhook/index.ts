@@ -367,16 +367,25 @@ async function executarRelatorioVendas(
 
 
 function docRecebedor(dados: Record<string, any>): { doc: string | null; tipoPessoa: "pf" | "pj" | null } {
-  const cnpj = String(dados.cnpj_recebedor ?? dados.cnpj_emitente ?? "").replace(/\D/g, "");
-  const cpf = dados.cpf_recebedor ? String(dados.cpf_recebedor).replace(/\D/g, "") : "";
+  // SEMPRE o destinatário (quem RECEBEU). Nunca o pagador/remetente.
+  const cnpjRec = String(dados.cnpj_recebedor ?? "").replace(/\D/g, "");
+  const cpfRec = String(dados.cpf_recebedor ?? "").replace(/\D/g, "");
+  const cnpjPagador = String(dados.cnpj_pagador ?? "").replace(/\D/g, "");
+  // emitente só é usado como fallback quando não é o próprio pagador (nota fiscal)
+  const cnpjEmit = String(dados.cnpj_emitente ?? "").replace(/\D/g, "");
+  const emitenteValido = cnpjEmit && cnpjEmit !== cnpjPagador ? cnpjEmit : "";
 
-  const doc = cnpj || cpf || null;
+  const doc =
+    (dados.tipo_pessoa_recebedor === "pf" ? cpfRec || cnpjRec : cnpjRec || cpfRec) ||
+    emitenteValido ||
+    null;
   if (!doc) return { doc: null, tipoPessoa: null };
   const tipo = (dados.tipo_pessoa_recebedor === "pf" || dados.tipo_pessoa_recebedor === "pj")
     ? dados.tipo_pessoa_recebedor
     : doc.length === 11 ? "pf" : "pj";
   return { doc, tipoPessoa: tipo };
 }
+
 
 function formatDoc(doc: string) {
   if (doc.length === 11) return doc.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
