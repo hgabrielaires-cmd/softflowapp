@@ -764,7 +764,7 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
         },
         body: JSON.stringify({
           model: modelo,
-          max_tokens: 1500,
+          max_tokens: 2000,
           messages: [{ role: "user", content: [contentBlock, { type: "text", text: prompt }] }],
         }),
       }).finally(() => clearTimeout(timeoutId));
