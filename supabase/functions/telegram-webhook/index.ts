@@ -713,11 +713,19 @@ Retorne APENAS JSON válido sem markdown:
   "plano_conta_sugerido_motivo": "string ou null"
 }
 
+REGRAS OBRIGATÓRIAS PARA DOCUMENTOS DO RECEBEDOR (leia o documento inteiro, inclusive PDFs de várias páginas):
+- Procure o CPF/CNPJ do destinatário em QUALQUER seção: "Dados de quem recebeu", "Destinatário", "Favorecido", "Beneficiário", "Recebedor", "Credor", "Para".
+- Se o recebedor for pessoa física, preencha SEMPRE cpf_recebedor (11 dígitos) e tipo_pessoa_recebedor = "pf".
+- Se o CPF/CNPJ estiver MASCARADO (ex.: "***.417.684-**" ou "•••.417.684-••"), retorne null nesse campo — NUNCA retorne dígitos parciais.
+- Nunca coloque o documento do pagador/remetente em cpf_recebedor ou cnpj_recebedor.
+
 Para NFC-e/cupom fiscal:
 - nome_recebedor = nome do estabelecimento
 - cnpj_recebedor = CNPJ do emitente
 - valor = valor total pago
 - data = data de emissão
+
+
 
 Para sugerir o plano de contas, analise:
 1. A descrição do usuário${observacaoUsuario ? `: "${observacaoUsuario}"` : " (não informada)"}
