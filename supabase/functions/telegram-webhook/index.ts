@@ -777,7 +777,8 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
       }
 
       claudeData = await claudeRes.json();
-      console.log("[claude] Resposta:", JSON.stringify(claudeData).slice(0, 300));
+      console.log("[claude] tipo_documento:", isPdf ? "pdf" : mimeType, "stop_reason:", claudeData?.stop_reason, "tokens:", JSON.stringify(claudeData?.usage ?? {}));
+      console.log("[claude] resposta bruta:", String(claudeData?.content?.[0]?.text ?? "").slice(0, 2000));
     } catch (err: any) {
       console.error("[claude] Falha:", err?.name, err?.message);
       if (err?.name === "AbortError") {
