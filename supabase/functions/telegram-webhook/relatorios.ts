@@ -158,7 +158,7 @@ async function receitas(supabase: any, inicio: string, fim: string) {
     .gte("data_movimentacao", inicio)
     .lte("data_movimentacao", fim);
   return (data ?? [])
-    .filter((m: any) => m.categoria !== "ajuste" && !(m.plano_conta_id && ignorados.has(m.plano_conta_id)))
+    .filter((m: any) => m.categoria !== "ajuste" && m.categoria !== "transferencia" && !(m.plano_conta_id && ignorados.has(m.plano_conta_id)))
     .reduce((s: number, m: any) => s + Number(m.valor ?? 0), 0);
 }
 

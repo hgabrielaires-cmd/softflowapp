@@ -676,7 +676,10 @@ Retorne APENAS JSON válido sem markdown:
   "nome_recebedor": "string ou null",
   "cnpj_emitente": "apenas números ou null",
   "nome_emitente": "string ou null",
+  "cnpj_pagador": "CNPJ/CPF de quem PAGOU (remetente), apenas números ou null",
+  "nome_pagador": "nome de quem PAGOU (remetente) ou null",
   "banco_pagador": "string ou null",
+
   "numero_documento": "string ou null",
   "chave_acesso": "string ou null",
   "codigo_barras": "string ou null",
@@ -783,11 +786,69 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
       await editMessage(token, chatId, processingMsgId, "✅ Documento lido com sucesso.");
     }
 
+    // ── Transferência entre contas da própria empresa ──
+    {
+      const { data: filiaisCnpj } = await supabase
+        .from("filiais")
+        .select("cnpj")
+        .not("cnpj", "is", null);
+      const cnpjsEmpresa = (filiaisCnpj ?? [])
+        .map((f: any) => String(f.cnpj ?? "").replace(/\D/g, ""))
+        .filter(Boolean);
 
+      const cnpjRecebedor = String(dados.cnpj_recebedor ?? "").replace(/\D/g, "");
+      const cnpjPagador = String(dados.cnpj_pagador ?? dados.cnpj_emitente ?? "").replace(/\D/g, "");
+
+      const isTransferenciaInterna =
+        !!cnpjRecebedor &&
+        cnpjRecebedor === cnpjPagador &&
+        cnpjsEmpresa.includes(cnpjRecebedor) &&
+        cnpjsEmpresa.includes(cnpjPagador);
+
+      if (isTransferenciaInterna) {
+        const { data: pendTransf } = await supabase
+          .from("telegram_pendencias")
+          .insert({
+            chat_id: chatId,
+            user_id: userId,
+            dados_extraidos: dados,
+            etapa: "transferencia_confirmar",
+            status: "aguardando_resposta",
+            observacao_usuario: caption || null,
+            anexo_url: anexoUrl,
+          })
+          .select("id")
+          .single();
+
+        const msgTransf =
+          `🔄 *Transferência entre contas identificada!*\n\n` +
+          `💰 Valor: ${formatMoeda(Number(dados.valor || 0))}\n` +
+          `📅 Data: ${dados.data ?? "—"}\n` +
+          `🏢 Remetente: ${dados.nome_pagador ?? dados.nome_emitente ?? "Softplus"}\n` +
+          `🏢 Destinatário: ${dados.nome_recebedor ?? "Softplus"}\n\n` +
+          `⚠️ Remetente e destinatário têm o mesmo CNPJ.\n` +
+          `É uma transferência entre contas internas?`;
+
+        const midTransf = await sendMessage(token, chatId, msgTransf, {
+          inline_keyboard: [
+            [{ text: "✅ Sim, transferência interna", callback_data: "transf_confirmar" }],
+            [{ text: "❌ Não, é despesa normal", callback_data: "transf_negar" }],
+          ],
+        });
+        if (midTransf && pendTransf?.id) {
+          await supabase
+            .from("telegram_pendencias")
+            .update({ message_id: midTransf })
+            .eq("id", pendTransf.id);
+        }
+        return ok();
+      }
+    }
 
     // ── Fornecedor ──
     const { doc: cnpj } = docRecebedor(dados);
     let fornecedor: any = null;
+
 
     if (cnpj) {
       const { data: forn } = await supabase
@@ -1202,6 +1263,132 @@ async function processarCallback(
 
   const planos = await listarPlanos(supabase);
   const dados = pendencia.dados_extraidos ?? {};
+
+  // ── Fluxo de transferência entre contas ──
+  if (data.startsWith("transf_")) {
+    const { data: contasTransf } = await supabase
+      .from("fin_contas_financeiras")
+      .select("id, nome")
+      .eq("ativo", true)
+      .order("nome");
+    const contas = (contasTransf ?? []) as { id: string; nome: string }[];
+    const nomeConta = (id: string | null) => contas.find((c) => c.id === id)?.nome ?? "Conta";
+
+    if (data === "transf_confirmar") {
+      await answerCallback(token, callbackQuery.id, "🔄");
+      await supabase
+        .from("telegram_pendencias")
+        .update({ etapa: "transferencia_origem" })
+        .eq("id", pendencia.id);
+
+      await editMessage(
+        token,
+        chatId,
+        messageId,
+        `🔄 *Transferência confirmada!*\n\n` +
+          `💰 Valor: ${formatMoeda(Number(dados.valor || 0))}\n` +
+          `📅 Data: ${dados.data ?? "—"}\n\n` +
+          `📤 Selecione a conta de *ORIGEM* (de onde saiu o dinheiro):`,
+        {
+          inline_keyboard: contas.map((c) => [
+            { text: `📤 ${c.nome}`.slice(0, 60), callback_data: `transf_origem_${c.id}` },
+          ]),
+        },
+      );
+      return ok();
+    }
+
+    if (data === "transf_negar") {
+      await answerCallback(token, callbackQuery.id, "📁");
+      await supabase
+        .from("telegram_pendencias")
+        .update({ etapa: "plano_contas", plano_pagina: 0 })
+        .eq("id", pendencia.id);
+
+      const texto =
+        resumoComprovante(dados, pendencia.fornecedor_nome, pendencia.observacao_usuario) +
+        `\n📁 *Selecione o plano de contas:*`;
+      await editMessage(token, chatId, messageId, texto, tecladoPlanos(planos, 0, null));
+      return ok();
+    }
+
+    if (data.startsWith("transf_origem_")) {
+      const contaOrigemId = data.replace("transf_origem_", "");
+      await answerCallback(token, callbackQuery.id, "📥");
+      await supabase
+        .from("telegram_pendencias")
+        .update({ conta_financeira_id: contaOrigemId, etapa: "transferencia_destino" })
+        .eq("id", pendencia.id);
+
+      await editMessage(
+        token,
+        chatId,
+        messageId,
+        `🔄 *Transferência — Conta Destino*\n\n` +
+          `📤 Origem: ${nomeConta(contaOrigemId)}\n` +
+          `💰 Valor: ${formatMoeda(Number(dados.valor || 0))}\n\n` +
+          `📥 Selecione a conta de *DESTINO* (para onde foi o dinheiro):`,
+        {
+          inline_keyboard: contas
+            .filter((c) => c.id !== contaOrigemId)
+            .map((c) => [
+              { text: `📥 ${c.nome}`.slice(0, 60), callback_data: `transf_destino_${c.id}` },
+            ]),
+        },
+      );
+      return ok();
+    }
+
+    if (data.startsWith("transf_destino_")) {
+      const contaDestinoId = data.replace("transf_destino_", "");
+      const contaOrigemId = pendencia.conta_financeira_id;
+      if (!contaOrigemId) {
+        await answerCallback(token, callbackQuery.id, "⚠️ Selecione a conta de origem.");
+        return ok();
+      }
+      await answerCallback(token, callbackQuery.id, "⏳ Lançando...");
+
+      const obs = String(pendencia.observacao_usuario ?? "").trim();
+      const dataMov = String(dados.data ?? "").slice(0, 10) || new Date().toISOString().slice(0, 10);
+
+      const { error: movErr } = await supabase.from("fin_movimentacoes").insert({
+        conta_financeira_id: contaOrigemId,
+        conta_destino_id: contaDestinoId,
+        tipo: "transferencia",
+        valor: Number(dados.valor || 0),
+        data_movimentacao: dataMov,
+        descricao: `Transferência entre contas${obs ? ` — ${obs}` : ""}`,
+        categoria: "transferencia",
+        origem: "telegram",
+        anexo_url: pendencia.anexo_url ?? null,
+      });
+
+      if (movErr) {
+        console.error("[telegram] transferencia:", movErr.message);
+        await editMessage(token, chatId, messageId, `❌ Erro ao registrar transferência: ${movErr.message}`);
+        return ok();
+      }
+
+      await supabase
+        .from("telegram_pendencias")
+        .update({ status: "concluido" })
+        .eq("id", pendencia.id);
+
+      await editMessage(
+        token,
+        chatId,
+        messageId,
+        `✅ *Transferência registrada!*\n\n` +
+          `📤 Saiu de: *${nomeConta(contaOrigemId)}*\n` +
+          `📥 Entrou em: *${nomeConta(contaDestinoId)}*\n` +
+          `💰 Valor: *${formatMoeda(Number(dados.valor || 0))}*\n` +
+          `📅 Data: ${dataMov.split("-").reverse().join("/")}\n\n` +
+          `_Registrado no livro caixa._\n_Não afeta a DRE._ ✓`,
+      );
+      return ok();
+    }
+  }
+
 
   // Confirmar plano sugerido → lança direto
   if (data === "sug" && pendencia.plano_conta_sugerido_id) {
