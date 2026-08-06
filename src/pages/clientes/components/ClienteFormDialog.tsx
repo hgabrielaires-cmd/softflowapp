@@ -138,13 +138,13 @@ export function ClienteFormDialog({
           {/* Nome fantasia */}
           <div className="col-span-2 space-y-1.5">
             <Label>Nome fantasia *</Label>
-            <Input value={form.nome_fantasia} onChange={(e) => setForm((prev) => ({ ...prev, nome_fantasia: e.target.value }))} placeholder="Ex: Restaurante do João" />
+            <Input className="uppercase" value={form.nome_fantasia} onChange={(e) => setForm((prev) => ({ ...prev, nome_fantasia: e.target.value.toUpperCase() }))} placeholder="Ex: Restaurante do João" />
           </div>
 
           {/* Razao social */}
           <div className="col-span-2 space-y-1.5">
             <Label>Razão social *</Label>
-            <Input value={form.razao_social} onChange={(e) => setForm((prev) => ({ ...prev, razao_social: e.target.value }))} placeholder="Razão social" />
+            <Input className="uppercase" value={form.razao_social} onChange={(e) => setForm((prev) => ({ ...prev, razao_social: e.target.value.toUpperCase() }))} placeholder="Razão social" />
           </div>
 
           {/* Apelido */}
@@ -259,7 +259,7 @@ export function ClienteFormDialog({
           {/* ── Responsável ── */}
           <div className="col-span-2 space-y-1.5">
             <Label>Nome completo do responsável *</Label>
-            <Input value={form.responsavel_nome} onChange={(e) => setForm((prev) => ({ ...prev, responsavel_nome: e.target.value }))} placeholder="Nome completo do responsável pela empresa" />
+            <Input className="uppercase" value={form.responsavel_nome} onChange={(e) => setForm((prev) => ({ ...prev, responsavel_nome: e.target.value.toUpperCase() }))} placeholder="Nome completo do responsável pela empresa" />
           </div>
 
           {/* ── Seção Contatos ── */}

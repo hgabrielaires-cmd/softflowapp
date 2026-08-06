@@ -52,7 +52,7 @@ export function ContatoFormDialog({
         <div className="grid grid-cols-2 gap-3 py-2">
           <div className="col-span-2 space-y-1.5">
             <Label>Nome *</Label>
-            <Input value={form.nome} onChange={(e) => onFormChange((f) => ({ ...f, nome: e.target.value }))} placeholder="Nome completo" />
+            <Input className="uppercase" value={form.nome} onChange={(e) => onFormChange((f) => ({ ...f, nome: e.target.value.toUpperCase() }))} placeholder="Nome completo" />
           </div>
           <div className="col-span-2 space-y-1.5">
             <Label>Cargo</Label>

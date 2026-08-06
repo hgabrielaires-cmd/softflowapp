@@ -140,11 +140,11 @@ export function ClienteRapidoDialog({
 
             <div className="col-span-2 space-y-1.5">
               <Label>Nome Fantasia *</Label>
-              <Input placeholder="Nome fantasia..." value={clienteForm.nome_fantasia} onChange={(e) => setClienteForm((f) => ({ ...f, nome_fantasia: e.target.value }))} required />
+              <Input className="uppercase" placeholder="Nome fantasia..." value={clienteForm.nome_fantasia} onChange={(e) => setClienteForm((f) => ({ ...f, nome_fantasia: e.target.value.toUpperCase() }))} required />
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Razão Social *</Label>
-              <Input placeholder="Razão social..." value={clienteForm.razao_social} onChange={(e) => setClienteForm((f) => ({ ...f, razao_social: e.target.value }))} required />
+              <Input className="uppercase" placeholder="Razão social..." value={clienteForm.razao_social} onChange={(e) => setClienteForm((f) => ({ ...f, razao_social: e.target.value.toUpperCase() }))} required />
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Apelido</Label>
@@ -173,7 +173,7 @@ export function ClienteRapidoDialog({
             {/* Responsável */}
             <div className="col-span-2 space-y-1.5">
               <Label>Nome completo do responsável *</Label>
-              <Input value={clienteForm.responsavel_nome} onChange={(e) => setClienteForm((f) => ({ ...f, responsavel_nome: e.target.value }))} placeholder="Nome completo do responsável pela empresa" />
+              <Input className="uppercase" value={clienteForm.responsavel_nome} onChange={(e) => setClienteForm((f) => ({ ...f, responsavel_nome: e.target.value.toUpperCase() }))} placeholder="Nome completo do responsável pela empresa" />
             </div>
 
             {/* Endereço */}
