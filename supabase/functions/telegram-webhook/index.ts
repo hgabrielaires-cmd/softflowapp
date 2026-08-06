@@ -807,12 +807,17 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
 
       const cnpjRecebedor = String(dados.cnpj_recebedor ?? "").replace(/\D/g, "");
       const cnpjPagador = String(dados.cnpj_pagador ?? dados.cnpj_emitente ?? "").replace(/\D/g, "");
+      const cpfRecebedor = String(dados.cpf_recebedor ?? "").replace(/\D/g, "");
 
+      // Transferência interna só quando AMBOS os lados são o MESMO CNPJ (14 dígitos)
+      // da própria empresa. Pagamento a pessoa física (CPF) nunca é transferência.
       const isTransferenciaInterna =
-        !!cnpjRecebedor &&
+        !cpfRecebedor &&
+        cnpjRecebedor.length === 14 &&
         cnpjRecebedor === cnpjPagador &&
         cnpjsEmpresa.includes(cnpjRecebedor) &&
         cnpjsEmpresa.includes(cnpjPagador);
+
 
       if (isTransferenciaInterna) {
         const { data: pendTransf } = await supabase
