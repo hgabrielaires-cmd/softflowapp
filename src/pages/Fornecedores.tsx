@@ -482,8 +482,9 @@ export default function Fornecedores() {
               <div>
                 <Label>Razão Social</Label>
                 <Input
+                  className="uppercase"
                   value={form.razao_social}
-                  onChange={(e) => setForm((f) => ({ ...f, razao_social: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, razao_social: e.target.value.toUpperCase() }))}
                 />
               </div>
             </div>
@@ -492,8 +493,9 @@ export default function Fornecedores() {
               <div>
                 <Label>Nome Fantasia *</Label>
                 <Input
+                  className="uppercase"
                   value={form.nome_fantasia}
-                  onChange={(e) => setForm((f) => ({ ...f, nome_fantasia: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, nome_fantasia: e.target.value.toUpperCase() }))}
                 />
               </div>
               <div>
@@ -521,8 +523,9 @@ export default function Fornecedores() {
               <div>
                 <Label>Nome do Contato</Label>
                 <Input
+                  className="uppercase"
                   value={form.contato_nome}
-                  onChange={(e) => setForm((f) => ({ ...f, contato_nome: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, contato_nome: e.target.value.toUpperCase() }))}
                 />
               </div>
               <div>

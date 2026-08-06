@@ -530,15 +530,15 @@ export default function Filiais() {
 
                   <div className="space-y-1.5">
                     <Label>Nome da filial *</Label>
-                    <Input placeholder="Ex: Filial São Paulo" value={nome} onChange={(e) => setNome(e.target.value)} required />
+                    <Input className="uppercase" placeholder="Ex: Filial São Paulo" value={nome} onChange={(e) => setNome(e.target.value.toUpperCase())} required />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Razão Social</Label>
-                    <Input placeholder="Ex: Softflow Tecnologia Ltda" value={razaoSocial} onChange={(e) => setRazaoSocial(e.target.value)} />
+                    <Input className="uppercase" placeholder="Ex: Softflow Tecnologia Ltda" value={razaoSocial} onChange={(e) => setRazaoSocial(e.target.value.toUpperCase())} />
                   </div>
                   <div className="space-y-1.5 col-span-2">
                     <Label>Responsável (quem assina o contrato)</Label>
-                    <Input placeholder="Ex: José da Silva" value={responsavel} onChange={(e) => setResponsavel(e.target.value)} />
+                    <Input className="uppercase" placeholder="Ex: José da Silva" value={responsavel} onChange={(e) => setResponsavel(e.target.value.toUpperCase())} />
                   </div>
 
                   {/* CEP com busca */}
