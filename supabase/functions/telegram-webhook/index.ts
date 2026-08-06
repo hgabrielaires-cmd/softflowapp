@@ -676,7 +676,10 @@ Retorne APENAS JSON válido sem markdown:
   "nome_recebedor": "string ou null",
   "cnpj_emitente": "apenas números ou null",
   "nome_emitente": "string ou null",
+  "cnpj_pagador": "CNPJ/CPF de quem PAGOU (remetente), apenas números ou null",
+  "nome_pagador": "nome de quem PAGOU (remetente) ou null",
   "banco_pagador": "string ou null",
+
   "numero_documento": "string ou null",
   "chave_acesso": "string ou null",
   "codigo_barras": "string ou null",
