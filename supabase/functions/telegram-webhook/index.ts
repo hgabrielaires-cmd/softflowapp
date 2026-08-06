@@ -893,6 +893,22 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
       fornecedor = forn;
     }
 
+    // Nunca usar a própria empresa (remetente) como fornecedor
+    if (fornecedor?.cnpj_cpf) {
+      const { data: filiaisCnpjForn } = await supabase
+        .from("filiais")
+        .select("cnpj")
+        .not("cnpj", "is", null);
+      const empresaDocs = (filiaisCnpjForn ?? []).map((f: any) =>
+        String(f.cnpj ?? "").replace(/\D/g, "")
+      );
+      if (empresaDocs.includes(String(fornecedor.cnpj_cpf).replace(/\D/g, ""))) {
+        fornecedor = null;
+      }
+    }
+
+
+
     // ── Memória CNPJ → plano de contas ──
     let planoMemoria: any = null;
     if (cnpj) {
