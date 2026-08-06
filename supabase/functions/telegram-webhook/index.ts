@@ -366,19 +366,30 @@ async function executarRelatorioVendas(
 
 
 
+function soDigitos(v: unknown): string {
+  return String(v ?? "").replace(/\D/g, "");
+}
+
+// aceita apenas documentos completos (CPF 11 / CNPJ 14). Mascarados (***.417.684-**) viram ""
+function docValido(v: unknown, len: number): string {
+  const d = soDigitos(v);
+  return d.length === len ? d : "";
+}
+
 function docRecebedor(dados: Record<string, any>): { doc: string | null; tipoPessoa: "pf" | "pj" | null } {
   // SEMPRE o destinatário (quem RECEBEU). Nunca o pagador/remetente.
-  const cnpjRec = String(dados.cnpj_recebedor ?? "").replace(/\D/g, "");
-  const cpfRec = String(dados.cpf_recebedor ?? "").replace(/\D/g, "");
-  const cnpjPagador = String(dados.cnpj_pagador ?? "").replace(/\D/g, "");
+  const cnpjRec = docValido(dados.cnpj_recebedor, 14);
+  const cpfRec = docValido(dados.cpf_recebedor, 11);
+  const cnpjPagador = soDigitos(dados.cnpj_pagador);
   // emitente só é usado como fallback quando não é o próprio pagador (nota fiscal)
-  const cnpjEmit = String(dados.cnpj_emitente ?? "").replace(/\D/g, "");
+  const cnpjEmit = docValido(dados.cnpj_emitente, 14);
   const emitenteValido = cnpjEmit && cnpjEmit !== cnpjPagador ? cnpjEmit : "";
 
   const doc =
     (dados.tipo_pessoa_recebedor === "pf" ? cpfRec || cnpjRec : cnpjRec || cpfRec) ||
     emitenteValido ||
     null;
+
   if (!doc) return { doc: null, tipoPessoa: null };
   const tipo = (dados.tipo_pessoa_recebedor === "pf" || dados.tipo_pessoa_recebedor === "pj")
     ? dados.tipo_pessoa_recebedor
