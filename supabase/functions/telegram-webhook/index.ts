@@ -786,11 +786,69 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
       await editMessage(token, chatId, processingMsgId, "✅ Documento lido com sucesso.");
     }
 
+    // ── Transferência entre contas da própria empresa ──
+    {
+      const { data: filiaisCnpj } = await supabase
+        .from("filiais")
+        .select("cnpj")
+        .not("cnpj", "is", null);
+      const cnpjsEmpresa = (filiaisCnpj ?? [])
+        .map((f: any) => String(f.cnpj ?? "").replace(/\D/g, ""))
+        .filter(Boolean);
 
+      const cnpjRecebedor = String(dados.cnpj_recebedor ?? "").replace(/\D/g, "");
+      const cnpjPagador = String(dados.cnpj_pagador ?? dados.cnpj_emitente ?? "").replace(/\D/g, "");
+
+      const isTransferenciaInterna =
+        !!cnpjRecebedor &&
+        cnpjRecebedor === cnpjPagador &&
+        cnpjsEmpresa.includes(cnpjRecebedor) &&
+        cnpjsEmpresa.includes(cnpjPagador);
+
+      if (isTransferenciaInterna) {
+        const { data: pendTransf } = await supabase
+          .from("telegram_pendencias")
+          .insert({
+            chat_id: chatId,
+            user_id: userId,
+            dados_extraidos: dados,
+            etapa: "transferencia_confirmar",
+            status: "aguardando_resposta",
+            observacao_usuario: caption || null,
+            anexo_url: anexoUrl,
+          })
+          .select("id")
+          .single();
+
+        const msgTransf =
+          `🔄 *Transferência entre contas identificada!*\n\n` +
+          `💰 Valor: ${formatMoeda(Number(dados.valor || 0))}\n` +
+          `📅 Data: ${dados.data ?? "—"}\n` +
+          `🏢 Remetente: ${dados.nome_pagador ?? dados.nome_emitente ?? "Softplus"}\n` +
+          `🏢 Destinatário: ${dados.nome_recebedor ?? "Softplus"}\n\n` +
+          `⚠️ Remetente e destinatário têm o mesmo CNPJ.\n` +
+          `É uma transferência entre contas internas?`;
+
+        const midTransf = await sendMessage(token, chatId, msgTransf, {
+          inline_keyboard: [
+            [{ text: "✅ Sim, transferência interna", callback_data: "transf_confirmar" }],
+            [{ text: "❌ Não, é despesa normal", callback_data: "transf_negar" }],
+          ],
+        });
+        if (midTransf && pendTransf?.id) {
+          await supabase
+            .from("telegram_pendencias")
+            .update({ message_id: midTransf })
+            .eq("id", pendTransf.id);
+        }
+        return ok();
+      }
+    }
 
     // ── Fornecedor ──
     const { doc: cnpj } = docRecebedor(dados);
     let fornecedor: any = null;
+
 
     if (cnpj) {
       const { data: forn } = await supabase
