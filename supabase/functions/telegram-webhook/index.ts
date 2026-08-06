@@ -366,19 +366,30 @@ async function executarRelatorioVendas(
 
 
 
+function soDigitos(v: unknown): string {
+  return String(v ?? "").replace(/\D/g, "");
+}
+
+// aceita apenas documentos completos (CPF 11 / CNPJ 14). Mascarados (***.417.684-**) viram ""
+function docValido(v: unknown, len: number): string {
+  const d = soDigitos(v);
+  return d.length === len ? d : "";
+}
+
 function docRecebedor(dados: Record<string, any>): { doc: string | null; tipoPessoa: "pf" | "pj" | null } {
   // SEMPRE o destinatário (quem RECEBEU). Nunca o pagador/remetente.
-  const cnpjRec = String(dados.cnpj_recebedor ?? "").replace(/\D/g, "");
-  const cpfRec = String(dados.cpf_recebedor ?? "").replace(/\D/g, "");
-  const cnpjPagador = String(dados.cnpj_pagador ?? "").replace(/\D/g, "");
+  const cnpjRec = docValido(dados.cnpj_recebedor, 14);
+  const cpfRec = docValido(dados.cpf_recebedor, 11);
+  const cnpjPagador = soDigitos(dados.cnpj_pagador);
   // emitente só é usado como fallback quando não é o próprio pagador (nota fiscal)
-  const cnpjEmit = String(dados.cnpj_emitente ?? "").replace(/\D/g, "");
+  const cnpjEmit = docValido(dados.cnpj_emitente, 14);
   const emitenteValido = cnpjEmit && cnpjEmit !== cnpjPagador ? cnpjEmit : "";
 
   const doc =
     (dados.tipo_pessoa_recebedor === "pf" ? cpfRec || cnpjRec : cnpjRec || cpfRec) ||
     emitenteValido ||
     null;
+
   if (!doc) return { doc: null, tipoPessoa: null };
   const tipo = (dados.tipo_pessoa_recebedor === "pf" || dados.tipo_pessoa_recebedor === "pj")
     ? dados.tipo_pessoa_recebedor
@@ -702,11 +713,19 @@ Retorne APENAS JSON válido sem markdown:
   "plano_conta_sugerido_motivo": "string ou null"
 }
 
+REGRAS OBRIGATÓRIAS PARA DOCUMENTOS DO RECEBEDOR (leia o documento inteiro, inclusive PDFs de várias páginas):
+- Procure o CPF/CNPJ do destinatário em QUALQUER seção: "Dados de quem recebeu", "Destinatário", "Favorecido", "Beneficiário", "Recebedor", "Credor", "Para".
+- Se o recebedor for pessoa física, preencha SEMPRE cpf_recebedor (11 dígitos) e tipo_pessoa_recebedor = "pf".
+- Se o CPF/CNPJ estiver MASCARADO (ex.: "***.417.684-**" ou "•••.417.684-••"), retorne null nesse campo — NUNCA retorne dígitos parciais.
+- Nunca coloque o documento do pagador/remetente em cpf_recebedor ou cnpj_recebedor.
+
 Para NFC-e/cupom fiscal:
 - nome_recebedor = nome do estabelecimento
 - cnpj_recebedor = CNPJ do emitente
 - valor = valor total pago
 - data = data de emissão
+
+
 
 Para sugerir o plano de contas, analise:
 1. A descrição do usuário${observacaoUsuario ? `: "${observacaoUsuario}"` : " (não informada)"}
@@ -745,7 +764,7 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
         },
         body: JSON.stringify({
           model: modelo,
-          max_tokens: 1500,
+          max_tokens: 2000,
           messages: [{ role: "user", content: [contentBlock, { type: "text", text: prompt }] }],
         }),
       }).finally(() => clearTimeout(timeoutId));
@@ -758,7 +777,8 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
       }
 
       claudeData = await claudeRes.json();
-      console.log("[claude] Resposta:", JSON.stringify(claudeData).slice(0, 300));
+      console.log("[claude] tipo_documento:", isPdf ? "pdf" : mimeType, "stop_reason:", claudeData?.stop_reason, "tokens:", JSON.stringify(claudeData?.usage ?? {}));
+      console.log("[claude] resposta bruta:", String(claudeData?.content?.[0]?.text ?? "").slice(0, 2000));
     } catch (err: any) {
       console.error("[claude] Falha:", err?.name, err?.message);
       if (err?.name === "AbortError") {
@@ -777,7 +797,12 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
     } catch {
       dados = {};
     }
-    console.log("[telegram] Dados extraídos:", JSON.stringify(dados));
+    console.log("[claude] dados extraídos:", JSON.stringify(dados));
+    console.log("[claude] docs recebedor -> cpf_recebedor:", dados.cpf_recebedor ?? null,
+      "| cnpj_recebedor:", dados.cnpj_recebedor ?? null,
+      "| tipo_pessoa:", dados.tipo_pessoa_recebedor ?? null,
+      "| nome_recebedor:", dados.nome_recebedor ?? null,
+      "| resolvido:", JSON.stringify(docRecebedor(dados)));
 
     if (!dados.valor || dados.tipo === "desconhecido") {
       await avisar(
