@@ -367,16 +367,25 @@ async function executarRelatorioVendas(
 
 
 function docRecebedor(dados: Record<string, any>): { doc: string | null; tipoPessoa: "pf" | "pj" | null } {
-  const cnpj = String(dados.cnpj_recebedor ?? dados.cnpj_emitente ?? "").replace(/\D/g, "");
-  const cpf = dados.cpf_recebedor ? String(dados.cpf_recebedor).replace(/\D/g, "") : "";
+  // SEMPRE o destinatário (quem RECEBEU). Nunca o pagador/remetente.
+  const cnpjRec = String(dados.cnpj_recebedor ?? "").replace(/\D/g, "");
+  const cpfRec = String(dados.cpf_recebedor ?? "").replace(/\D/g, "");
+  const cnpjPagador = String(dados.cnpj_pagador ?? "").replace(/\D/g, "");
+  // emitente só é usado como fallback quando não é o próprio pagador (nota fiscal)
+  const cnpjEmit = String(dados.cnpj_emitente ?? "").replace(/\D/g, "");
+  const emitenteValido = cnpjEmit && cnpjEmit !== cnpjPagador ? cnpjEmit : "";
 
-  const doc = cnpj || cpf || null;
+  const doc =
+    (dados.tipo_pessoa_recebedor === "pf" ? cpfRec || cnpjRec : cnpjRec || cpfRec) ||
+    emitenteValido ||
+    null;
   if (!doc) return { doc: null, tipoPessoa: null };
   const tipo = (dados.tipo_pessoa_recebedor === "pf" || dados.tipo_pessoa_recebedor === "pj")
     ? dados.tipo_pessoa_recebedor
     : doc.length === 11 ? "pf" : "pj";
   return { doc, tipoPessoa: tipo };
 }
+
 
 function formatDoc(doc: string) {
   if (doc.length === 11) return doc.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
@@ -798,12 +807,17 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
 
       const cnpjRecebedor = String(dados.cnpj_recebedor ?? "").replace(/\D/g, "");
       const cnpjPagador = String(dados.cnpj_pagador ?? dados.cnpj_emitente ?? "").replace(/\D/g, "");
+      const cpfRecebedor = String(dados.cpf_recebedor ?? "").replace(/\D/g, "");
 
+      // Transferência interna só quando AMBOS os lados são o MESMO CNPJ (14 dígitos)
+      // da própria empresa. Pagamento a pessoa física (CPF) nunca é transferência.
       const isTransferenciaInterna =
-        !!cnpjRecebedor &&
+        !cpfRecebedor &&
+        cnpjRecebedor.length === 14 &&
         cnpjRecebedor === cnpjPagador &&
         cnpjsEmpresa.includes(cnpjRecebedor) &&
         cnpjsEmpresa.includes(cnpjPagador);
+
 
       if (isTransferenciaInterna) {
         const { data: pendTransf } = await supabase
@@ -878,6 +892,22 @@ Retorne em plano_conta_sugerido_codigo o código EXATO (da lista acima) do plano
         .maybeSingle();
       fornecedor = forn;
     }
+
+    // Nunca usar a própria empresa (remetente) como fornecedor
+    if (fornecedor?.cnpj_cpf) {
+      const { data: filiaisCnpjForn } = await supabase
+        .from("filiais")
+        .select("cnpj")
+        .not("cnpj", "is", null);
+      const empresaDocs = (filiaisCnpjForn ?? []).map((f: any) =>
+        String(f.cnpj ?? "").replace(/\D/g, "")
+      );
+      if (empresaDocs.includes(String(fornecedor.cnpj_cpf).replace(/\D/g, ""))) {
+        fornecedor = null;
+      }
+    }
+
+
 
     // ── Memória CNPJ → plano de contas ──
     let planoMemoria: any = null;
