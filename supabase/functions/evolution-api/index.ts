@@ -265,7 +265,15 @@ serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-        const name = resolvedInstanceName || instance_name || "Softflow_WhatsApp";
+        const requested = resolvedInstanceName || instance_name || "Softflow_WhatsApp";
+        const check = await ensureConnectedInstance(baseUrl, headers, requested);
+        if (check.error) {
+          return new Response(JSON.stringify({ error: check.error }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const name = check.name!;
         let formattedNumber = number.replace(/\D/g, "");
         // Normalize BR phone: remove 55, ensure 9-digit mobile
         if (formattedNumber.length >= 12 && formattedNumber.startsWith("55")) {
