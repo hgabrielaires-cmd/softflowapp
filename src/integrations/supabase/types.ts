@@ -6533,6 +6533,14 @@ export type Database = {
         Args: { _conversa_id: string; _user_id: string }
         Returns: boolean
       }
+      is_conversa_atendente: {
+        Args: { _conversa_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_conversa_owner: {
+        Args: { _conversa_id: string; _user_id: string }
+        Returns: boolean
+      }
       record_login_attempt: {
         Args: { p_email: string; p_ip?: string; p_success: boolean }
         Returns: undefined
