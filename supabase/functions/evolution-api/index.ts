@@ -340,7 +340,15 @@ serve(async (req) => {
           });
         }
         // mediatype, media, caption, fileName already destructured from body
-        const name = resolvedInstanceName || instance_name || "Softflow_WhatsApp";
+        const requestedMedia = resolvedInstanceName || instance_name || "Softflow_WhatsApp";
+        const checkMedia = await ensureConnectedInstance(baseUrl, headers, requestedMedia);
+        if (checkMedia.error) {
+          return new Response(JSON.stringify({ error: checkMedia.error }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const name = checkMedia.name!;
         let formattedNumber = number.replace(/\D/g, "");
         // Normalize BR phone: remove 55, ensure 9-digit mobile
         if (formattedNumber.length >= 12 && formattedNumber.startsWith("55")) {
