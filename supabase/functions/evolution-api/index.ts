@@ -9,6 +9,49 @@ const corsHeaders = {
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Garante que a instância usada para envio esteja conectada.
+ * Se a instância pedida estiver desconectada, procura outra instância
+ * conectada com o MESMO número (ownerJid) e usa essa no lugar.
+ * Retorna { name } ou { error }.
+ */
+async function ensureConnectedInstance(
+  baseUrl: string,
+  headers: Record<string, string>,
+  name: string
+): Promise<{ name?: string; error?: string }> {
+  try {
+    const res = await fetch(`${baseUrl}/instance/fetchInstances`, { method: "GET", headers });
+    if (!res.ok) return { name };
+    const list = await res.json();
+    if (!Array.isArray(list)) return { name };
+
+    const current = list.find((i: any) => i?.name === name || i?.instance?.instanceName === name);
+    const stateOf = (i: any) => i?.connectionStatus ?? i?.connectionState ?? i?.instance?.state;
+    const jidOf = (i: any) => i?.ownerJid ?? i?.instance?.owner;
+
+    if (!current) return { error: `Instância "${name}" não existe no servidor WhatsApp.` };
+    if (stateOf(current) === "open") return { name };
+
+    const owner = jidOf(current);
+    const fallback = owner
+      ? list.find((i: any) => jidOf(i) === owner && stateOf(i) === "open")
+      : undefined;
+
+    if (fallback) {
+      const fbName = fallback.name ?? fallback.instance?.instanceName;
+      console.log(`[Evolution] Instância "${name}" desconectada. Usando "${fbName}" (mesmo número).`);
+      return { name: fbName };
+    }
+
+    return {
+      error: `A instância "${name}" está desconectada. Conecte o WhatsApp dessa instância (ou aponte o setor para uma instância conectada) e tente novamente.`,
+    };
+  } catch (_e) {
+    return { name };
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
