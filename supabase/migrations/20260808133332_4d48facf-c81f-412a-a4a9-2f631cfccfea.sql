@@ -1,0 +1,1 @@
+UPDATE public.setores SET instance_name = 'Softflow_WhatsApp', updated_at = now() WHERE nome = 'HELPDESK';
