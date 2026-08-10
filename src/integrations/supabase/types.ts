@@ -3754,6 +3754,11 @@ export type Database = {
           created_at: string
           descricao: string | null
           id: string
+          meta_buttons: Json
+          meta_language: string | null
+          meta_template_name: string | null
+          meta_template_status: string | null
+          meta_template_type: string | null
           nome: string
           setor_id: string | null
           tipo: string
@@ -3766,6 +3771,11 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           id?: string
+          meta_buttons?: Json
+          meta_language?: string | null
+          meta_template_name?: string | null
+          meta_template_status?: string | null
+          meta_template_type?: string | null
           nome: string
           setor_id?: string | null
           tipo?: string
@@ -3778,6 +3788,11 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           id?: string
+          meta_buttons?: Json
+          meta_language?: string | null
+          meta_template_name?: string | null
+          meta_template_status?: string | null
+          meta_template_type?: string | null
           nome?: string
           setor_id?: string | null
           tipo?: string

@@ -31,6 +31,13 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+interface MetaButton {
+  type: "QUICK_REPLY" | "URL" | "PHONE";
+  text: string;
+  url?: string;
+  phone?: string;
+}
+
 interface MessageTemplate {
   id: string;
   nome: string;
@@ -42,6 +49,11 @@ interface MessageTemplate {
   setor_id: string | null;
   created_at: string;
   updated_at: string;
+  meta_template_type?: string | null;
+  meta_template_name?: string | null;
+  meta_template_status?: string | null;
+  meta_language?: string | null;
+  meta_buttons?: MetaButton[] | null;
 }
 
 interface Setor {
@@ -49,11 +61,30 @@ interface Setor {
   nome: string;
 }
 
+const CANAL_META = "whatsapp_meta";
+
 const TIPOS_MSG = [
   { value: "whatsapp", label: "WhatsApp" },
   { value: "email", label: "E-mail" },
   { value: "sms", label: "SMS" },
+  { value: "telegram", label: "Telegram" },
+  { value: CANAL_META, label: "WhatsApp API Meta (Oficial)" },
 ];
+
+const META_TIPOS = [
+  { value: "MARKETING", label: "Marketing", desc: "Promoções, ofertas, conteúdo" },
+  { value: "UTILITY", label: "Utilitário", desc: "Atualizações de transação, alertas" },
+  { value: "AUTHENTICATION", label: "Autenticação", desc: "Códigos de verificação, OTP" },
+];
+
+const META_IDIOMAS = ["pt_BR", "en_US", "es_ES"];
+
+const META_STATUS: Record<string, { label: string; className: string }> = {
+  pending: { label: "Pendente", className: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400" },
+  approved: { label: "Aprovado", className: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  rejected: { label: "Rejeitado", className: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400" },
+};
+
 
 const CATEGORIAS = [
   { value: "termo_aceite", label: "Termo de Aceite" },
@@ -118,7 +149,7 @@ export function MessageTemplates() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
 
-  const [form, setForm] = useState({
+  const emptyForm = {
     nome: "",
     tipo: "whatsapp",
     categoria: "termo_aceite",
@@ -126,7 +157,14 @@ export function MessageTemplates() {
     descricao: "",
     ativo: true,
     setor_id: "" as string,
-  });
+    meta_template_type: "UTILITY",
+    meta_template_name: "",
+    meta_template_status: "pending",
+    meta_language: "pt_BR",
+    meta_buttons: [] as MetaButton[],
+  };
+
+  const [form, setForm] = useState(emptyForm);
 
   async function loadData() {
     setLoading(true);
@@ -136,7 +174,7 @@ export function MessageTemplates() {
       .neq("tipo", "notificacao")
       .order("created_at", { ascending: false });
     if (error) toast.error("Erro ao carregar templates: " + error.message);
-    setTemplates((data || []) as MessageTemplate[]);
+    setTemplates((data || []) as unknown as MessageTemplate[]);
     setLoading(false);
   }
 
@@ -149,13 +187,24 @@ export function MessageTemplates() {
 
   function openNew() {
     setEditingTemplate(null);
-    setForm({ nome: "", tipo: "whatsapp", categoria: "termo_aceite", conteudo: "", descricao: "", ativo: true, setor_id: "" });
+    setForm(emptyForm);
     setOpenEditor(true);
+  }
+
+  function metaFieldsFrom(t: MessageTemplate) {
+    return {
+      meta_template_type: t.meta_template_type || "UTILITY",
+      meta_template_name: t.meta_template_name || "",
+      meta_template_status: t.meta_template_status || "pending",
+      meta_language: t.meta_language || "pt_BR",
+      meta_buttons: Array.isArray(t.meta_buttons) ? (t.meta_buttons as MetaButton[]) : [],
+    };
   }
 
   function openEdit(t: MessageTemplate) {
     setEditingTemplate(t);
     setForm({
+      ...emptyForm,
       nome: t.nome,
       tipo: t.tipo,
       categoria: t.categoria,
@@ -163,6 +212,7 @@ export function MessageTemplates() {
       descricao: t.descricao || "",
       ativo: t.ativo,
       setor_id: t.setor_id || "",
+      ...metaFieldsFrom(t),
     });
     setOpenEditor(true);
   }
@@ -170,6 +220,7 @@ export function MessageTemplates() {
   function handleDuplicate(t: MessageTemplate) {
     setEditingTemplate(null);
     setForm({
+      ...emptyForm,
       nome: t.nome + " (cópia)",
       tipo: t.tipo,
       categoria: t.categoria,
@@ -177,17 +228,26 @@ export function MessageTemplates() {
       descricao: t.descricao || "",
       ativo: false,
       setor_id: t.setor_id || "",
+      ...metaFieldsFrom(t),
+      meta_template_name: "",
     });
     setOpenEditor(true);
   }
+
+
+  const isMeta = form.tipo === CANAL_META;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
     if (!form.conteudo.trim()) { toast.error("Conteúdo é obrigatório"); return; }
+    if (isMeta && form.meta_template_name && !/^[a-z0-9_]+$/.test(form.meta_template_name)) {
+      toast.error("Nome do template na Meta: use apenas letras minúsculas, números e _");
+      return;
+    }
 
     setSaving(true);
-    const payload = {
+    const payload: any = {
       nome: form.nome.trim(),
       tipo: form.tipo,
       categoria: form.categoria,
@@ -195,7 +255,13 @@ export function MessageTemplates() {
       descricao: form.descricao.trim() || null,
       ativo: form.ativo,
       setor_id: form.setor_id || null,
+      meta_template_type: isMeta ? form.meta_template_type : null,
+      meta_template_name: isMeta ? (form.meta_template_name.trim() || null) : null,
+      meta_template_status: isMeta ? form.meta_template_status : null,
+      meta_language: isMeta ? form.meta_language : null,
+      meta_buttons: isMeta ? form.meta_buttons : [],
     };
+
 
     if (editingTemplate) {
       const { error } = await supabase.from("message_templates").update(payload).eq("id", editingTemplate.id);
@@ -307,8 +373,16 @@ export function MessageTemplates() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline" className="text-xs">{getTipoLabel(t.tipo)}</Badge>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <Badge variant="outline" className="text-xs">{getTipoLabel(t.tipo)}</Badge>
+                    {t.tipo === CANAL_META && t.meta_template_status && META_STATUS[t.meta_template_status] && (
+                      <Badge variant="outline" className={`text-[10px] ${META_STATUS[t.meta_template_status].className}`}>
+                        {META_STATUS[t.meta_template_status].label}
+                      </Badge>
+                    )}
+                  </div>
                 </TableCell>
+
                 <TableCell>
                   <Badge variant="secondary" className="text-xs">{getCategoriaLabel(t.categoria)}</Badge>
                 </TableCell>
@@ -422,6 +496,121 @@ export function MessageTemplates() {
                 />
               </div>
             </div>
+
+            {isMeta && (
+              <div className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-3">
+                <p className="text-xs font-semibold">Configuração Meta (WhatsApp Oficial)</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Tipo de template</Label>
+                    <Select value={form.meta_template_type} onValueChange={(v) => setForm((f) => ({ ...f, meta_template_type: v }))}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {META_TIPOS.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label} — <span className="text-muted-foreground">{t.desc}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Idioma</Label>
+                    <Select value={form.meta_language} onValueChange={(v) => setForm((f) => ({ ...f, meta_language: v }))}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {META_IDIOMAS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Nome do template na Meta</Label>
+                    <Input
+                      placeholder="ex: cobranca_fatura"
+                      value={form.meta_template_name}
+                      onChange={(e) => setForm((f) => ({ ...f, meta_template_name: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_") }))}
+                      className="h-9 font-mono text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Status de aprovação</Label>
+                    <Select value={form.meta_template_status} onValueChange={(v) => setForm((f) => ({ ...f, meta_template_status: v }))}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(META_STATUS).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Botões interativos ({form.meta_buttons.length}/3)</Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      disabled={form.meta_buttons.length >= 3}
+                      onClick={() => setForm((f) => ({ ...f, meta_buttons: [...f.meta_buttons, { type: "QUICK_REPLY", text: "" }] }))}
+                    >
+                      Adicionar botão
+                    </Button>
+                  </div>
+                  {form.meta_buttons.map((b, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <Select
+                        value={b.type}
+                        onValueChange={(v) => setForm((f) => ({
+                          ...f,
+                          meta_buttons: f.meta_buttons.map((x, ix) => ix === i ? { ...x, type: v as MetaButton["type"] } : x),
+                        }))}
+                      >
+                        <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="QUICK_REPLY">Resposta rápida</SelectItem>
+                          <SelectItem value="URL">Link (URL)</SelectItem>
+                          <SelectItem value="PHONE">Telefone</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        placeholder="Texto do botão"
+                        value={b.text}
+                        maxLength={25}
+                        onChange={(e) => setForm((f) => ({
+                          ...f,
+                          meta_buttons: f.meta_buttons.map((x, ix) => ix === i ? { ...x, text: e.target.value } : x),
+                        }))}
+                        className="h-8 text-xs flex-1"
+                      />
+                      {b.type !== "QUICK_REPLY" && (
+                        <Input
+                          placeholder={b.type === "URL" ? "https://..." : "+5584..."}
+                          value={b.type === "URL" ? (b.url || "") : (b.phone || "")}
+                          onChange={(e) => setForm((f) => ({
+                            ...f,
+                            meta_buttons: f.meta_buttons.map((x, ix) => ix === i
+                              ? (x.type === "URL" ? { ...x, url: e.target.value } : { ...x, phone: e.target.value })
+                              : x),
+                          }))}
+                          className="h-8 text-xs flex-1"
+                        />
+                      )}
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => setForm((f) => ({ ...f, meta_buttons: f.meta_buttons.filter((_, ix) => ix !== i) }))}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
 
             <div className="flex gap-3">
               <div className="flex-1 flex flex-col space-y-1">

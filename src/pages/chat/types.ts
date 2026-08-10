@@ -96,11 +96,12 @@ export interface ChatRespostaRapida {
   ativo: boolean | null;
 }
 
-export type ChatStatus = "bot" | "aguardando" | "em_atendimento" | "encerrado" | "fora_horario";
+export type ChatStatus = "bot" | "aguardando" | "aguardando_cliente" | "em_atendimento" | "encerrado" | "fora_horario";
 
 export const STATUS_LABELS: Record<ChatStatus, string> = {
   bot: "Triagem",
   aguardando: "Aguardando",
+  aguardando_cliente: "Aguardando cliente",
   em_atendimento: "Em atendimento",
   encerrado: "Encerrado",
   fora_horario: "Fora do horário",
@@ -109,6 +110,7 @@ export const STATUS_LABELS: Record<ChatStatus, string> = {
 export const STATUS_COLORS: Record<ChatStatus, string> = {
   bot: "bg-purple-500",
   aguardando: "bg-yellow-500",
+  aguardando_cliente: "bg-amber-500",
   em_atendimento: "bg-blue-500",
   encerrado: "bg-gray-400",
   fora_horario: "bg-gray-300",

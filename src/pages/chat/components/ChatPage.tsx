@@ -7,6 +7,7 @@ import ChatMessageArea from "./ChatMessageArea";
 import ChatClientePanel from "./ChatClientePanel";
 import TransferirDialog from "./TransferirDialog";
 import NovaConversaDialog from "./NovaConversaDialog";
+import NovaConversaMetaDrawer from "./NovaConversaMetaDrawer";
 import EncerrarAtendimentoDialog from "./EncerrarAtendimentoDialog";
 import EncerramentoAtendimento from "./EncerramentoAtendimento";
 import { useChatConversas, useChatMensagens } from "../useChatQueries";
@@ -29,6 +30,7 @@ export default function ChatPage() {
   const [showTransferir, setShowTransferir] = useState(false);
   const [showEncerrar, setShowEncerrar] = useState(false);
   const [showNovaConversa, setShowNovaConversa] = useState(false);
+  const [showNovaConversaMeta, setShowNovaConversaMeta] = useState(false);
   const [encerrando, setEncerrando] = useState(false);
 
   const { data: conversas = [] } = useChatConversas(tab, user?.id, search);
@@ -117,6 +119,7 @@ export default function ChatPage() {
             onSelect={(c) => setSelectedConversa(c)}
             counts={counts}
             onNovaConversa={() => setShowNovaConversa(true)}
+            onNovaConversaMeta={() => setShowNovaConversaMeta(true)}
           />
         </div>
 
@@ -249,7 +252,25 @@ export default function ChatPage() {
             }
           }}
         />
+
+        <NovaConversaMetaDrawer
+          open={showNovaConversaMeta}
+          onOpenChange={setShowNovaConversaMeta}
+          onConversaCriada={async (conversaId) => {
+            await qc.invalidateQueries({ queryKey: ["chat-conversas"] });
+            const { data: convData } = await supabase
+              .from("chat_conversas")
+              .select("*, cliente:clientes(*), atendente:profiles!chat_conversas_atendente_id_fkey(*), setor:setores(*)")
+              .eq("id", conversaId)
+              .single();
+            if (convData) {
+              setSelectedConversa(convData as unknown as ChatConversa);
+              setTab("meus");
+            }
+          }}
+        />
       </div>
+
 
       {encerrando && (
         <EncerramentoAtendimento
