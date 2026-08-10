@@ -489,6 +489,121 @@ export function MessageTemplates() {
               </div>
             </div>
 
+            {isMeta && (
+              <div className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-3">
+                <p className="text-xs font-semibold">Configuração Meta (WhatsApp Oficial)</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Tipo de template</Label>
+                    <Select value={form.meta_template_type} onValueChange={(v) => setForm((f) => ({ ...f, meta_template_type: v }))}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {META_TIPOS.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label} — <span className="text-muted-foreground">{t.desc}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Idioma</Label>
+                    <Select value={form.meta_language} onValueChange={(v) => setForm((f) => ({ ...f, meta_language: v }))}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {META_IDIOMAS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Nome do template na Meta</Label>
+                    <Input
+                      placeholder="ex: cobranca_fatura"
+                      value={form.meta_template_name}
+                      onChange={(e) => setForm((f) => ({ ...f, meta_template_name: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_") }))}
+                      className="h-9 font-mono text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Status de aprovação</Label>
+                    <Select value={form.meta_template_status} onValueChange={(v) => setForm((f) => ({ ...f, meta_template_status: v }))}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(META_STATUS).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Botões interativos ({form.meta_buttons.length}/3)</Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      disabled={form.meta_buttons.length >= 3}
+                      onClick={() => setForm((f) => ({ ...f, meta_buttons: [...f.meta_buttons, { type: "QUICK_REPLY", text: "" }] }))}
+                    >
+                      Adicionar botão
+                    </Button>
+                  </div>
+                  {form.meta_buttons.map((b, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <Select
+                        value={b.type}
+                        onValueChange={(v) => setForm((f) => ({
+                          ...f,
+                          meta_buttons: f.meta_buttons.map((x, ix) => ix === i ? { ...x, type: v as MetaButton["type"] } : x),
+                        }))}
+                      >
+                        <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="QUICK_REPLY">Resposta rápida</SelectItem>
+                          <SelectItem value="URL">Link (URL)</SelectItem>
+                          <SelectItem value="PHONE">Telefone</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        placeholder="Texto do botão"
+                        value={b.text}
+                        maxLength={25}
+                        onChange={(e) => setForm((f) => ({
+                          ...f,
+                          meta_buttons: f.meta_buttons.map((x, ix) => ix === i ? { ...x, text: e.target.value } : x),
+                        }))}
+                        className="h-8 text-xs flex-1"
+                      />
+                      {b.type !== "QUICK_REPLY" && (
+                        <Input
+                          placeholder={b.type === "URL" ? "https://..." : "+5584..."}
+                          value={b.type === "URL" ? (b.url || "") : (b.phone || "")}
+                          onChange={(e) => setForm((f) => ({
+                            ...f,
+                            meta_buttons: f.meta_buttons.map((x, ix) => ix === i
+                              ? (x.type === "URL" ? { ...x, url: e.target.value } : { ...x, phone: e.target.value })
+                              : x),
+                          }))}
+                          className="h-8 text-xs flex-1"
+                        />
+                      )}
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => setForm((f) => ({ ...f, meta_buttons: f.meta_buttons.filter((_, ix) => ix !== i) }))}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+
             <div className="flex gap-3">
               <div className="flex-1 flex flex-col space-y-1">
                 <Label className="text-xs">Conteúdo da Mensagem *</Label>
