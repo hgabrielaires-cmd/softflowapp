@@ -164,6 +164,22 @@ const integrationDefs: IntegrationDef[] = [
     ],
   },
   {
+    key: "whatsapp_meta",
+    icon: <img src={logoWhatsapp} alt="WhatsApp API Meta" className="h-28 w-28 object-contain" />,
+    hasLogo: true,
+    title: "WhatsApp API Oficial (Meta)",
+    description: "Meta Cloud API — templates aprovados",
+    accentColor: "bg-[#25D366]",
+    tokenLabel: "",
+    tokenPlaceholder: "",
+    details: [
+      "Templates aprovados pela Meta",
+      "Chat bidirecional com clientes",
+      "Botões interativos nos templates",
+      "Notificações automáticas de cobrança",
+    ],
+  },
+  {
     key: "contaazul",
     icon: <img src={logoContaAzul} alt="Conta Azul" className="h-20 w-20 object-contain rounded-2xl" />,
     hasLogo: true,
@@ -180,6 +196,7 @@ const integrationDefs: IntegrationDef[] = [
     ],
   },
 ];
+
 // ── WhatsApp Config Dialog (Evolution API) ──
 
 interface WhatsAppConfigDialogProps {
