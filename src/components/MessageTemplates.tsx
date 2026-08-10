@@ -31,6 +31,13 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+interface MetaButton {
+  type: "QUICK_REPLY" | "URL" | "PHONE";
+  text: string;
+  url?: string;
+  phone?: string;
+}
+
 interface MessageTemplate {
   id: string;
   nome: string;
@@ -42,6 +49,11 @@ interface MessageTemplate {
   setor_id: string | null;
   created_at: string;
   updated_at: string;
+  meta_template_type?: string | null;
+  meta_template_name?: string | null;
+  meta_template_status?: string | null;
+  meta_language?: string | null;
+  meta_buttons?: MetaButton[] | null;
 }
 
 interface Setor {
@@ -49,11 +61,30 @@ interface Setor {
   nome: string;
 }
 
+const CANAL_META = "whatsapp_meta";
+
 const TIPOS_MSG = [
   { value: "whatsapp", label: "WhatsApp" },
   { value: "email", label: "E-mail" },
   { value: "sms", label: "SMS" },
+  { value: "telegram", label: "Telegram" },
+  { value: CANAL_META, label: "WhatsApp API Meta (Oficial)" },
 ];
+
+const META_TIPOS = [
+  { value: "MARKETING", label: "Marketing", desc: "Promoções, ofertas, conteúdo" },
+  { value: "UTILITY", label: "Utilitário", desc: "Atualizações de transação, alertas" },
+  { value: "AUTHENTICATION", label: "Autenticação", desc: "Códigos de verificação, OTP" },
+];
+
+const META_IDIOMAS = ["pt_BR", "en_US", "es_ES"];
+
+const META_STATUS: Record<string, { label: string; className: string }> = {
+  pending: { label: "Pendente", className: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400" },
+  approved: { label: "Aprovado", className: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  rejected: { label: "Rejeitado", className: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400" },
+};
+
 
 const CATEGORIAS = [
   { value: "termo_aceite", label: "Termo de Aceite" },
