@@ -249,7 +249,25 @@ export default function ChatPage() {
             }
           }}
         />
+
+        <NovaConversaMetaDrawer
+          open={showNovaConversaMeta}
+          onOpenChange={setShowNovaConversaMeta}
+          onConversaCriada={async (conversaId) => {
+            await qc.invalidateQueries({ queryKey: ["chat-conversas"] });
+            const { data: convData } = await supabase
+              .from("chat_conversas")
+              .select("*, cliente:clientes(*), atendente:profiles!chat_conversas_atendente_id_fkey(*), setor:setores(*)")
+              .eq("id", conversaId)
+              .single();
+            if (convData) {
+              setSelectedConversa(convData as unknown as ChatConversa);
+              setTab("meus");
+            }
+          }}
+        />
       </div>
+
 
       {encerrando && (
         <EncerramentoAtendimento
