@@ -1466,6 +1466,16 @@ export default function Integracoes() {
         onSaved={loadConfigs}
       />
 
+      {/* WhatsApp API Oficial (Meta) Drawer */}
+      <WhatsAppMetaDialog
+        open={metaDialogOpen}
+        onOpenChange={setMetaDialogOpen}
+        initialConfig={configs.find((c) => c.nome === "whatsapp_meta") || null}
+        onSaved={loadConfigs}
+      />
+
+
+
       {/* Telegram Drawer */}
       <TelegramConfigDialog
         open={telegramDialogOpen}
