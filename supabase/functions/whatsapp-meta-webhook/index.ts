@@ -126,11 +126,12 @@ Deno.serve(async (req) => {
 
               if (conversa.atendente_id) {
                 await admin.from("notificacoes").insert({
-                  user_id: conversa.atendente_id,
+                  destinatario_user_id: conversa.atendente_id,
+                  criado_por: conversa.atendente_id,
                   titulo: "Cliente iniciou a conversa",
                   mensagem: `${nome || numero} clicou em "Iniciar Conversa" no WhatsApp.`,
                   tipo: "chat",
-                  link: "/chat",
+                  metadata: { conversa_id: conversa.id, link: "/chat" },
                 });
               }
             }
