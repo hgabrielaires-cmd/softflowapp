@@ -834,15 +834,23 @@ function IntegrationCard({ def, config, onOpenConfig }: IntegrationCardProps) {
     inativo: { variant: "outline" as const, icon: <Clock className="h-3 w-3" />, label: "Inativo" },
   };
   const cfg = statusConfig[status];
+  const metaPendente = def.key === "whatsapp_meta" && !isAtivo;
 
   return (
-    <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-soft border-border/60">
-      <div className={`absolute top-0 left-0 right-0 h-1 ${isAtivo ? def.accentColor : "bg-muted-foreground/20"}`} />
+    <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-soft border-border/60 rounded-xl">
+      <div className={`absolute top-0 left-0 right-0 h-1 ${isAtivo || metaPendente ? def.accentColor : "bg-muted-foreground/20"}`} />
       <CardHeader className="pb-3 relative">
-        <Badge variant={cfg.variant} className="absolute top-4 right-4 flex items-center gap-1 text-[10px] font-medium px-2 py-0.5">
-          {cfg.icon}
-          {cfg.label}
-        </Badge>
+        {metaPendente ? (
+          <Badge className="absolute top-4 right-4 flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">
+            <Clock className="h-3 w-3" />
+            Aguardando verificação
+          </Badge>
+        ) : (
+          <Badge variant={cfg.variant} className="absolute top-4 right-4 flex items-center gap-1 text-[10px] font-medium px-2 py-0.5">
+            {cfg.icon}
+            {cfg.label}
+          </Badge>
+        )}
         <div className="flex justify-center pt-2">
           <div className={`h-32 w-32 rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${def.hasLogo ? "bg-muted/30" : isAtivo ? def.accentColor + " text-white" : "bg-muted text-muted-foreground"}`}>
             {def.icon}
