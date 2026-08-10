@@ -149,7 +149,7 @@ export function MessageTemplates() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
 
-  const [form, setForm] = useState({
+  const emptyForm = {
     nome: "",
     tipo: "whatsapp",
     categoria: "termo_aceite",
@@ -157,7 +157,14 @@ export function MessageTemplates() {
     descricao: "",
     ativo: true,
     setor_id: "" as string,
-  });
+    meta_template_type: "UTILITY",
+    meta_template_name: "",
+    meta_template_status: "pending",
+    meta_language: "pt_BR",
+    meta_buttons: [] as MetaButton[],
+  };
+
+  const [form, setForm] = useState(emptyForm);
 
   async function loadData() {
     setLoading(true);
