@@ -1309,6 +1309,7 @@ export default function Integracoes() {
   const [telegramDialogOpen, setTelegramDialogOpen] = useState(false);
   const [anthropicDialogOpen, setAnthropicDialogOpen] = useState(false);
   const [contaAzulDialogOpen, setContaAzulDialogOpen] = useState(false);
+  const [metaDialogOpen, setMetaDialogOpen] = useState(false);
 
   const [r2DialogOpen, setR2DialogOpen] = useState(false);
   const [r2Config, setR2Config] = useState<any>(null);
