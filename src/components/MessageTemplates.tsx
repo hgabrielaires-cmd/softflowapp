@@ -373,8 +373,16 @@ export function MessageTemplates() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline" className="text-xs">{getTipoLabel(t.tipo)}</Badge>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <Badge variant="outline" className="text-xs">{getTipoLabel(t.tipo)}</Badge>
+                    {t.tipo === CANAL_META && t.meta_template_status && META_STATUS[t.meta_template_status] && (
+                      <Badge variant="outline" className={`text-[10px] ${META_STATUS[t.meta_template_status].className}`}>
+                        {META_STATUS[t.meta_template_status].label}
+                      </Badge>
+                    )}
+                  </div>
                 </TableCell>
+
                 <TableCell>
                   <Badge variant="secondary" className="text-xs">{getCategoriaLabel(t.categoria)}</Badge>
                 </TableCell>
