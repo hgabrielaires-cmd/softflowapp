@@ -167,7 +167,7 @@ export function MessageTemplates() {
       .neq("tipo", "notificacao")
       .order("created_at", { ascending: false });
     if (error) toast.error("Erro ao carregar templates: " + error.message);
-    setTemplates((data || []) as MessageTemplate[]);
+    setTemplates((data || []) as unknown as MessageTemplate[]);
     setLoading(false);
   }
 
