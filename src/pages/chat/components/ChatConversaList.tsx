@@ -40,7 +40,16 @@ export default function ChatConversaList({
               {counts.fila}
             </Badge>
           )}
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-emerald-600 hover:text-emerald-700"
+              title="Nova conversa oficial (Meta)"
+              onClick={onNovaConversaMeta}
+            >
+              <BadgeCheck className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
