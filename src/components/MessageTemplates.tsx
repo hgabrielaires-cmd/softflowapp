@@ -187,13 +187,24 @@ export function MessageTemplates() {
 
   function openNew() {
     setEditingTemplate(null);
-    setForm({ nome: "", tipo: "whatsapp", categoria: "termo_aceite", conteudo: "", descricao: "", ativo: true, setor_id: "" });
+    setForm(emptyForm);
     setOpenEditor(true);
+  }
+
+  function metaFieldsFrom(t: MessageTemplate) {
+    return {
+      meta_template_type: t.meta_template_type || "UTILITY",
+      meta_template_name: t.meta_template_name || "",
+      meta_template_status: t.meta_template_status || "pending",
+      meta_language: t.meta_language || "pt_BR",
+      meta_buttons: Array.isArray(t.meta_buttons) ? (t.meta_buttons as MetaButton[]) : [],
+    };
   }
 
   function openEdit(t: MessageTemplate) {
     setEditingTemplate(t);
     setForm({
+      ...emptyForm,
       nome: t.nome,
       tipo: t.tipo,
       categoria: t.categoria,
@@ -201,6 +212,7 @@ export function MessageTemplates() {
       descricao: t.descricao || "",
       ativo: t.ativo,
       setor_id: t.setor_id || "",
+      ...metaFieldsFrom(t),
     });
     setOpenEditor(true);
   }
@@ -208,6 +220,7 @@ export function MessageTemplates() {
   function handleDuplicate(t: MessageTemplate) {
     setEditingTemplate(null);
     setForm({
+      ...emptyForm,
       nome: t.nome + " (cópia)",
       tipo: t.tipo,
       categoria: t.categoria,
@@ -215,9 +228,12 @@ export function MessageTemplates() {
       descricao: t.descricao || "",
       ativo: false,
       setor_id: t.setor_id || "",
+      ...metaFieldsFrom(t),
+      meta_template_name: "",
     });
     setOpenEditor(true);
   }
+
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
