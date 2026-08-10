@@ -235,13 +235,19 @@ export function MessageTemplates() {
   }
 
 
+  const isMeta = form.tipo === CANAL_META;
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
     if (!form.conteudo.trim()) { toast.error("Conteúdo é obrigatório"); return; }
+    if (isMeta && form.meta_template_name && !/^[a-z0-9_]+$/.test(form.meta_template_name)) {
+      toast.error("Nome do template na Meta: use apenas letras minúsculas, números e _");
+      return;
+    }
 
     setSaving(true);
-    const payload = {
+    const payload: any = {
       nome: form.nome.trim(),
       tipo: form.tipo,
       categoria: form.categoria,
@@ -249,7 +255,13 @@ export function MessageTemplates() {
       descricao: form.descricao.trim() || null,
       ativo: form.ativo,
       setor_id: form.setor_id || null,
+      meta_template_type: isMeta ? form.meta_template_type : null,
+      meta_template_name: isMeta ? (form.meta_template_name.trim() || null) : null,
+      meta_template_status: isMeta ? form.meta_template_status : null,
+      meta_language: isMeta ? form.meta_language : null,
+      meta_buttons: isMeta ? form.meta_buttons : [],
     };
+
 
     if (editingTemplate) {
       const { error } = await supabase.from("message_templates").update(payload).eq("id", editingTemplate.id);
