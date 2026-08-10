@@ -9,6 +9,7 @@ import logoAnthropic from "@/assets/logo-anthropic.svg";
 import logoContaAzul from "@/assets/logo-contaazul.svg";
 import { TelegramConfigDialog, AnthropicConfigDialog } from "@/components/integracoes/TelegramAnthropicDialogs";
 import { ContaAzulConfigDialog } from "@/components/integracoes/ContaAzulDialog";
+import { WhatsAppMetaDialog } from "@/components/integracoes/WhatsAppMetaDialog";
 import { AppLayout } from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
