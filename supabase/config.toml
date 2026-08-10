@@ -51,3 +51,6 @@ verify_jwt = false
 [functions.login-guard]
 verify_jwt = false
 
+[functions.whatsapp-meta-webhook]
+verify_jwt = false
+
