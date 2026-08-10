@@ -24,7 +24,7 @@ interface Props {
 
 export default function ChatConversaList({
   conversas, tab, onTabChange, search, onSearchChange,
-  selectedId, onSelect, counts, onNovaConversa,
+  selectedId, onSelect, counts, onNovaConversa, onNovaConversaMeta,
 }: Props) {
   const triagemCount = counts.triagem || 0;
 
