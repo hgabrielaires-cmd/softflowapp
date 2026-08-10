@@ -1424,6 +1424,8 @@ export default function Integracoes() {
                     setAnthropicDialogOpen(true);
                   } else if (def.key === "contaazul") {
                     setContaAzulDialogOpen(true);
+                  } else if (def.key === "whatsapp_meta") {
+                    setMetaDialogOpen(true);
                   } else {
                     setSelectedDef(def);
                     setDialogOpen(true);
