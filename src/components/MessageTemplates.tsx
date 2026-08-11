@@ -238,6 +238,18 @@ export function MessageTemplates() {
   }
 
 
+  function sanitizeTemplateBody(text: string) {
+    return String(text || "")
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n")
+      .split("\n")
+      .map((l) => l.trimEnd())
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/[ \t]{2,}/g, " ")
+      .trim();
+  }
+
   const isMeta = form.tipo === CANAL_META;
 
   async function handleSave(e: React.FormEvent) {
