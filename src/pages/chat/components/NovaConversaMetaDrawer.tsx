@@ -8,6 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { MetaVariavel, sincronizarVariaveis, resolverVariaveis } from "@/lib/meta-variaveis";
+
 import {
   Building2, Search, User, Phone, ChevronLeft, ChevronRight,
   BadgeCheck, Send, Loader2,
