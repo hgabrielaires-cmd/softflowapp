@@ -94,6 +94,8 @@ const App = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/trocar-senha" element={<TrocarSenha />} />
+            <Route path="/privacidade" element={<Privacy />} />
+            <Route path="/termos" element={<Terms />} />
             <Route
               path="/dashboard"
               element={
