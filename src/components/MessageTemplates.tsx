@@ -148,6 +148,8 @@ export function MessageTemplates() {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
+  const [enviandoMetaId, setEnviandoMetaId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   const emptyForm = {
     nome: "",
