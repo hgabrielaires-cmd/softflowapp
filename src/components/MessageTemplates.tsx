@@ -912,6 +912,8 @@ export function MessageTemplates() {
                     meta_language: form.meta_language,
                     conteudo: form.conteudo,
                     meta_buttons: form.meta_buttons,
+                    meta_variaveis: form.meta_variaveis,
+
                   })}
                 >
                   {enviandoMetaId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
