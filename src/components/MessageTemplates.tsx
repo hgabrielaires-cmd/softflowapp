@@ -356,6 +356,7 @@ export function MessageTemplates() {
     meta_language?: string | null;
     conteudo: string;
     meta_buttons?: MetaButton[] | null;
+    meta_variaveis?: MetaVariavel[] | null;
   }) {
     const faltando: string[] = [];
     if (!t.meta_template_name) faltando.push("Nome do template na Meta");
@@ -364,6 +365,13 @@ export function MessageTemplates() {
     if (!t.conteudo?.trim()) faltando.push("Conteúdo");
     if (faltando.length) {
       toast.error("Campos obrigatórios: " + faltando.join(", "));
+      return;
+    }
+
+    const variaveis = sincronizarVariaveis(t.conteudo, t.meta_variaveis || []);
+    const semExemplo = variaveis.filter((v) => !v.exemplo?.trim()).map((v) => `{{${v.posicao}}}`);
+    if (semExemplo.length) {
+      toast.error(`A Meta exige exemplos para as variáveis: ${semExemplo.join(", ")}`);
       return;
     }
 
@@ -389,9 +397,13 @@ export function MessageTemplates() {
         category: t.meta_template_type,
         conteudo: sanitizeTemplateBody(t.conteudo),
         buttons: t.meta_buttons || [],
+        examples: variaveis
+          .sort((a, b) => a.posicao - b.posicao)
+          .map((v) => v.exemplo.trim()),
       },
     });
     setEnviandoMetaId(null);
+
 
     const res = data as any;
     if (error || !res?.ok) {
