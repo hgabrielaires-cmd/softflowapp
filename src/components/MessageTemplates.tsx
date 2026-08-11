@@ -26,6 +26,7 @@ import {
 import {
   MessageSquare, Plus, Loader2, MoreHorizontal,
   Pencil, Trash2, CheckCircle, XCircle, Copy, Send, RefreshCw,
+  Clock, AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -400,6 +401,31 @@ export function MessageTemplates() {
     return TIPOS_MSG.find((t) => t.value === tipo)?.label || tipo;
   }
 
+  function canSendToMeta(status?: string | null) {
+    return !status || status === "rejected";
+  }
+
+  function MetaStatusBadge({ status }: { status?: string | null }) {
+    const st = status && META_STATUS[status];
+    if (!st) {
+      return (
+        <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground gap-1">
+          <Send className="h-3 w-3" /> Não enviado
+        </Badge>
+      );
+    }
+    const icon = status === "approved" ? <CheckCircle className="h-3 w-3" /> : status === "rejected" ? <AlertTriangle className="h-3 w-3" /> : <Clock className="h-3 w-3" />;
+    return (
+      <Badge
+        variant="outline"
+        className={`text-[10px] gap-1 ${st.className}`}
+        title={status === "rejected" ? "Template rejeitado pela Meta. Revise o conteúdo e reenvie." : status === "pending" ? "Template aguardando análise da Meta." : undefined}
+      >
+        {icon} {st.label}
+      </Badge>
+    );
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -463,19 +489,8 @@ export function MessageTemplates() {
                 <TableCell>
                   <div className="flex flex-wrap items-center gap-1">
                     <Badge variant="outline" className="text-xs">{getTipoLabel(t.tipo)}</Badge>
-                    {t.tipo === CANAL_META && (() => {
-                      const st = t.meta_template_status && META_STATUS[t.meta_template_status];
-                      return (
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] ${st ? st.className : "bg-muted text-muted-foreground"}`}
-                          title={t.meta_template_status === "rejected" ? "Template rejeitado pela Meta. Revise o conteúdo e reenvie." : undefined}
-                        >
-                          {st ? st.label : "Não enviado"}
-                        </Badge>
-                      );
-                    })()}
-                    {t.tipo === CANAL_META && t.meta_template_status !== "approved" && (
+                    {t.tipo === CANAL_META && <MetaStatusBadge status={t.meta_template_status} />}
+                    {t.tipo === CANAL_META && canSendToMeta(t.meta_template_status) && (
                       <Button
                         type="button"
                         size="sm"
@@ -762,7 +777,7 @@ export function MessageTemplates() {
             </div>
 
             <DialogFooter>
-              {isMeta && form.meta_template_status !== "approved" && (
+              {isMeta && canSendToMeta(form.meta_template_status) && (
                 <Button
                   type="button"
                   variant="secondary"
