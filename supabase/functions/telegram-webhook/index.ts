@@ -134,8 +134,15 @@ async function listarPlanos(supabase: any): Promise<Plano[]> {
     .eq("aceita_lancamento", true)
     .eq("ativo", true)
     .order("codigo");
-  return (data ?? []) as Plano[];
+  // Ordena os códigos numericamente (1, 2, ..., 10) e não como texto (1, 10, 2)
+  const chave = (c: string) =>
+    String(c ?? "")
+      .split(".")
+      .map((p) => String(Number(p) || 0).padStart(6, "0"))
+      .join(".");
+  return ((data ?? []) as Plano[]).sort((a, b) => chave(a.codigo).localeCompare(chave(b.codigo)));
 }
+
 
 // Teclado com a página de planos + navegação
 function tecladoPlanos(planos: Plano[], pagina: number, escolhidoId: string | null) {
