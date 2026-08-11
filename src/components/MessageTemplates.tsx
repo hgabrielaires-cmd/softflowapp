@@ -412,9 +412,15 @@ export function MessageTemplates() {
             Gerencie os modelos de mensagens para WhatsApp, e-mail e SMS
           </p>
         </div>
-        <Button className="gap-2" onClick={openNew}>
-          <Plus className="h-4 w-4" /> Novo Template
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2" onClick={handleSyncMeta} disabled={syncing}>
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Atualizar status Meta
+          </Button>
+          <Button className="gap-2" onClick={openNew}>
+            <Plus className="h-4 w-4" /> Novo Template
+          </Button>
+        </div>
       </div>
 
       <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
