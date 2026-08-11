@@ -345,7 +345,7 @@ export function MessageTemplates() {
         name: t.meta_template_name,
         language: t.meta_language,
         category: t.meta_template_type,
-        conteudo: t.conteudo,
+        conteudo: sanitizeTemplateBody(t.conteudo),
         buttons: t.meta_buttons || [],
       },
     });
