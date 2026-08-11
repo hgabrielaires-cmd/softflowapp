@@ -833,6 +833,62 @@ export function MessageTemplates() {
               </div>
             </div>
 
+            {isMeta && (
+              <div className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-3">
+                <div>
+                  <p className="text-xs font-semibold">📋 Mapeamento de Variáveis</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Defina o que cada {"{{N}}"} representa. A Meta exige exemplos para aprovar templates com variáveis.
+                  </p>
+                </div>
+
+                {form.meta_variaveis.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Nenhuma variável detectada. Use {"{{1}}"}, {"{{2}}"}... no conteúdo.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {form.meta_variaveis.map((v) => (
+                      <div key={v.posicao} className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-primary w-12 shrink-0">{`{{${v.posicao}}}`}</span>
+                        <span className="text-muted-foreground text-xs">→</span>
+                        <Select value={v.campo} onValueChange={(val) => trocarCampoVariavel(v.posicao, val)}>
+                          <SelectTrigger className="h-8 w-[240px] text-xs">
+                            <SelectValue placeholder="Campo do sistema" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {META_CAMPOS_GRUPOS.map((g) => (
+                              <div key={g}>
+                                <div className="px-2 py-1 text-[10px] uppercase text-muted-foreground">{g}</div>
+                                {META_CAMPOS.filter((c) => c.grupo === g).map((c) => (
+                                  <SelectItem key={c.campo} value={c.campo}>{c.label}</SelectItem>
+                                ))}
+                              </div>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          placeholder={v.campo === "custom" ? "Texto fixo" : "Exemplo"}
+                          value={v.exemplo}
+                          onChange={(e) => atualizarVariavel(v.posicao, { exemplo: e.target.value })}
+                          className="h-8 text-xs flex-1"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div>
+                  <Label className="text-xs">Preview</Label>
+                  <div className="mt-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 p-3 text-sm whitespace-pre-wrap">
+                    {previewComExemplos(form.conteudo, form.meta_variaveis) || "—"}
+                  </div>
+                </div>
+              </div>
+            )}
+
+
+
             <div className="flex items-center gap-2">
               <Switch
                 checked={form.ativo}
