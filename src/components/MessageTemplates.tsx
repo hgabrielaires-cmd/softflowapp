@@ -266,7 +266,7 @@ export function MessageTemplates() {
       nome: form.nome.trim(),
       tipo: form.tipo,
       categoria: form.categoria,
-      conteudo: form.conteudo,
+      conteudo: sanitizeTemplateBody(form.conteudo),
       descricao: form.descricao.trim() || null,
       ativo: form.ativo,
       setor_id: form.setor_id || null,
