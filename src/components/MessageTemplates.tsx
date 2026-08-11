@@ -489,19 +489,8 @@ export function MessageTemplates() {
                 <TableCell>
                   <div className="flex flex-wrap items-center gap-1">
                     <Badge variant="outline" className="text-xs">{getTipoLabel(t.tipo)}</Badge>
-                    {t.tipo === CANAL_META && (() => {
-                      const st = t.meta_template_status && META_STATUS[t.meta_template_status];
-                      return (
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] ${st ? st.className : "bg-muted text-muted-foreground"}`}
-                          title={t.meta_template_status === "rejected" ? "Template rejeitado pela Meta. Revise o conteúdo e reenvie." : undefined}
-                        >
-                          {st ? st.label : "Não enviado"}
-                        </Badge>
-                      );
-                    })()}
-                    {t.tipo === CANAL_META && t.meta_template_status !== "approved" && (
+                    {t.tipo === CANAL_META && <MetaStatusBadge status={t.meta_template_status} />}
+                    {t.tipo === CANAL_META && canSendToMeta(t.meta_template_status) && (
                       <Button
                         type="button"
                         size="sm"
