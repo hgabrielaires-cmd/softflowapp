@@ -457,12 +457,35 @@ export function MessageTemplates() {
                 <TableCell>
                   <div className="flex flex-wrap items-center gap-1">
                     <Badge variant="outline" className="text-xs">{getTipoLabel(t.tipo)}</Badge>
-                    {t.tipo === CANAL_META && t.meta_template_status && META_STATUS[t.meta_template_status] && (
-                      <Badge variant="outline" className={`text-[10px] ${META_STATUS[t.meta_template_status].className}`}>
-                        {META_STATUS[t.meta_template_status].label}
-                      </Badge>
+                    {t.tipo === CANAL_META && (() => {
+                      const st = t.meta_template_status && META_STATUS[t.meta_template_status];
+                      return (
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] ${st ? st.className : "bg-muted text-muted-foreground"}`}
+                          title={t.meta_template_status === "rejected" ? "Template rejeitado pela Meta. Revise o conteúdo e reenvie." : undefined}
+                        >
+                          {st ? st.label : "Não enviado"}
+                        </Badge>
+                      );
+                    })()}
+                    {t.tipo === CANAL_META && t.meta_template_status !== "approved" && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-[10px] gap-1"
+                        disabled={enviandoMetaId === t.id}
+                        onClick={() => enviarParaMeta(t)}
+                      >
+                        {enviandoMetaId === t.id
+                          ? <Loader2 className="h-3 w-3 animate-spin" />
+                          : <Send className="h-3 w-3" />}
+                        Enviar para Meta
+                      </Button>
                     )}
                   </div>
+
                 </TableCell>
 
                 <TableCell>
