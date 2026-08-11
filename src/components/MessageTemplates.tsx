@@ -263,6 +263,35 @@ export function MessageTemplates() {
 
   const isMeta = form.tipo === CANAL_META;
 
+  // Mantém o mapeamento sincronizado com as variáveis {{N}} do conteúdo
+  useEffect(() => {
+    if (!isMeta) return;
+    setForm((f) => {
+      const next = sincronizarVariaveis(f.conteudo, f.meta_variaveis);
+      const igual =
+        next.length === f.meta_variaveis.length &&
+        next.every((v, i) => v === f.meta_variaveis[i]);
+      return igual ? f : { ...f, meta_variaveis: next };
+    });
+  }, [form.conteudo, isMeta]);
+
+  function atualizarVariavel(posicao: number, patch: Partial<MetaVariavel>) {
+    setForm((f) => ({
+      ...f,
+      meta_variaveis: f.meta_variaveis.map((v) => v.posicao === posicao ? { ...v, ...patch } : v),
+    }));
+  }
+
+  function trocarCampoVariavel(posicao: number, campo: string) {
+    const def = getCampoMeta(campo);
+    atualizarVariavel(posicao, {
+      campo,
+      label: def?.label || "",
+      exemplo: campo === "custom" ? "" : (def?.exemplo || ""),
+    });
+  }
+
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
