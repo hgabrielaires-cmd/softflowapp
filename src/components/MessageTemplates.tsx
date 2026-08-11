@@ -762,7 +762,27 @@ export function MessageTemplates() {
             </div>
 
             <DialogFooter>
+              {isMeta && form.meta_template_status !== "approved" && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="mr-auto gap-2"
+                  disabled={enviandoMetaId !== null}
+                  onClick={() => enviarParaMeta({
+                    id: editingTemplate?.id,
+                    meta_template_name: form.meta_template_name,
+                    meta_template_type: form.meta_template_type,
+                    meta_language: form.meta_language,
+                    conteudo: form.conteudo,
+                    meta_buttons: form.meta_buttons,
+                  })}
+                >
+                  {enviandoMetaId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Enviar para aprovação Meta
+                </Button>
+              )}
               <Button type="button" variant="outline" onClick={() => setOpenEditor(false)}>
+
                 Cancelar
               </Button>
               <Button type="submit" disabled={saving}>
