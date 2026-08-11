@@ -8,6 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { MetaVariavel, sincronizarVariaveis, resolverVariaveis } from "@/lib/meta-variaveis";
+
 import {
   Building2, Search, User, Phone, ChevronLeft, ChevronRight,
   BadgeCheck, Send, Loader2,
@@ -29,9 +31,11 @@ interface TemplateMeta {
   meta_template_name: string | null;
   meta_language: string | null;
   meta_template_status: string | null;
+  meta_variaveis: MetaVariavel[] | null;
 }
 
 const VAR_REGEX = /\{\{(\d+)\}\}/g;
+
 
 export default function NovaConversaMetaDrawer({ open, onOpenChange, onConversaCriada }: Props) {
   const { user, profile } = useAuth();
@@ -99,7 +103,7 @@ export default function NovaConversaMetaDrawer({ open, onOpenChange, onConversaC
     if (step !== 3) return;
     supabase
       .from("message_templates")
-      .select("id, nome, conteudo, meta_template_name, meta_language, meta_template_status")
+      .select("id, nome, conteudo, meta_template_name, meta_language, meta_template_status, meta_variaveis")
       .eq("tipo", "whatsapp_meta")
       .eq("ativo", true)
       .order("nome")
@@ -113,14 +117,18 @@ export default function NovaConversaMetaDrawer({ open, onOpenChange, onConversaC
 
   function selecionarTemplate(t: TemplateMeta) {
     setTemplate(t);
-    const vars = [...t.conteudo.matchAll(VAR_REGEX)].map((m) => m[1]);
-    const total = vars.length ? Math.max(...vars.map(Number)) : 0;
-    const preenchidos = Array.from({ length: total }, (_, i) => {
-      if (i === 0) return contato?.nome || empresa?.nome_fantasia || "";
-      return "";
+    const vars = sincronizarVariaveis(
+      t.conteudo,
+      Array.isArray(t.meta_variaveis) ? t.meta_variaveis : [],
+    );
+    const resolvidos = resolverVariaveis(vars, {
+      contato: contato ? { nome: contato.nome, telefone: contato.telefone } : null,
+      cliente: empresa ? { nome_fantasia: empresa.nome_fantasia, cnpj_cpf: (empresa as any).cnpj_cpf } : null,
+      usuario: { nome: (user?.user_metadata as any)?.full_name || "" },
     });
-    setParams(preenchidos);
+    setParams(resolvidos.map((v, i) => v || (i === 0 ? (contato?.nome || empresa?.nome_fantasia || "") : "")));
   }
+
 
   const preview = template
     ? template.conteudo.replace(VAR_REGEX, (_m, i) => params[Number(i) - 1] || `{{${i}}}`)

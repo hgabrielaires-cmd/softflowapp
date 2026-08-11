@@ -101,7 +101,25 @@ Deno.serve(async (req) => {
         if (!conteudo) faltando.push("conteúdo");
         if (faltando.length) return json({ ok: false, error: `Campos obrigatórios: ${faltando.join(", ")}` });
 
-        const components: any[] = [{ type: "BODY", text: conteudo }];
+        const examples: string[] = Array.isArray(body?.examples)
+          ? body.examples.map((e: unknown) => String(e ?? "").trim()).filter((e: string) => e.length > 0)
+          : [];
+        const totalVars = new Set(
+          [...conteudo.matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1])),
+        ).size;
+        if (totalVars > 0 && examples.length < totalVars) {
+          return json({
+            ok: false,
+            error: `A Meta exige um exemplo para cada variável (${totalVars} necessárias, ${examples.length} informadas).`,
+          });
+        }
+
+        const bodyComponent: any = { type: "BODY", text: conteudo };
+        if (totalVars > 0) {
+          bodyComponent.example = { body_text: [examples.slice(0, totalVars)] };
+        }
+        const components: any[] = [bodyComponent];
+
         if (buttons.length > 0) {
           components.push({
             type: "BUTTONS",

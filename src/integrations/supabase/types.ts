@@ -3759,6 +3759,7 @@ export type Database = {
           meta_template_name: string | null
           meta_template_status: string | null
           meta_template_type: string | null
+          meta_variaveis: Json
           nome: string
           setor_id: string | null
           tipo: string
@@ -3776,6 +3777,7 @@ export type Database = {
           meta_template_name?: string | null
           meta_template_status?: string | null
           meta_template_type?: string | null
+          meta_variaveis?: Json
           nome: string
           setor_id?: string | null
           tipo?: string
@@ -3793,6 +3795,7 @@ export type Database = {
           meta_template_name?: string | null
           meta_template_status?: string | null
           meta_template_type?: string | null
+          meta_variaveis?: Json
           nome?: string
           setor_id?: string | null
           tipo?: string
