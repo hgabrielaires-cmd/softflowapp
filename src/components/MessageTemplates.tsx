@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   MessageSquare, Plus, Loader2, MoreHorizontal,
-  Pencil, Trash2, CheckCircle, XCircle, Copy,
+  Pencil, Trash2, CheckCircle, XCircle, Copy, Send, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
