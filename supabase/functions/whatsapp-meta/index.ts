@@ -76,6 +76,75 @@ Deno.serve(async (req) => {
         return json({ ok: res.ok, data });
       }
 
+      case "create_template": {
+        if (!cfg.waba_id) return json({ ok: false, error: "WABA ID não configurado" }, 400);
+        const name = String(body?.name || "").trim();
+        const language = String(body?.language || "pt_BR");
+        const category = String(body?.category || "").toUpperCase();
+        const conteudo = String(body?.conteudo || "").trim();
+        const buttons: any[] = Array.isArray(body?.buttons) ? body.buttons : [];
+
+        const faltando: string[] = [];
+        if (!name) faltando.push("nome do template na Meta");
+        if (!category) faltando.push("tipo de template");
+        if (!language) faltando.push("idioma");
+        if (!conteudo) faltando.push("conteúdo");
+        if (faltando.length) return json({ ok: false, error: `Campos obrigatórios: ${faltando.join(", ")}` }, 400);
+
+        const components: any[] = [{ type: "BODY", text: conteudo }];
+        if (buttons.length > 0) {
+          components.push({
+            type: "BUTTONS",
+            buttons: buttons.map((b: any) => {
+              const tipo = b.type === "PHONE" ? "PHONE_NUMBER" : b.type;
+              const btn: any = { type: tipo, text: b.text };
+              if (tipo === "URL") btn.url = b.url;
+              if (tipo === "PHONE_NUMBER") btn.phone_number = b.phone;
+              return btn;
+            }),
+          });
+        }
+
+        const res = await fetch(`${GRAPH}/${cfg.waba_id}/message_templates`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ name, language, category, components }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          return json({ ok: false, error: data?.error?.message || "Erro Meta", details: data }, 400);
+        }
+        return json({ ok: true, template_id: data?.id, status: data?.status });
+      }
+
+      case "sync_templates": {
+        if (!cfg.waba_id) return json({ ok: false, error: "WABA ID não configurado" }, 400);
+        const res = await fetch(
+          `${GRAPH}/${cfg.waba_id}/message_templates?fields=name,status,category,language&limit=100`,
+          { headers },
+        );
+        const data = await res.json();
+        if (!res.ok) return json({ ok: false, error: data?.error?.message || "Erro Meta" }, 400);
+
+        const lista: any[] = Array.isArray(data?.data) ? data.data : [];
+        const contagem = { approved: 0, pending: 0, rejected: 0, outros: 0 };
+        for (const t of lista) {
+          const status = String(t?.status || "").toLowerCase();
+          if (status === "approved") contagem.approved++;
+          else if (status === "rejected") contagem.rejected++;
+          else if (status === "pending" || status === "in_appeal" || status === "pending_deletion") contagem.pending++;
+          else contagem.outros++;
+          const normalizado = status === "approved" || status === "rejected" ? status : "pending";
+          await admin
+            .from("message_templates")
+            .update({ meta_template_status: normalizado })
+            .eq("meta_template_name", t.name);
+        }
+        return json({ ok: true, total: lista.length, contagem });
+      }
+
+
+
       case "send_template": {
         const to = String(body?.to || "").replace(/\D/g, "");
         const templateName = String(body?.template_name || "");
