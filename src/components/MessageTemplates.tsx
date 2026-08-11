@@ -315,6 +315,8 @@ export function MessageTemplates() {
       meta_template_status: isMeta ? form.meta_template_status : null,
       meta_language: isMeta ? form.meta_language : null,
       meta_buttons: isMeta ? form.meta_buttons : [],
+      meta_variaveis: isMeta ? form.meta_variaveis : [],
+
     };
 
 
