@@ -81,7 +81,13 @@ Deno.serve(async (req) => {
         const name = String(body?.name || "").trim();
         const language = String(body?.language || "pt_BR");
         const category = String(body?.category || "").toUpperCase();
-        const conteudo = String(body?.conteudo || "").trim();
+        // A Meta rejeita corpos com 3+ quebras de linha seguidas ou espaços em excesso
+        const conteudo = String(body?.conteudo || "")
+          .replace(/\r\n/g, "\n")
+          .replace(/[ \t]+\n/g, "\n")
+          .replace(/\n{3,}/g, "\n\n")
+          .replace(/[ \t]{2,}/g, " ")
+          .trim();
         const buttons: any[] = Array.isArray(body?.buttons) ? body.buttons : [];
 
         const faltando: string[] = [];
