@@ -81,10 +81,14 @@ Deno.serve(async (req) => {
         const name = String(body?.name || "").trim();
         const language = String(body?.language || "pt_BR");
         const category = String(body?.category || "").toUpperCase();
-        // A Meta rejeita corpos com 3+ quebras de linha seguidas ou espaços em excesso
+        // A Meta rejeita corpos com 3+ quebras de linha seguidas, espaços em excesso,
+        // templates compostos apenas por variáveis ou mais de 10 emojis.
         const conteudo = String(body?.conteudo || "")
           .replace(/\r\n/g, "\n")
-          .replace(/[ \t]+\n/g, "\n")
+          .replace(/\r/g, "\n")
+          .split("\n")
+          .map((l) => l.trimEnd())
+          .join("\n")
           .replace(/\n{3,}/g, "\n\n")
           .replace(/[ \t]{2,}/g, " ")
           .trim();
