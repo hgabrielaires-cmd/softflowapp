@@ -401,6 +401,31 @@ export function MessageTemplates() {
     return TIPOS_MSG.find((t) => t.value === tipo)?.label || tipo;
   }
 
+  function canSendToMeta(status?: string | null) {
+    return !status || status === "rejected";
+  }
+
+  function MetaStatusBadge({ status }: { status?: string | null }) {
+    const st = status && META_STATUS[status];
+    if (!st) {
+      return (
+        <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground gap-1">
+          <Send className="h-3 w-3" /> Não enviado
+        </Badge>
+      );
+    }
+    const icon = status === "approved" ? <CheckCircle className="h-3 w-3" /> : status === "rejected" ? <AlertTriangle className="h-3 w-3" /> : <Clock className="h-3 w-3" />;
+    return (
+      <Badge
+        variant="outline"
+        className={`text-[10px] gap-1 ${st.className}`}
+        title={status === "rejected" ? "Template rejeitado pela Meta. Revise o conteúdo e reenvie." : status === "pending" ? "Template aguardando análise da Meta." : undefined}
+      >
+        {icon} {st.label}
+      </Badge>
+    );
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
