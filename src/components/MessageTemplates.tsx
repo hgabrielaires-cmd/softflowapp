@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   MessageSquare, Plus, Loader2, MoreHorizontal,
-  Pencil, Trash2, CheckCircle, XCircle, Copy,
+  Pencil, Trash2, CheckCircle, XCircle, Copy, Send, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -148,6 +148,8 @@ export function MessageTemplates() {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
+  const [enviandoMetaId, setEnviandoMetaId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   const emptyForm = {
     nome: "",
@@ -292,6 +294,86 @@ export function MessageTemplates() {
     loadData();
   }
 
+  async function enviarParaMeta(t: {
+    id?: string;
+    meta_template_name?: string | null;
+    meta_template_type?: string | null;
+    meta_language?: string | null;
+    conteudo: string;
+    meta_buttons?: MetaButton[] | null;
+  }) {
+    const faltando: string[] = [];
+    if (!t.meta_template_name) faltando.push("Nome do template na Meta");
+    if (!t.meta_template_type) faltando.push("Tipo de template");
+    if (!t.meta_language) faltando.push("Idioma");
+    if (!t.conteudo?.trim()) faltando.push("Conteúdo");
+    if (faltando.length) {
+      toast.error("Campos obrigatórios: " + faltando.join(", "));
+      return;
+    }
+
+    setEnviandoMetaId(t.id || "form");
+    const { data: cfg } = await supabase
+      .from("integracoes_config")
+      .select("config")
+      .eq("nome", "whatsapp_meta")
+      .eq("ativo", true)
+      .maybeSingle();
+
+    if (!cfg?.config) {
+      setEnviandoMetaId(null);
+      toast.error("Configure a integração WhatsApp Meta em Integrações antes de enviar.");
+      return;
+    }
+
+    const { data, error } = await supabase.functions.invoke("whatsapp-meta", {
+      body: {
+        action: "create_template",
+        name: t.meta_template_name,
+        language: t.meta_language,
+        category: t.meta_template_type,
+        conteudo: t.conteudo,
+        buttons: t.meta_buttons || [],
+      },
+    });
+    setEnviandoMetaId(null);
+
+    const res = data as any;
+    if (error || !res?.ok) {
+      const msg = res?.error || error?.message || "Falha ao enviar";
+      toast.error("Erro Meta: " + msg);
+      return;
+    }
+
+    if (t.id) {
+      await supabase
+        .from("message_templates")
+        .update({ meta_template_status: "pending", updated_at: new Date().toISOString() })
+        .eq("id", t.id);
+    }
+    toast.success("Template enviado para aprovação! A Meta analisa em até 24 horas.");
+    setForm((f) => ({ ...f, meta_template_status: "pending" }));
+    loadData();
+  }
+
+  async function handleSyncMeta() {
+    setSyncing(true);
+    const { data, error } = await supabase.functions.invoke("whatsapp-meta", {
+      body: { action: "sync_templates" },
+    });
+    setSyncing(false);
+    const res = data as any;
+    if (error || !res?.ok) {
+      toast.error("Erro Meta: " + (res?.error || error?.message || "Falha ao sincronizar"));
+      return;
+    }
+    const c = res.contagem || {};
+    toast.success(`Status atualizado! ${c.approved || 0} aprovados, ${c.pending || 0} pendentes, ${c.rejected || 0} rejeitados`);
+    loadData();
+  }
+
+
+
   function insertVariable(v: string) {
     const textarea = textareaRef.current;
     if (textarea) {
@@ -330,9 +412,15 @@ export function MessageTemplates() {
             Gerencie os modelos de mensagens para WhatsApp, e-mail e SMS
           </p>
         </div>
-        <Button className="gap-2" onClick={openNew}>
-          <Plus className="h-4 w-4" /> Novo Template
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2" onClick={handleSyncMeta} disabled={syncing}>
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Atualizar status Meta
+          </Button>
+          <Button className="gap-2" onClick={openNew}>
+            <Plus className="h-4 w-4" /> Novo Template
+          </Button>
+        </div>
       </div>
 
       <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
@@ -375,12 +463,35 @@ export function MessageTemplates() {
                 <TableCell>
                   <div className="flex flex-wrap items-center gap-1">
                     <Badge variant="outline" className="text-xs">{getTipoLabel(t.tipo)}</Badge>
-                    {t.tipo === CANAL_META && t.meta_template_status && META_STATUS[t.meta_template_status] && (
-                      <Badge variant="outline" className={`text-[10px] ${META_STATUS[t.meta_template_status].className}`}>
-                        {META_STATUS[t.meta_template_status].label}
-                      </Badge>
+                    {t.tipo === CANAL_META && (() => {
+                      const st = t.meta_template_status && META_STATUS[t.meta_template_status];
+                      return (
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] ${st ? st.className : "bg-muted text-muted-foreground"}`}
+                          title={t.meta_template_status === "rejected" ? "Template rejeitado pela Meta. Revise o conteúdo e reenvie." : undefined}
+                        >
+                          {st ? st.label : "Não enviado"}
+                        </Badge>
+                      );
+                    })()}
+                    {t.tipo === CANAL_META && t.meta_template_status !== "approved" && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-[10px] gap-1"
+                        disabled={enviandoMetaId === t.id}
+                        onClick={() => enviarParaMeta(t)}
+                      >
+                        {enviandoMetaId === t.id
+                          ? <Loader2 className="h-3 w-3 animate-spin" />
+                          : <Send className="h-3 w-3" />}
+                        Enviar para Meta
+                      </Button>
                     )}
                   </div>
+
                 </TableCell>
 
                 <TableCell>
@@ -651,7 +762,27 @@ export function MessageTemplates() {
             </div>
 
             <DialogFooter>
+              {isMeta && form.meta_template_status !== "approved" && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="mr-auto gap-2"
+                  disabled={enviandoMetaId !== null}
+                  onClick={() => enviarParaMeta({
+                    id: editingTemplate?.id,
+                    meta_template_name: form.meta_template_name,
+                    meta_template_type: form.meta_template_type,
+                    meta_language: form.meta_language,
+                    conteudo: form.conteudo,
+                    meta_buttons: form.meta_buttons,
+                  })}
+                >
+                  {enviandoMetaId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Enviar para aprovação Meta
+                </Button>
+              )}
               <Button type="button" variant="outline" onClick={() => setOpenEditor(false)}>
+
                 Cancelar
               </Button>
               <Button type="submit" disabled={saving}>
