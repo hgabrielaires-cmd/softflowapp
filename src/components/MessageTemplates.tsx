@@ -777,7 +777,7 @@ export function MessageTemplates() {
             </div>
 
             <DialogFooter>
-              {isMeta && form.meta_template_status !== "approved" && (
+              {isMeta && canSendToMeta(form.meta_template_status) && (
                 <Button
                   type="button"
                   variant="secondary"
