@@ -292,6 +292,86 @@ export function MessageTemplates() {
     loadData();
   }
 
+  async function enviarParaMeta(t: {
+    id?: string;
+    meta_template_name?: string | null;
+    meta_template_type?: string | null;
+    meta_language?: string | null;
+    conteudo: string;
+    meta_buttons?: MetaButton[] | null;
+  }) {
+    const faltando: string[] = [];
+    if (!t.meta_template_name) faltando.push("Nome do template na Meta");
+    if (!t.meta_template_type) faltando.push("Tipo de template");
+    if (!t.meta_language) faltando.push("Idioma");
+    if (!t.conteudo?.trim()) faltando.push("Conteúdo");
+    if (faltando.length) {
+      toast.error("Campos obrigatórios: " + faltando.join(", "));
+      return;
+    }
+
+    setEnviandoMetaId(t.id || "form");
+    const { data: cfg } = await supabase
+      .from("integracoes_config")
+      .select("config")
+      .eq("nome", "whatsapp_meta")
+      .eq("ativo", true)
+      .maybeSingle();
+
+    if (!cfg?.config) {
+      setEnviandoMetaId(null);
+      toast.error("Configure a integração WhatsApp Meta em Integrações antes de enviar.");
+      return;
+    }
+
+    const { data, error } = await supabase.functions.invoke("whatsapp-meta", {
+      body: {
+        action: "create_template",
+        name: t.meta_template_name,
+        language: t.meta_language,
+        category: t.meta_template_type,
+        conteudo: t.conteudo,
+        buttons: t.meta_buttons || [],
+      },
+    });
+    setEnviandoMetaId(null);
+
+    const res = data as any;
+    if (error || !res?.ok) {
+      const msg = res?.error || error?.message || "Falha ao enviar";
+      toast.error("Erro Meta: " + msg);
+      return;
+    }
+
+    if (t.id) {
+      await supabase
+        .from("message_templates")
+        .update({ meta_template_status: "pending", updated_at: new Date().toISOString() })
+        .eq("id", t.id);
+    }
+    toast.success("Template enviado para aprovação! A Meta analisa em até 24 horas.");
+    setForm((f) => ({ ...f, meta_template_status: "pending" }));
+    loadData();
+  }
+
+  async function handleSyncMeta() {
+    setSyncing(true);
+    const { data, error } = await supabase.functions.invoke("whatsapp-meta", {
+      body: { action: "sync_templates" },
+    });
+    setSyncing(false);
+    const res = data as any;
+    if (error || !res?.ok) {
+      toast.error("Erro Meta: " + (res?.error || error?.message || "Falha ao sincronizar"));
+      return;
+    }
+    const c = res.contagem || {};
+    toast.success(`Status atualizado! ${c.approved || 0} aprovados, ${c.pending || 0} pendentes, ${c.rejected || 0} rejeitados`);
+    loadData();
+  }
+
+
+
   function insertVariable(v: string) {
     const textarea = textareaRef.current;
     if (textarea) {
