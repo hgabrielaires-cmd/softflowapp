@@ -31,6 +31,11 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  MetaVariavel, META_CAMPOS, META_CAMPOS_GRUPOS, getCampoMeta,
+  sincronizarVariaveis, previewComExemplos,
+} from "@/lib/meta-variaveis";
+
 
 interface MetaButton {
   type: "QUICK_REPLY" | "URL" | "PHONE";
