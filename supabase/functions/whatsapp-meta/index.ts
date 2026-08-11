@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action || "");
     const cfg = await getConfig(admin);
-    if (!cfg) return json({ ok: false, error: "Integração WhatsApp Meta não configurada" }, 400);
+    if (!cfg) return json({ ok: false, error: "Integração WhatsApp Meta não configurada" });
 
     const headers = {
       Authorization: `Bearer ${cfg.access_token}`,
@@ -70,14 +70,14 @@ Deno.serve(async (req) => {
       }
 
       case "get_templates": {
-        if (!cfg.waba_id) return json({ ok: false, error: "WABA ID não configurado" }, 400);
+        if (!cfg.waba_id) return json({ ok: false, error: "WABA ID não configurado" });
         const res = await fetch(`${GRAPH}/${cfg.waba_id}/message_templates?limit=100`, { headers });
         const data = await res.json();
         return json({ ok: res.ok, data });
       }
 
       case "create_template": {
-        if (!cfg.waba_id) return json({ ok: false, error: "WABA ID não configurado" }, 400);
+        if (!cfg.waba_id) return json({ ok: false, error: "WABA ID não configurado" });
         const name = String(body?.name || "").trim();
         const language = String(body?.language || "pt_BR");
         const category = String(body?.category || "").toUpperCase();
@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
         if (!category) faltando.push("tipo de template");
         if (!language) faltando.push("idioma");
         if (!conteudo) faltando.push("conteúdo");
-        if (faltando.length) return json({ ok: false, error: `Campos obrigatórios: ${faltando.join(", ")}` }, 400);
+        if (faltando.length) return json({ ok: false, error: `Campos obrigatórios: ${faltando.join(", ")}` });
 
         const components: any[] = [{ type: "BODY", text: conteudo }];
         if (buttons.length > 0) {
@@ -112,19 +112,24 @@ Deno.serve(async (req) => {
         });
         const data = await res.json();
         if (!res.ok) {
-          return json({ ok: false, error: data?.error?.message || "Erro Meta", details: data }, 400);
+          console.error("[whatsapp-meta] create_template falhou:", JSON.stringify(data));
+          return json({
+            ok: false,
+            error: data?.error?.error_user_msg || data?.error?.message || "Erro Meta",
+            details: data,
+          });
         }
         return json({ ok: true, template_id: data?.id, status: data?.status });
       }
 
       case "sync_templates": {
-        if (!cfg.waba_id) return json({ ok: false, error: "WABA ID não configurado" }, 400);
+        if (!cfg.waba_id) return json({ ok: false, error: "WABA ID não configurado" });
         const res = await fetch(
           `${GRAPH}/${cfg.waba_id}/message_templates?fields=name,status,category,language&limit=100`,
           { headers },
         );
         const data = await res.json();
-        if (!res.ok) return json({ ok: false, error: data?.error?.message || "Erro Meta" }, 400);
+        if (!res.ok) return json({ ok: false, error: data?.error?.message || "Erro Meta" });
 
         const lista: any[] = Array.isArray(data?.data) ? data.data : [];
         const contagem = { approved: 0, pending: 0, rejected: 0, outros: 0 };
@@ -152,8 +157,8 @@ Deno.serve(async (req) => {
         const params: string[] = Array.isArray(body?.params) ? body.params.map(String) : [];
         const buttonPayload: string | undefined = body?.button_payload;
 
-        if (!to || to.length < 10) return json({ ok: false, error: "Número inválido" }, 400);
-        if (!templateName) return json({ ok: false, error: "Template não informado" }, 400);
+        if (!to || to.length < 10) return json({ ok: false, error: "Número inválido" });
+        if (!templateName) return json({ ok: false, error: "Template não informado" });
 
         const components: any[] = [];
         if (params.length > 0) {
@@ -188,13 +193,13 @@ Deno.serve(async (req) => {
           body: JSON.stringify(payload),
         });
         const data = await res.json();
-        return json({ ok: res.ok, data, error: res.ok ? undefined : data }, res.ok ? 200 : 400);
+        return json({ ok: res.ok, data, error: res.ok ? undefined : (data?.error?.message || JSON.stringify(data)) });
       }
 
       case "send_text": {
         const to = String(body?.to || "").replace(/\D/g, "");
         const text = String(body?.text || "");
-        if (!to || !text) return json({ ok: false, error: "Parâmetros inválidos" }, 400);
+        if (!to || !text) return json({ ok: false, error: "Parâmetros inválidos" });
         const res = await fetch(`${GRAPH}/${cfg.phone_number_id}/messages`, {
           method: "POST",
           headers,
@@ -206,14 +211,14 @@ Deno.serve(async (req) => {
           }),
         });
         const data = await res.json();
-        return json({ ok: res.ok, data, error: res.ok ? undefined : data }, res.ok ? 200 : 400);
+        return json({ ok: res.ok, data, error: res.ok ? undefined : (data?.error?.message || JSON.stringify(data)) });
       }
 
       default:
-        return json({ ok: false, error: `Ação desconhecida: ${action}` }, 400);
+        return json({ ok: false, error: `Ação desconhecida: ${action}` });
     }
   } catch (e) {
     console.error("[whatsapp-meta] erro:", e);
-    return json({ ok: false, error: String((e as Error).message ?? e) }, 500);
+    return json({ ok: false, error: String((e as Error).message ?? e) });
   }
 });
