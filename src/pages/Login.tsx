@@ -195,6 +195,16 @@ export default function Login() {
             Acesso restrito. Entre em contato com o administrador para obter acesso.
           </p>
 
+          <div className="flex items-center justify-center gap-3 mt-6 text-xs text-muted-foreground">
+            <a href="/privacidade" className="hover:text-foreground transition-colors underline underline-offset-2">
+              Política de Privacidade
+            </a>
+            <span>•</span>
+            <a href="/termos" className="hover:text-foreground transition-colors underline underline-offset-2">
+              Termos de Serviço
+            </a>
+          </div>
+
           <div className="flex items-center justify-center gap-2 mt-6">
             <span className="text-xs text-muted-foreground">By
             </span>
