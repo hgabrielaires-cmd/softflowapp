@@ -1,0 +1,1 @@
+ALTER TABLE public.message_templates ADD COLUMN IF NOT EXISTS meta_variaveis jsonb NOT NULL DEFAULT '[]'::jsonb;
