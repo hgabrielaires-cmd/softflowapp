@@ -60,6 +60,8 @@ interface MessageTemplate {
   meta_template_status?: string | null;
   meta_language?: string | null;
   meta_buttons?: MetaButton[] | null;
+  meta_variaveis?: MetaVariavel[] | null;
+
 }
 
 interface Setor {
@@ -170,6 +172,8 @@ export function MessageTemplates() {
     meta_template_status: "pending",
     meta_language: "pt_BR",
     meta_buttons: [] as MetaButton[],
+    meta_variaveis: [] as MetaVariavel[],
+
   };
 
   const [form, setForm] = useState(emptyForm);
@@ -206,6 +210,8 @@ export function MessageTemplates() {
       meta_template_status: t.meta_template_status || "pending",
       meta_language: t.meta_language || "pt_BR",
       meta_buttons: Array.isArray(t.meta_buttons) ? (t.meta_buttons as MetaButton[]) : [],
+      meta_variaveis: Array.isArray(t.meta_variaveis) ? (t.meta_variaveis as MetaVariavel[]) : [],
+
     };
   }
 
