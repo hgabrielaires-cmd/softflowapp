@@ -238,6 +238,18 @@ export function MessageTemplates() {
   }
 
 
+  function sanitizeTemplateBody(text: string) {
+    return String(text || "")
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n")
+      .split("\n")
+      .map((l) => l.trimEnd())
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/[ \t]{2,}/g, " ")
+      .trim();
+  }
+
   const isMeta = form.tipo === CANAL_META;
 
   async function handleSave(e: React.FormEvent) {
@@ -254,7 +266,7 @@ export function MessageTemplates() {
       nome: form.nome.trim(),
       tipo: form.tipo,
       categoria: form.categoria,
-      conteudo: form.conteudo,
+      conteudo: sanitizeTemplateBody(form.conteudo),
       descricao: form.descricao.trim() || null,
       ativo: form.ativo,
       setor_id: form.setor_id || null,
@@ -333,7 +345,7 @@ export function MessageTemplates() {
         name: t.meta_template_name,
         language: t.meta_language,
         category: t.meta_template_type,
-        conteudo: t.conteudo,
+        conteudo: sanitizeTemplateBody(t.conteudo),
         buttons: t.meta_buttons || [],
       },
     });
