@@ -46,6 +46,7 @@ export default function FinanceiroDespesas() {
   const { canIncluir, canEditar, canExcluir } = useCrudPermissions("despesas", roles);
   const { allowed: canEditarPaga } = usePermission("crud.despesas.editar_paga", roles);
   const temAcoes = true;
+  const isAdmin = roles.includes("admin");
 
 
 
@@ -342,11 +343,12 @@ export default function FinanceiroDespesas() {
                               <CheckCircle2 className="h-4 w-4 text-success" />
                             </Button>
                           )}
-                          {canExcluir && d.status !== "pago" && (
+                          {isAdmin && (
                             <Button
                               variant="ghost"
                               size="icon"
                               aria-label="Excluir despesa"
+                              title="Excluir (somente administrador)"
                               onClick={() => setExcluindo(d)}
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />

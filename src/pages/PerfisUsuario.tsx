@@ -186,6 +186,11 @@ const MENU_TREE: MenuNode[] = [
       { key: "menu.crm_parametros", label: "Parâmetros CRM", description: "Configurar funis, etapas e campos personalizados", icon: <SlidersHorizontal className="h-4 w-4" /> },
     ],
   },
+  // Relatórios
+  {
+    key: "menu.relatorios_auditoria", label: "Auditoria do Sistema", description: "Relatório de inclusões, edições e exclusões de todos os módulos",
+    icon: <FileText className="h-4 w-4" />,
+  },
 ];
 
 // Group menus into sections for display
@@ -225,6 +230,11 @@ const MENU_SECTIONS: MenuSection[] = [
     title: "Financeiro",
     icon: <DollarSign className="h-4 w-4" />,
     items: MENU_TREE.filter(m => m.key === "menu.financeiro"),
+  },
+  {
+    title: "Relatórios",
+    icon: <FileText className="h-4 w-4" />,
+    items: MENU_TREE.filter(m => m.key === "menu.relatorios_auditoria"),
   },
   {
     title: "Parâmetros",
