@@ -58,6 +58,7 @@ const ChatParametros = React.lazy(() => import("./pages/chat-parametros"));
 const FinanceiroParametros = React.lazy(() => import("./pages/financeiro-parametros"));
 const FinanceiroDespesas = React.lazy(() => import("./pages/financeiro-despesas"));
 const DespesasAuditoria = React.lazy(() => import("./pages/financeiro-despesas/DespesasAuditoria"));
+const AuditoriaGeral = React.lazy(() => import("./pages/relatorios/AuditoriaGeral"));
 const ContasFinanceiras = React.lazy(() => import("./pages/financeiro-contas"));
 const DRE = React.lazy(() => import("./pages/financeiro-dre"));
 
