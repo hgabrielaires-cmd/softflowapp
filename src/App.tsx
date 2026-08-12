@@ -265,6 +265,15 @@ const App = () => {
               }
             />
             <Route
+              path="/relatorios/auditoria"
+              element={
+                <ProtectedRoute>
+                  <AuditoriaGeral />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
               path="/financeiro/contas"
               element={
                 <ProtectedRoute>
