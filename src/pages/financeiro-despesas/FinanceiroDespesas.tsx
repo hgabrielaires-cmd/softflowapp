@@ -46,6 +46,7 @@ export default function FinanceiroDespesas() {
   const { canIncluir, canEditar, canExcluir } = useCrudPermissions("despesas", roles);
   const { allowed: canEditarPaga } = usePermission("crud.despesas.editar_paga", roles);
   const temAcoes = true;
+  const isAdmin = roles.includes("admin");
 
 
 
