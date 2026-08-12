@@ -232,6 +232,11 @@ const MENU_SECTIONS: MenuSection[] = [
     items: MENU_TREE.filter(m => m.key === "menu.financeiro"),
   },
   {
+    title: "Relatórios",
+    icon: <FileText className="h-4 w-4" />,
+    items: MENU_TREE.filter(m => m.key === "menu.relatorios_auditoria"),
+  },
+  {
     title: "Parâmetros",
     icon: <Building2 className="h-4 w-4" />,
     items: MENU_TREE.filter(m =>
