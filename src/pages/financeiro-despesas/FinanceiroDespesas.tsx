@@ -342,11 +342,12 @@ export default function FinanceiroDespesas() {
                               <CheckCircle2 className="h-4 w-4 text-success" />
                             </Button>
                           )}
-                          {canExcluir && d.status !== "pago" && (
+                          {isAdmin && (
                             <Button
                               variant="ghost"
                               size="icon"
                               aria-label="Excluir despesa"
+                              title="Excluir (somente administrador)"
                               onClick={() => setExcluindo(d)}
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
