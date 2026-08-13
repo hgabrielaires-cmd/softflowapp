@@ -18,7 +18,7 @@ async function getConfig() {
 async function acharConversa(numero: string) {
   const { data } = await admin
     .from("chat_conversas")
-    .select("id, status, atendente_id")
+    .select("id, status, atendente_id, nome_cliente, iniciado_em")
     .eq("numero_cliente", numero)
     .eq("canal", "whatsapp_meta")
     .neq("status", "encerrado")
@@ -27,7 +27,22 @@ async function acharConversa(numero: string) {
   return data?.[0] ?? null;
 }
 
-async function salvarMensagem(conversaId: string, conteudo: string, tipo = "texto", extra: Record<string, unknown> = {}) {
+async function jaProcessada(messageId: string | null) {
+  if (!messageId) return false;
+  const { data } = await admin
+    .from("chat_mensagens")
+    .select("id")
+    .eq("evolution_message_id", messageId)
+    .maybeSingle();
+  return !!data;
+}
+
+async function salvarMensagem(
+  conversaId: string,
+  conteudo: string,
+  tipo = "texto",
+  extra: Record<string, unknown> = {},
+) {
   await admin.from("chat_mensagens").insert({
     conversa_id: conversaId,
     tipo,
@@ -36,6 +51,46 @@ async function salvarMensagem(conversaId: string, conteudo: string, tipo = "text
     ...extra,
   });
   await admin.from("chat_conversas").update({ updated_at: new Date().toISOString() }).eq("id", conversaId);
+}
+
+/** Cliente respondeu: ativa o atendimento direto com o atendente que enviou o template. */
+async function ativarAtendimento(conversa: any, nome: string | null, numero: string) {
+  if (conversa.status !== "aguardando_cliente" && conversa.status !== "aguardando" && conversa.status !== "bot") {
+    return;
+  }
+  const agora = new Date();
+  const iniciado = conversa.iniciado_em ? new Date(conversa.iniciado_em) : null;
+  const espera = iniciado ? Math.max(0, Math.round((agora.getTime() - iniciado.getTime()) / 1000)) : null;
+
+  const update: Record<string, unknown> = {
+    status: "em_atendimento",
+    atendimento_iniciado_em: agora.toISOString(),
+    updated_at: agora.toISOString(),
+  };
+  if (espera !== null) update.tempo_espera_segundos = espera;
+
+  await admin.from("chat_conversas").update(update).eq("id", conversa.id);
+
+  // Sai da fila, se por algum motivo estiver enfileirada
+  await admin.from("chat_fila").delete().eq("conversa_id", conversa.id);
+
+  await admin.from("chat_mensagens").insert({
+    conversa_id: conversa.id,
+    tipo: "sistema",
+    conteudo: "Cliente respondeu — atendimento iniciado automaticamente",
+    remetente: "sistema",
+  });
+
+  if (conversa.atendente_id) {
+    await admin.from("notificacoes").insert({
+      destinatario_user_id: conversa.atendente_id,
+      criado_por: conversa.atendente_id,
+      titulo: "💬 Cliente aceitou o atendimento",
+      mensagem: `${nome || conversa.nome_cliente || numero} respondeu e está pronto para ser atendido`,
+      tipo: "chat",
+      metadata: { conversa_id: conversa.id, link: "/chat" },
+    });
+  }
 }
 
 Deno.serve(async (req) => {
@@ -76,6 +131,13 @@ Deno.serve(async (req) => {
           const numero = String(msg.from || "").replace(/\D/g, "");
           if (!numero) continue;
           const nome = value?.contacts?.[0]?.profile?.name ?? null;
+          const wamid: string | null = msg?.id ?? null;
+
+          // Deduplicação — a Meta reenvia o mesmo evento várias vezes
+          if (await jaProcessada(wamid)) {
+            console.log("[whatsapp-meta-webhook] mensagem já processada:", wamid);
+            continue;
+          }
 
           let conversa = await acharConversa(numero);
           if (!conversa) {
@@ -90,64 +152,39 @@ Deno.serve(async (req) => {
                 iniciado_em: agora,
                 updated_at: agora,
               })
-              .select("id, status, atendente_id")
+              .select("id, status, atendente_id, nome_cliente, iniciado_em")
               .single();
             conversa = nova as any;
           }
           if (!conversa) continue;
 
-          // Resposta de botão interativo
+          // Texto da mensagem (texto simples ou resposta de botão)
+          let texto = "";
+          let tipo = "texto";
+          const extra: Record<string, unknown> = { evolution_message_id: wamid };
+
           if (msg.type === "interactive" || msg.type === "button") {
-            const payload =
-              msg?.interactive?.button_reply?.id ??
-              msg?.button?.payload ??
-              msg?.button?.text ??
-              "";
-            const texto =
+            texto =
               msg?.interactive?.button_reply?.title ??
               msg?.button?.text ??
-              payload;
-
-            await salvarMensagem(conversa.id, texto, "texto");
-
-            if (String(payload).toUpperCase().includes("INICIAR_CONVERSA")) {
-              await admin
-                .from("chat_conversas")
-                .update({
-                  status: "em_atendimento",
-                  atendimento_iniciado_em: new Date().toISOString(),
-                })
-                .eq("id", conversa.id);
-
-              await admin.from("chat_mensagens").insert({
-                conversa_id: conversa.id,
-                tipo: "sistema",
-                conteudo: "Cliente aceitou iniciar a conversa",
-                remetente: "sistema",
-              });
-
-              if (conversa.atendente_id) {
-                await admin.from("notificacoes").insert({
-                  destinatario_user_id: conversa.atendente_id,
-                  criado_por: conversa.atendente_id,
-                  titulo: "Cliente iniciou a conversa",
-                  mensagem: `${nome || numero} clicou em "Iniciar Conversa" no WhatsApp.`,
-                  tipo: "chat",
-                  metadata: { conversa_id: conversa.id, link: "/chat" },
-                });
-              }
-            }
+              msg?.interactive?.button_reply?.id ??
+              msg?.button?.payload ??
+              "";
+          } else if (msg.type === "text") {
+            texto = msg?.text?.body ?? "";
+          } else if (["image", "audio", "document", "video"].includes(msg.type)) {
+            texto = `[${msg.type}]`;
+            tipo = msg.type;
+            extra.media_tipo = msg.type;
+            extra.media_nome = msg?.[msg.type]?.filename ?? null;
+          } else {
             continue;
           }
 
-          if (msg.type === "text") {
-            await salvarMensagem(conversa.id, msg?.text?.body ?? "");
-          } else if (["image", "audio", "document", "video"].includes(msg.type)) {
-            await salvarMensagem(conversa.id, `[${msg.type}]`, msg.type, {
-              media_tipo: msg.type,
-              media_nome: msg?.[msg.type]?.filename ?? null,
-            });
-          }
+          await salvarMensagem(conversa.id, texto, tipo, extra);
+
+          // Qualquer resposta do cliente ativa o atendimento com o atendente dono da conversa
+          await ativarAtendimento(conversa, nome, numero);
         }
       }
     }
