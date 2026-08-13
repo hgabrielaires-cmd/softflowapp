@@ -55,9 +55,8 @@ async function salvarMensagem(
 
 /** Cliente respondeu: ativa o atendimento direto com o atendente que enviou o template. */
 async function ativarAtendimento(conversa: any, nome: string | null, numero: string) {
-  if (conversa.status !== "aguardando_cliente" && conversa.status !== "aguardando" && conversa.status !== "bot") {
-    return;
-  }
+  // Só ativa automaticamente conversas iniciadas por template (têm atendente dono)
+  if (conversa.status !== "aguardando_cliente" || !conversa.atendente_id) return;
   const agora = new Date();
   const iniciado = conversa.iniciado_em ? new Date(conversa.iniciado_em) : null;
   const espera = iniciado ? Math.max(0, Math.round((agora.getTime() - iniciado.getTime()) / 1000)) : null;
