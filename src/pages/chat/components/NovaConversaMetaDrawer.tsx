@@ -211,7 +211,7 @@ export default function NovaConversaMetaDrawer({ open, onOpenChange, onConversaC
       onOpenChange(false);
       onConversaCriada(conv.id);
     } catch (e: any) {
-      toast.error("Erro: " + e.message);
+      toast.error("❌ Erro ao enviar", { description: e.message, duration: 10000 });
     } finally {
       setEnviando(false);
     }
