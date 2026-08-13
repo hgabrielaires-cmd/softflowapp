@@ -273,8 +273,50 @@ Deno.serve(async (req) => {
         return json({ ok: res.ok, data, error: res.ok ? undefined : (data?.error?.message || JSON.stringify(data)) });
       }
 
+      case "test_send": {
+        const numeroLimpo = String(body?.numero || "5584994561994").replace(/\D/g, "");
+        const to = numeroLimpo.startsWith("55") ? numeroLimpo : `55${numeroLimpo}`;
+        const res = await fetch(`${GRAPH}/${cfg.phone_number_id}/messages`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            to,
+            type: "template",
+            template: {
+              name: String(body?.template_name || "chat_conversa_ativa_v2"),
+              language: { code: String(body?.language || "pt_BR") },
+              components: [
+                {
+                  type: "body",
+                  parameters: [
+                    { type: "text", text: "TESTE" },
+                    { type: "text", text: "bom dia" },
+                    { type: "text", text: "Gabriel" },
+                  ],
+                },
+              ],
+            },
+          }),
+        });
+        const data = await res.json();
+        console.log("[meta] test_send resultado:", res.status, JSON.stringify(data));
+        return json({ status: res.status, ok: res.ok, data });
+      }
+
+      case "phone_info": {
+        const res = await fetch(
+          `${GRAPH}/${cfg.phone_number_id}?fields=verified_name,code_verification_status,quality_rating,display_phone_number,throughput,status`,
+          { headers },
+        );
+        const data = await res.json();
+        console.log("[meta] phone_info:", res.status, JSON.stringify(data));
+        return json({ status: res.status, ok: res.ok, data });
+      }
+
       default:
         return json({ ok: false, error: `Ação desconhecida: ${action}` });
+
     }
   } catch (e) {
     console.error("[whatsapp-meta] erro:", e);
