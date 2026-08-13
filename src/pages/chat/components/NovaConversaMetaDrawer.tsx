@@ -191,7 +191,12 @@ export default function NovaConversaMetaDrawer({ open, onOpenChange, onConversaC
         },
       });
       if (fnErr || (res && res.ok === false)) {
-        throw new Error(fnErr?.message || res?.error?.error?.message || "Falha ao enviar template");
+        const msg =
+          (typeof res?.error === "string" ? res.error : res?.error?.message) ||
+          fnErr?.message ||
+          "Falha ao enviar template";
+        const codigo = res?.code ?? res?.details?.error?.code;
+        throw new Error(codigo ? `${msg} (código ${codigo})` : msg);
       }
 
       await supabase.from("chat_mensagens").insert({
