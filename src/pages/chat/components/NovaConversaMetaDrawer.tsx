@@ -132,6 +132,12 @@ export default function NovaConversaMetaDrawer({ open, onOpenChange, onConversaC
     setParams(resolvidos.map((v, i) => v || (i === 0 ? (contato?.nome || empresa?.nome_fantasia || "") : "")));
   }
 
+  // Reaplica o mapeamento sempre que o passo 3 for exibido (contato/empresa podem ter mudado)
+  useEffect(() => {
+    if (step === 3 && template) selecionarTemplate(template);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, contato?.id, empresa?.id, profile?.full_name]);
+
 
   const preview = template
     ? template.conteudo.replace(VAR_REGEX, (_m, i) => params[Number(i) - 1] || `{{${i}}}`)
