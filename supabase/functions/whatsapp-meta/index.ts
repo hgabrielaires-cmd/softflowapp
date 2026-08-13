@@ -80,7 +80,17 @@ Deno.serve(async (req) => {
         if (!cfg.waba_id) return json({ ok: false, error: "WABA ID não configurado" });
         const name = String(body?.name || "").trim();
         const language = String(body?.language || "pt_BR");
-        const category = String(body?.category || "").toUpperCase();
+        const categoriaRaw = String(body?.category || "").trim();
+        const categoryMap: Record<string, string> = {
+          "UTILITY": "UTILITY",
+          "UTILITARIO": "UTILITY",
+          "UTILITÁRIO": "UTILITY",
+          "MARKETING": "MARKETING",
+          "AUTHENTICATION": "AUTHENTICATION",
+          "AUTENTICACAO": "AUTHENTICATION",
+          "AUTENTICAÇÃO": "AUTHENTICATION",
+        };
+        const category = categoriaRaw ? (categoryMap[categoriaRaw.toUpperCase()] || "UTILITY") : "";
         // A Meta rejeita corpos com 3+ quebras de linha seguidas, espaços em excesso,
         // templates compostos apenas por variáveis ou mais de 10 emojis.
         const conteudo = String(body?.conteudo || "")
@@ -179,13 +189,14 @@ Deno.serve(async (req) => {
 
 
       case "send_template": {
-        const to = String(body?.to || "").replace(/\D/g, "");
+        const numeroLimpo = String(body?.to || "").replace(/\D/g, "");
+        const to = numeroLimpo.startsWith("55") ? numeroLimpo : `55${numeroLimpo}`;
         const templateName = String(body?.template_name || "");
         const language = String(body?.language || "pt_BR");
         const params: string[] = Array.isArray(body?.params) ? body.params.map(String) : [];
         const buttonPayload: string | undefined = body?.button_payload;
 
-        if (!to || to.length < 10) return json({ ok: false, error: "Número inválido" });
+        if (!numeroLimpo || numeroLimpo.length < 10) return json({ ok: false, error: "Número inválido" });
         if (!templateName) return json({ ok: false, error: "Template não informado" });
 
         const components: any[] = [];
@@ -215,13 +226,33 @@ Deno.serve(async (req) => {
           },
         };
 
+        console.log("[meta] Enviando template:", JSON.stringify({
+          phone_number_id: cfg.phone_number_id,
+          numero_destino: to,
+          template_name: templateName,
+          language,
+          parametros: params,
+          button_payload: buttonPayload,
+        }));
+
         const res = await fetch(`${GRAPH}/${cfg.phone_number_id}/messages`, {
           method: "POST",
           headers,
           body: JSON.stringify(payload),
         });
         const data = await res.json();
-        return json({ ok: res.ok, data, error: res.ok ? undefined : (data?.error?.message || JSON.stringify(data)) });
+        console.log("[meta] Resposta Meta:", res.status, JSON.stringify(data));
+
+        if (!res.ok) {
+          console.error("[meta] ERRO send_template:", JSON.stringify(data));
+          return json({
+            ok: false,
+            error: data?.error?.error_user_msg || data?.error?.message || "Erro Meta",
+            code: data?.error?.code,
+            details: data,
+          });
+        }
+        return json({ ok: true, data, message_id: data?.messages?.[0]?.id });
       }
 
       case "send_text": {

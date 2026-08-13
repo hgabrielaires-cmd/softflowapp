@@ -124,10 +124,19 @@ export default function NovaConversaMetaDrawer({ open, onOpenChange, onConversaC
     const resolvidos = resolverVariaveis(vars, {
       contato: contato ? { nome: contato.nome, telefone: contato.telefone } : null,
       cliente: empresa ? { nome_fantasia: empresa.nome_fantasia, cnpj_cpf: (empresa as any).cnpj_cpf } : null,
-      usuario: { nome: (user?.user_metadata as any)?.full_name || "" },
+      usuario: {
+        nome: (profile as any)?.full_name || (user?.user_metadata as any)?.full_name || "",
+        cargo: (profile as any)?.cargo || "",
+      },
     });
     setParams(resolvidos.map((v, i) => v || (i === 0 ? (contato?.nome || empresa?.nome_fantasia || "") : "")));
   }
+
+  // Reaplica o mapeamento sempre que o passo 3 for exibido (contato/empresa podem ter mudado)
+  useEffect(() => {
+    if (step === 3 && template) selecionarTemplate(template);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, contato?.id, empresa?.id, profile?.full_name]);
 
 
   const preview = template
@@ -188,7 +197,12 @@ export default function NovaConversaMetaDrawer({ open, onOpenChange, onConversaC
         },
       });
       if (fnErr || (res && res.ok === false)) {
-        throw new Error(fnErr?.message || res?.error?.error?.message || "Falha ao enviar template");
+        const msg =
+          (typeof res?.error === "string" ? res.error : res?.error?.message) ||
+          fnErr?.message ||
+          "Falha ao enviar template";
+        const codigo = res?.code ?? res?.details?.error?.code;
+        throw new Error(codigo ? `${msg} (código ${codigo})` : msg);
       }
 
       await supabase.from("chat_mensagens").insert({
@@ -203,7 +217,7 @@ export default function NovaConversaMetaDrawer({ open, onOpenChange, onConversaC
       onOpenChange(false);
       onConversaCriada(conv.id);
     } catch (e: any) {
-      toast.error("Erro: " + e.message);
+      toast.error("❌ Erro ao enviar", { description: e.message, duration: 10000 });
     } finally {
       setEnviando(false);
     }
