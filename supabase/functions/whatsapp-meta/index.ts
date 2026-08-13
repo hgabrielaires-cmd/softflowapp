@@ -80,7 +80,17 @@ Deno.serve(async (req) => {
         if (!cfg.waba_id) return json({ ok: false, error: "WABA ID não configurado" });
         const name = String(body?.name || "").trim();
         const language = String(body?.language || "pt_BR");
-        const category = String(body?.category || "").toUpperCase();
+        const categoriaRaw = String(body?.category || "").trim();
+        const categoryMap: Record<string, string> = {
+          "UTILITY": "UTILITY",
+          "UTILITARIO": "UTILITY",
+          "UTILITÁRIO": "UTILITY",
+          "MARKETING": "MARKETING",
+          "AUTHENTICATION": "AUTHENTICATION",
+          "AUTENTICACAO": "AUTHENTICATION",
+          "AUTENTICAÇÃO": "AUTHENTICATION",
+        };
+        const category = categoriaRaw ? (categoryMap[categoriaRaw.toUpperCase()] || "UTILITY") : "";
         // A Meta rejeita corpos com 3+ quebras de linha seguidas, espaços em excesso,
         // templates compostos apenas por variáveis ou mais de 10 emojis.
         const conteudo = String(body?.conteudo || "")
