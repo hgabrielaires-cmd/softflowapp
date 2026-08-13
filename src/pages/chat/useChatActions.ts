@@ -98,12 +98,14 @@ export function useChatActions() {
       userName,
       numero,
       instanceName,
+      canal,
     }: {
       conversaId: string;
       userId: string;
       userName: string;
       numero: string;
       instanceName?: string;
+      canal?: string | null;
     }) => {
       const agora = new Date().toISOString();
 
@@ -138,9 +140,7 @@ export function useChatActions() {
 
       // Send WhatsApp greeting
       const saudacao = `😃 Olá! Meu nome é *${userName}* e estarei te auxiliando no atendimento.`;
-      await supabase.functions.invoke("evolution-api", {
-        body: { action: "send_text", number: numero, text: saudacao, instance_name: instanceName },
-      });
+      await enviarTextoWhatsApp({ canal, numero, texto: saudacao, instanceName });
 
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversaId,
@@ -170,6 +170,7 @@ export function useChatActions() {
       userName,
       numero,
       instanceName,
+      canal,
       clienteId,
       tituloAtendimento,
     }: {
@@ -178,6 +179,7 @@ export function useChatActions() {
       userName: string;
       numero: string;
       instanceName?: string;
+      canal?: string | null;
       clienteId?: string;
       tituloAtendimento?: string;
     }) => {
@@ -237,9 +239,7 @@ export function useChatActions() {
       });
 
       // Send closure message via WhatsApp
-      await supabase.functions.invoke("evolution-api", {
-        body: { action: "send_text", number: numero, text: msgEnc, instance_name: instanceName },
-      });
+      await enviarTextoWhatsApp({ canal, numero, texto: msgEnc, instanceName });
 
       // Delay 3 seconds before NPS
       await new Promise((r) => setTimeout(r, 3000));
@@ -250,9 +250,7 @@ export function useChatActions() {
         .update({ nps_enviado: true })
         .eq("id", conversaId);
 
-      await supabase.functions.invoke("evolution-api", {
-        body: { action: "send_text", number: numero, text: msgNps, instance_name: instanceName },
-      });
+      await enviarTextoWhatsApp({ canal, numero, texto: msgNps, instanceName });
 
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversaId,
