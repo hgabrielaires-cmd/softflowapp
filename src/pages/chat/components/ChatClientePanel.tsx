@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect , useRef} from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +47,7 @@ interface EmpresaContato {
 export default function ChatClientePanel({ conversa, onSelectHistorico, onLeaveConversation }: Props) {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const autoLinkTentado = useRef<Set<string>>(new Set());
   const { user } = useAuth();
   const { filiaisDoUsuario } = useUserFiliais();
   const [termoBusca, setTermoBusca] = useState("");
@@ -158,6 +159,8 @@ export default function ChatClientePanel({ conversa, onSelectHistorico, onLeaveC
       return;
     }
 
+    if (autoLinkTentado.current.has(conversa.id)) return;
+
     const detectar = async () => {
       const limpo = conversa.numero_cliente.replace(/\D/g, "");
       if (limpo.length < 8) return;
@@ -243,6 +246,8 @@ export default function ChatClientePanel({ conversa, onSelectHistorico, onLeaveC
 
   async function vincularClienteAuto(clienteId: string, nomeEmpresa: string, fromHistory: boolean) {
     if (!conversa) return;
+    if (autoLinkTentado.current.has(conversa.id)) return;
+    autoLinkTentado.current.add(conversa.id);
     try {
       const { error } = await supabase
         .from("chat_conversas")
