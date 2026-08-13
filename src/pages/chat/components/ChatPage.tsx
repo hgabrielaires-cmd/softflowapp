@@ -139,6 +139,7 @@ export default function ChatPage() {
               userName,
               numero: conversaAtual.numero_cliente,
               instanceName: conversaAtual.canal_instancia || undefined,
+              canal: conversaAtual.canal,
             });
           }}
           onSendMedia={async (file, caption) => {
@@ -160,6 +161,7 @@ export default function ChatPage() {
               userName,
               numero: conversaAtual.numero_cliente,
               instanceName: conversaAtual.canal_instancia || undefined,
+              canal: conversaAtual.canal,
             }, {
               onSuccess: () => {
                 setTab("meus");
@@ -225,6 +227,7 @@ export default function ChatPage() {
               userName,
               numero: conversaAtual.numero_cliente,
               instanceName: conversaAtual.canal_instancia || undefined,
+              canal: conversaAtual.canal,
               clienteId,
               tituloAtendimento: titulo,
             };

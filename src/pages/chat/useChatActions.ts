@@ -2,6 +2,37 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+async function enviarTextoWhatsApp(opts: {
+  canal?: string | null;
+  numero: string;
+  texto: string;
+  instanceName?: string;
+}) {
+  const { canal, numero, texto, instanceName } = opts;
+
+  if (canal === "whatsapp_meta") {
+    const numeroLimpo = numero.replace(/\D/g, "");
+    const to = numeroLimpo.startsWith("55") ? numeroLimpo : `55${numeroLimpo}`;
+    const { data, error } = await supabase.functions.invoke("whatsapp-meta", {
+      body: { action: "send_text", to, text: texto },
+    });
+    if (error) return { ok: false, error: error.message || String(error) };
+    if (data && (data as any).ok === false) {
+      return { ok: false, error: (data as any).error || "Erro na API Meta" };
+    }
+    return { ok: true };
+  }
+
+  const { data, error } = await supabase.functions.invoke("evolution-api", {
+    body: { action: "send_text", number: numero, text: texto, instance_name: instanceName },
+  });
+  if (error) return { ok: false, error: error.message || String(error) };
+  if (data && (data as any).ok === false) {
+    return { ok: false, error: (data as any).error || "Erro na Evolution API" };
+  }
+  return { ok: true };
+}
+
 export function useChatActions() {
   const qc = useQueryClient();
 
@@ -19,6 +50,7 @@ export function useChatActions() {
       userName,
       numero,
       instanceName,
+      canal,
     }: {
       conversaId: string;
       texto: string;
@@ -27,6 +59,7 @@ export function useChatActions() {
       userName?: string;
       numero: string;
       instanceName?: string;
+      canal?: string | null;
     }) => {
       // Save to DB
       const { error } = await supabase.from("chat_mensagens").insert({
@@ -41,15 +74,10 @@ export function useChatActions() {
       // Send via WhatsApp if not internal note
       if (tipo !== "nota_interna") {
         const textoWhatsApp = `*${userName || "Atendente"}* diz:\n${texto}`;
-        console.log("[Chat] Enviando WhatsApp para:", numero, "instância:", instanceName);
-        const { data: sendData, error: sendError } = await supabase.functions.invoke("evolution-api", {
-          body: { action: "send_text", number: numero, text: textoWhatsApp, instance_name: instanceName },
-        });
-        if (sendError) {
-          console.error("[Chat] Erro ao enviar WhatsApp:", sendError);
-          toast.error("Mensagem salva, mas falhou ao enviar no WhatsApp: " + (sendError.message || sendError));
-        } else {
-          console.log("[Chat] WhatsApp enviado com sucesso:", sendData);
+        const res = await enviarTextoWhatsApp({ canal, numero, texto: textoWhatsApp, instanceName });
+        if (!res.ok) {
+          console.error("[Chat] Erro ao enviar WhatsApp:", res.error);
+          toast.error("Mensagem salva, mas falhou ao enviar no WhatsApp: " + res.error);
         }
       }
 
@@ -70,12 +98,14 @@ export function useChatActions() {
       userName,
       numero,
       instanceName,
+      canal,
     }: {
       conversaId: string;
       userId: string;
       userName: string;
       numero: string;
       instanceName?: string;
+      canal?: string | null;
     }) => {
       const agora = new Date().toISOString();
 
@@ -110,9 +140,7 @@ export function useChatActions() {
 
       // Send WhatsApp greeting
       const saudacao = `😃 Olá! Meu nome é *${userName}* e estarei te auxiliando no atendimento.`;
-      await supabase.functions.invoke("evolution-api", {
-        body: { action: "send_text", number: numero, text: saudacao, instance_name: instanceName },
-      });
+      await enviarTextoWhatsApp({ canal, numero, texto: saudacao, instanceName });
 
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversaId,
@@ -142,6 +170,7 @@ export function useChatActions() {
       userName,
       numero,
       instanceName,
+      canal,
       clienteId,
       tituloAtendimento,
     }: {
@@ -150,6 +179,7 @@ export function useChatActions() {
       userName: string;
       numero: string;
       instanceName?: string;
+      canal?: string | null;
       clienteId?: string;
       tituloAtendimento?: string;
     }) => {
@@ -209,9 +239,7 @@ export function useChatActions() {
       });
 
       // Send closure message via WhatsApp
-      await supabase.functions.invoke("evolution-api", {
-        body: { action: "send_text", number: numero, text: msgEnc, instance_name: instanceName },
-      });
+      await enviarTextoWhatsApp({ canal, numero, texto: msgEnc, instanceName });
 
       // Delay 3 seconds before NPS
       await new Promise((r) => setTimeout(r, 3000));
@@ -222,9 +250,7 @@ export function useChatActions() {
         .update({ nps_enviado: true })
         .eq("id", conversaId);
 
-      await supabase.functions.invoke("evolution-api", {
-        body: { action: "send_text", number: numero, text: msgNps, instance_name: instanceName },
-      });
+      await enviarTextoWhatsApp({ canal, numero, texto: msgNps, instanceName });
 
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversaId,
