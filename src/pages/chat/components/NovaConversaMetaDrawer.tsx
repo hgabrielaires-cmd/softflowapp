@@ -124,7 +124,10 @@ export default function NovaConversaMetaDrawer({ open, onOpenChange, onConversaC
     const resolvidos = resolverVariaveis(vars, {
       contato: contato ? { nome: contato.nome, telefone: contato.telefone } : null,
       cliente: empresa ? { nome_fantasia: empresa.nome_fantasia, cnpj_cpf: (empresa as any).cnpj_cpf } : null,
-      usuario: { nome: (user?.user_metadata as any)?.full_name || "" },
+      usuario: {
+        nome: (profile as any)?.full_name || (user?.user_metadata as any)?.full_name || "",
+        cargo: (profile as any)?.cargo || "",
+      },
     });
     setParams(resolvidos.map((v, i) => v || (i === 0 ? (contato?.nome || empresa?.nome_fantasia || "") : "")));
   }
