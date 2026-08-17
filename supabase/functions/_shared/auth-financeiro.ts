@@ -19,12 +19,17 @@ export async function authorizeFinanceiro(req: Request): Promise<AuthResult> {
   if (serviceRoleKey && token === serviceRoleKey) return { ok: true, via: "service_role" };
   if (cronSecret && token === cronSecret) return { ok: true, via: "cron_secret" };
 
-  // Header alternativo para chamadas de sistema (pg_cron)
-  const headerCron = req.headers.get("x-cron-secret");
-  if (cronSecret && headerCron && headerCron === cronSecret) return { ok: true, via: "cron_secret" };
-
   // Anon key NUNCA é credencial válida
   if (anonKey && token === anonKey) return { ok: false, status: 401, error: "Não autorizado" };
+
+  // Segredo de agendamento guardado no cofre do banco (usado pelo pg_cron)
+  try {
+    const admin = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey);
+    const { data: vaultCron } = await admin.rpc("get_cron_secret");
+    if (typeof vaultCron === "string" && vaultCron.length > 0 && token === vaultCron) {
+      return { ok: true, via: "cron_secret" };
+    }
+  } catch { /* segue para validação de usuário */ }
 
   const { data, error } = await createClient(Deno.env.get("SUPABASE_URL")!, anonKey)
     .auth.getUser(token);
