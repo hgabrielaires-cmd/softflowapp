@@ -2,6 +2,7 @@
 // Runs daily via pg_cron. Checks pending invoices and sends WhatsApp reminders
 // based on configurable rules per branch.
 
+import { authorizeFinanceiro, authErrorResponse } from "../_shared/auth-financeiro.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {

@@ -3,6 +3,7 @@
 // Handles: create customer, create charge (boleto/pix)
 // After payment: sends WhatsApp notification via Evolution API
 
+import { authorizeFinanceiro, authErrorResponse } from "../_shared/auth-financeiro.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {

@@ -2,6 +2,7 @@
 // Consolida mensalidade + módulos + OAs + parcelas de implantação
 // Gera cobrança no Asaas e registra log de cada operação
 
+import { authorizeFinanceiro, authErrorResponse } from "../_shared/auth-financeiro.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {

@@ -2,6 +2,7 @@
 // Verifica status de pagamentos no Asaas e atualiza faturas pendentes/vencidas
 // Execução: cron diário 07:00 BRT ou chamada manual
 
+import { authorizeFinanceiro, authErrorResponse } from "../_shared/auth-financeiro.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
