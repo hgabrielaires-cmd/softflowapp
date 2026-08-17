@@ -515,8 +515,8 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
                           size="icon"
                           className="h-7 w-7"
                           title={pdfUrl ? "Baixar PDF do boleto" : "Boleto não disponível"}
-                          disabled={!pdfUrl}
-                          onClick={() => pdfUrl && window.open(pdfUrl, "_blank")}
+                          disabled={!pdfUrl || baixandoBoleto === f.id}
+                          onClick={() => handleBaixarBoleto(f)}
                         >
                           <FileText className="h-4 w-4 text-muted-foreground" />
                         </Button>
