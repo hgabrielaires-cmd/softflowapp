@@ -54,3 +54,6 @@ verify_jwt = false
 [functions.whatsapp-meta-webhook]
 verify_jwt = false
 
+[functions.sicredi-webhook]
+verify_jwt = false
+
