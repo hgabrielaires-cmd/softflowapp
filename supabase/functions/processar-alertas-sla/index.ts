@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authorizeFinanceiro, authErrorResponse } from "../_shared/auth-financeiro.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,41 +14,17 @@ serve(async (req) => {
   }
 
   try {
-    // ── Autenticação: aceita service role, anon key (cron) ou JWT válido ──
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // ── Autenticação FAIL-CLOSED: service_role, CRON_SECRET ou admin/financeiro ──
+    const auth = await authorizeFinanceiro(req);
+    if (!auth.ok) return authErrorResponse(auth, corsHeaders);
 
-    const token = authHeader.replace("Bearer ", "");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const cronSecret = Deno.env.get("CRON_SECRET") || "";
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
-
-    const isSystemCall = token === serviceRoleKey || (cronSecret && token === cronSecret) || (anonKey && token === anonKey);
-
-    if (!isSystemCall) {
-      const tempClient = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_ANON_KEY")!,
-        { global: { headers: { Authorization: authHeader } } }
-      );
-      const { error: claimsError } = await tempClient.auth.getClaims(token);
-      if (claimsError) {
-        return new Response(JSON.stringify({ error: "Não autorizado" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       serviceRoleKey
     );
+
 
     // 1. Get all active etapas with SLA control
     const { data: etapas } = await supabase
