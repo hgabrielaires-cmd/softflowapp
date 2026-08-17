@@ -112,8 +112,12 @@ async function authenticate(): Promise<string> {
 
   if (!resp.ok) {
     const text = await resp.text();
-    throw new Error(`Falha na autenticação Sicredi (${resp.status}): ${text}`);
+    const u = username();
+    throw new Error(
+      `Falha na autenticação Sicredi (${resp.status}): ${text} [diag: ambiente=${AMBIENTE} username=${u} (len ${u.length}) coop=${COOPERATIVA} posto=${POSTO} benef_len=${CODIGO_BENEFICIARIO.length} acesso_len=${CODIGO_ACESSO.length}]`,
+    );
   }
+
 
   const json = await resp.json();
   await saveToken(json);
