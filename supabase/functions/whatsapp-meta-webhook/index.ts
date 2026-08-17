@@ -113,7 +113,17 @@ Deno.serve(async (req) => {
 
   // ── POST: eventos ──
   try {
-    const body = await req.json();
+    // Validação HMAC-SHA256 (X-Hub-Signature-256) — FAIL CLOSED
+    const rawBody = await req.text();
+    const cfgPost = await getConfig().catch(() => ({} as Record<string, string>));
+    const appSecret = Deno.env.get("META_APP_SECRET") || cfgPost.app_secret || "";
+    const signature = req.headers.get("x-hub-signature-256") || "";
+    if (!appSecret || !signature.startsWith("sha256=") || !(await validSignature(appSecret, rawBody, signature))) {
+      console.warn("[whatsapp-meta-webhook] assinatura inválida ou ausente");
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+
+    const body = JSON.parse(rawBody);
     console.log("[whatsapp-meta-webhook] evento:", JSON.stringify(body).slice(0, 2000));
 
     for (const entry of body?.entry ?? []) {
