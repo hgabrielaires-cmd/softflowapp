@@ -34,6 +34,7 @@ import {
   DollarSign, AlertTriangle, Clock, Building2, Zap, MessageCircle, Eye, RefreshCw, Info,
 } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
+import { getCobrancaFatura, temCobranca } from "@/lib/cobrancaFatura";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 
@@ -300,7 +301,7 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
   const [baixandoBoleto, setBaixandoBoleto] = useState<string | null>(null);
 
   async function handleBaixarBoleto(f: Fatura) {
-    const url: string | null = (f as any).boleto_pdf_url || f.asaas_url || null;
+    const url: string | null = getCobrancaFatura(f).pdfUrl;
     if (!url) { toast.error("Boleto não disponível para esta fatura"); return; }
     setBaixandoBoleto(f.id);
     try {
@@ -345,8 +346,15 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
         forma_pagamento: f.forma_pagamento,
         asaas_payment_id: f.asaas_payment_id,
         asaas_url: f.asaas_url,
+        asaas_bank_slip_url: f.asaas_bank_slip_url,
         asaas_barcode: f.asaas_barcode,
         asaas_pix_qrcode: f.asaas_pix_qrcode,
+        asaas_pix_image: f.asaas_pix_image,
+        boleto_nosso_numero: f.boleto_nosso_numero,
+        boleto_linha_digitavel: f.boleto_linha_digitavel,
+        boleto_codigo_barras: f.boleto_codigo_barras,
+        boleto_pdf_url: f.boleto_pdf_url,
+        boleto_pix_qrcode: f.boleto_pix_qrcode,
       });
       if (resultado.ok) {
         toast.success("Mensagem enviada com sucesso!");
@@ -508,7 +516,7 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
                       <Eye className="h-4 w-4 text-muted-foreground" />
                     </Button>
                     {(() => {
-                      const pdfUrl = (f as any).boleto_pdf_url || f.asaas_url;
+                      const pdfUrl = getCobrancaFatura(f).pdfUrl;
                       return (
                         <Button
                           variant="ghost"
@@ -529,7 +537,7 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      {(f.asaas_barcode || f.asaas_pix_qrcode || f.asaas_url) && (
+                      {temCobranca(getCobrancaFatura(f)) && (
                         <DropdownMenuItem onClick={() => setDetalheFatura(f)} className="cursor-pointer">
                           <Receipt className="h-4 w-4 mr-2" /> Detalhes Cobrança
                         </DropdownMenuItem>
@@ -650,9 +658,11 @@ function FaturaCobrancaDialog({ fatura, onClose }: { fatura: Fatura | null; onCl
 
   if (!fatura) return null;
 
-  const hasBoleto = !!fatura.asaas_barcode || !!fatura.asaas_bank_slip_url;
-  const hasPix = !!fatura.asaas_pix_qrcode || !!fatura.asaas_pix_image;
-  const hasAsaasUrl = !!fatura.asaas_url;
+  const cobranca = getCobrancaFatura(fatura);
+  const linhaDigitavel = cobranca.linhaDigitavel || cobranca.codigoBarras;
+  const hasBoleto = !!linhaDigitavel || !!cobranca.pdfUrl;
+  const hasPix = !!cobranca.pixCopiaECola || !!cobranca.pixImage;
+  const hasPaymentUrl = !!cobranca.paymentUrl && cobranca.paymentUrl !== cobranca.pdfUrl;
 
   function copyToClipboard(text: string, label: string) {
     navigator.clipboard.writeText(text);
@@ -679,32 +689,32 @@ function FaturaCobrancaDialog({ fatura, onClose }: { fatura: Fatura | null; onCl
               <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                 <FileText className="h-4 w-4" /> Boleto
               </h4>
-              {fatura.asaas_barcode && (
+              {linhaDigitavel && (
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Linha digitável</label>
                   <div className="flex gap-2">
                     <Input
                       readOnly
-                      value={fatura.asaas_barcode}
+                      value={linhaDigitavel}
                       className="font-mono text-xs h-9"
                     />
                     <Button
                       variant="outline"
                       size="sm"
                       className="shrink-0 h-9"
-                      onClick={() => copyToClipboard(fatura.asaas_barcode!, "Linha digitável")}
+                      onClick={() => copyToClipboard(linhaDigitavel!, "Linha digitável")}
                     >
                       Copiar
                     </Button>
                   </div>
                 </div>
               )}
-              {fatura.asaas_bank_slip_url && (
+              {cobranca.pdfUrl && (
                 <Button
                   variant="outline"
                   size="sm"
                   className="w-full gap-2"
-                  onClick={() => window.open(fatura.asaas_bank_slip_url!, "_blank")}
+                  onClick={() => window.open(cobranca.pdfUrl!, "_blank")}
                 >
                   <FileText className="h-4 w-4" /> Visualizar Boleto
                 </Button>
@@ -718,29 +728,29 @@ function FaturaCobrancaDialog({ fatura, onClose }: { fatura: Fatura | null; onCl
               <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                 <DollarSign className="h-4 w-4" /> PIX
               </h4>
-              {fatura.asaas_pix_image && (
+              {cobranca.pixImage && (
                 <div className="flex justify-center bg-white rounded-lg p-4 border">
                   <img
-                    src={`data:image/png;base64,${fatura.asaas_pix_image}`}
+                    src={`data:image/png;base64,${cobranca.pixImage}`}
                     alt="QR Code PIX"
                     className="w-48 h-48"
                   />
                 </div>
               )}
-              {fatura.asaas_pix_qrcode && (
+              {cobranca.pixCopiaECola && (
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Copia e Cola</label>
                   <div className="flex gap-2">
                     <Input
                       readOnly
-                      value={fatura.asaas_pix_qrcode}
+                      value={cobranca.pixCopiaECola}
                       className="font-mono text-xs h-9"
                     />
                     <Button
                       variant="outline"
                       size="sm"
                       className="shrink-0 h-9"
-                      onClick={() => copyToClipboard(fatura.asaas_pix_qrcode!, "Código PIX")}
+                      onClick={() => copyToClipboard(cobranca.pixCopiaECola!, "Código PIX")}
                     >
                       Copiar
                     </Button>
@@ -751,19 +761,19 @@ function FaturaCobrancaDialog({ fatura, onClose }: { fatura: Fatura | null; onCl
           )}
 
           {/* Link pagamento */}
-          {hasAsaasUrl && (
+          {hasPaymentUrl && (
             <Button
               variant="outline"
               size="sm"
               className="w-full gap-2"
-              onClick={() => window.open(fatura.asaas_url!, "_blank")}
+              onClick={() => window.open(cobranca.paymentUrl!, "_blank")}
             >
               <DollarSign className="h-4 w-4" /> Abrir Link de Pagamento
             </Button>
           )}
 
           {/* Sem dados */}
-          {!hasBoleto && !hasPix && !hasAsaasUrl && (
+          {!hasBoleto && !hasPix && !hasPaymentUrl && (
             <p className="text-sm text-muted-foreground text-center py-4">
               Nenhuma informação de cobrança disponível para esta fatura.
             </p>

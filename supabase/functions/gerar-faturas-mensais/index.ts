@@ -3,7 +3,9 @@
 // Gera cobrança no Asaas e registra log de cada operação
 
 import { authorizeFinanceiro, authErrorResponse } from "../_shared/auth-financeiro.ts";
+import { getCobrancaFatura, temCobranca } from "../_shared/cobranca.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -93,10 +95,11 @@ async function sendWhatsAppForFatura(
     valor: number;
     dataVencimento: string;
     billingType: string;
-    asaasUrl: string | null;
-    asaasBarcode: string | null;
-    asaasPix: string | null;
+    linkPagamento: string | null;
+    linhaDigitavel: string | null;
+    pixCopiaECola: string | null;
   }
+
 ) {
   const { data: whatsConfig } = await supabase
     .from("integracoes_config")
@@ -139,10 +142,14 @@ async function sendWhatsAppForFatura(
 
   let text = "";
   if (params.billingType === "PIX") {
-    text = `Olá ${nomeContato}! 👋\n\nSua fatura está disponível:\n\nEmpresa: ${params.nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*\n\n💠 PIX Copia e Cola:\n${params.asaasPix || "—"}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
+    text = `Olá ${nomeContato}! 👋\n\nSua fatura está disponível:\n\nEmpresa: ${params.nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*\n\n💠 PIX Copia e Cola:\n${params.pixCopiaECola || "—"}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
   } else {
-    text = `Olá ${nomeContato}! 👋\n\nA fatura está disponível:\n\nEmpresa: ${params.nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*\n\n🔗 Acesse o boleto: ${params.asaasUrl || "—"}\n\nLinha digitável:\n${params.asaasBarcode || "—"}${params.asaasPix ? `\n\n💠 PIX Copia e Cola:\n${params.asaasPix}` : ""}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
+    const linkSection = params.linkPagamento ? `\n\n🔗 Acesse o boleto: ${params.linkPagamento}` : "";
+    const linhaSection = params.linhaDigitavel ? `\n\nLinha digitável:\n${params.linhaDigitavel}` : "";
+    const pixSection = params.pixCopiaECola ? `\n\n💠 PIX Copia e Cola:\n${params.pixCopiaECola}` : "";
+    text = `Olá ${nomeContato}! 👋\n\nA fatura está disponível:\n\nEmpresa: ${params.nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*${linkSection}${linhaSection}${pixSection}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
   }
+
 
   let formattedNumber = phone.replace(/\D/g, "");
   if (formattedNumber.startsWith("0")) formattedNumber = "55" + formattedNumber.substring(1);
@@ -365,29 +372,43 @@ async function processContrato(
         }
 
         await supabase.from("faturas").update(asaasUpdate).eq("id", fatura.id);
-
-        // Send WhatsApp notification (non-blocking)
-        try {
-          await sendWhatsAppForFatura(supabase, {
-            faturaId: fatura.id,
-            clienteId: contrato.cliente_id,
-            nomeFantasia: clienteNome,
-            valor: valorTotal,
-            dataVencimento: dueDate,
-            billingType,
-            asaasUrl: asaasUpdate.asaas_url as string | null,
-            asaasBarcode: (asaasUpdate.asaas_barcode as string) || null,
-            asaasPix: (asaasUpdate.asaas_pix_qrcode as string) || null,
-          });
-        } catch (whatsErr) {
-          console.warn("WhatsApp notification failed (non-blocking):", whatsErr);
-        }
       } catch (asaasErr: unknown) {
         const msg = asaasErr instanceof Error ? asaasErr.message : "Erro Asaas";
         console.warn(`Asaas error for contrato ${contrato.id}: ${msg}`);
         // Fatura created, Asaas failed — log but don't revert
       }
     }
+
+    // 7.1 Notificação WhatsApp (gatilho fatura_gerada) — independente do gateway
+    try {
+      const { data: faturaCobranca } = await supabase
+        .from("faturas")
+        .select(
+          "boleto_nosso_numero, boleto_linha_digitavel, boleto_codigo_barras, boleto_pdf_url, boleto_pix_qrcode, asaas_payment_id, asaas_url, asaas_bank_slip_url, asaas_barcode, asaas_pix_qrcode, asaas_pix_image"
+        )
+        .eq("id", fatura.id)
+        .maybeSingle();
+
+      const cobranca = getCobrancaFatura(faturaCobranca);
+      if (temCobranca(cobranca)) {
+        await sendWhatsAppForFatura(supabase, {
+          faturaId: fatura.id,
+          clienteId: contrato.cliente_id,
+          nomeFantasia: clienteNome,
+          valor: valorTotal,
+          dataVencimento: dueDate,
+          billingType: formaPagamento === "PIX" ? "PIX" : "BOLETO",
+          linkPagamento: cobranca.paymentUrl,
+          linhaDigitavel: cobranca.linhaDigitavel || cobranca.codigoBarras,
+          pixCopiaECola: cobranca.pixCopiaECola,
+        });
+      } else {
+        console.warn(`Sem dados de cobrança para fatura ${fatura.id} — WhatsApp não enviado`);
+      }
+    } catch (whatsErr) {
+      console.warn("WhatsApp notification failed (non-blocking):", whatsErr);
+    }
+
 
     // 8. Post-processing: increment parcelas_pagas
     if (parcelaImplantacao > 0) {
