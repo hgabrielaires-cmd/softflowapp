@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authorizeSistema, authErrorResponse } from "../_shared/auth-sistema.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,40 +14,13 @@ serve(async (req) => {
   }
 
   try {
-    // ── Autenticação: aceita service role, anon key (cron) ou JWT válido ──
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const cronSecret = Deno.env.get("CRON_SECRET") || "";
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
-
-    const isSystemCall = token === serviceRoleKey || (cronSecret && token === cronSecret) || (anonKey && token === anonKey);
-
-    if (!isSystemCall) {
-      const tempClient = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_ANON_KEY")!,
-        { global: { headers: { Authorization: authHeader } } }
-      );
-      const { error: claimsError } = await tempClient.auth.getClaims(token);
-      if (claimsError) {
-        return new Response(JSON.stringify({ error: "Não autorizado" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
+    // ── Auth FAIL CLOSED: service_role, CRON_SECRET ou usuário autenticado ──
+    const auth = await authorizeSistema(req);
+    if (!auth.ok) return authErrorResponse(auth, corsHeaders);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      serviceRoleKey
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
     // 1. Load active automations
