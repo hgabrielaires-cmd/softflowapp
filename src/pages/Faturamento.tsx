@@ -297,6 +297,39 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
   }
 
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
+  const [baixandoBoleto, setBaixandoBoleto] = useState<string | null>(null);
+
+  async function handleBaixarBoleto(f: Fatura) {
+    const url: string | null = (f as any).boleto_pdf_url || f.asaas_url || null;
+    if (!url) { toast.error("Boleto não disponível para esta fatura"); return; }
+    setBaixandoBoleto(f.id);
+    try {
+      // Boleto Sicredi: arquivo no storage privado -> gera link assinado novo (o salvo expira)
+      const match = url.match(/\/object\/(?:sign|public)\/sicredi-boletos\/([^?]+)/);
+      let finalUrl = url;
+      if (match) {
+        const path = decodeURIComponent(match[1]);
+        const { data, error } = await supabase.storage
+          .from("sicredi-boletos")
+          .createSignedUrl(path, 3600, { download: `${f.numero_fatura || "boleto"}.pdf` });
+        if (error || !data?.signedUrl) {
+          toast.error("Não foi possível gerar o link do boleto: " + (error?.message || "erro"));
+          return;
+        }
+        finalUrl = data.signedUrl;
+      }
+      const a = document.createElement("a");
+      a.href = finalUrl;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } finally {
+      setBaixandoBoleto(null);
+    }
+  }
+
 
   async function handleEnviarWhatsApp(f: Fatura) {
     if (!f.cliente_id) { toast.error("Fatura sem cliente vinculado"); return; }
@@ -482,8 +515,8 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
                           size="icon"
                           className="h-7 w-7"
                           title={pdfUrl ? "Baixar PDF do boleto" : "Boleto não disponível"}
-                          disabled={!pdfUrl}
-                          onClick={() => pdfUrl && window.open(pdfUrl, "_blank")}
+                          disabled={!pdfUrl || baixandoBoleto === f.id}
+                          onClick={() => handleBaixarBoleto(f)}
                         >
                           <FileText className="h-4 w-4 text-muted-foreground" />
                         </Button>
