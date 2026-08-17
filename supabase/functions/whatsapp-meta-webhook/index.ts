@@ -92,6 +92,29 @@ async function ativarAtendimento(conversa: any, nome: string | null, numero: str
   }
 }
 
+/** Compara a assinatura HMAC-SHA256 enviada pela Meta com o corpo bruto recebido. */
+async function validSignature(appSecret: string, rawBody: string, signature: string): Promise<boolean> {
+  try {
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(appSecret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
+    const expected = Array.from(new Uint8Array(mac)).map((b) => b.toString(16).padStart(2, "0")).join("");
+    const received = signature.slice("sha256=".length).toLowerCase();
+    if (received.length !== expected.length) return false;
+    let diff = 0;
+    for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ received.charCodeAt(i);
+    return diff === 0;
+  } catch (e) {
+    console.error("[whatsapp-meta-webhook] erro ao validar assinatura:", e);
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
