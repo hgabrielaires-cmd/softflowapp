@@ -297,7 +297,7 @@ async function gerarPdf(linhaDigitavel: string, nossoNumero?: string) {
   if (nossoNumero) {
     await supabase
       .from("sicredi_boletos")
-      .update({ pdf_path: path })
+      .update({ pdf_url: signed?.signedUrl ?? path })
       .eq("nosso_numero", nossoNumero);
   }
 
