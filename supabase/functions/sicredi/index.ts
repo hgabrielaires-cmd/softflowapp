@@ -223,22 +223,27 @@ async function criarBoleto(input: CriarBoletoInput) {
 
   const json = await resp.json().catch(() => null);
 
-  await supabase.from("sicredi_boletos").insert({
+  const { error: logError } = await supabase.from("sicredi_boletos").insert({
     fatura_id: input.faturaId ?? null,
     seu_numero: input.seuNumero,
     valor: input.valor,
     data_vencimento: input.dataVencimento,
-    pagador_nome: input.pagador.nome,
-    pagador_documento: input.pagador.documento,
-    ambiente: AMBIENTE,
+    cooperativa: COOPERATIVA,
+    posto: POSTO,
+    codigo_beneficiario: CODIGO_BENEFICIARIO,
     status: resp.ok ? "EMITIDO" : "ERRO",
     nosso_numero: json?.nossoNumero ?? null,
     linha_digitavel: json?.linhaDigitavel ?? null,
     codigo_barras: json?.codigoBarras ?? null,
-    request_payload: payload,
-    response_payload: json,
-    http_status: resp.status,
+    payload_emissao: {
+      ambiente: AMBIENTE,
+      http_status: resp.status,
+      pagador: input.pagador,
+      request: payload,
+      response: json,
+    },
   });
+  if (logError) console.warn("[sicredi] falha ao registrar log do boleto:", logError.message);
 
   if (!resp.ok) {
     throw new Error(`Falha ao criar boleto (${resp.status}): ${JSON.stringify(json)}`);
