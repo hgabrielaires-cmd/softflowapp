@@ -2,6 +2,8 @@
 // Importa recebíveis pagos da Conta Azul para fin_movimentacoes (entradas)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getValidToken } from "../_shared/contaazul.ts";
+import { authorizeFinanceiro, authErrorResponse } from "../_shared/auth-financeiro.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
