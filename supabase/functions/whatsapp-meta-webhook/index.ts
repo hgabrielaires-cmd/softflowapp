@@ -92,6 +92,29 @@ async function ativarAtendimento(conversa: any, nome: string | null, numero: str
   }
 }
 
+/** Compara a assinatura HMAC-SHA256 enviada pela Meta com o corpo bruto recebido. */
+async function validSignature(appSecret: string, rawBody: string, signature: string): Promise<boolean> {
+  try {
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(appSecret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
+    const expected = Array.from(new Uint8Array(mac)).map((b) => b.toString(16).padStart(2, "0")).join("");
+    const received = signature.slice("sha256=".length).toLowerCase();
+    if (received.length !== expected.length) return false;
+    let diff = 0;
+    for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ received.charCodeAt(i);
+    return diff === 0;
+  } catch (e) {
+    console.error("[whatsapp-meta-webhook] erro ao validar assinatura:", e);
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -113,7 +136,17 @@ Deno.serve(async (req) => {
 
   // ── POST: eventos ──
   try {
-    const body = await req.json();
+    // Validação HMAC-SHA256 (X-Hub-Signature-256) — FAIL CLOSED
+    const rawBody = await req.text();
+    const cfgPost = await getConfig().catch(() => ({} as Record<string, string>));
+    const appSecret = Deno.env.get("META_APP_SECRET") || cfgPost.app_secret || "";
+    const signature = req.headers.get("x-hub-signature-256") || "";
+    if (!appSecret || !signature.startsWith("sha256=") || !(await validSignature(appSecret, rawBody, signature))) {
+      console.warn("[whatsapp-meta-webhook] assinatura inválida ou ausente");
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    }
+
+    const body = JSON.parse(rawBody);
     console.log("[whatsapp-meta-webhook] evento:", JSON.stringify(body).slice(0, 2000));
 
     for (const entry of body?.entry ?? []) {

@@ -2,6 +2,7 @@
 // Consolida mensalidade + módulos + OAs + parcelas de implantação
 // Gera cobrança no Asaas e registra log de cada operação
 
+import { authorizeFinanceiro, authErrorResponse } from "../_shared/auth-financeiro.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -405,35 +406,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Auth: accept Bearer JWT or service role key
-    const authHeader = req.headers.get("authorization");
+    // Auth FAIL CLOSED: service_role, CRON_SECRET ou usuário admin/financeiro
+    const auth = await authorizeFinanceiro(req);
+    if (!auth.ok) return authErrorResponse(auth, corsHeaders);
+
     const supabase = getSupabaseAdmin();
-    let authenticated = false;
-
-    if (authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
-
-      // Accept service role, anon key (pg_cron fallback), or valid user JWT
-      if (token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
-        authenticated = true;
-      } else if (anonKey && token === anonKey) {
-        authenticated = true;
-      } else {
-        const { data: { user } } = await createClient(
-          Deno.env.get("SUPABASE_URL")!,
-          anonKey
-        ).auth.getUser(token);
-        if (user) authenticated = true;
-      }
-    }
-
-    if (!authenticated) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     // Parse request
     const body = await req.json().catch(() => ({}));

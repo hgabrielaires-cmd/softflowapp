@@ -27,11 +27,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Validar token do webhook (backward compatible)
+    // Validar token do webhook — FAIL CLOSED (sem secret configurado, rejeita)
     const webhookToken = req.headers.get("asaas-access-token");
     const expectedToken = Deno.env.get("ASAAS_WEBHOOK_TOKEN");
-    if (expectedToken && (!webhookToken || webhookToken !== expectedToken)) {
-      console.warn("asaas-webhook: token inválido ou ausente");
+    if (!expectedToken || !webhookToken || webhookToken !== expectedToken) {
+      console.warn("asaas-webhook: token inválido, ausente ou secret não configurado");
       return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
 
