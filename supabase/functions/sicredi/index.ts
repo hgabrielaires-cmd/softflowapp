@@ -604,6 +604,9 @@ Deno.serve(async (request: Request) => {
       case "gerar-automatico":
         result = await gerarAutomatico();
         break;
+      case "sincronizar-liquidados":
+        result = await sincronizarLiquidados();
+        break;
       default:
         return new Response(
           JSON.stringify({ error: `Ação desconhecida: "${action}"` }),
