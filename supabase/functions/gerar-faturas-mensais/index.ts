@@ -439,9 +439,36 @@ Deno.serve(async (req) => {
 
     // Parse request
     const body = await req.json().catch(() => ({}));
+
+    // Reprocessa a emissão do boleto Sicredi de uma fatura já criada.
+    // Autorizado pelo mesmo fluxo financeiro (service_role / CRON_SECRET / admin-financeiro).
+    if (body.reprocessar_boleto_fatura_id) {
+      const token = Deno.env.get("SICREDI_INTERNAL_TOKEN");
+      if (!token) {
+        return new Response(JSON.stringify({ error: "SICREDI_INTERNAL_TOKEN ausente" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const resp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sicredi`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-internal-token": token },
+        body: JSON.stringify({
+          action: "criar-boleto-fatura",
+          faturaId: body.reprocessar_boleto_fatura_id,
+        }),
+      });
+      const text = await resp.text();
+      return new Response(
+        JSON.stringify({ sicredi_status: resp.status, sicredi_response: text }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const now = new Date();
     const mes = body.mes || (now.getMonth() + 1);
     const ano = body.ano || now.getFullYear();
+
 
     console.log(`Gerando faturas para ${String(mes).padStart(2, "0")}/${ano}`);
 
