@@ -474,6 +474,21 @@ function FaturasTab({ filialFilter }: { filialFilter: string }) {
                     >
                       <Eye className="h-4 w-4 text-muted-foreground" />
                     </Button>
+                    {(() => {
+                      const pdfUrl = (f as any).boleto_pdf_url || f.asaas_url;
+                      return (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title={pdfUrl ? "Baixar PDF do boleto" : "Boleto não disponível"}
+                          disabled={!pdfUrl}
+                          onClick={() => pdfUrl && window.open(pdfUrl, "_blank")}
+                        >
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      );
+                    })()}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-7 w-7">
