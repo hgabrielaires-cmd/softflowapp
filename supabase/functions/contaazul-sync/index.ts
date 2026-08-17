@@ -2,6 +2,8 @@
 // Importa recebíveis pagos da Conta Azul para fin_movimentacoes (entradas)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getValidToken } from "../_shared/contaazul.ts";
+import { authorizeFinanceiro, authErrorResponse } from "../_shared/auth-financeiro.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -57,6 +59,11 @@ function calcularTaxaBoleto(
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  // Auth FAIL CLOSED: service_role, CRON_SECRET ou usuário admin/financeiro
+  const auth = await authorizeFinanceiro(req);
+  if (!auth.ok) return authErrorResponse(auth, corsHeaders);
+
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
