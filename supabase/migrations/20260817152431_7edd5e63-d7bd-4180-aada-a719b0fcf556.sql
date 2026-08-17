@@ -1,0 +1,1 @@
+SELECT cron.schedule('test-cron-auth','* * * * *', $cron$ SELECT net.http_post(url:='https://gjovmocrotguhjrqroin.supabase.co/functions/v1/sincronizar-faturas-asaas', headers:=jsonb_build_object('Content-Type','application/json','Authorization','Bearer '||public.get_cron_secret()), body:='{}'::jsonb); $cron$);
