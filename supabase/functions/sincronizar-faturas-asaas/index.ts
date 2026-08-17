@@ -63,27 +63,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Auth: aceita JWT de usuário OU anon key para cron
-    const authHeader = req.headers.get("authorization");
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+    // Auth FAIL CLOSED: service_role, CRON_SECRET ou usuário admin/financeiro
+    const auth = await authorizeFinanceiro(req);
+    if (!auth.ok) return authErrorResponse(auth, corsHeaders);
 
-    if (authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      // Aceitar anon key (cron) ou validar JWT
-      if (token !== anonKey) {
-        const userClient = createClient(
-          Deno.env.get("SUPABASE_URL")!,
-          Deno.env.get("SUPABASE_ANON_KEY")!
-        );
-        const { error: authError } = await userClient.auth.getUser(token);
-        if (authError) {
-          return new Response(JSON.stringify({ error: "Não autorizado" }), {
-            status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-      }
-    }
+
 
     const supabase = getSupabaseAdmin();
     const today = new Date().toISOString().split("T")[0];

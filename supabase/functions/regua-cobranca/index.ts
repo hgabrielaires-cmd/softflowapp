@@ -118,32 +118,7 @@ async function sendWhatsApp(
   return res.ok;
 }
 
-// ── Auth helper: accepts service role, cron secret, anon key, or valid JWT ──
-async function authenticateRequest(req: Request): Promise<boolean> {
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader) return false;
-
-  const token = authHeader.replace("Bearer ", "");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  const cronSecret = Deno.env.get("CRON_SECRET") || "";
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
-
-  // System calls: service role, cron secret, or anon key (for pg_cron when vault is unavailable)
-  if (serviceRoleKey && token === serviceRoleKey) return true;
-  if (cronSecret && token === cronSecret) return true;
-  if (anonKey && token === anonKey) return true;
-
-  // User JWT validation
-  try {
-    const { data: { user } } = await createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      anonKey
-    ).auth.getUser(token);
-    if (user) return true;
-  } catch { /* invalid token */ }
-
-  return false;
-}
+// ── Auth helper: FAIL CLOSED — service_role, CRON_SECRET ou admin/financeiro ──
 
 // ── Main ──────────────────────────────────────────────────────────────────
 
