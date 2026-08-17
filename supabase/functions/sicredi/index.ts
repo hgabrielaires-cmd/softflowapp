@@ -470,7 +470,106 @@ async function gerarAutomatico() {
   return { total: (pendentes ?? []).length, resultados };
 }
 
+// ── Conciliação: liquidados por dia (rede de segurança do webhook) ──────
+
+function formatarDataBR(date: Date): string {
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+interface BoletoLiquidado {
+  nossoNumero: string;
+  seuNumero: string;
+  dataPagamento: string; // yyyy-mm-dd
+  valorLiquidado: number;
+  tipoLiquidacao: string;
+}
+
+async function consultarLiquidadosDia(dia: string): Promise<BoletoLiquidado[]> {
+  const token = await getValidToken();
+  const items: BoletoLiquidado[] = [];
+  let pagina = 0;
+  let hasNext = true;
+
+  while (hasNext) {
+    const url =
+      `${API_BASE}/boletos/liquidados/dia?codigoBeneficiario=${CODIGO_BENEFICIARIO}&dia=${dia}&pagina=${pagina}`;
+    const resp = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "x-api-key": X_API_KEY,
+        "Content-Type": "application/x-www-form-urlencoded",
+        cooperativa: COOPERATIVA,
+        posto: POSTO,
+      },
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      throw new Error(`Falha ao consultar liquidados do dia ${dia} (${resp.status}): ${text}`);
+    }
+
+    const json = await resp.json();
+    items.push(...(json.items ?? []));
+    hasNext = Boolean(json.hasNext);
+    pagina += 1;
+  }
+
+  return items;
+}
+
+async function sincronizarLiquidados() {
+  const hoje = new Date();
+  const ontem = new Date(hoje.getTime() - 24 * 60 * 60 * 1000);
+
+  const [itensHoje, itensOntem] = await Promise.all([
+    consultarLiquidadosDia(formatarDataBR(hoje)),
+    consultarLiquidadosDia(formatarDataBR(ontem)),
+  ]);
+
+  const todos = [...itensHoje, ...itensOntem];
+  const resultados: Array<{ nossoNumero: string; alterado: boolean }> = [];
+
+  for (const item of todos) {
+    const { data: fatura } = await supabase
+      .from("faturas")
+      .select("id, status")
+      .eq("boleto_nosso_numero", item.nossoNumero)
+      .maybeSingle<{ id: string; status: string }>();
+
+    if (!fatura || fatura.status === "Pago") {
+      resultados.push({ nossoNumero: item.nossoNumero, alterado: false });
+      continue;
+    }
+
+    const { error } = await supabase
+      .from("faturas")
+      .update({ status: "Pago", data_pagamento: item.dataPagamento })
+      .eq("id", fatura.id);
+
+    if (error) {
+      console.warn(`[sicredi] falha ao dar baixa via conciliação (${item.nossoNumero}):`, error.message);
+    } else {
+      await supabase
+        .from("sicredi_boletos")
+        .update({
+          status: "LIQUIDADO",
+          liquidado_em: new Date().toISOString(),
+          valor_liquidacao: item.valorLiquidado ?? null,
+        })
+        .eq("nosso_numero", item.nossoNumero);
+    }
+
+    resultados.push({ nossoNumero: item.nossoNumero, alterado: !error });
+  }
+
+  return { total: todos.length, alterados: resultados.filter((r) => r.alterado).length, resultados };
+}
+
 // ── HTTP handler ─────────────────────────────────────────────────────────
+
 
 Deno.serve(async (request: Request) => {
   // Fail-closed: sem o segredo interno, nada roda.
