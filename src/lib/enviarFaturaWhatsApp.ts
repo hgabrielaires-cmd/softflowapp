@@ -2,18 +2,15 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
+import { getCobrancaFatura, type FaturaCobrancaFields } from "@/lib/cobrancaFatura";
 
-interface FaturaParaEnvio {
+interface FaturaParaEnvio extends FaturaCobrancaFields {
   id: string;
   cliente_id: string;
   filial_id: string | null;
   valor_final: number;
   data_vencimento: string;
   forma_pagamento: string | null;
-  asaas_payment_id: string | null;
-  asaas_url: string | null;
-  asaas_barcode: string | null;
-  asaas_pix_qrcode: string | null;
 }
 
 /**
@@ -71,9 +68,12 @@ export async function enviarFaturaWhatsApp(fatura: FaturaParaEnvio): Promise<{ o
     const valorFmt = fatura.valor_final.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const dataFmt = format(parseISO(fatura.data_vencimento), "dd/MM/yyyy");
 
-    // 6. PIX — buscar se necessário
-    let pixCode = fatura.asaas_pix_qrcode;
-    if (!pixCode && fatura.asaas_payment_id && fatura.filial_id) {
+    // 6. Cobrança (Asaas ou Sicredi) via resolver genérico
+    const cobranca = getCobrancaFatura(fatura);
+    let pixCode = cobranca.pixCopiaECola;
+
+    // Asaas: se o PIX ainda não foi materializado, busca sob demanda
+    if (!pixCode && cobranca.gateway !== "sicredi" && fatura.asaas_payment_id && fatura.filial_id) {
       try {
         const { data: pixResult } = await supabase.functions.invoke("asaas", {
           body: {
@@ -101,7 +101,12 @@ export async function enviarFaturaWhatsApp(fatura: FaturaParaEnvio): Promise<{ o
     if (billingType === "PIX") {
       text = `Olá ${nomeContato}! 👋\n\nSua fatura está disponível:\n\nEmpresa: ${nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*\n\n💠 PIX Copia e Cola:\n${pixCode || "—"}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
     } else {
-      text = `Olá ${nomeContato}! 👋\n\nA fatura está disponível:\n\nEmpresa: ${nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*\n\n🔗 Acesse o boleto: ${fatura.asaas_url || "—"}\n\nLinha digitável:\n${fatura.asaas_barcode || "—"}${pixCode ? `\n\n💠 PIX Copia e Cola:\n${pixCode}` : ""}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
+      const link = cobranca.paymentUrl;
+      const linha = cobranca.linhaDigitavel || cobranca.codigoBarras;
+      const linkSection = link ? `\n\n🔗 Acesse o boleto: ${link}` : "";
+      const linhaSection = linha ? `\n\nLinha digitável:\n${linha}` : "";
+      const pixSection = pixCode ? `\n\n💠 PIX Copia e Cola:\n${pixCode}` : "";
+      text = `Olá ${nomeContato}! 👋\n\nA fatura está disponível:\n\nEmpresa: ${nomeFantasia}\n\n💰 Valor: *R$ ${valorFmt}*\n📅 Vencimento: *${dataFmt}*${linkSection}${linhaSection}${pixSection}\n\nQualquer dúvida, é só chamar! 😊\n\n_Softplus Tecnologia_`;
     }
 
     // 8. Formatar número

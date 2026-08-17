@@ -26,6 +26,14 @@ export interface Fatura {
   asaas_bank_slip_url: string | null;
   asaas_pix_qrcode: string | null;
   asaas_pix_image: string | null;
+  // Sicredi (boleto híbrido)
+  boleto_nosso_numero?: string | null;
+  boleto_linha_digitavel?: string | null;
+  boleto_codigo_barras?: string | null;
+  boleto_pdf_url?: string | null;
+  boleto_pix_qrcode?: string | null;
+  boleto_pix_txid?: string | null;
+
   created_at: string;
   updated_at: string;
   clientes?: { nome_fantasia: string } | null;

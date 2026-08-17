@@ -3,7 +3,9 @@
 // based on configurable rules per branch.
 
 import { authorizeFinanceiro, authErrorResponse } from "../_shared/auth-financeiro.ts";
+import { getCobrancaFatura } from "../_shared/cobranca.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -57,32 +59,35 @@ function buildMessage(
   valor: number,
   dataVenc: string,
   link: string | null,
-  billingType: string,
+  _billingType: string,
   barcode: string | null,
   pixCode: string | null,
 ): string {
   const valorFmt = fmtCurrency(valor);
   const dataFmt = fmtDate(dataVenc);
-  const linkText = link || "—";
+  const linkSection = link ? `\n🔗 ${link}` : "";
+  const barcodeSection = barcode ? `\n\nLinha digitável:\n${barcode}` : "";
   const pixSection = pixCode ? `\n\n💠 PIX Copia e Cola:\n${pixCode}` : "";
+  const pagamento = `${linkSection}${barcodeSection}${pixSection}`;
 
   switch (tipo) {
     case "lembrete_5d":
-      return `⏰ Olá ${nome}! Lembrete: sua fatura vence em 5 dias.\n\nEmpresa: ${nomeFantasia}\n💰 R$ ${valorFmt} — Vence em ${dataFmt}\n🔗 ${linkText}${pixSection}`;
+      return `⏰ Olá ${nome}! Lembrete: sua fatura vence em 5 dias.\n\nEmpresa: ${nomeFantasia}\n💰 R$ ${valorFmt} — Vence em ${dataFmt}${pagamento}`;
 
     case "vencimento_dia":
-      return `🔔 ${nome}, sua fatura vence *hoje*!\n\nEmpresa: ${nomeFantasia}\n💰 R$ ${valorFmt}\n🔗 ${linkText}${pixSection}`;
+      return `🔔 ${nome}, sua fatura vence *hoje*!\n\nEmpresa: ${nomeFantasia}\n💰 R$ ${valorFmt}${pagamento}`;
 
     case "atraso_3d":
-      return `🔴 ${nome}, sua fatura está em atraso há 3 dias.\nRegularize para evitar suspensão do sistema.\n\nEmpresa: ${nomeFantasia}\n💰 R$ ${valorFmt}\n🔗 ${linkText}${pixSection}`;
+      return `🔴 ${nome}, sua fatura está em atraso há 3 dias.\nRegularize para evitar suspensão do sistema.\n\nEmpresa: ${nomeFantasia}\n💰 R$ ${valorFmt}${pagamento}`;
 
     case "atraso_5d":
-      return `🔴 ${nome}, sua fatura está em atraso há 5 dias.\nO travamento do sistema ocorre de maneira automática e pode atrapalhar sua operação.\n\nEmpresa: ${nomeFantasia}\n💰 R$ ${valorFmt}\n🔗 ${linkText}${pixSection}`;
+      return `🔴 ${nome}, sua fatura está em atraso há 5 dias.\nO travamento do sistema ocorre de maneira automática e pode atrapalhar sua operação.\n\nEmpresa: ${nomeFantasia}\n💰 R$ ${valorFmt}${pagamento}`;
 
     default:
-      return `Olá ${nome}, sobre sua fatura de R$ ${valorFmt} com vencimento em ${dataFmt}.\n🔗 ${linkText}${pixSection}`;
+      return `Olá ${nome}, sobre sua fatura de R$ ${valorFmt} com vencimento em ${dataFmt}.${pagamento}`;
   }
 }
+
 
 async function sendWhatsApp(
   serverUrl: string,
@@ -186,9 +191,12 @@ Deno.serve(async (req) => {
       .from("faturas")
       .select(`
         id, cliente_id, filial_id, valor_final, data_vencimento, status,
-        forma_pagamento, asaas_url, asaas_barcode, asaas_pix_qrcode,
+        forma_pagamento,
+        asaas_payment_id, asaas_url, asaas_bank_slip_url, asaas_barcode, asaas_pix_qrcode, asaas_pix_image,
+        boleto_nosso_numero, boleto_linha_digitavel, boleto_codigo_barras, boleto_pdf_url, boleto_pix_qrcode,
         clientes(nome_fantasia, telefone)
       `)
+
       .in("status", ["Pendente", "Vencido"]);
 
     if (fatError) throw new Error(`Erro ao buscar faturas: ${fatError.message}`);
@@ -289,16 +297,19 @@ Deno.serve(async (req) => {
         await supabase.from("faturas").update({ status: "Vencido" }).eq("id", fatura.id);
       }
 
+      const cobranca = getCobrancaFatura(fatura as any);
+
       const text = buildMessage(
         tipoGatilho,
         nomeContato,
         nomeFantasia,
         fatura.valor_final,
         fatura.data_vencimento,
-        fatura.asaas_url,
+        cobranca.paymentUrl,
         fatura.forma_pagamento || "BOLETO",
-        fatura.asaas_barcode,
-        fatura.asaas_pix_qrcode,
+        cobranca.linhaDigitavel || cobranca.codigoBarras,
+        cobranca.pixCopiaECola,
+
       );
 
       const sent = await sendWhatsApp(
