@@ -60,6 +60,11 @@ function calcularTaxaBoleto(
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  // Auth FAIL CLOSED: service_role, CRON_SECRET ou usuário admin/financeiro
+  const auth = await authorizeFinanceiro(req);
+  if (!auth.ok) return authErrorResponse(auth, corsHeaders);
+
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
