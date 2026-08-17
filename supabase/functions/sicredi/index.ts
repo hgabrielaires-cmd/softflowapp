@@ -398,12 +398,20 @@ async function criarBoletoParaFatura(faturaId: string) {
 
   const boleto = await criarBoleto({
     seuNumero,
-
+    tipoCobranca: "HIBRIDO",
     valor: fatura.valor_final ?? fatura.valor,
     dataVencimento: fatura.data_vencimento,
     pagador: montarPagador(cliente),
     faturaId: fatura.id,
   });
+
+  if (!boleto?.qrCode) {
+    console.warn(
+      `[sicredi] boleto ${boleto?.nossoNumero} solicitado como HIBRIDO mas retornou sem qrCode — ` +
+      `provavelmente a modalidade Híbrida (Pix) não está habilitada no cadastro de Cobrança do beneficiário. ` +
+      `O boleto tradicional segue válido.`,
+    );
+  }
 
   await supabase
     .from("faturas")
@@ -412,6 +420,8 @@ async function criarBoletoParaFatura(faturaId: string) {
       boleto_nosso_numero: boleto.nossoNumero,
       boleto_linha_digitavel: boleto.linhaDigitavel,
       boleto_codigo_barras: boleto.codigoBarras,
+      boleto_pix_qrcode: boleto.qrCode ?? null,
+      boleto_pix_txid: boleto.txid ?? null,
     })
     .eq("id", fatura.id);
 
