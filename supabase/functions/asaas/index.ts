@@ -252,30 +252,12 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // Exige usuário com papel financeiro/admin (ou chamada de sistema service_role/CRON_SECRET)
+    const auth = await authorizeFinanceiro(req);
+    if (!auth.ok) return authErrorResponse(auth, corsHeaders);
 
     const supabaseAdmin = getSupabaseAdmin();
-    const token = authHeader.replace("Bearer ", "");
-    const {
-      data: { user },
-      error: authError,
-    } = await createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!
-    ).auth.getUser(token);
 
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Token inválido" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const { action, filialId, filial_id, ...params } = await req.json();
     const effectiveFilialId = filialId || filial_id;

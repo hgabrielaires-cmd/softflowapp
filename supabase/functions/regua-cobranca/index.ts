@@ -128,13 +128,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authenticated = await authenticateRequest(req);
-    if (!authenticated) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const auth = await authorizeFinanceiro(req);
+    if (!auth.ok) return authErrorResponse(auth, corsHeaders);
 
     console.log("Régua de cobrança: iniciando processamento...");
 
