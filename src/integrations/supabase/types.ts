@@ -5934,6 +5934,33 @@ export type Database = {
           },
         ]
       }
+      sicredi_tokens: {
+        Row: {
+          access_token: string
+          ambiente: string
+          expires_at: string
+          refresh_expires_at: string
+          refresh_token: string
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          ambiente: string
+          expires_at: string
+          refresh_expires_at: string
+          refresh_token: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          ambiente?: string
+          expires_at?: string
+          refresh_expires_at?: string
+          refresh_token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sicredi_webhook_eventos: {
         Row: {
           created_at: string
