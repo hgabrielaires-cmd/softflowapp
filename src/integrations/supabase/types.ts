@@ -2600,6 +2600,10 @@ export type Database = {
           asaas_pix_image: string | null
           asaas_pix_qrcode: string | null
           asaas_url: string | null
+          boleto_codigo_barras: string | null
+          boleto_linha_digitavel: string | null
+          boleto_nosso_numero: string | null
+          boleto_pdf_url: string | null
           cliente_id: string
           contrato_financeiro_id: string | null
           contrato_id: string | null
@@ -2609,6 +2613,8 @@ export type Database = {
           data_vencimento: string
           filial_id: string | null
           forma_pagamento: string | null
+          gateway: string | null
+          gateway_payment_id: string | null
           gerado_automaticamente: boolean
           id: string
           numero_fatura: string
@@ -2630,6 +2636,10 @@ export type Database = {
           asaas_pix_image?: string | null
           asaas_pix_qrcode?: string | null
           asaas_url?: string | null
+          boleto_codigo_barras?: string | null
+          boleto_linha_digitavel?: string | null
+          boleto_nosso_numero?: string | null
+          boleto_pdf_url?: string | null
           cliente_id: string
           contrato_financeiro_id?: string | null
           contrato_id?: string | null
@@ -2639,6 +2649,8 @@ export type Database = {
           data_vencimento: string
           filial_id?: string | null
           forma_pagamento?: string | null
+          gateway?: string | null
+          gateway_payment_id?: string | null
           gerado_automaticamente?: boolean
           id?: string
           numero_fatura?: string
@@ -2660,6 +2672,10 @@ export type Database = {
           asaas_pix_image?: string | null
           asaas_pix_qrcode?: string | null
           asaas_url?: string | null
+          boleto_codigo_barras?: string | null
+          boleto_linha_digitavel?: string | null
+          boleto_nosso_numero?: string | null
+          boleto_pdf_url?: string | null
           cliente_id?: string
           contrato_financeiro_id?: string | null
           contrato_id?: string | null
@@ -2669,6 +2685,8 @@ export type Database = {
           data_vencimento?: string
           filial_id?: string | null
           forma_pagamento?: string | null
+          gateway?: string | null
+          gateway_payment_id?: string | null
           gerado_automaticamente?: boolean
           id?: string
           numero_fatura?: string
@@ -5822,6 +5840,129 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      sicredi_boletos: {
+        Row: {
+          carteira: string | null
+          codigo_barras: string | null
+          codigo_beneficiario: string | null
+          cooperativa: string | null
+          created_at: string
+          data_vencimento: string | null
+          fatura_id: string | null
+          filial_id: string | null
+          id: string
+          linha_digitavel: string | null
+          liquidado_em: string | null
+          movimento_webhook: string | null
+          nosso_numero: string
+          payload_emissao: Json | null
+          pdf_url: string | null
+          posto: string | null
+          qrcode_pix: string | null
+          seu_numero: string | null
+          status: string
+          txid: string | null
+          updated_at: string
+          valor: number | null
+          valor_liquidacao: number | null
+        }
+        Insert: {
+          carteira?: string | null
+          codigo_barras?: string | null
+          codigo_beneficiario?: string | null
+          cooperativa?: string | null
+          created_at?: string
+          data_vencimento?: string | null
+          fatura_id?: string | null
+          filial_id?: string | null
+          id?: string
+          linha_digitavel?: string | null
+          liquidado_em?: string | null
+          movimento_webhook?: string | null
+          nosso_numero: string
+          payload_emissao?: Json | null
+          pdf_url?: string | null
+          posto?: string | null
+          qrcode_pix?: string | null
+          seu_numero?: string | null
+          status?: string
+          txid?: string | null
+          updated_at?: string
+          valor?: number | null
+          valor_liquidacao?: number | null
+        }
+        Update: {
+          carteira?: string | null
+          codigo_barras?: string | null
+          codigo_beneficiario?: string | null
+          cooperativa?: string | null
+          created_at?: string
+          data_vencimento?: string | null
+          fatura_id?: string | null
+          filial_id?: string | null
+          id?: string
+          linha_digitavel?: string | null
+          liquidado_em?: string | null
+          movimento_webhook?: string | null
+          nosso_numero?: string
+          payload_emissao?: Json | null
+          pdf_url?: string | null
+          posto?: string | null
+          qrcode_pix?: string | null
+          seu_numero?: string | null
+          status?: string
+          txid?: string | null
+          updated_at?: string
+          valor?: number | null
+          valor_liquidacao?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sicredi_boletos_fatura_id_fkey"
+            columns: ["fatura_id"]
+            isOneToOne: false
+            referencedRelation: "faturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sicredi_boletos_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sicredi_webhook_eventos: {
+        Row: {
+          created_at: string
+          id: string
+          id_evento_webhook: string | null
+          movimento: string | null
+          nosso_numero: string | null
+          payload: Json
+          recebido_em: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          id_evento_webhook?: string | null
+          movimento?: string | null
+          nosso_numero?: string | null
+          payload: Json
+          recebido_em?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          id_evento_webhook?: string | null
+          movimento?: string | null
+          nosso_numero?: string | null
+          payload?: Json
+          recebido_em?: string
+        }
+        Relationships: []
       }
       solicitacoes_desconto: {
         Row: {
