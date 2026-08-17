@@ -294,12 +294,37 @@ async function processContrato(
 
     if (faturaError) throw new Error(`Erro ao criar fatura: ${faturaError.message}`);
 
-    // 7. Asaas integration (non-blocking)
-    const asaasConfig = contrato.filial_id
+    // 7. Emissão de cobrança (não-bloqueante)
+    // Filial configurada para Sicredi usa boleto Sicredi; as demais seguem no Asaas.
+    const SICREDI_FILIAL_ID = Deno.env.get("SICREDI_FILIAL_ID");
+    const SICREDI_INTERNAL_TOKEN = Deno.env.get("SICREDI_INTERNAL_TOKEN");
+    const usaSicredi = !!SICREDI_FILIAL_ID && contrato.filial_id === SICREDI_FILIAL_ID;
+
+    if (usaSicredi) {
+      try {
+        if (!SICREDI_INTERNAL_TOKEN) throw new Error("SICREDI_INTERNAL_TOKEN ausente");
+        const resp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sicredi`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-internal-token": SICREDI_INTERNAL_TOKEN,
+          },
+          body: JSON.stringify({ action: "criar-boleto-fatura", faturaId: fatura.id }),
+        });
+        if (!resp.ok) {
+          console.warn(`Sicredi error for fatura ${fatura.id}: ${resp.status} ${await resp.text()}`);
+        }
+      } catch (sicrediErr) {
+        console.warn(`Sicredi error for fatura ${fatura.id}:`, sicrediErr);
+      }
+    }
+
+    const asaasConfig = !usaSicredi && contrato.filial_id
       ? await getAsaasConfig(supabase, contrato.filial_id)
       : null;
 
     if (asaasConfig) {
+
       try {
         const cliente = contrato.clientes;
         const customerId = await ensureAsaasCustomer(
