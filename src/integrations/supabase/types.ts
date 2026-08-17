@@ -2604,6 +2604,8 @@ export type Database = {
           boleto_linha_digitavel: string | null
           boleto_nosso_numero: string | null
           boleto_pdf_url: string | null
+          boleto_pix_qrcode: string | null
+          boleto_pix_txid: string | null
           cliente_id: string
           contrato_financeiro_id: string | null
           contrato_id: string | null
@@ -2640,6 +2642,8 @@ export type Database = {
           boleto_linha_digitavel?: string | null
           boleto_nosso_numero?: string | null
           boleto_pdf_url?: string | null
+          boleto_pix_qrcode?: string | null
+          boleto_pix_txid?: string | null
           cliente_id: string
           contrato_financeiro_id?: string | null
           contrato_id?: string | null
@@ -2676,6 +2680,8 @@ export type Database = {
           boleto_linha_digitavel?: string | null
           boleto_nosso_numero?: string | null
           boleto_pdf_url?: string | null
+          boleto_pix_qrcode?: string | null
+          boleto_pix_txid?: string | null
           cliente_id?: string
           contrato_financeiro_id?: string | null
           contrato_id?: string | null
