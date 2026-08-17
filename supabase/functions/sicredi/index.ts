@@ -392,8 +392,13 @@ async function criarBoletoParaFatura(faturaId: string) {
   if (clienteError) throw new Error(`Falha ao buscar cliente da fatura ${faturaId}: ${clienteError.message}`);
   if (!cliente) throw new Error(`Cliente da fatura ${faturaId} não encontrado`);
 
+  // Sicredi limita "seu número" a 10 caracteres: usa apenas os dígitos do número da fatura.
+  const seuNumero = (String(fatura.numero_fatura).replace(/\D/g, "") || String(fatura.id).replace(/\D/g, ""))
+    .slice(-10);
+
   const boleto = await criarBoleto({
-    seuNumero: fatura.numero_fatura,
+    seuNumero,
+
     valor: fatura.valor_final ?? fatura.valor,
     dataVencimento: fatura.data_vencimento,
     pagador: montarPagador(cliente),
