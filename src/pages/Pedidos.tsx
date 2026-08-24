@@ -62,7 +62,8 @@ export default function Pedidos() {
   const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais, loading: loadingFiliais } = useUserFiliais();
   const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("pedidos", roles);
   const isFinanceiro = roles.includes("financeiro");
-  const isVendedor = roles.includes("vendedor");
+  // Perfil "vendedor" OU marcação "É Vendedor?" no cadastro do usuário
+  const isVendedor = roles.includes("vendedor") || (profile as any)?.is_vendedor === true;
   const isTecnico = roles.includes("tecnico") && !isAdmin && !isFinanceiro && !isVendedor;
   const canSeeAllBranches = filiaisDoUsuario.length > 1;
 
