@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppRole } from "@/lib/supabase-types";
+import { useAuth } from "@/context/AuthContext";
+import { VENDEDOR_CRUD_PERMS } from "@/lib/vendedor-permissions";
 
 /**
  * Fetches CRUD permissions (crud.<module>.incluir/editar/excluir) for the user's roles.
  * Admin always has full access.
+ * Users flagged as "É Vendedor?" can create/edit pedidos e clientes.
  */
 export function useCrudPermissions(module: string, roles: AppRole[]) {
+  const { profile } = useAuth();
+  const isVendedor = (profile as any)?.is_vendedor === true;
   const isAdmin = roles.includes("admin");
   const [canIncluir, setCanIncluir] = useState(isAdmin);
   const [canEditar, setCanEditar] = useState(isAdmin);
@@ -22,11 +27,17 @@ export function useCrudPermissions(module: string, roles: AppRole[]) {
       return;
     }
 
-    if (roles.length === 0) {
-      setCanIncluir(false);
-      setCanEditar(false);
-      setCanExcluir(false);
+    const base = isVendedor ? new Set<string>(VENDEDOR_CRUD_PERMS) : new Set<string>();
+
+    function apply(perms: Set<string>) {
+      setCanIncluir(perms.has(`crud.${module}.incluir`));
+      setCanEditar(perms.has(`crud.${module}.editar`));
+      setCanExcluir(perms.has(`crud.${module}.excluir`));
       setLoading(false);
+    }
+
+    if (roles.length === 0) {
+      apply(base);
       return;
     }
 
@@ -42,15 +53,13 @@ export function useCrudPermissions(module: string, roles: AppRole[]) {
         ])
         .eq("ativo", true);
 
-      const perms = new Set((data || []).map((p) => p.permissao));
-      setCanIncluir(perms.has(`crud.${module}.incluir`));
-      setCanEditar(perms.has(`crud.${module}.editar`));
-      setCanExcluir(perms.has(`crud.${module}.excluir`));
-      setLoading(false);
+      const perms = new Set<string>(base);
+      (data || []).forEach((p) => perms.add(p.permissao));
+      apply(perms);
     }
 
     fetch();
-  }, [module, roles.join(","), isAdmin]);
+  }, [module, roles.join(","), isAdmin, isVendedor]);
 
   return { canIncluir, canEditar, canExcluir, loading };
 }
