@@ -205,7 +205,7 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
   useEffect(() => {
     setAtivo(initialConfig?.ativo ?? false);
     setNovoId("");
-    setNovoNome("");
+    setNovoUserId("");
     if (open) carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialConfig, open]);
@@ -223,44 +223,43 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
     }
   }
 
+  async function vincularUsuario(idTg: string, userId: string) {
+    const usuario = usuarios.find((u) => u.user_id === userId);
+    if (!usuario) return false;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ telegram_id: Number(idTg) })
+      .eq("user_id", userId);
+    if (error) {
+      toast.error("Erro ao vincular usuário: " + error.message);
+      return false;
+    }
+    setPessoas((prev) => {
+      const semAntigo = prev.filter((p) => p.id !== idTg);
+      return [...semAntigo, { id: idTg, nome: usuario.full_name, user_id: userId }];
+    });
+    toast.success("Usuário vinculado — configure os bots abaixo");
+    return true;
+  }
+
   async function addPessoa() {
     const idTg = novoId.trim();
-    const nome = novoNome.trim();
     if (!idTg) return;
-    if (pessoas.some((x) => x.id === idTg)) {
+    if (!novoUserId) {
+      toast.error("Selecione o usuário do sistema");
+      return;
+    }
+    if (pessoas.some((x) => x.id === idTg && x.user_id)) {
       toast.error("Este ID já está na lista");
       return;
     }
-
-    // Tenta vincular a um profile existente pelo nome
-    if (nome) {
-      const { data: matches } = await supabase
-        .from("profiles")
-        .select("user_id, full_name")
-        .ilike("full_name", `%${nome}%`)
-        .limit(2);
-      if (matches && matches.length === 1) {
-        const { error } = await supabase
-          .from("profiles")
-          .update({ telegram_id: Number(idTg) })
-          .eq("user_id", (matches[0] as any).user_id);
-        if (error) {
-          toast.error("Erro ao vincular usuário: " + error.message);
-          return;
-        }
-        setPessoas([...pessoas, { id: idTg, nome: (matches[0] as any).full_name, user_id: (matches[0] as any).user_id }]);
-        setNovoId("");
-        setNovoNome("");
-        toast.success("Usuário vinculado ao Telegram");
-        return;
-      }
+    const ok = await vincularUsuario(idTg, novoUserId);
+    if (ok) {
+      setNovoId("");
+      setNovoUserId("");
     }
-
-    // Sem profile correspondente: registro avulso
-    setPessoas([...pessoas, { id: idTg, nome, user_id: null }]);
-    setNovoId("");
-    setNovoNome("");
   }
+
 
   async function removerPessoa(pessoa: Pessoa) {
     if (pessoa.user_id) {
