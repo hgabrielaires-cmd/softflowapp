@@ -1,0 +1,2 @@
+ALTER TABLE public.modulos ADD COLUMN descricao TEXT;
+COMMENT ON COLUMN public.modulos.descricao IS 'Bullets separados por vírgula descrevendo o que o módulo faz — mesmo padrão de planos.descricao, usado na proposta em PDF e na mensagem de WhatsApp';

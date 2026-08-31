@@ -15,6 +15,13 @@
       "when": 1788211350691,
       "tag": "0001_telegram_bots_acessos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788213541335,
+      "tag": "0002_add_descricao_modulos",
+      "breakpoints": true
     }
   ]
 }
