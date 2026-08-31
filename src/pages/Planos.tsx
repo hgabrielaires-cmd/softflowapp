@@ -462,6 +462,7 @@ function PlanosTab() {
 
 interface ModuloForm {
   nome: string;
+  descricao: string;
   ativo: boolean;
   valor_implantacao_modulo: string;
   valor_mensalidade_modulo: string;
