@@ -68,97 +68,215 @@ interface DialogProps {
   onSaved: () => void;
 }
 
-type TelegramId = { id: string; nome: string };
+type TelegramBot = { id: string; nome: string; slug: string };
+type Pessoa = { id: string; nome: string; user_id: string | null };
 
-export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSaved }: DialogProps) {
-  const [ativo, setAtivo] = useState(false);
-  const [ids, setIds] = useState<TelegramId[]>([]);
-  const [novoId, setNovoId] = useState("");
-  const [novoNome, setNovoNome] = useState("");
-  const [saving, setSaving] = useState(false);
+function nomeFuncao(slug: string) {
+  return slug === "financeiro" ? "telegram-webhook" : `telegram-webhook-${slug}`;
+}
+
+function nomeSecret(slug: string) {
+  return slug === "financeiro" ? "TELEGRAM_BOT_TOKEN" : `TELEGRAM_${slug.toUpperCase()}_BOT_TOKEN`;
+}
+
+async function chamarAcaoBot(slug: string, action: "test" | "setup") {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${nomeFuncao(slug)}?action=${action}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+    },
+  );
+  return await res.json().catch(() => ({}));
+}
+
+function BotAcoesCard({ bot }: { bot: TelegramBot }) {
   const [testing, setTesting] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [result, setResult] = useState<TestResult>(null);
 
-  useEffect(() => {
-    setAtivo(initialConfig?.ativo ?? false);
-    const lista = initialConfig?.config?.authorized_list;
-    if (Array.isArray(lista) && lista.length > 0) {
-      setIds(
-        lista
-          .map((item: any) => ({ id: String(item?.id ?? "").trim(), nome: String(item?.nome ?? "").trim() }))
-          .filter((item) => item.id),
-      );
-    } else {
-      const raw = initialConfig?.config?.authorized_ids;
-      const arr = Array.isArray(raw) ? raw.map((v: unknown) => String(v)) : String(raw ?? "").split(",");
-      setIds(arr.map((s) => s.trim()).filter(Boolean).map((id) => ({ id, nome: "" })));
-    }
-    setNovoId("");
-    setNovoNome("");
-    setResult(null);
-  }, [initialConfig, open]);
-
-  function addId() {
-    const v = novoId.trim();
-    if (!v) return;
-    if (ids.some((x) => x.id === v)) {
-      toast.error("Este ID já está na lista");
-      return;
-    }
-    setIds([...ids, { id: v, nome: novoNome.trim() }]);
-    setNovoId("");
-    setNovoNome("");
-  }
-
-
-  async function handleTest() {
-    setTesting(true);
+  async function run(action: "test" | "setup") {
+    action === "test" ? setTesting(true) : setRegistering(true);
     setResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke("integracoes-teste", {
-        body: { action: "test_telegram" },
-      });
-      if (error) throw error;
-      setResult(
-        data?.ok
-          ? { ok: true, message: `Bot: @${data.username} — Online!` }
-          : { ok: false, message: `Erro: ${data?.error ?? "token inválido"}` },
-      );
+      const data: any = await chamarAcaoBot(bot.slug, action);
+      const okResp = data?.ok === true || data?.result?.username;
+      if (action === "test") {
+        setResult(
+          okResp
+            ? { ok: true, message: `Bot: @${data?.result?.username ?? data?.username ?? bot.slug} — Online!` }
+            : { ok: false, message: `Erro: ${data?.description ?? data?.error ?? "token inválido"}` },
+        );
+      } else {
+        setResult(
+          okResp
+            ? { ok: true, message: "Webhook registrado!" }
+            : { ok: false, message: `Erro: ${data?.description ?? data?.error ?? "falha ao registrar"}` },
+        );
+      }
     } catch (err: any) {
       setResult({ ok: false, message: `Erro: ${err.message}` });
     } finally {
       setTesting(false);
+      setRegistering(false);
     }
   }
 
-  async function handleWebhook() {
-    setRegistering(true);
-    setResult(null);
+  return (
+    <div className="space-y-2 rounded-lg border border-border p-3">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium">{bot.nome}</span>
+        <code className="text-[10px] text-muted-foreground">{nomeSecret(bot.slug)}</code>
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" className="flex-1" onClick={() => run("test")} disabled={testing}>
+          {testing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2" />}
+          Testar
+        </Button>
+        <Button variant="outline" size="sm" className="flex-1" onClick={() => run("setup")} disabled={registering}>
+          {registering ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Webhook className="h-4 w-4 mr-2" />}
+          Webhook
+        </Button>
+      </div>
+      <ResultBanner result={result} />
+    </div>
+  );
+}
+
+export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSaved }: DialogProps) {
+  const [ativo, setAtivo] = useState(false);
+  const [bots, setBots] = useState<TelegramBot[]>([]);
+  const [pessoas, setPessoas] = useState<Pessoa[]>([]);
+  const [acessos, setAcessos] = useState<Record<string, boolean>>({}); // `${bot_id}:${user_id}`
+  const [novoId, setNovoId] = useState("");
+  const [novoNome, setNovoNome] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  async function carregar() {
+    setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("integracoes-teste", {
-        body: { action: "setup_telegram_webhook" },
-      });
-      if (error) throw error;
-      setResult(
-        data?.ok
-          ? { ok: true, message: "Webhook registrado!" }
-          : { ok: false, message: `Erro: ${data?.error ?? "falha ao registrar"}` },
-      );
-    } catch (err: any) {
-      setResult({ ok: false, message: `Erro: ${err.message}` });
+      const [{ data: botsData }, { data: profilesData }, { data: acessosData }] = await Promise.all([
+        supabase.from("telegram_bots").select("id, nome, slug").eq("ativo", true).order("nome"),
+        supabase
+          .from("profiles")
+          .select("user_id, full_name, telegram_id")
+          .not("telegram_id", "is", null),
+        supabase.from("telegram_bot_acessos").select("bot_id, user_id, ativo"),
+      ]);
+
+      setBots((botsData ?? []) as TelegramBot[]);
+
+      const doBanco: Pessoa[] = (profilesData ?? []).map((p: any) => ({
+        id: String(p.telegram_id),
+        nome: p.full_name ?? "",
+        user_id: p.user_id,
+      }));
+
+      // Registros avulsos (sem profile) mantidos no config da integração
+      const lista = initialConfig?.config?.authorized_list;
+      const avulsos: Pessoa[] = (Array.isArray(lista) ? lista : [])
+        .map((item: any) => ({ id: String(item?.id ?? "").trim(), nome: String(item?.nome ?? "").trim(), user_id: null }))
+        .filter((item) => item.id && !doBanco.some((d) => d.id === item.id));
+
+      setPessoas([...doBanco, ...avulsos]);
+
+      const mapa: Record<string, boolean> = {};
+      for (const a of acessosData ?? []) mapa[`${(a as any).bot_id}:${(a as any).user_id}`] = (a as any).ativo;
+      setAcessos(mapa);
     } finally {
-      setRegistering(false);
+      setLoading(false);
     }
+  }
+
+  useEffect(() => {
+    setAtivo(initialConfig?.ativo ?? false);
+    setNovoId("");
+    setNovoNome("");
+    if (open) carregar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialConfig, open]);
+
+  async function toggleAcesso(bot: TelegramBot, pessoa: Pessoa, valor: boolean) {
+    if (!pessoa.user_id) return;
+    const chave = `${bot.id}:${pessoa.user_id}`;
+    setAcessos((prev) => ({ ...prev, [chave]: valor }));
+    const { error } = await supabase
+      .from("telegram_bot_acessos")
+      .upsert({ bot_id: bot.id, user_id: pessoa.user_id, ativo: valor }, { onConflict: "bot_id,user_id" });
+    if (error) {
+      toast.error("Erro ao salvar acesso: " + error.message);
+      setAcessos((prev) => ({ ...prev, [chave]: !valor }));
+    }
+  }
+
+  async function addPessoa() {
+    const idTg = novoId.trim();
+    const nome = novoNome.trim();
+    if (!idTg) return;
+    if (pessoas.some((x) => x.id === idTg)) {
+      toast.error("Este ID já está na lista");
+      return;
+    }
+
+    // Tenta vincular a um profile existente pelo nome
+    if (nome) {
+      const { data: matches } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .ilike("full_name", `%${nome}%`)
+        .limit(2);
+      if (matches && matches.length === 1) {
+        const { error } = await supabase
+          .from("profiles")
+          .update({ telegram_id: Number(idTg) })
+          .eq("user_id", (matches[0] as any).user_id);
+        if (error) {
+          toast.error("Erro ao vincular usuário: " + error.message);
+          return;
+        }
+        setPessoas([...pessoas, { id: idTg, nome: (matches[0] as any).full_name, user_id: (matches[0] as any).user_id }]);
+        setNovoId("");
+        setNovoNome("");
+        toast.success("Usuário vinculado ao Telegram");
+        return;
+      }
+    }
+
+    // Sem profile correspondente: registro avulso
+    setPessoas([...pessoas, { id: idTg, nome, user_id: null }]);
+    setNovoId("");
+    setNovoNome("");
+  }
+
+  async function removerPessoa(pessoa: Pessoa) {
+    if (pessoa.user_id) {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ telegram_id: null })
+        .eq("user_id", pessoa.user_id);
+      if (error) {
+        toast.error("Erro ao remover: " + error.message);
+        return;
+      }
+      await supabase.from("telegram_bot_acessos").delete().eq("user_id", pessoa.user_id);
+    }
+    setPessoas(pessoas.filter((x) => x.id !== pessoa.id));
   }
 
   async function handleSave() {
     setSaving(true);
     try {
+      const avulsos = pessoas.filter((p) => !p.user_id).map((p) => ({ id: p.id, nome: p.nome }));
       await saveIntegracao("telegram", ativo, {
         ...(initialConfig?.config ?? {}),
-        authorized_ids: ids.map((x) => x.id).join(","),
-        authorized_list: ids,
+        authorized_ids: pessoas.map((x) => x.id).join(","),
+        authorized_list: avulsos,
       });
       toast.success("Configuração do Telegram salva!");
       onSaved();
@@ -172,13 +290,13 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-[480px] overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-[560px] overflow-y-auto">
         <SheetHeader>
           <div className="flex items-center gap-3">
             <img src={logoTelegram} alt="Telegram" className="h-10 w-10" />
             <div className="text-left">
               <SheetTitle>Telegram</SheetTitle>
-              <SheetDescription>Recebimento de comprovantes e lançamento de despesas</SheetDescription>
+              <SheetDescription>Bots, pessoas autorizadas e acessos</SheetDescription>
             </div>
           </div>
         </SheetHeader>
@@ -188,14 +306,14 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
             <div>
               <Label className="text-sm font-medium">Integração ativa</Label>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {ativo ? "O bot do Telegram está habilitado" : "O bot do Telegram está desabilitado"}
+                {ativo ? "Os bots do Telegram estão habilitados" : "Os bots do Telegram estão desabilitados"}
               </p>
             </div>
             <Switch checked={ativo} onCheckedChange={setAtivo} />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium">IDs Autorizados</Label>
+            <Label className="text-sm font-medium">Pessoas autorizadas</Label>
             <div className="flex gap-2">
               <Input
                 value={novoId}
@@ -203,7 +321,7 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    addId();
+                    addPessoa();
                   }
                 }}
                 placeholder="ID (ex.: 738302128)"
@@ -215,64 +333,84 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    addId();
+                    addPessoa();
                   }
                 }}
                 placeholder="Nome"
                 className="flex-1"
               />
-              <Button type="button" variant="outline" size="icon" onClick={addId} aria-label="Adicionar ID">
+              <Button type="button" variant="outline" size="icon" onClick={addPessoa} aria-label="Adicionar pessoa">
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-            {ids.length > 0 ? (
+
+            {loading ? (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
+              </div>
+            ) : pessoas.length > 0 ? (
               <div className="space-y-1.5">
-                {ids.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-mono">{item.id}</span>
-                      {item.nome && <span className="text-xs text-muted-foreground">{item.nome}</span>}
+                {pessoas.map((pessoa) => (
+                  <div key={pessoa.id} className="rounded-lg border border-border px-3 py-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="font-mono">{pessoa.id}</span>
+                        {pessoa.nome && <span className="text-xs text-muted-foreground">{pessoa.nome}</span>}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => removerPessoa(pessoa)}
+                        aria-label={`Remover ${pessoa.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive"
-                      onClick={() => setIds(ids.filter((x) => x.id !== item.id))}
-                      aria-label={`Remover ${item.id}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-2">
+                      {pessoa.user_id ? (
+                        bots.map((bot) => (
+                          <div key={bot.id} className="flex items-center gap-2">
+                            <Switch
+                              checked={!!acessos[`${bot.id}:${pessoa.user_id}`]}
+                              onCheckedChange={(v) => toggleAcesso(bot, pessoa, v)}
+                            />
+                            <span className="text-xs text-muted-foreground">{bot.nome}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          Sem usuário vinculado — cadastre o ID no perfil para liberar os bots
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">Nenhum ID autorizado cadastrado</p>
+              <p className="text-xs text-muted-foreground">Nenhuma pessoa autorizada cadastrada</p>
             )}
 
-            <p className="text-xs text-muted-foreground">Seu ID do Telegram (@userinfobot)</p>
+            <p className="text-xs text-muted-foreground">O ID do Telegram é obtido no @userinfobot</p>
           </div>
-
 
           <InfoCard>
-            Token do Bot está configurado como secret no backend (<code>TELEGRAM_BOT_TOKEN</code>).
+            Tokens configurados como secrets no backend:
+            <br />
+            {bots.map((bot) => (
+              <span key={bot.id} className="block">
+                {bot.nome}: <code>{nomeSecret(bot.slug)}</code>
+              </span>
+            ))}
           </InfoCard>
 
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={handleTest} disabled={testing}>
-              {testing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2" />}
-              Testar Conexão
-            </Button>
-            <Button variant="outline" className="flex-1" onClick={handleWebhook} disabled={registering}>
-              {registering ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Webhook className="h-4 w-4 mr-2" />}
-              Registrar Webhook
-            </Button>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Bots</Label>
+            {bots.map((bot) => (
+              <BotAcoesCard key={bot.id} bot={bot} />
+            ))}
           </div>
-
-          <ResultBanner result={result} />
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
