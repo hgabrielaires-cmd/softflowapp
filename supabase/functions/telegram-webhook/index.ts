@@ -502,7 +502,7 @@ Deno.serve(async (req) => {
     const text = String(message.text ?? "").trim();
     const firstName = callbackQuery?.from?.first_name ?? message.from?.first_name ?? "";
 
-    // ── Config da integração + IDs autorizados ──
+    // ── Config da integração ──
     const { data: cfgTelegram } = await supabase
       .from("integracoes_config")
       .select("ativo, config")
@@ -511,18 +511,34 @@ Deno.serve(async (req) => {
 
     if (cfgTelegram?.ativo === false) return ok({ ok: true, ignored: true });
 
-    const idsRaw = String(
-      (cfgTelegram?.config as Record<string, unknown> | null)?.authorized_ids ??
-        Deno.env.get("TELEGRAM_AUTHORIZED_IDS") ??
-        "",
-    );
-    const authorizedIds = idsRaw.split(",").map((s) => s.trim()).filter(Boolean);
+    // ── Autorização: telegram_bot_acessos + telegram_bots (slug = 'financeiro') ──
+    const { data: acesso } = await supabase
+      .from("profiles")
+      .select("user_id, active, telegram_bot_acessos!inner(ativo, telegram_bots!inner(slug, ativo))")
+      .eq("telegram_id", userId)
+      .eq("active", true)
+      .eq("telegram_bot_acessos.ativo", true)
+      .eq("telegram_bot_acessos.telegram_bots.slug", "financeiro")
+      .eq("telegram_bot_acessos.telegram_bots.ativo", true)
+      .maybeSingle();
 
-    if (authorizedIds.length > 0 && !authorizedIds.includes(String(userId))) {
+    let autorizado = !!acesso;
+
+    if (!acesso) {
+      // Fallback de transição: TELEGRAM_AUTHORIZED_IDS do .env
+      const fallbackIds = String(Deno.env.get("TELEGRAM_AUTHORIZED_IDS") ?? "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      autorizado = fallbackIds.length > 0 && fallbackIds.includes(String(userId));
+    }
+
+    if (!autorizado) {
       if (callbackQuery) await answerCallback(token, callbackQuery.id, "⛔ Acesso não autorizado.");
       else await sendMessage(token, chatId, "⛔ Acesso não autorizado.");
       return ok();
     }
+
 
     // ── Clique em botão inline ──
     if (callbackQuery) {
