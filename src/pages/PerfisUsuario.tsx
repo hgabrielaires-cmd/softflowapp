@@ -252,7 +252,7 @@ const MENU_SECTIONS: MenuSection[] = [
     items: MENU_TREE.filter(m =>
       ["menu.filiais", "menu.usuarios", "menu.perfis_usuario", "menu.modelos_contrato",
        "menu.notificacoes", "menu.integracoes", "menu.setores", "menu.jornadas", "menu.mesas_atendimento",
-       "menu.etapas_painel", "menu.segmentos", "menu.financeiro_parametros"].includes(m.key)
+       "menu.etapas_painel", "menu.segmentos", "menu.campanhas", "menu.canais", "menu.financeiro_parametros"].includes(m.key)
     ),
   },
   {
