@@ -10,7 +10,6 @@ import {
   type Periodo,
 } from "./relatorios.ts";
 import { relatorioVendas } from "./vendas.ts";
-import { buscarVendedor, handleVendedorMessage, handleVendedorCallback } from "./vendedor.ts";
 
 const TELEGRAM_API = "https://api.telegram.org/bot";
 const PLANOS_POR_PAGINA = 8;
@@ -502,17 +501,6 @@ Deno.serve(async (req) => {
     const userId = (callbackQuery?.from?.id ?? message.from?.id) as number;
     const text = String(message.text ?? "").trim();
     const firstName = callbackQuery?.from?.first_name ?? message.from?.first_name ?? "";
-
-    // ── Modo vendedor: se o telegram_id bate com um vendedor cadastrado, roteia pro fluxo de propostas ──
-    const vendedor = await buscarVendedor(supabase, userId);
-    if (vendedor) {
-      if (callbackQuery) {
-        await handleVendedorCallback(supabase, token, chatId, vendedor, callbackQuery);
-      } else {
-        await handleVendedorMessage(supabase, token, anthropicKey, chatId, vendedor, text);
-      }
-      return ok();
-    }
 
     // ── Config da integração + IDs autorizados ──
     const { data: cfgTelegram } = await supabase
