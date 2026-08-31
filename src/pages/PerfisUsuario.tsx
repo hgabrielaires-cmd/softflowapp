@@ -165,6 +165,16 @@ const MENU_TREE: MenuNode[] = [
     children: crudChildren("segmentos"),
   },
   {
+    key: "menu.campanhas", label: "Campanhas", description: "Gerenciar campanhas do CRM",
+    icon: <UserCheck className="h-4 w-4" />,
+    children: crudChildren("campanhas"),
+  },
+  {
+    key: "menu.canais", label: "Canais", description: "Gerenciar canais do CRM",
+    icon: <UserCheck className="h-4 w-4" />,
+    children: crudChildren("canais"),
+  },
+  {
     key: "menu.integracoes", label: "Integrações", description: "Configurar integrações externas",
     icon: <Plug className="h-4 w-4" />,
   },
