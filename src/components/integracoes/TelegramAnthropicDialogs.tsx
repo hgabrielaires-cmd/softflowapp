@@ -152,9 +152,10 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
   const [ativo, setAtivo] = useState(false);
   const [bots, setBots] = useState<TelegramBot[]>([]);
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
+  const [usuarios, setUsuarios] = useState<{ user_id: string; full_name: string }[]>([]);
   const [acessos, setAcessos] = useState<Record<string, boolean>>({}); // `${bot_id}:${user_id}`
   const [novoId, setNovoId] = useState("");
-  const [novoNome, setNovoNome] = useState("");
+  const [novoUserId, setNovoUserId] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -166,17 +167,23 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
         supabase
           .from("profiles")
           .select("user_id, full_name, telegram_id")
-          .not("telegram_id", "is", null),
+          .eq("active", true)
+          .order("full_name"),
         supabase.from("telegram_bot_acessos").select("bot_id, user_id, ativo"),
       ]);
 
       setBots((botsData ?? []) as TelegramBot[]);
+      setUsuarios(
+        (profilesData ?? []).map((p: any) => ({ user_id: p.user_id, full_name: p.full_name ?? "(sem nome)" })),
+      );
 
-      const doBanco: Pessoa[] = (profilesData ?? []).map((p: any) => ({
-        id: String(p.telegram_id),
-        nome: p.full_name ?? "",
-        user_id: p.user_id,
-      }));
+      const doBanco: Pessoa[] = (profilesData ?? [])
+        .filter((p: any) => p.telegram_id != null)
+        .map((p: any) => ({
+          id: String(p.telegram_id),
+          nome: p.full_name ?? "",
+          user_id: p.user_id,
+        }));
 
       // Registros avulsos (sem profile) mantidos no config da integração
       const lista = initialConfig?.config?.authorized_list;
@@ -194,10 +201,11 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
     }
   }
 
+
   useEffect(() => {
     setAtivo(initialConfig?.ativo ?? false);
     setNovoId("");
-    setNovoNome("");
+    setNovoUserId("");
     if (open) carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialConfig, open]);
@@ -215,44 +223,43 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
     }
   }
 
+  async function vincularUsuario(idTg: string, userId: string) {
+    const usuario = usuarios.find((u) => u.user_id === userId);
+    if (!usuario) return false;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ telegram_id: Number(idTg) })
+      .eq("user_id", userId);
+    if (error) {
+      toast.error("Erro ao vincular usuário: " + error.message);
+      return false;
+    }
+    setPessoas((prev) => {
+      const semAntigo = prev.filter((p) => p.id !== idTg);
+      return [...semAntigo, { id: idTg, nome: usuario.full_name, user_id: userId }];
+    });
+    toast.success("Usuário vinculado — configure os bots abaixo");
+    return true;
+  }
+
   async function addPessoa() {
     const idTg = novoId.trim();
-    const nome = novoNome.trim();
     if (!idTg) return;
-    if (pessoas.some((x) => x.id === idTg)) {
+    if (!novoUserId) {
+      toast.error("Selecione o usuário do sistema");
+      return;
+    }
+    if (pessoas.some((x) => x.id === idTg && x.user_id)) {
       toast.error("Este ID já está na lista");
       return;
     }
-
-    // Tenta vincular a um profile existente pelo nome
-    if (nome) {
-      const { data: matches } = await supabase
-        .from("profiles")
-        .select("user_id, full_name")
-        .ilike("full_name", `%${nome}%`)
-        .limit(2);
-      if (matches && matches.length === 1) {
-        const { error } = await supabase
-          .from("profiles")
-          .update({ telegram_id: Number(idTg) })
-          .eq("user_id", (matches[0] as any).user_id);
-        if (error) {
-          toast.error("Erro ao vincular usuário: " + error.message);
-          return;
-        }
-        setPessoas([...pessoas, { id: idTg, nome: (matches[0] as any).full_name, user_id: (matches[0] as any).user_id }]);
-        setNovoId("");
-        setNovoNome("");
-        toast.success("Usuário vinculado ao Telegram");
-        return;
-      }
+    const ok = await vincularUsuario(idTg, novoUserId);
+    if (ok) {
+      setNovoId("");
+      setNovoUserId("");
     }
-
-    // Sem profile correspondente: registro avulso
-    setPessoas([...pessoas, { id: idTg, nome, user_id: null }]);
-    setNovoId("");
-    setNovoNome("");
   }
+
 
   async function removerPessoa(pessoa: Pessoa) {
     if (pessoa.user_id) {
@@ -327,18 +334,19 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
                 placeholder="ID (ex.: 738302128)"
                 className="flex-1"
               />
-              <Input
-                value={novoNome}
-                onChange={(e) => setNovoNome(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addPessoa();
-                  }
-                }}
-                placeholder="Nome"
-                className="flex-1"
-              />
+              <Select value={novoUserId} onValueChange={setNovoUserId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Usuário do sistema" />
+                </SelectTrigger>
+                <SelectContent>
+                  {usuarios.map((u) => (
+                    <SelectItem key={u.user_id} value={u.user_id}>
+                      {u.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Button type="button" variant="outline" size="icon" onClick={addPessoa} aria-label="Adicionar pessoa">
                 <Plus className="h-4 w-4" />
               </Button>
@@ -380,10 +388,25 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
                           </div>
                         ))
                       ) : (
-                        <span className="text-xs text-muted-foreground">
-                          Sem usuário vinculado — cadastre o ID no perfil para liberar os bots
-                        </span>
+                        <div className="flex w-full flex-col gap-1">
+                          <span className="text-xs text-muted-foreground">
+                            Sem usuário vinculado — selecione o usuário para liberar os bots
+                          </span>
+                          <Select value="" onValueChange={(v) => vincularUsuario(pessoa.id, v)}>
+                            <SelectTrigger className="h-8">
+                              <SelectValue placeholder="Vincular usuário do sistema" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {usuarios.map((u) => (
+                                <SelectItem key={u.user_id} value={u.user_id}>
+                                  {u.full_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       )}
+
                     </div>
                   </div>
                 ))}
