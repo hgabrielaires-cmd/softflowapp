@@ -334,18 +334,19 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
                 placeholder="ID (ex.: 738302128)"
                 className="flex-1"
               />
-              <Input
-                value={novoNome}
-                onChange={(e) => setNovoNome(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addPessoa();
-                  }
-                }}
-                placeholder="Nome"
-                className="flex-1"
-              />
+              <Select value={novoUserId} onValueChange={setNovoUserId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Usuário do sistema" />
+                </SelectTrigger>
+                <SelectContent>
+                  {usuarios.map((u) => (
+                    <SelectItem key={u.user_id} value={u.user_id}>
+                      {u.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Button type="button" variant="outline" size="icon" onClick={addPessoa} aria-label="Adicionar pessoa">
                 <Plus className="h-4 w-4" />
               </Button>
