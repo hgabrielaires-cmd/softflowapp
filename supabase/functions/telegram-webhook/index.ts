@@ -10,6 +10,7 @@ import {
   type Periodo,
 } from "./relatorios.ts";
 import { relatorioVendas } from "./vendas.ts";
+import { buscarVendedor, handleVendedorMessage, handleVendedorCallback } from "./vendedor.ts";
 
 const TELEGRAM_API = "https://api.telegram.org/bot";
 const PLANOS_POR_PAGINA = 8;
