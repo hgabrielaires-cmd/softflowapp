@@ -152,9 +152,10 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
   const [ativo, setAtivo] = useState(false);
   const [bots, setBots] = useState<TelegramBot[]>([]);
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
+  const [usuarios, setUsuarios] = useState<{ user_id: string; full_name: string }[]>([]);
   const [acessos, setAcessos] = useState<Record<string, boolean>>({}); // `${bot_id}:${user_id}`
   const [novoId, setNovoId] = useState("");
-  const [novoNome, setNovoNome] = useState("");
+  const [novoUserId, setNovoUserId] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -166,17 +167,23 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
         supabase
           .from("profiles")
           .select("user_id, full_name, telegram_id")
-          .not("telegram_id", "is", null),
+          .eq("active", true)
+          .order("full_name"),
         supabase.from("telegram_bot_acessos").select("bot_id, user_id, ativo"),
       ]);
 
       setBots((botsData ?? []) as TelegramBot[]);
+      setUsuarios(
+        (profilesData ?? []).map((p: any) => ({ user_id: p.user_id, full_name: p.full_name ?? "(sem nome)" })),
+      );
 
-      const doBanco: Pessoa[] = (profilesData ?? []).map((p: any) => ({
-        id: String(p.telegram_id),
-        nome: p.full_name ?? "",
-        user_id: p.user_id,
-      }));
+      const doBanco: Pessoa[] = (profilesData ?? [])
+        .filter((p: any) => p.telegram_id != null)
+        .map((p: any) => ({
+          id: String(p.telegram_id),
+          nome: p.full_name ?? "",
+          user_id: p.user_id,
+        }));
 
       // Registros avulsos (sem profile) mantidos no config da integração
       const lista = initialConfig?.config?.authorized_list;
@@ -193,6 +200,7 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
       setLoading(false);
     }
   }
+
 
   useEffect(() => {
     setAtivo(initialConfig?.ativo ?? false);
