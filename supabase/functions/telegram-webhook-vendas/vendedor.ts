@@ -84,11 +84,16 @@ async function sendDocument(token: string, chatId: number, buffer: Uint8Array, f
 export async function buscarVendedor(supabase: any, telegramId: number): Promise<Vendedor | null> {
   const { data } = await supabase
     .from("profiles")
-    .select("user_id, full_name, filial_id, is_vendedor, active")
+    .select("user_id, full_name, filial_id, is_vendedor, active, telegram_bot_acessos!inner(ativo, telegram_bots!inner(slug))")
     .eq("telegram_id", telegramId)
     .eq("active", true)
+    .eq("is_vendedor", true)
+    .eq("telegram_bot_acessos.ativo", true)
+    .eq("telegram_bot_acessos.telegram_bots.slug", "vendas")
     .maybeSingle();
-  if (!data || !data.is_vendedor) return null;
+
+  if (!data) return null;
+
   return data as Vendedor;
 }
 
