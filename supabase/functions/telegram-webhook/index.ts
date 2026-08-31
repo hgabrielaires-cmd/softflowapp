@@ -503,6 +503,17 @@ Deno.serve(async (req) => {
     const text = String(message.text ?? "").trim();
     const firstName = callbackQuery?.from?.first_name ?? message.from?.first_name ?? "";
 
+    // ── Modo vendedor: se o telegram_id bate com um vendedor cadastrado, roteia pro fluxo de propostas ──
+    const vendedor = await buscarVendedor(supabase, userId);
+    if (vendedor) {
+      if (callbackQuery) {
+        await handleVendedorCallback(supabase, token, chatId, vendedor, callbackQuery);
+      } else {
+        await handleVendedorMessage(supabase, token, anthropicKey, chatId, vendedor, text);
+      }
+      return ok();
+    }
+
     // ── Config da integração + IDs autorizados ──
     const { data: cfgTelegram } = await supabase
       .from("integracoes_config")
