@@ -141,6 +141,8 @@ const navGroups: NavGroup[] = [
       ] },
       { icon: <UserCheck className="h-4 w-4" />, label: "CRM", to: "#crm", children: [
         { icon: <ListOrdered className="h-4 w-4" />, label: "Segmentos", to: "/segmentos", permKey: "menu.segmentos" },
+        { icon: <ListOrdered className="h-4 w-4" />, label: "Campanhas", to: "/campanhas", permKey: "menu.campanhas" },
+        { icon: <ListOrdered className="h-4 w-4" />, label: "Canais", to: "/canais", permKey: "menu.canais" },
         { icon: <ListOrdered className="h-4 w-4" />, label: "Funis e Etapas", to: "/crm-parametros", permKey: "menu.crm_parametros" },
       ] },
       { icon: <DollarSign className="h-4 w-4" />, label: "Financeiro", to: "/financeiro-parametros", permKey: "menu.financeiro_parametros" },

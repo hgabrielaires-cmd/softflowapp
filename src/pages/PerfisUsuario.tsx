@@ -165,6 +165,16 @@ const MENU_TREE: MenuNode[] = [
     children: crudChildren("segmentos"),
   },
   {
+    key: "menu.campanhas", label: "Campanhas", description: "Gerenciar campanhas do CRM",
+    icon: <UserCheck className="h-4 w-4" />,
+    children: crudChildren("campanhas"),
+  },
+  {
+    key: "menu.canais", label: "Canais", description: "Gerenciar canais do CRM",
+    icon: <UserCheck className="h-4 w-4" />,
+    children: crudChildren("canais"),
+  },
+  {
     key: "menu.integracoes", label: "Integrações", description: "Configurar integrações externas",
     icon: <Plug className="h-4 w-4" />,
   },
@@ -242,7 +252,7 @@ const MENU_SECTIONS: MenuSection[] = [
     items: MENU_TREE.filter(m =>
       ["menu.filiais", "menu.usuarios", "menu.perfis_usuario", "menu.modelos_contrato",
        "menu.notificacoes", "menu.integracoes", "menu.setores", "menu.jornadas", "menu.mesas_atendimento",
-       "menu.etapas_painel", "menu.segmentos", "menu.financeiro_parametros"].includes(m.key)
+       "menu.etapas_painel", "menu.segmentos", "menu.campanhas", "menu.canais", "menu.financeiro_parametros"].includes(m.key)
     ),
   },
   {

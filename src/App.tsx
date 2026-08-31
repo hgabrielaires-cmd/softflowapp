@@ -41,6 +41,8 @@ const DashboardFinanceiro = React.lazy(() => import("./pages/DashboardFinanceiro
 const DashboardAtendimento = React.lazy(() => import("./pages/DashboardAtendimento"));
 const DashboardChatAtendimento = React.lazy(() => import("./pages/DashboardChatAtendimento"));
 const Segmentos = React.lazy(() => import("./pages/Segmentos"));
+const Campanhas = React.lazy(() => import("./pages/Campanhas"));
+const Canais = React.lazy(() => import("./pages/Canais"));
 const Setores = React.lazy(() => import("./pages/Setores"));
 const Automacoes = React.lazy(() => import("./pages/Automacoes"));
 const Faturamento = React.lazy(() => import("./pages/Faturamento"));
@@ -377,6 +379,22 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <PainelAtendimento />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/campanhas"
+              element={
+                <ProtectedRoute>
+                  <Campanhas />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/canais"
+              element={
+                <ProtectedRoute>
+                  <Canais />
                 </ProtectedRoute>
               }
             />
