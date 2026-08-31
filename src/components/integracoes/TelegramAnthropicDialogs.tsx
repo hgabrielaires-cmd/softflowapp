@@ -388,10 +388,25 @@ export function TelegramConfigDialog({ open, onOpenChange, initialConfig, onSave
                           </div>
                         ))
                       ) : (
-                        <span className="text-xs text-muted-foreground">
-                          Sem usuário vinculado — cadastre o ID no perfil para liberar os bots
-                        </span>
+                        <div className="flex w-full flex-col gap-1">
+                          <span className="text-xs text-muted-foreground">
+                            Sem usuário vinculado — selecione o usuário para liberar os bots
+                          </span>
+                          <Select value="" onValueChange={(v) => vincularUsuario(pessoa.id, v)}>
+                            <SelectTrigger className="h-8">
+                              <SelectValue placeholder="Vincular usuário do sistema" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {usuarios.map((u) => (
+                                <SelectItem key={u.user_id} value={u.user_id}>
+                                  {u.full_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       )}
+
                     </div>
                   </div>
                 ))}
