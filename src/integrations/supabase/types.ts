@@ -1685,6 +1685,38 @@ export type Database = {
           },
         ]
       }
+      crm_campanhas: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          filial_id: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          filial_id?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          filial_id?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_campanhas_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_campos_personalizados: {
         Row: {
           ativo: boolean
@@ -1720,6 +1752,38 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      crm_canais: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          filial_id: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          filial_id?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          filial_id?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_canais_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       crm_cargos: {
         Row: {
@@ -2052,13 +2116,16 @@ export type Database = {
       }
       crm_oportunidades: {
         Row: {
+          campanha_id: string | null
           campos_personalizados: Json
+          canal_id: string | null
           classificacao: number
           cliente_id: string | null
           concorrente: string | null
           contato_id: string | null
           conversa_id: string | null
           created_at: string
+          criado_via: string
           data_fechamento: string | null
           data_perda: string | null
           data_previsao_fechamento: string | null
@@ -2076,6 +2143,7 @@ export type Database = {
           observacoes: string | null
           ordem: number
           origem: string | null
+          parcelamento_implantacao: number
           pedido_id: string | null
           responsavel_id: string | null
           segmento_ids: string[] | null
@@ -2085,13 +2153,16 @@ export type Database = {
           valor: number
         }
         Insert: {
+          campanha_id?: string | null
           campos_personalizados?: Json
+          canal_id?: string | null
           classificacao?: number
           cliente_id?: string | null
           concorrente?: string | null
           contato_id?: string | null
           conversa_id?: string | null
           created_at?: string
+          criado_via?: string
           data_fechamento?: string | null
           data_perda?: string | null
           data_previsao_fechamento?: string | null
@@ -2109,6 +2180,7 @@ export type Database = {
           observacoes?: string | null
           ordem?: number
           origem?: string | null
+          parcelamento_implantacao?: number
           pedido_id?: string | null
           responsavel_id?: string | null
           segmento_ids?: string[] | null
@@ -2118,13 +2190,16 @@ export type Database = {
           valor?: number
         }
         Update: {
+          campanha_id?: string | null
           campos_personalizados?: Json
+          canal_id?: string | null
           classificacao?: number
           cliente_id?: string | null
           concorrente?: string | null
           contato_id?: string | null
           conversa_id?: string | null
           created_at?: string
+          criado_via?: string
           data_fechamento?: string | null
           data_perda?: string | null
           data_previsao_fechamento?: string | null
@@ -2142,6 +2217,7 @@ export type Database = {
           observacoes?: string | null
           ordem?: number
           origem?: string | null
+          parcelamento_implantacao?: number
           pedido_id?: string | null
           responsavel_id?: string | null
           segmento_ids?: string[] | null
@@ -2151,6 +2227,20 @@ export type Database = {
           valor?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_oportunidades_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "crm_campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_oportunidades_canal_id_fkey"
+            columns: ["canal_id"]
+            isOneToOne: false
+            referencedRelation: "crm_canais"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "crm_oportunidades_cliente_id_fkey"
             columns: ["cliente_id"]
@@ -5509,6 +5599,7 @@ export type Database = {
           recebe_comissao: boolean
           setor_id: string | null
           telefone: string | null
+          telegram_id: number | null
           tipo_tecnico: string | null
           updated_at: string
           user_id: string
@@ -5547,6 +5638,7 @@ export type Database = {
           recebe_comissao?: boolean
           setor_id?: string | null
           telefone?: string | null
+          telegram_id?: number | null
           tipo_tecnico?: string | null
           updated_at?: string
           user_id: string
@@ -5585,6 +5677,7 @@ export type Database = {
           recebe_comissao?: boolean
           setor_id?: string | null
           telefone?: string | null
+          telegram_id?: number | null
           tipo_tecnico?: string | null
           updated_at?: string
           user_id?: string
