@@ -436,6 +436,22 @@ export async function handleVendedorCallback(
     return;
   }
 
+  // ── Seleção de cargo por botão (passo 3 da coleta) ──
+  if (data.startsWith("propcargo_") && pendencia.etapa === "prop_coleta") {
+    const escolhido = data.replace("propcargo_", "");
+    const dados = pendencia.dados_extraidos ?? {};
+
+    if (escolhido !== "nenhum") {
+      const { data: cargo } = await supabase.from("crm_cargos").select("nome").eq("id", escolhido).maybeSingle();
+      if (cargo?.nome) dados.cargo_nome = cargo.nome;
+    }
+
+    await answerCallback(token, callbackQuery.id, "✅");
+    await editMessage(token, chatId, messageId, `3 de 6\n\n✅ Cargo: *${dados.cargo_nome ?? "não informado"}*`);
+    await avancarStep(supabase, token, chatId, pendencia.id, dados, 4);
+    return;
+  }
+
   if (data === "prop_cancelar") {
     await answerCallback(token, callbackQuery.id, "❌");
     await supabase.from("telegram_pendencias").update({ status: "cancelado" }).eq("id", pendencia.id);
