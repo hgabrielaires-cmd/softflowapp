@@ -18,6 +18,7 @@ type Vendedor = {
   full_name: string;
   filial_id: string | null;
   is_vendedor: boolean;
+  telefone?: string | null;
 };
 
 function fmt(v: number) {
@@ -84,7 +85,7 @@ async function sendDocument(token: string, chatId: number, buffer: Uint8Array, f
 export async function buscarVendedor(supabase: any, telegramId: number): Promise<Vendedor | null> {
   const { data } = await supabase
     .from("profiles")
-    .select("user_id, full_name, filial_id, is_vendedor, active, telegram_bot_acessos!inner(ativo, telegram_bots!inner(slug))")
+    .select("user_id, full_name, filial_id, is_vendedor, active, telefone, telegram_bot_acessos!inner(ativo, telegram_bots!inner(slug))")
     .eq("telegram_id", telegramId)
     .eq("active", true)
     .eq("is_vendedor", true)
@@ -411,7 +412,15 @@ export async function handleVendedorCallback(
   await answerCallback(token, callbackQuery.id);
 }
 
-// ── Passo 4/5: gera PDF e envia pro vendedor no Telegram ────────────────
+// ── Passo 4/5: monta o ProposalData real, chama o gerador visual (/print) e envia o PDF pro vendedor ──
+const PROPOSAL_ENGINE_URL = "https://softplus-pitch.lovable.app/print";
+
+function toBase64Utf8(str: string): string {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+const CATEGORIA_PADRAO = "operacao"; // fallback quando não dá pra inferir a categoria real do módulo
+
 async function confirmarEGerarPdf(
   supabase: any,
   token: string,
@@ -423,47 +432,143 @@ async function confirmarEGerarPdf(
   const d = pendencia.dados_extraidos;
   const BROWSERLESS_API_KEY = Deno.env.get("BROWSERLESS_API_KEY");
 
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-    body{font-family:Arial,sans-serif;font-size:11pt;padding:24px;color:#222}
-    h1{color:#7c3aed;font-size:20pt} h2{font-size:14pt;margin-top:24px}
-    .box{background:#f5f3ff;border-radius:8px;padding:16px;margin:12px 0}
-    table{width:100%;border-collapse:collapse;margin-top:8px}
-    td{padding:6px 0;border-bottom:1px solid #eee}
-  </style></head><body>
-    <h1>Proposta Comercial — Softplus</h1>
-    <div class="box">
-      <strong>${d.empresa_nome}</strong><br/>
-      Contato: ${d.contato_nome}${d.cargo_nome ? ` (${d.cargo_nome})` : ""}<br/>
-      Telefone: ${d.telefone}
-    </div>
-    <h2>Plano</h2>
-    <p><strong>${d.plano_nome}</strong></p>
-    ${d.modulos?.length ? `<p>Módulos adicionais: ${d.modulos.join(", ")}</p>` : ""}
-    <h2>Condições</h2>
-    <table>
-      ${d.desconto_percentual ? `<tr><td>Desconto</td><td>${d.desconto_percentual}%</td></tr>` : ""}
-      ${d.valor_implantacao ? `<tr><td>Implantação</td><td>${fmt(d.valor_implantacao)}${d.parcelamento_implantacao > 1 ? ` em ${d.parcelamento_implantacao}x` : " à vista"}</td></tr>` : ""}
-    </table>
-    <p style="margin-top:32px;color:#777;font-size:9pt">Proposta gerada por ${vendedor.full_name} — Softplus Tecnologia</p>
-  </body></html>`;
+  // ── Resolve o plano e os módulos escolhidos com dados reais do banco ──
+  const { data: plano } = await supabase
+    .from("planos")
+    .select("nome, descricao, valor_implantacao_padrao, valor_mensalidade_padrao")
+    .ilike("nome", d.plano_nome)
+    .maybeSingle();
 
-  let pdfBytes: Uint8Array | null = null;
-  if (BROWSERLESS_API_KEY) {
-    const pdfRes = await fetch(`https://production-sfo.browserless.io/pdf?token=${BROWSERLESS_API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ html, options: { format: "A4", printBackground: true } }),
-    });
-    if (pdfRes.ok) pdfBytes = new Uint8Array(await pdfRes.arrayBuffer());
+  const nomesModulos: string[] = Array.isArray(d.modulos) ? d.modulos : [];
+  let modulosContratados: any[] = [];
+  if (nomesModulos.length) {
+    const { data: mods } = await supabase
+      .from("modulos")
+      .select("id, nome, descricao, valor_mensalidade_modulo, valor_implantacao_modulo")
+      .in("nome", nomesModulos);
+    modulosContratados = mods ?? [];
+
+    for (const nome of nomesModulos) {
+      if (!modulosContratados.some((m) => m.nome.toLowerCase() === nome.toLowerCase())) {
+        const { data: aprox } = await supabase
+          .from("modulos")
+          .select("id, nome, descricao, valor_mensalidade_modulo, valor_implantacao_modulo")
+          .ilike("nome", `%${nome}%`)
+          .limit(1)
+          .maybeSingle();
+        if (aprox) modulosContratados.push(aprox);
+      }
+    }
   }
 
-  if (!pdfBytes) {
+  // ── Módulos sugeridos (opcionais) — outros ativos que o cliente ainda não contratou ──
+  const idsContratados = modulosContratados.map((m) => m.id).filter(Boolean);
+  const { data: modulosOpcionaisRaw } = await supabase
+    .from("modulos")
+    .select("id, nome, descricao, valor_mensalidade_modulo")
+    .eq("ativo", true)
+    .not("id", "in", `(${idsContratados.length ? idsContratados.join(",") : "00000000-0000-0000-0000-000000000000"})`)
+    .limit(3);
+
+  const descontoPct = Number(d.desconto_percentual || 0);
+  const aplicarDesconto = (valor: number) => Math.max(0, Math.round(valor * (1 - descontoPct / 100) * 100) / 100);
+
+  const primeiraLinha = (texto?: string | null) => (texto || "").split(",")[0]?.trim() || "";
+
+  const includedFeatures = (plano?.descricao || "")
+    .split(",")
+    .map((s: string) => s.trim())
+    .filter(Boolean)
+    .map((nome: string, i: number) => ({
+      id: `feature-${i}`,
+      name: nome,
+      description: "",
+      category: CATEGORIA_PADRAO,
+      kind: "incluido",
+    }));
+
+  const addons = modulosContratados.map((m) => ({
+    id: m.id ?? m.nome,
+    name: m.nome,
+    description: primeiraLinha(m.descricao) || m.nome,
+    category: CATEGORIA_PADRAO,
+    kind: "adicional",
+    quantity: 1,
+    listMonthlyPrice: Number(m.valor_mensalidade_modulo || 0),
+    unitMonthlyPrice: aplicarDesconto(Number(m.valor_mensalidade_modulo || 0)),
+  }));
+
+  const optionals = (modulosOpcionaisRaw ?? []).map((m: any) => ({
+    id: m.id,
+    name: m.nome,
+    description: primeiraLinha(m.descricao) || m.nome,
+    category: CATEGORIA_PADRAO,
+    kind: "opcional",
+    unitMonthlyPrice: Number(m.valor_mensalidade_modulo || 0),
+  }));
+
+  const hoje = new Date();
+  const validade = new Date(hoje.getTime() + 15 * 24 * 60 * 60 * 1000);
+  const fmtData = (dt: Date) => dt.toLocaleDateString("pt-BR");
+
+  const proposalData = {
+    meta: {
+      number: `${hoje.getFullYear()}-${String(Math.floor(1000 + Math.random() * 9000))}`,
+      issuedAt: fmtData(hoje),
+      consultant: vendedor.full_name,
+      consultantContact: vendedor.telefone ?? undefined,
+      headline: `Sua operação inteira integrada, pensada para ${d.empresa_nome}.`,
+      subheadline: "Uma plataforma única para operação, gestão, vendas e inteligência.",
+    },
+    client: {
+      companyName: d.empresa_nome,
+      contactName: d.contato_nome,
+      segment: d.segmento_nome ?? undefined,
+    },
+    plan: {
+      name: plano?.nome ?? d.plano_nome,
+      listMonthlyPrice: Number(plano?.valor_mensalidade_padrao || 0),
+      negotiatedMonthlyPrice: aplicarDesconto(Number(plano?.valor_mensalidade_padrao || 0)),
+    },
+    includedFeatures,
+    addons,
+    optionals,
+    implementation: {
+      title: "Implantação e treinamento",
+      description: "Instalação do sistema, cadastro de cardápio e treinamento da equipe.",
+      listPrice: Number(d.valor_implantacao ?? plano?.valor_implantacao_padrao ?? 0),
+      negotiatedPrice: Number(d.valor_implantacao ?? plano?.valor_implantacao_padrao ?? 0),
+      paymentCondition: d.parcelamento_implantacao > 1 ? `Em até ${d.parcelamento_implantacao}x` : "Pagamento único",
+    },
+    conditions: {
+      paymentMethods: ["PIX", "Cartão de crédito"],
+      billingCycle: "Mensalidade cobrada mensalmente",
+      validUntil: fmtData(validade),
+    },
+  };
+
+  if (!BROWSERLESS_API_KEY) {
+    await editMessage(token, chatId, messageId, "❌ BROWSERLESS_API_KEY não configurada.");
+    return;
+  }
+
+  const printUrl = `${PROPOSAL_ENGINE_URL}?data=${toBase64Utf8(JSON.stringify(proposalData))}`;
+
+  const pdfRes = await fetch(`https://production-sfo.browserless.io/pdf?token=${BROWSERLESS_API_KEY}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: printUrl, options: { format: "A4", landscape: true, printBackground: true } }),
+  });
+
+  if (!pdfRes.ok) {
     await editMessage(token, chatId, messageId, "❌ Não consegui gerar o PDF agora. Tente novamente em instantes.");
     return;
   }
 
+  const pdfFinalBytes = new Uint8Array(await pdfRes.arrayBuffer());
+
   const storagePath = `propostas/${Date.now()}_${vendedor.user_id}.pdf`;
-  await supabase.storage.from("propostas-pdf").upload(storagePath, pdfBytes, { contentType: "application/pdf", upsert: true });
+  await supabase.storage.from("propostas-pdf").upload(storagePath, pdfFinalBytes, { contentType: "application/pdf", upsert: true });
 
   await supabase
     .from("telegram_pendencias")
@@ -471,7 +576,7 @@ async function confirmarEGerarPdf(
     .eq("id", pendencia.id);
 
   await editMessage(token, chatId, messageId, "✅ PDF gerado!");
-  await sendDocument(token, chatId, pdfBytes, `Proposta_${d.empresa_nome}.pdf`, `Proposta para ${d.empresa_nome}`);
+  await sendDocument(token, chatId, pdfFinalBytes, `Proposta_${d.empresa_nome}.pdf`, `Proposta para ${d.empresa_nome}`);
 
   await sendMessage(
     token,
