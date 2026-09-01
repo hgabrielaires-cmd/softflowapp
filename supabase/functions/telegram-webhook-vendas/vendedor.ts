@@ -392,7 +392,8 @@ const TECLADO_RESUMO = {
       { text: "✏️ Editar Telefone", callback_data: "prop_edit_telefone" },
       { text: "✏️ Editar Plano", callback_data: "prop_edit_plano_nome" },
     ],
-    [{ text: "✏️ Editar Desconto", callback_data: "prop_edit_desconto_percentual" }],
+    [{ text: "✏️ Editar Desconto Mensalidade", callback_data: "prop_edit_desconto_mensalidade_percentual" }],
+    [{ text: "✏️ Editar Desconto Implantação", callback_data: "prop_edit_desconto_implantacao_percentual" }],
     [{ text: "❌ Cancelar", callback_data: "prop_cancelar" }],
   ],
 };
@@ -420,7 +421,8 @@ async function processarEdicaoCampo(supabase: any, token: string, chatId: number
   if (!campo) return;
   const dados = { ...pendencia.dados_extraidos };
   delete dados._editando;
-  dados[campo] = campo === "desconto_percentual" ? Number(text.replace(/[^\d.]/g, "")) : text.trim();
+  const camposNumericos = ["desconto_mensalidade_percentual", "desconto_implantacao_percentual"];
+  dados[campo] = camposNumericos.includes(campo) ? Number(text.replace(/[^\d.]/g, "")) : text.trim();
   await mostrarResumo(supabase, token, chatId, pendencia.id, dados);
 }
 
