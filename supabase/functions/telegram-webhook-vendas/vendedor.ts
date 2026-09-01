@@ -85,7 +85,7 @@ async function sendDocument(token: string, chatId: number, buffer: Uint8Array, f
 export async function buscarVendedor(supabase: any, telegramId: number): Promise<Vendedor | null> {
   const { data } = await supabase
     .from("profiles")
-    .select("user_id, full_name, filial_id, is_vendedor, active, telegram_bot_acessos!inner(ativo, telegram_bots!inner(slug))")
+    .select("user_id, full_name, filial_id, is_vendedor, active, telefone, telegram_bot_acessos!inner(ativo, telegram_bots!inner(slug))")
     .eq("telegram_id", telegramId)
     .eq("active", true)
     .eq("is_vendedor", true)
