@@ -311,7 +311,18 @@ Use o nome EXATO da lista mais parecido com o que foi dito, não invente. Retorn
 
 Retorne APENAS JSON válido:
 
-{ "desconto_percentual": number|null, "valor_implantacao": number|null, "parcelamento_implantacao": number|null }`;
+{
+  "desconto_mensalidade_percentual": number|null,
+  "desconto_mensalidade_meses": number|null,
+  "desconto_implantacao_percentual": number|null,
+  "valor_implantacao": number|null,
+  "parcelamento_implantacao": number|null
+}
+
+Regras:
+- Se o desconto da mensalidade valer só por um período (ex: "nos 2 primeiros meses", "6 meses"), preencha desconto_mensalidade_meses com esse número.
+- Se o desconto da mensalidade for permanente (sem prazo mencionado), deixe desconto_mensalidade_meses como null.
+- desconto_implantacao_percentual é o desconto sobre o valor de implantação/treinamento, se houver — é separado do desconto da mensalidade.`;
 
     const extraido = await chamarClaudeJson(anthropicKey, prompt);
 
@@ -361,7 +372,10 @@ function textoResumo(d: Record<string, any>): string {
     (d.canal_nome ? `📡 Canal: ${d.canal_nome}\n` : "") +
     `\n📦 Plano: *${d.plano_nome}*\n` +
     (d.modulos?.length ? `➕ Módulos: ${d.modulos.join(", ")}\n` : "") +
-    (d.desconto_percentual ? `🎁 Desconto: ${d.desconto_percentual}%\n` : "") +
+    (d.desconto_mensalidade_percentual
+      ? `🎁 Desconto mensalidade: ${d.desconto_mensalidade_percentual}%${d.desconto_mensalidade_meses ? ` (primeiros ${d.desconto_mensalidade_meses} meses)` : " (permanente)"}\n`
+      : "") +
+    (d.desconto_implantacao_percentual ? `🏗️ Desconto implantação: ${d.desconto_implantacao_percentual}%\n` : "") +
     (d.valor_implantacao ? `💵 Implantação: ${fmt(d.valor_implantacao)}${d.parcelamento_implantacao > 1 ? ` em ${d.parcelamento_implantacao}x` : ""}\n` : "") +
     `\nConfirma?`
   );
@@ -378,7 +392,8 @@ const TECLADO_RESUMO = {
       { text: "✏️ Editar Telefone", callback_data: "prop_edit_telefone" },
       { text: "✏️ Editar Plano", callback_data: "prop_edit_plano_nome" },
     ],
-    [{ text: "✏️ Editar Desconto", callback_data: "prop_edit_desconto_percentual" }],
+    [{ text: "✏️ Editar Desconto Mensalidade", callback_data: "prop_edit_desconto_mensalidade_percentual" }],
+    [{ text: "✏️ Editar Desconto Implantação", callback_data: "prop_edit_desconto_implantacao_percentual" }],
     [{ text: "❌ Cancelar", callback_data: "prop_cancelar" }],
   ],
 };
@@ -406,7 +421,8 @@ async function processarEdicaoCampo(supabase: any, token: string, chatId: number
   if (!campo) return;
   const dados = { ...pendencia.dados_extraidos };
   delete dados._editando;
-  dados[campo] = campo === "desconto_percentual" ? Number(text.replace(/[^\d.]/g, "")) : text.trim();
+  const camposNumericos = ["desconto_mensalidade_percentual", "desconto_implantacao_percentual"];
+  dados[campo] = camposNumericos.includes(campo) ? Number(text.replace(/[^\d.]/g, "")) : text.trim();
   await mostrarResumo(supabase, token, chatId, pendencia.id, dados);
 }
 
@@ -550,8 +566,19 @@ async function confirmarEGerarPdf(
     .not("id", "in", `(${idsContratados.length ? idsContratados.join(",") : "00000000-0000-0000-0000-000000000000"})`)
     .limit(3);
 
-  const descontoPct = Number(d.desconto_percentual || 0);
-  const aplicarDesconto = (valor: number) => Math.max(0, Math.round(valor * (1 - descontoPct / 100) * 100) / 100);
+  // ── Desconto permanente na mensalidade só se NÃO tiver prazo (senão vira promoção temporária) ──
+  const descontoMensalidadeMeses = Number(d.desconto_mensalidade_meses || 0);
+  const descontoMensalidadePermanentePct = descontoMensalidadeMeses > 0 ? 0 : Number(d.desconto_mensalidade_percentual || 0);
+  const aplicarDescontoPermanente = (valor: number) =>
+    Math.max(0, Math.round(valor * (1 - descontoMensalidadePermanentePct / 100) * 100) / 100);
+
+  // ── Desconto na implantação (sempre permanente/pontual, não tem "período") ──
+  const descontoImplantacaoPct = Number(d.desconto_implantacao_percentual || 0);
+  const valorImplantacaoBase = Number(d.valor_implantacao ?? plano?.valor_implantacao_padrao ?? 0);
+  const valorImplantacaoNegociado = Math.max(
+    0,
+    Math.round(valorImplantacaoBase * (1 - descontoImplantacaoPct / 100) * 100) / 100,
+  );
 
   const primeiraLinha = (texto?: string | null) => (texto || "").split(",")[0]?.trim() || "";
 
@@ -575,7 +602,7 @@ async function confirmarEGerarPdf(
     kind: "adicional",
     quantity: 1,
     listMonthlyPrice: Number(m.valor_mensalidade_modulo || 0),
-    unitMonthlyPrice: aplicarDesconto(Number(m.valor_mensalidade_modulo || 0)),
+    unitMonthlyPrice: aplicarDescontoPermanente(Number(m.valor_mensalidade_modulo || 0)),
   }));
 
   const optionals = (modulosOpcionaisRaw ?? []).map((m: any) => ({
@@ -608,16 +635,24 @@ async function confirmarEGerarPdf(
     plan: {
       name: plano?.nome ?? d.plano_nome,
       listMonthlyPrice: Number(plano?.valor_mensalidade_padrao || 0),
-      negotiatedMonthlyPrice: aplicarDesconto(Number(plano?.valor_mensalidade_padrao || 0)),
+      negotiatedMonthlyPrice: aplicarDescontoPermanente(Number(plano?.valor_mensalidade_padrao || 0)),
     },
     includedFeatures,
     addons,
     optionals,
+    // ── Promoção temporária: só existe quando o desconto de mensalidade tem prazo (ex: "2 primeiros meses") ──
+    promotion: descontoMensalidadeMeses > 0 && d.desconto_mensalidade_percentual
+      ? {
+          label: "Condição de entrada",
+          discountPercent: Number(d.desconto_mensalidade_percentual),
+          months: descontoMensalidadeMeses,
+        }
+      : undefined,
     implementation: {
       title: "Implantação e treinamento",
       description: "Instalação do sistema, cadastro de cardápio e treinamento da equipe.",
-      listPrice: Number(d.valor_implantacao ?? plano?.valor_implantacao_padrao ?? 0),
-      negotiatedPrice: Number(d.valor_implantacao ?? plano?.valor_implantacao_padrao ?? 0),
+      listPrice: valorImplantacaoBase,
+      negotiatedPrice: valorImplantacaoNegociado,
       paymentCondition: d.parcelamento_implantacao > 1 ? `Em até ${d.parcelamento_implantacao}x` : "Pagamento único",
     },
     conditions: {
@@ -632,7 +667,7 @@ async function confirmarEGerarPdf(
     return;
   }
 
-  const printUrl = `${PROPOSAL_ENGINE_URL}?data=${toBase64Utf8(JSON.stringify(proposalData))}`;
+  const printUrl = `${PROPOSAL_ENGINE_URL}?data=${encodeURIComponent(toBase64Utf8(JSON.stringify(proposalData)))}`;
 
   const pdfRes = await fetch(`https://production-sfo.browserless.io/pdf?token=${BROWSERLESS_API_KEY}`, {
     method: "POST",
@@ -731,7 +766,7 @@ async function dispararWhatsAppEregistrarCrm(
       etapa_id: etapaProposta?.id ?? null,
       responsavel_id: vendedor.user_id,
       valor: (plano?.valor_mensalidade_padrao ?? 0),
-      desconto_mensalidade: d.desconto_percentual ?? 0,
+      desconto_mensalidade: d.desconto_mensalidade_percentual ?? 0,
       desconto_mensalidade_tipo: "%",
       valor_implantacao_padrao: d.valor_implantacao ?? plano?.valor_implantacao_padrao ?? 0,
       parcelamento_implantacao: d.parcelamento_implantacao ?? 1,
