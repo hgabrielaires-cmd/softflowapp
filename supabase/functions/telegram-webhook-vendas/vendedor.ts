@@ -766,7 +766,7 @@ async function dispararWhatsAppEregistrarCrm(
       etapa_id: etapaProposta?.id ?? null,
       responsavel_id: vendedor.user_id,
       valor: (plano?.valor_mensalidade_padrao ?? 0),
-      desconto_mensalidade: d.desconto_percentual ?? 0,
+      desconto_mensalidade: d.desconto_mensalidade_percentual ?? 0,
       desconto_mensalidade_tipo: "%",
       valor_implantacao_padrao: d.valor_implantacao ?? plano?.valor_implantacao_padrao ?? 0,
       parcelamento_implantacao: d.parcelamento_implantacao ?? 1,
