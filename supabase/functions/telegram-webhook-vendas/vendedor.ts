@@ -566,8 +566,19 @@ async function confirmarEGerarPdf(
     .not("id", "in", `(${idsContratados.length ? idsContratados.join(",") : "00000000-0000-0000-0000-000000000000"})`)
     .limit(3);
 
-  const descontoPct = Number(d.desconto_percentual || 0);
-  const aplicarDesconto = (valor: number) => Math.max(0, Math.round(valor * (1 - descontoPct / 100) * 100) / 100);
+  // ── Desconto permanente na mensalidade só se NÃO tiver prazo (senão vira promoção temporária) ──
+  const descontoMensalidadeMeses = Number(d.desconto_mensalidade_meses || 0);
+  const descontoMensalidadePermanentePct = descontoMensalidadeMeses > 0 ? 0 : Number(d.desconto_mensalidade_percentual || 0);
+  const aplicarDescontoPermanente = (valor: number) =>
+    Math.max(0, Math.round(valor * (1 - descontoMensalidadePermanentePct / 100) * 100) / 100);
+
+  // ── Desconto na implantação (sempre permanente/pontual, não tem "período") ──
+  const descontoImplantacaoPct = Number(d.desconto_implantacao_percentual || 0);
+  const valorImplantacaoBase = Number(d.valor_implantacao ?? plano?.valor_implantacao_padrao ?? 0);
+  const valorImplantacaoNegociado = Math.max(
+    0,
+    Math.round(valorImplantacaoBase * (1 - descontoImplantacaoPct / 100) * 100) / 100,
+  );
 
   const primeiraLinha = (texto?: string | null) => (texto || "").split(",")[0]?.trim() || "";
 
@@ -591,7 +602,7 @@ async function confirmarEGerarPdf(
     kind: "adicional",
     quantity: 1,
     listMonthlyPrice: Number(m.valor_mensalidade_modulo || 0),
-    unitMonthlyPrice: aplicarDesconto(Number(m.valor_mensalidade_modulo || 0)),
+    unitMonthlyPrice: aplicarDescontoPermanente(Number(m.valor_mensalidade_modulo || 0)),
   }));
 
   const optionals = (modulosOpcionaisRaw ?? []).map((m: any) => ({
@@ -624,16 +635,24 @@ async function confirmarEGerarPdf(
     plan: {
       name: plano?.nome ?? d.plano_nome,
       listMonthlyPrice: Number(plano?.valor_mensalidade_padrao || 0),
-      negotiatedMonthlyPrice: aplicarDesconto(Number(plano?.valor_mensalidade_padrao || 0)),
+      negotiatedMonthlyPrice: aplicarDescontoPermanente(Number(plano?.valor_mensalidade_padrao || 0)),
     },
     includedFeatures,
     addons,
     optionals,
+    // ── Promoção temporária: só existe quando o desconto de mensalidade tem prazo (ex: "2 primeiros meses") ──
+    promotion: descontoMensalidadeMeses > 0 && d.desconto_mensalidade_percentual
+      ? {
+          label: "Condição de entrada",
+          discountPercent: Number(d.desconto_mensalidade_percentual),
+          months: descontoMensalidadeMeses,
+        }
+      : undefined,
     implementation: {
       title: "Implantação e treinamento",
       description: "Instalação do sistema, cadastro de cardápio e treinamento da equipe.",
-      listPrice: Number(d.valor_implantacao ?? plano?.valor_implantacao_padrao ?? 0),
-      negotiatedPrice: Number(d.valor_implantacao ?? plano?.valor_implantacao_padrao ?? 0),
+      listPrice: valorImplantacaoBase,
+      negotiatedPrice: valorImplantacaoNegociado,
       paymentCondition: d.parcelamento_implantacao > 1 ? `Em até ${d.parcelamento_implantacao}x` : "Pagamento único",
     },
     conditions: {
@@ -648,7 +667,7 @@ async function confirmarEGerarPdf(
     return;
   }
 
-  const printUrl = `${PROPOSAL_ENGINE_URL}?data=${toBase64Utf8(JSON.stringify(proposalData))}`;
+  const printUrl = `${PROPOSAL_ENGINE_URL}?data=${encodeURIComponent(toBase64Utf8(JSON.stringify(proposalData)))}`;
 
   const pdfRes = await fetch(`https://production-sfo.browserless.io/pdf?token=${BROWSERLESS_API_KEY}`, {
     method: "POST",
