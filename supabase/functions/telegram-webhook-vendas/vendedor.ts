@@ -311,7 +311,18 @@ Use o nome EXATO da lista mais parecido com o que foi dito, não invente. Retorn
 
 Retorne APENAS JSON válido:
 
-{ "desconto_percentual": number|null, "valor_implantacao": number|null, "parcelamento_implantacao": number|null }`;
+{
+  "desconto_mensalidade_percentual": number|null,
+  "desconto_mensalidade_meses": number|null,
+  "desconto_implantacao_percentual": number|null,
+  "valor_implantacao": number|null,
+  "parcelamento_implantacao": number|null
+}
+
+Regras:
+- Se o desconto da mensalidade valer só por um período (ex: "nos 2 primeiros meses", "6 meses"), preencha desconto_mensalidade_meses com esse número.
+- Se o desconto da mensalidade for permanente (sem prazo mencionado), deixe desconto_mensalidade_meses como null.
+- desconto_implantacao_percentual é o desconto sobre o valor de implantação/treinamento, se houver — é separado do desconto da mensalidade.`;
 
     const extraido = await chamarClaudeJson(anthropicKey, prompt);
 
