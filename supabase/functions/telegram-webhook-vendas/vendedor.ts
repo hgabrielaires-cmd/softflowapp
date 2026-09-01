@@ -155,7 +155,32 @@ export async function handleVendedorMessage(
   }
 }
 
-// ── Passo 1: inicia a coleta de dados por texto livre ──────────────────────
+const TOTAL_STEPS = 6;
+
+function perguntaDoStep(n: number): string {
+  switch (n) {
+    case 1:
+      return "📋 *Nova Proposta* — 1 de 6\n\nQual o nome da empresa (cliente)?";
+    case 2:
+      return "2 de 6\n\nQual o nome do contato?";
+    case 4:
+      return "4 de 6\n\nQual o telefone, com DDD? Ex: _84999990000_";
+    case 5:
+      return "5 de 6\n\nQual plano e quais módulos adicionais? Ex: _\"Plano Master, com XTAG e Tablet na Mesa\"_";
+    case 6:
+      return "6 de 6\n\nTem desconto ou condição especial? Se não tiver, responda *não*.\nEx: _\"10% de desconto na mensalidade, implantação em 2x\"_";
+    default:
+      return "";
+  }
+}
+
+async function enviarPerguntaCargo(supabase: any, token: string, chatId: number) {
+  const { data: cargos } = await supabase.from("crm_cargos").select("id, nome").eq("ativo", true).order("nome");
+  const botoes = (cargos ?? []).map((c: any) => [{ text: c.nome, callback_data: `propcargo_${c.id}` }]);
+  botoes.push([{ text: "— Nenhum / pular —", callback_data: "propcargo_nenhum" }]);
+  await sendMessage(token, chatId, "3 de 6\n\nQual o cargo do contato?", { inline_keyboard: botoes });
+}
+
 async function iniciarNovaProposta(supabase: any, token: string, chatId: number, vendedor: Vendedor, telegramUserId: number) {
   await supabase
     .from("telegram_pendencias")
@@ -170,22 +195,37 @@ async function iniciarNovaProposta(supabase: any, token: string, chatId: number,
     etapa: "prop_coleta",
     status: "aguardando_resposta",
     filial_id: vendedor.filial_id,
-    dados_extraidos: { vendedor_id: vendedor.user_id },
+    dados_extraidos: { vendedor_id: vendedor.user_id, _step: 1 },
   });
 
-  await sendMessage(
-    token,
-    chatId,
-    `📋 *Nova Proposta*\n\nMe conta os dados — pode escrever tudo de uma vez ou aos poucos:\n\n` +
-      `• Empresa e contato\n• Telefone\n• Plano e módulos desejados\n• Desconto / condições\n\n` +
-      `Exemplo:\n_"Empresa Hamburgueria do Zé, contato João, fone 84999990000, plano Softflow Pro, 10% de desconto na mensalidade"_`,
-    { remove_keyboard: true },
-  );
+  await sendMessage(token, chatId, perguntaDoStep(1), { remove_keyboard: true });
 }
 
-// ── Passo 2: interpreta texto livre com Claude e pergunta o que falta ──────
-const CAMPOS_OBRIGATORIOS = ["empresa_nome", "contato_nome", "telefone", "plano_nome"];
+async function avancarStep(
+  supabase: any,
+  token: string,
+  chatId: number,
+  pendenciaId: string,
+  dados: Record<string, any>,
+  proximoStep: number,
+) {
+  if (proximoStep > TOTAL_STEPS) {
+    await mostrarResumo(supabase, token, chatId, pendenciaId, { ...dados, _step: undefined });
+    return;
+  }
 
+  const novosDados = { ...dados, _step: proximoStep };
+  await supabase.from("telegram_pendencias").update({ dados_extraidos: novosDados }).eq("id", pendenciaId);
+
+  if (proximoStep === 3) {
+    await enviarPerguntaCargo(supabase, token, chatId);
+    return;
+  }
+
+  await sendMessage(token, chatId, perguntaDoStep(proximoStep));
+}
+
+// ── Passo 2: uma pergunta de cada vez, numerada (cargo vem por botão, não por texto) ──
 async function processarColeta(
   supabase: any,
   token: string,
@@ -195,46 +235,95 @@ async function processarColeta(
   pendencia: any,
   text: string,
 ) {
-  const processingId = await sendMessage(token, chatId, "⏳ Entendendo...", { remove_keyboard: true });
+  const dados = pendencia.dados_extraidos ?? {};
+  const step = dados._step ?? 1;
 
-  const { data: planos } = await supabase.from("planos").select("id, nome").eq("ativo", true);
-  const { data: segmentos } = await supabase.from("segmentos").select("id, nome").eq("ativo", true);
-  const { data: origens } = await supabase.from("crm_etapas").select("nome").limit(1); // placeholder se não houver tabela dedicada de origem
-  const { data: campanhas } = await supabase.from("crm_campanhas").select("id, nome").eq("ativo", true);
-  const { data: canais } = await supabase.from("crm_canais").select("id, nome").eq("ativo", true);
-  const { data: cargos } = await supabase.from("crm_cargos").select("id, nome").eq("ativo", true);
+  if (step === 1) {
+    dados.empresa_nome = text.trim();
+    await avancarStep(supabase, token, chatId, pendencia.id, dados, 2);
+    return;
+  }
 
-  const dadosAtuais = pendencia.dados_extraidos ?? {};
+  if (step === 2) {
+    dados.contato_nome = text.trim();
+    await avancarStep(supabase, token, chatId, pendencia.id, dados, 3);
+    return;
+  }
 
-  const prompt = `Você está ajudando um vendedor a montar uma proposta comercial pelo Telegram.
+  if (step === 3) {
+    // Cargo é escolhido por botão (ver handleVendedorCallback) — se a pessoa digitar em vez de clicar, reforça o teclado.
+    await enviarPerguntaCargo(supabase, token, chatId);
+    return;
+  }
 
-Dados já coletados até agora: ${JSON.stringify(dadosAtuais)}
+  if (step === 4) {
+    const digitos = text.replace(/\D/g, "");
+    if (digitos.length < 10) {
+      await sendMessage(token, chatId, "⚠️ Telefone inválido — manda com DDD, só números ou não. Ex: 84999990000");
+      return;
+    }
+    dados.telefone = digitos;
+    await avancarStep(supabase, token, chatId, pendencia.id, dados, 5);
+    return;
+  }
 
-Nova mensagem do vendedor: "${text}"
+  if (step === 5) {
+    const processingId = await sendMessage(token, chatId, "⏳ Entendendo...");
 
-Cadastros disponíveis (use o "nome" mais parecido, não invente):
-Planos: ${(planos ?? []).map((p: any) => p.nome).join(", ")}
-Segmentos: ${(segmentos ?? []).map((s: any) => s.nome).join(", ")}
-Campanhas: ${(campanhas ?? []).map((c: any) => c.nome).join(", ")}
-Canais: ${(canais ?? []).map((c: any) => c.nome).join(", ")}
-Cargos: ${(cargos ?? []).map((c: any) => c.nome).join(", ")}
+    const { data: planos } = await supabase.from("planos").select("nome").eq("ativo", true);
+    const { data: modulos } = await supabase.from("modulos").select("nome").eq("ativo", true);
 
-Extraia e retorne APENAS JSON válido (sem markdown), mesclando com os dados já coletados:
-{
-  "empresa_nome": string|null,
-  "contato_nome": string|null,
-  "telefone": "apenas dígitos com DDD ou null",
-  "cargo_nome": string|null,
-  "segmento_nome": string|null,
-  "campanha_nome": string|null,
-  "canal_nome": string|null,
-  "plano_nome": string|null,
-  "modulos": ["nome1","nome2"],
-  "desconto_percentual": number|null,
-  "valor_implantacao": number|null,
-  "parcelamento_implantacao": number|null
-}`;
+    const prompt = `Extraia o plano e os módulos adicionais mencionados nesta mensagem de um vendedor: "${text}"
 
+Planos disponíveis: ${(planos ?? []).map((p: any) => p.nome).join(", ")}
+Módulos disponíveis: ${(modulos ?? []).map((m: any) => m.nome).join(", ")}
+
+Use o nome EXATO da lista mais parecido com o que foi dito, não invente. Retorne APENAS JSON válido:
+
+{ "plano_nome": string|null, "modulos": ["nome1","nome2"] }`;
+
+    const extraido = await chamarClaudeJson(anthropicKey, prompt);
+
+    if (!extraido.plano_nome) {
+      if (processingId) await editMessage(token, chatId, processingId, "⚠️ Não identifiquei o plano. Qual plano o cliente vai contratar?");
+      else await sendMessage(token, chatId, "⚠️ Não identifiquei o plano. Qual plano o cliente vai contratar?");
+      return;
+    }
+
+    dados.plano_nome = extraido.plano_nome;
+    dados.modulos = extraido.modulos ?? [];
+
+    if (processingId) await editMessage(token, chatId, processingId, "✅ Entendido!");
+    await avancarStep(supabase, token, chatId, pendencia.id, dados, 6);
+    return;
+  }
+
+  if (step === 6) {
+    const semDesconto = /^n[aã]o$/i.test(text.trim());
+    if (semDesconto) {
+      await avancarStep(supabase, token, chatId, pendencia.id, dados, 7);
+      return;
+    }
+
+    const processingId = await sendMessage(token, chatId, "⏳ Entendendo...");
+
+    const prompt = `Extraia condições comerciais desta mensagem de um vendedor: "${text}"
+
+Retorne APENAS JSON válido:
+
+{ "desconto_percentual": number|null, "valor_implantacao": number|null, "parcelamento_implantacao": number|null }`;
+
+    const extraido = await chamarClaudeJson(anthropicKey, prompt);
+
+    Object.assign(dados, Object.fromEntries(Object.entries(extraido).filter(([, v]) => v !== null && v !== undefined)));
+
+    if (processingId) await editMessage(token, chatId, processingId, "✅ Entendido!");
+    await avancarStep(supabase, token, chatId, pendencia.id, dados, 7);
+    return;
+  }
+}
+
+async function chamarClaudeJson(anthropicKey: string, prompt: string): Promise<Record<string, any>> {
   const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -244,7 +333,7 @@ Extraia e retorne APENAS JSON válido (sem markdown), mesclando com os dados já
     },
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
-      max_tokens: 1000,
+      max_tokens: 500,
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -252,37 +341,12 @@ Extraia e retorne APENAS JSON válido (sem markdown), mesclando com os dados já
   const claudeData = await claudeRes.json().catch(() => ({}));
   const claudeText = claudeData?.content?.[0]?.text ?? "{}";
 
-  let extraido: Record<string, any> = {};
   try {
     const match = String(claudeText).match(/\{[\s\S]*\}/);
-    extraido = match ? JSON.parse(match[0]) : {};
+    return match ? JSON.parse(match[0]) : {};
   } catch {
-    extraido = {};
+    return {};
   }
-
-  const dadosMesclados = { ...dadosAtuais, ...Object.fromEntries(Object.entries(extraido).filter(([, v]) => v !== null && v !== undefined && v !== "")) };
-
-  await supabase
-    .from("telegram_pendencias")
-    .update({ dados_extraidos: dadosMesclados })
-    .eq("id", pendencia.id);
-
-  const faltando = CAMPOS_OBRIGATORIOS.filter((c) => !dadosMesclados[c]);
-
-  if (faltando.length > 0) {
-    const labels: Record<string, string> = {
-      empresa_nome: "nome da empresa",
-      contato_nome: "nome do contato",
-      telefone: "telefone (com DDD)",
-      plano_nome: "plano desejado",
-    };
-    const perguntaTexto = `Ainda falta: *${faltando.map((f) => labels[f]).join(", ")}*.\n\nPode me passar?`;
-    if (processingId) await editMessage(token, chatId, processingId, perguntaTexto);
-    else await sendMessage(token, chatId, perguntaTexto);
-    return;
-  }
-
-  await mostrarResumo(supabase, token, chatId, pendencia.id, dadosMesclados, processingId);
 }
 
 // ── Passo 3: resumo com botões de edição ────────────────────────────────
