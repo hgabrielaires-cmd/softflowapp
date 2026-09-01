@@ -372,7 +372,10 @@ function textoResumo(d: Record<string, any>): string {
     (d.canal_nome ? `📡 Canal: ${d.canal_nome}\n` : "") +
     `\n📦 Plano: *${d.plano_nome}*\n` +
     (d.modulos?.length ? `➕ Módulos: ${d.modulos.join(", ")}\n` : "") +
-    (d.desconto_percentual ? `🎁 Desconto: ${d.desconto_percentual}%\n` : "") +
+    (d.desconto_mensalidade_percentual
+      ? `🎁 Desconto mensalidade: ${d.desconto_mensalidade_percentual}%${d.desconto_mensalidade_meses ? ` (primeiros ${d.desconto_mensalidade_meses} meses)` : " (permanente)"}\n`
+      : "") +
+    (d.desconto_implantacao_percentual ? `🏗️ Desconto implantação: ${d.desconto_implantacao_percentual}%\n` : "") +
     (d.valor_implantacao ? `💵 Implantação: ${fmt(d.valor_implantacao)}${d.parcelamento_implantacao > 1 ? ` em ${d.parcelamento_implantacao}x` : ""}\n` : "") +
     `\nConfirma?`
   );
