@@ -18,6 +18,7 @@ type Vendedor = {
   full_name: string;
   filial_id: string | null;
   is_vendedor: boolean;
+  telefone?: string | null;
 };
 
 function fmt(v: number) {
