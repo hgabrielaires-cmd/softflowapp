@@ -29,7 +29,10 @@ export interface PedidoSaveParams {
 
 export interface PedidoSaveResult {
   success: boolean;
+  /** true quando o pedido foi salvo pelo fluxo de ajuste de contrato pendente */
+  ajusteContrato?: boolean;
 }
+
 
 /**
  * Encapsulates all persistence branches for creating/updating a pedido,
@@ -73,11 +76,29 @@ export function usePedidoSave() {
       const isReprovado = editingPedido.financeiro_status === "Reprovado";
       const wasAwaitingDesconto = editingPedido.status_pedido === "Aguardando Aprovação de Desconto";
       const wasDescontoAprovado = editingPedido.status_pedido === "Desconto Aprovado";
+      const isAjusteContrato = editingPedido.status_pedido === "Aguardando Ajuste Vendedor";
 
       const descontoValoresMudaram = checkDescontoValoresMudaram(form, editingPedido);
       const descontoJaAprovadoSemMudanca = wasDescontoAprovado && precisaAprovacao && !descontoValoresMudaram;
 
+      if (isAjusteContrato) {
+        // Branch 0: ajuste de contrato pendente — NÃO volta para a fila do financeiro
+        payload.status_pedido = "Aprovado Financeiro";
+        payload.financeiro_status = "Aprovado";
+        const { error } = await supabase.from("pedidos").update(payload).eq("id", editingPedido.id);
+        if (error) throw error;
+        const { error: errContrato } = await supabase
+          .from("contratos")
+          .update({ status: "Atualizado Vendedor" })
+          .eq("pedido_id", editingPedido.id);
+        if (errContrato) console.error("Erro ao atualizar contrato do ajuste:", errContrato);
+        await salvarDraftComentarios(editingPedido.id);
+        toast.success("Pedido ajustado! Gere o novo contrato para reenviar ao cliente.");
+        return { success: true, ajusteContrato: true };
+      }
+
       if (precisaAprovacao && !descontoJaAprovadoSemMudanca) {
+
         // Branch 1: discount exceeds limit → send for approval
         applyFinanceiroReset(payload, "Aguardando Aprovação de Desconto");
         const { error } = await supabase.from("pedidos").update(payload).eq("id", editingPedido.id);

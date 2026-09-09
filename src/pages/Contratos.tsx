@@ -16,6 +16,9 @@ import { ZapsignDetailDialog } from "./contratos/components/ZapsignDetailDialog"
 import { useContratoGeracaoZapsign } from "./contratos/useContratoGeracaoZapsign";
 import { useContratosQueries } from "./contratos/useContratosQueries";
 import { useCadastroRetroativo } from "./contratos/useCadastroRetroativo";
+import { SolicitarAjusteDialog } from "./contratos/components/SolicitarAjusteDialog";
+import { solicitarAjusteContrato } from "@/lib/solicitarAjusteContrato";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +58,8 @@ import {
   RefreshCw,
   ExternalLink,
   Search,
+  AlertTriangle,
+
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -66,8 +71,9 @@ import { TablePagination } from "@/components/TablePagination";
 export default function Contratos() {
   const queries = useContratosQueries();
   const {
-    profile,
+    profile, isAdmin, roles, isFinanceiro,
     canManage, podeCadastroRetroativo, podeRegerarContrato,
+
     filiaisDoUsuario, todasFiliais,
     contratos, setContratos,
     filiais, filialParametros, profilesMap,
@@ -102,6 +108,36 @@ export default function Contratos() {
   const [aditivosVinculados, setAditivosVinculados] = useState<Contrato[]>([]);
   const [aditivosSelecionados, setAditivosSelecionados] = useState<string[]>([]);
   const [contratoBaseCancelado, setContratoBaseCancelado] = useState<Contrato | null>(null);
+
+  // ── Solicitar ajuste de contrato pendente de assinatura ─────────────────
+  const [openAjuste, setOpenAjuste] = useState(false);
+  const [ajusteAlvo, setAjusteAlvo] = useState<Contrato | null>(null);
+  const [ajusteSaving, setAjusteSaving] = useState(false);
+  const podeSolicitarAjuste = isAdmin || roles.includes("gestor") || isFinanceiro;
+
+  async function handleConfirmarAjuste(motivo: string) {
+    if (!ajusteAlvo || !profile?.user_id) return;
+    setAjusteSaving(true);
+    const res = await solicitarAjusteContrato({
+      contratoId: ajusteAlvo.id,
+      pedidoId: ajusteAlvo.pedido_id,
+      numeroContrato: ajusteAlvo.numero_exibicao || `#${ajusteAlvo.numero_registro}`,
+      clienteNome: ajusteAlvo.clientes?.nome_fantasia || "—",
+      vendedorId: ajusteAlvo.pedidos?.vendedor_id || null,
+      motivo,
+      solicitanteId: profile.user_id,
+    });
+    setAjusteSaving(false);
+    if (!res.ok) {
+      toast.error(res.error || "Erro ao solicitar ajuste");
+      return;
+    }
+    toast.success("Ajuste solicitado — o vendedor foi notificado.");
+    setOpenAjuste(false);
+    setAjusteAlvo(null);
+    loadData();
+  }
+
 
   // ── Contexto para gerarTermoAceite (helper extraído) ─────────────────────
   function buildTermoCtx(): GerarTermoAceiteContext {
@@ -712,6 +748,19 @@ export default function Contratos() {
                               </DropdownMenuItem>
                             </>
                           )}
+                          {podeSolicitarAjuste
+                            && ["Pendente", "Enviado"].includes(zapsignRecords[contrato.id]?.status || "")
+                            && contrato.status !== "Aguardando Ajuste"
+                            && contrato.status !== "Encerrado" && (
+                            <DropdownMenuItem
+                              className="cursor-pointer text-amber-600 focus:text-amber-700"
+                              onClick={() => { setAjusteAlvo(contrato); setOpenAjuste(true); }}
+                            >
+                              <AlertTriangle className="h-4 w-4 mr-2" />
+                              Solicitar Ajuste
+                            </DropdownMenuItem>
+                          )}
+
                           {canManage && (
                             <DropdownMenuItem
                               className="cursor-pointer"
@@ -838,6 +887,16 @@ export default function Contratos() {
         onReenviarWhatsapp={handleReenviarWhatsapp}
         reenviandoWhatsapp={reenviandoWhatsapp}
       />
+
+      {/* Solicitar Ajuste de Contrato */}
+      <SolicitarAjusteDialog
+        open={openAjuste}
+        onOpenChange={(v) => { setOpenAjuste(v); if (!v) setAjusteAlvo(null); }}
+        contrato={ajusteAlvo}
+        saving={ajusteSaving}
+        onConfirm={handleConfirmarAjuste}
+      />
+
 
       {/* ── Popup ZapSign + WhatsApp Animada ──────────────────────────── */}
       <ZapsignPopupDialog

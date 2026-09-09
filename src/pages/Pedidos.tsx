@@ -6,7 +6,7 @@ import { retomarOportunidadePorPedido } from "@/lib/retomarOportunidadeCrm";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useCrudPermissions } from "@/hooks/useCrudPermissions";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Cliente, Filial, Profile, Contrato } from "@/lib/supabase-types";
 import { useUserFiliais } from "@/hooks/useUserFiliais";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,8 @@ import { usePedidosQueries } from "./pedidos/usePedidosQueries";
 
 export default function Pedidos() {
   const { user, profile, roles, isAdmin } = useAuth();
+  const navigate = useNavigate();
+
   const { filiaisDoUsuario, filialPadraoId, isGlobal, todasFiliais, loading: loadingFiliais } = useUserFiliais();
   const { canIncluir: crudIncluir, canEditar: crudEditar, canExcluir: crudExcluir } = useCrudPermissions("pedidos", roles);
   const isFinanceiro = roles.includes("financeiro");
@@ -692,7 +694,7 @@ export default function Pedidos() {
 
     setSaving(true);
     try {
-      await savePedido({
+      const saveResult = await savePedido({
         form,
         computed: {
           valorImplantacaoOriginal,
@@ -718,6 +720,14 @@ export default function Pedidos() {
       setOpenDialog(false);
       setDraftComentarios([]);
       loadData();
+      if (saveResult?.ajusteContrato) {
+        toast.info("Deseja gerar o novo contrato agora?", {
+          description: "O link anterior continua válido até um novo contrato ser gerado.",
+          action: { label: "Ir para contratos", onClick: () => navigate("/contratos") },
+          duration: 10000,
+        });
+      }
+
     } catch (err: unknown) {
       console.error("Erro ao salvar pedido:", err);
       const msg = err instanceof Error ? err.message : "Erro ao salvar pedido";
@@ -1082,6 +1092,9 @@ export default function Pedidos() {
                   const isAprovado = finStatus === "Aprovado";
                   const temContratoVigente = contratoLiberado && isAprovado;
 
+                  // Ajuste de contrato pendente: pedido devolvido ao vendedor
+                  const isAjusteVendedor = pedido.status_pedido === "Aguardando Ajuste Vendedor";
+
                   // Vendedor só edita se: APENAS reprovado financeiro (não aprovado, não enviado, não cancelado)
                   const statusBloqueadoVendedor = [
                     "Aprovado Financeiro",
@@ -1094,9 +1107,13 @@ export default function Pedidos() {
                     && isReprovado
                     && !temContratoVigente
                     && !statusBloqueadoVendedor.includes(pedido.status_pedido);
+                   const canEditAjuste = isAjusteVendedor && (
+                     isAdmin || crudEditar || (isVendedor && pedido.vendedor_id === profile?.user_id)
+                   );
                    const canEditAdmin = isAdmin && !temContratoVigente && pedido.status_pedido !== "Cancelado";
                    const canEditCrud = crudEditar && !temContratoVigente && pedido.status_pedido !== "Cancelado";
-                   const canEdit = canEditAdmin || canEditVendedor || canEditCrud;
+                   const canEdit = canEditAdmin || canEditVendedor || canEditCrud || canEditAjuste;
+
 
                    // Cancelar: admin ou perfil com permissão de excluir (sem contrato vigente)
                    const canCancel = (isAdmin || crudExcluir) && pedido.status_pedido !== "Cancelado" && !temContratoVigente;
@@ -1202,8 +1219,15 @@ export default function Pedidos() {
                               <RefreshCw className="h-3.5 w-3.5" />
                             </Button>
                           )}
+                          {/* Ajuste de contrato solicitado — editar e reenviar direto para contrato */}
+                          {canEditAjuste && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-orange-600 hover:text-orange-700" onClick={() => openEdit(pedido)} title="Editar e reenviar (ajuste de contrato)">
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                           {/* Editar (aguardando, sem contrato vigente) */}
-                          {canEdit && (
+                          {canEdit && !canEditAjuste && (
+
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(pedido)} title="Editar pedido">
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>

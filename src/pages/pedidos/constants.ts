@@ -21,6 +21,7 @@ export const STATUS_OPTIONS = [
   "Reprovado Financeiro",
   "Aguardando Aprovação de Desconto",
   "Desconto Aprovado",
+  "Aguardando Ajuste Vendedor",
   "Cancelado",
 ] as const;
 
@@ -30,8 +31,10 @@ export const STATUS_COLORS: Record<string, string> = {
   "Reprovado Financeiro": "bg-red-100 text-red-600",
   "Aguardando Aprovação de Desconto": "bg-purple-100 text-purple-700",
   "Desconto Aprovado": "bg-teal-100 text-teal-700",
+  "Aguardando Ajuste Vendedor": "bg-orange-100 text-orange-700",
   "Cancelado": "bg-gray-100 text-gray-500",
 };
+
 
 export const FIN_STATUS_COLORS: Record<string, string> = {
   Aguardando: "bg-amber-100 text-amber-700",
