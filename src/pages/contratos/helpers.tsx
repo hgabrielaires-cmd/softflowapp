@@ -380,6 +380,17 @@ export function getZapSignStatusBadge(status: string | undefined, contratoStatus
       </Badge>
     );
   }
+  if (contratoStatus === "Atualizado Enviado" && status !== "Assinado" && status !== "Recusado") {
+    return (
+      <div className="flex flex-col gap-0.5 w-fit">
+        <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 text-xs flex items-center gap-1 w-fit">
+          <Send className="h-3 w-3" />
+          Atualizado e Enviado
+        </Badge>
+        <span className="text-[10px] text-amber-600 text-center w-full">Aguardando assinatura</span>
+      </div>
+    );
+  }
   if (!status) return null;
   const canceladoBadge = contratoStatus === "Encerrado" ? (
     <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 text-xs flex items-center gap-1 w-fit">
