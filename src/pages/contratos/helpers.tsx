@@ -366,6 +366,20 @@ export function getZapSignStatusBadge(status: string | undefined, contratoStatus
       </Badge>
     );
   }
+  if (contratoStatus === "Aguardando Ajuste") {
+    return (
+      <Badge className="bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-100 text-xs flex items-center gap-1 w-fit">
+        ⚠️ Aguardando Ajuste
+      </Badge>
+    );
+  }
+  if (contratoStatus === "Atualizado Vendedor") {
+    return (
+      <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 text-xs flex items-center gap-1 w-fit">
+        Atualizado — gerar novo envio
+      </Badge>
+    );
+  }
   if (!status) return null;
   const canceladoBadge = contratoStatus === "Encerrado" ? (
     <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 text-xs flex items-center gap-1 w-fit">
