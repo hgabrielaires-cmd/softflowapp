@@ -87,11 +87,38 @@ export function usePedidoSave() {
         payload.financeiro_status = "Aprovado";
         const { error } = await supabase.from("pedidos").update(payload).eq("id", editingPedido.id);
         if (error) throw error;
-        const { error: errContrato } = await supabase
+        const { data: contratosAtualizados, error: errContrato } = await supabase
           .from("contratos")
           .update({ status: "Atualizado Vendedor" })
-          .eq("pedido_id", editingPedido.id);
+          .eq("pedido_id", editingPedido.id)
+          .select("id, numero_exibicao, clientes(nome_fantasia)");
         if (errContrato) console.error("Erro ao atualizar contrato do ajuste:", errContrato);
+
+        // Notifica financeiro/admin/gestor que o contrato está pronto para reenvio
+        try {
+          const contratoAtualizado = (contratosAtualizados || [])[0] as any;
+          if (contratoAtualizado) {
+            const { data: destinatarios } = await supabase
+              .from("user_roles")
+              .select("user_id")
+              .in("role", ["admin", "financeiro", "gestor"]);
+            const ids = Array.from(new Set((destinatarios || []).map((r: any) => r.user_id)));
+            if (ids.length > 0) {
+              await supabase.from("notificacoes").insert(
+                ids.map((uid) => ({
+                  titulo: "📄 Contrato pronto para reenvio",
+                  mensagem: `Contrato ${contratoAtualizado.numero_exibicao} do cliente ${contratoAtualizado.clientes?.nome_fantasia || "—"} foi atualizado pelo vendedor e está pronto para gerar novo documento.`,
+                  tipo: "contrato_atualizado",
+                  destinatario_user_id: uid,
+                  criado_por: vendedorId,
+                  metadata: { link: "/contratos", contrato_id: contratoAtualizado.id, pedido_id: editingPedido.id },
+                })),
+              );
+            }
+          }
+        } catch (e) {
+          console.warn("Falha ao notificar equipe sobre contrato atualizado:", e);
+        }
         await salvarDraftComentarios(editingPedido.id);
         toast.success("Pedido ajustado! Gere o novo contrato para reenviar ao cliente.");
         return { success: true, ajusteContrato: true };
