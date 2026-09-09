@@ -654,6 +654,11 @@ export default function Contratos() {
                     </TableCell>
                     <TableCell className="font-medium">
                       {contrato.clientes?.nome_fantasia || "—"}
+                      {contrato.status === "Atualizado Vendedor" && (
+                        <div className="mt-1 text-[10px] font-normal text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5 w-fit dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800">
+                          ✅ Vendedor atualizou — pronto para gerar novo contrato
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {contrato.planos?.nome || "—"}
