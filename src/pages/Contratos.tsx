@@ -756,6 +756,24 @@ export default function Contratos() {
                               </DropdownMenuItem>
                             </>
                           )}
+                          {contrato.status === "Atualizado Vendedor" && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="cursor-pointer text-blue-600 focus:text-blue-700 font-medium"
+                                onClick={() => handleGerarContrato(contrato)}
+                                disabled={gerando}
+                              >
+                                {gerando ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <FileOutput className="h-4 w-4 mr-2" />
+                                )}
+                                Gerar Novo Contrato
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                            </>
+                          )}
                           {podeSolicitarAjuste
                             && ["Pendente", "Enviado"].includes(zapsignRecords[contrato.id]?.status || "")
                             && contrato.status !== "Aguardando Ajuste"
