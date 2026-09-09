@@ -420,13 +420,32 @@ export function getStatusBadge(status: string) {
         Ativo
       </Badge>
     );
+  if (status === "Aguardando Ajuste")
+    return (
+      <Badge className="bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400 text-xs flex items-center gap-1 w-fit">
+        ⚠️ Aguardando Ajuste
+      </Badge>
+    );
+  if (status === "Atualizado Vendedor")
+    return (
+      <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 text-xs flex items-center gap-1 w-fit">
+        🔄 Atualizado Vendedor
+      </Badge>
+    );
+  if (status === "Encerrado")
+    return (
+      <Badge variant="secondary" className="text-xs flex items-center gap-1 w-fit">
+        <MinusCircle className="h-3 w-3" />
+        Encerrado
+      </Badge>
+    );
   return (
     <Badge variant="secondary" className="text-xs flex items-center gap-1 w-fit">
-      <MinusCircle className="h-3 w-3" />
-      Encerrado
+      {status}
     </Badge>
   );
 }
+
 
 export function getStatusGeracaoBadge(statusGeracao: string | null, contratoStatus?: string) {
   if (contratoStatus === "Encerrado") {
