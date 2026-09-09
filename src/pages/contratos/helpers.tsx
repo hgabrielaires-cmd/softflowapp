@@ -457,6 +457,13 @@ export function getStatusBadge(status: string) {
         🔄 Atualizado Vendedor
       </Badge>
     );
+  if (status === "Atualizado Enviado")
+    return (
+      <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 text-xs flex items-center gap-1 w-fit">
+        <Send className="h-3 w-3" />
+        Atualizado e Enviado
+      </Badge>
+    );
   if (status === "Encerrado")
     return (
       <Badge variant="secondary" className="text-xs flex items-center gap-1 w-fit">
