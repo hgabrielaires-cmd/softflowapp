@@ -198,7 +198,14 @@ export function useContratoGeracaoZapsign({
         },
       }));
 
-      const contratoSemPdf = { ...updatedContrato, pdf_url: null };
+      // Contrato ajustado pelo vendedor: agora foi regerado e enviado
+      let statusPosEnvio = updatedContrato.status;
+      if (contrato.status === "Atualizado Vendedor") {
+        statusPosEnvio = "Atualizado Enviado";
+        await supabase.from("contratos").update({ status: statusPosEnvio }).eq("id", contrato.id);
+      }
+
+      const contratoSemPdf = { ...updatedContrato, pdf_url: null, status: statusPosEnvio };
       setContratos((prev) =>
         prev.map((c) => (c.id === contrato.id ? contratoSemPdf : c))
       );

@@ -155,7 +155,7 @@ export function useContratosQueries() {
   const filtered = contratos.filter((c) => {
     if (filterFilial !== "all" && filterFilial !== "_init_" && c.clientes?.filial_id !== filterFilial) return false;
     if (filterStatus === "ativos_edicao") {
-      if (!["Ativo", "Aguardando Ajuste", "Atualizado Vendedor"].includes(c.status)) return false;
+      if (!["Ativo", "Aguardando Ajuste", "Atualizado Vendedor", "Atualizado Enviado"].includes(c.status)) return false;
     } else if (filterStatus !== "all" && c.status !== filterStatus) return false;
     if (filterDe && c.created_at < filterDe) return false;
     if (filterAte && c.created_at > filterAte + "T23:59:59") return false;
