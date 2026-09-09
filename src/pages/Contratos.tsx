@@ -580,8 +580,11 @@ export default function Contratos() {
                 <SelectValue placeholder="Todos os status" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="ativos_edicao">Ativos e Em Edição</SelectItem>
                 <SelectItem value="all">Todos os status</SelectItem>
                 <SelectItem value="Ativo">Ativo</SelectItem>
+                <SelectItem value="Aguardando Ajuste">Aguardando Ajuste</SelectItem>
+                <SelectItem value="Atualizado Vendedor">Atualizado Vendedor</SelectItem>
                 <SelectItem value="Encerrado">Encerrado</SelectItem>
               </SelectContent>
             </Select>
