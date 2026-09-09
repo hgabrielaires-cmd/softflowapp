@@ -47,7 +47,7 @@ export function useContratosQueries() {
 
   // ── Filter states ──────────────────────────────────────────────────────
   const [filterFilial, setFilterFilial] = useState("_init_");
-  const [filterStatus, setFilterStatus] = useState("Ativo");
+  const [filterStatus, setFilterStatus] = useState("ativos_edicao");
   const [filterDe, setFilterDe] = useState("");
   const [filterAte, setFilterAte] = useState("");
   const [filterBusca, setFilterBusca] = useState("");
@@ -154,7 +154,9 @@ export function useContratosQueries() {
   // ── Filtro computado ───────────────────────────────────────────────────
   const filtered = contratos.filter((c) => {
     if (filterFilial !== "all" && filterFilial !== "_init_" && c.clientes?.filial_id !== filterFilial) return false;
-    if (filterStatus !== "all" && c.status !== filterStatus) return false;
+    if (filterStatus === "ativos_edicao") {
+      if (!["Ativo", "Aguardando Ajuste", "Atualizado Vendedor"].includes(c.status)) return false;
+    } else if (filterStatus !== "all" && c.status !== filterStatus) return false;
     if (filterDe && c.created_at < filterDe) return false;
     if (filterAte && c.created_at > filterAte + "T23:59:59") return false;
     if (filterBusca.trim()) {

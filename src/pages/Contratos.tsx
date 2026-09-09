@@ -580,8 +580,11 @@ export default function Contratos() {
                 <SelectValue placeholder="Todos os status" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="ativos_edicao">Ativos e Em Edição</SelectItem>
                 <SelectItem value="all">Todos os status</SelectItem>
                 <SelectItem value="Ativo">Ativo</SelectItem>
+                <SelectItem value="Aguardando Ajuste">Aguardando Ajuste</SelectItem>
+                <SelectItem value="Atualizado Vendedor">Atualizado Vendedor</SelectItem>
                 <SelectItem value="Encerrado">Encerrado</SelectItem>
               </SelectContent>
             </Select>
@@ -651,6 +654,11 @@ export default function Contratos() {
                     </TableCell>
                     <TableCell className="font-medium">
                       {contrato.clientes?.nome_fantasia || "—"}
+                      {contrato.status === "Atualizado Vendedor" && (
+                        <div className="mt-1 text-[10px] font-normal text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5 w-fit dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800">
+                          ✅ Vendedor atualizou — pronto para gerar novo contrato
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {contrato.planos?.nome || "—"}
@@ -746,6 +754,24 @@ export default function Contratos() {
                                 <RefreshCw className="h-4 w-4 mr-2" />
                                 Atualizar Status
                               </DropdownMenuItem>
+                            </>
+                          )}
+                          {contrato.status === "Atualizado Vendedor" && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="cursor-pointer text-blue-600 focus:text-blue-700 font-medium"
+                                onClick={() => handleGerarContrato(contrato)}
+                                disabled={gerando}
+                              >
+                                {gerando ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <FileOutput className="h-4 w-4 mr-2" />
+                                )}
+                                Gerar Novo Contrato
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
                             </>
                           )}
                           {podeSolicitarAjuste
