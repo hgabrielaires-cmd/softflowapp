@@ -227,25 +227,6 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          let conversa = await acharConversa(numero);
-          if (!conversa) {
-            const agora = new Date().toISOString();
-            const { data: nova } = await admin
-              .from("chat_conversas")
-              .insert({
-                numero_cliente: numero,
-                nome_cliente: nome,
-                canal: "whatsapp_meta",
-                status: "aguardando",
-                iniciado_em: agora,
-                updated_at: agora,
-              })
-              .select("id, status, atendente_id, nome_cliente, iniciado_em")
-              .single();
-            conversa = nova as any;
-          }
-          if (!conversa) continue;
-
           // Texto da mensagem (texto simples ou resposta de botão)
           let texto = "";
           let tipo = "texto";
@@ -268,6 +249,80 @@ Deno.serve(async (req) => {
           } else {
             continue;
           }
+
+          // 1º) Conversa ativa (inclui aguardando_cliente) → só adiciona a mensagem
+          let conversa = await acharConversa(numero);
+
+          if (!conversa) {
+            // 2º) NPS pendente nas últimas 24h → registra a nota, sem abrir conversa nova
+            const conversaNps = await acharNpsPendente(numero);
+            if (conversaNps) {
+              const textoMsg = (texto || "").trim();
+              const notaTexto = parseInt(textoMsg[0]);
+              const tituloBotao = msg?.interactive?.button_reply?.title ?? msg?.button?.text ?? null;
+              const notaBotao = tituloBotao ? parseInt(String(tituloBotao).trim()[0]) : NaN;
+              const notaFinal =
+                notaTexto >= 1 && notaTexto <= 5
+                  ? notaTexto
+                  : notaBotao >= 1 && notaBotao <= 5
+                    ? notaBotao
+                    : null;
+
+              await admin.from("chat_mensagens").insert({
+                conversa_id: conversaNps.id,
+                tipo,
+                conteudo: textoMsg,
+                remetente: "cliente",
+                ...extra,
+              });
+
+              if (notaFinal) {
+                await admin
+                  .from("chat_conversas")
+                  .update({ nps_nota: notaFinal, nps_comentario: textoMsg })
+                  .eq("id", conversaNps.id);
+
+                const agradecimento =
+                  "Obrigado pela sua avaliação! 🙏\nSua opinião é muito importante para nós. 😊";
+                await enviarTexto(numero, agradecimento);
+                await admin.from("chat_mensagens").insert({
+                  conversa_id: conversaNps.id,
+                  tipo: "bot",
+                  conteudo: agradecimento,
+                  remetente: "bot",
+                });
+                console.log("[whatsapp-meta-webhook] NPS registrado:", notaFinal, conversaNps.id);
+              } else {
+                const reenvio = "Por favor, responda apenas com um número de 1 a 5. 😊";
+                await enviarTexto(numero, reenvio);
+                await admin.from("chat_mensagens").insert({
+                  conversa_id: conversaNps.id,
+                  tipo: "bot",
+                  conteudo: reenvio,
+                  remetente: "bot",
+                });
+                console.log("[whatsapp-meta-webhook] resposta de NPS inválida:", conversaNps.id);
+              }
+              continue;
+            }
+
+            // 3º) Nada pendente → nova conversa na fila
+            const agora = new Date().toISOString();
+            const { data: nova } = await admin
+              .from("chat_conversas")
+              .insert({
+                numero_cliente: numero,
+                nome_cliente: nome,
+                canal: "whatsapp_meta",
+                status: "aguardando",
+                iniciado_em: agora,
+                updated_at: agora,
+              })
+              .select("id, status, atendente_id, nome_cliente, iniciado_em")
+              .single();
+            conversa = nova as any;
+          }
+          if (!conversa) continue;
 
           await salvarMensagem(conversa.id, texto, tipo, extra);
 
