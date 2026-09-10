@@ -378,22 +378,8 @@ serve(async (req) => {
       return ok({ success: true, conversa_id: conversa.id, action: "message_added" });
     }
 
-    // ── Check for recently closed conversation awaiting NPS ──
-    // Fetch ALL pending NPS conversations for this number (not just one)
-    const { data: conversasNpsPendentes } = await supabase
-      .from("chat_conversas")
-      .select("id, nps_enviado, nps_nota, canal_instancia, encerrado_em")
-      .in("numero_cliente", normalizarNumero(numero))
-      .eq("status", "encerrado")
-      .eq("nps_enviado", true)
-      .is("nps_nota", null)
-      .gte("encerrado_em", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-      .order("encerrado_em", { ascending: false });
-
-    const conversaNps = conversasNpsPendentes?.[0] || null;
-
-
     if (conversaNps) {
+
       // Save the client's message in the most recent closed conversation
       await supabase.from("chat_mensagens").insert({
         conversa_id: conversaNps.id,
