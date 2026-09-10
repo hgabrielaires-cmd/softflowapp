@@ -385,7 +385,8 @@ Deno.serve(async (req) => {
                 await admin
                   .from("chat_conversas")
                   .update({ nps_nota: notaFinal, nps_comentario: textoMsg })
-                  .eq("id", conversaNps.id);
+                  .eq("id", conversaNps.id)
+                  .eq("status", "encerrado");
 
                 const agradecimento =
                   "Obrigado pela sua avaliação! 🙏\nSua opinião é muito importante para nós. 😊";
@@ -410,7 +411,9 @@ Deno.serve(async (req) => {
               }
               continue;
             }
+          }
 
+          if (!conversa) {
             // 3º) Nada pendente → nova conversa na fila
             const agora = new Date().toISOString();
             const { data: nova } = await admin
@@ -423,10 +426,11 @@ Deno.serve(async (req) => {
                 iniciado_em: agora,
                 updated_at: agora,
               })
-              .select("id, status, atendente_id, nome_cliente, iniciado_em")
+              .select("id, status, atendente_id, nome_cliente, iniciado_em, created_at")
               .single();
             conversa = nova as any;
           }
+
           if (!conversa) continue;
 
           if (mediaId && mediaTipo) {
