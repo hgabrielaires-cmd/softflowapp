@@ -4,7 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Lock, MessageSquare, Download, FileText, FileSpreadsheet, File as FileIcon, Search, X, ChevronUp, ChevronDown, ArrowLeft, LogOut } from "lucide-react";
+import { Send, Lock, MessageSquare, Download, FileText, FileSpreadsheet, File as FileIcon, Search, X, ChevronUp, ChevronDown, ArrowLeft, LogOut, MoreHorizontal, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ChatConversa, ChatMensagem, STATUS_COLORS, STATUS_LABELS, ChatStatus } from "../types";
@@ -60,12 +66,15 @@ interface Props {
   onTransferir: () => void;
   onLeaveConversation?: () => void;
   onFinalizarTriagem?: () => void;
+  onExcluirAtendimento?: () => void;
+  podeExcluir?: boolean;
   isLoading?: boolean;
 }
 
 export default function ChatMessageArea({
   conversa, mensagens, userId, userName,
-  onSend, onSendMedia, onIniciarAtendimento, onEncerrar, onTransferir, onLeaveConversation, onFinalizarTriagem, isLoading,
+  onSend, onSendMedia, onIniciarAtendimento, onEncerrar, onTransferir, onLeaveConversation, onFinalizarTriagem,
+  onExcluirAtendimento, podeExcluir, isLoading,
 }: Props) {
   const { profile } = useAuth();
   const qc = useQueryClient();
@@ -279,6 +288,20 @@ export default function ChatMessageArea({
             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setBuscaAtiva(true)} title="Buscar mensagens">
               <Search className="h-4 w-4" />
             </Button>
+            {podeExcluir && conversa.status !== "encerrado" && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-1">
+                    Ações <MoreHorizontal className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem className="text-destructive focus:text-destructive gap-2" onClick={() => onExcluirAtendimento?.()}>
+                    <Trash2 className="h-4 w-4" /> Excluir atendimento
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             {podeIniciar && (
               <>
                 <Button size="sm" onClick={onIniciarAtendimento} disabled={isLoading}>
