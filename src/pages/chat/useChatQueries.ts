@@ -30,10 +30,10 @@ export function useChatConversas(tab: string, userId: string | undefined, search
         const colabIds = (colabData || []).map((c: any) => c.conversa_id);
 
         if (colabIds.length > 0) {
-          q = q.in("status", ["em_atendimento"])
+          q = q.in("status", ["em_atendimento", "aguardando_cliente"])
             .or(`atendente_id.eq.${userId},id.in.(${colabIds.join(",")})`);
         } else {
-          q = q.eq("atendente_id", userId).in("status", ["em_atendimento"]);
+          q = q.eq("atendente_id", userId).in("status", ["em_atendimento", "aguardando_cliente"]);
         }
       } else if (tab === "encerrados") {
         q = q.in("status", ["encerrado", "fora_horario"]);

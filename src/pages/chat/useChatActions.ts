@@ -315,6 +315,12 @@ export function useChatActions() {
       motivo?: string;
       setorNome?: string;
     }) => {
+      const { data: conversaInfo } = await supabase
+        .from("chat_conversas")
+        .select("numero_cliente, canal, canal_instancia")
+        .eq("id", conversaId)
+        .maybeSingle();
+
       await supabase
         .from("chat_conversas")
         .update({
@@ -333,6 +339,38 @@ export function useChatActions() {
         conversa_id: conversaId,
         tipo: "sistema",
         conteudo: msg,
+        remetente: "sistema",
+      });
+
+      // Avisa o cliente sobre a transferência
+      let atendenteNome: string | null = null;
+      if (novoAtendenteId) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("user_id", novoAtendenteId)
+          .maybeSingle();
+        atendenteNome = (prof as any)?.full_name || null;
+      }
+
+      const aviso = novoAtendenteId
+        ? `Seu atendimento foi transferido para ${atendenteNome || "outro atendente"}. Aguarde um momento. 🔄`
+        : `Seu atendimento foi transferido para o setor de ${setorNome || "outro setor"}. Em breve um novo atendente irá lhe atender. 🔄`;
+
+      if (conversaInfo?.numero_cliente) {
+        const envio = await enviarTextoWhatsApp({
+          canal: conversaInfo.canal,
+          numero: conversaInfo.numero_cliente,
+          texto: aviso,
+          instanceName: conversaInfo.canal_instancia || undefined,
+        });
+        if (!envio.ok) console.error("[Chat] Falha ao avisar cliente da transferência:", envio.error);
+      }
+
+      await supabase.from("chat_mensagens").insert({
+        conversa_id: conversaId,
+        tipo: "sistema",
+        conteudo: aviso,
         remetente: "sistema",
       });
 
