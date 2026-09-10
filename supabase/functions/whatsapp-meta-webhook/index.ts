@@ -15,16 +15,72 @@ async function getConfig() {
   return ((data as any)?.config ?? {}) as Record<string, string>;
 }
 
+/** Gera as variações de formato de um número (com/sem 55, com +55). */
+function normalizarNumero(numero: string): string[] {
+  const limpo = (numero || "").replace(/\D/g, "");
+  const variantes = new Set<string>();
+  if (!limpo) return [];
+  variantes.add(limpo);
+  if (!limpo.startsWith("55")) variantes.add("55" + limpo);
+  if (limpo.startsWith("55")) variantes.add(limpo.slice(2));
+  variantes.add("+55" + limpo.replace(/^55/, ""));
+  return Array.from(variantes);
+}
+
 async function acharConversa(numero: string) {
   const { data } = await admin
     .from("chat_conversas")
     .select("id, status, atendente_id, nome_cliente, iniciado_em")
-    .eq("numero_cliente", numero)
+    .in("numero_cliente", normalizarNumero(numero))
     .eq("canal", "whatsapp_meta")
     .neq("status", "encerrado")
     .order("created_at", { ascending: false })
     .limit(1);
   return data?.[0] ?? null;
+}
+
+/** Conversa encerrada nas últimas 24h com NPS enviado e ainda sem nota. */
+async function acharNpsPendente(numero: string) {
+  const { data } = await admin
+    .from("chat_conversas")
+    .select("id, nps_enviado, nps_nota, canal")
+    .in("numero_cliente", normalizarNumero(numero))
+    .eq("status", "encerrado")
+    .eq("nps_enviado", true)
+    .is("nps_nota", null)
+    .gte("encerrado_em", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    .order("encerrado_em", { ascending: false })
+    .limit(1);
+  return data?.[0] ?? null;
+}
+
+/** Envia texto simples pela Cloud API da Meta. */
+async function enviarTexto(numero: string, texto: string) {
+  try {
+    const cfg = await getConfig();
+    if (!cfg?.access_token || !cfg?.phone_number_id) {
+      console.error("[whatsapp-meta-webhook] credenciais Meta ausentes");
+      return;
+    }
+    const digits = (numero || "").replace(/\D/g, "");
+    const to = digits.startsWith("55") ? digits : `55${digits}`;
+    const res = await fetch(`https://graph.facebook.com/v19.0/${cfg.phone_number_id}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${cfg.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to,
+        type: "text",
+        text: { body: texto },
+      }),
+    });
+    if (!res.ok) console.error("[whatsapp-meta-webhook] falha ao enviar:", res.status, (await res.text()).slice(0, 300));
+  } catch (e) {
+    console.error("[whatsapp-meta-webhook] erro ao enviar texto:", e);
+  }
 }
 
 async function jaProcessada(messageId: string | null) {
@@ -171,25 +227,6 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          let conversa = await acharConversa(numero);
-          if (!conversa) {
-            const agora = new Date().toISOString();
-            const { data: nova } = await admin
-              .from("chat_conversas")
-              .insert({
-                numero_cliente: numero,
-                nome_cliente: nome,
-                canal: "whatsapp_meta",
-                status: "aguardando",
-                iniciado_em: agora,
-                updated_at: agora,
-              })
-              .select("id, status, atendente_id, nome_cliente, iniciado_em")
-              .single();
-            conversa = nova as any;
-          }
-          if (!conversa) continue;
-
           // Texto da mensagem (texto simples ou resposta de botão)
           let texto = "";
           let tipo = "texto";
@@ -212,6 +249,80 @@ Deno.serve(async (req) => {
           } else {
             continue;
           }
+
+          // 1º) Conversa ativa (inclui aguardando_cliente) → só adiciona a mensagem
+          let conversa = await acharConversa(numero);
+
+          if (!conversa) {
+            // 2º) NPS pendente nas últimas 24h → registra a nota, sem abrir conversa nova
+            const conversaNps = await acharNpsPendente(numero);
+            if (conversaNps) {
+              const textoMsg = (texto || "").trim();
+              const notaTexto = parseInt(textoMsg[0]);
+              const tituloBotao = msg?.interactive?.button_reply?.title ?? msg?.button?.text ?? null;
+              const notaBotao = tituloBotao ? parseInt(String(tituloBotao).trim()[0]) : NaN;
+              const notaFinal =
+                notaTexto >= 1 && notaTexto <= 5
+                  ? notaTexto
+                  : notaBotao >= 1 && notaBotao <= 5
+                    ? notaBotao
+                    : null;
+
+              await admin.from("chat_mensagens").insert({
+                conversa_id: conversaNps.id,
+                tipo,
+                conteudo: textoMsg,
+                remetente: "cliente",
+                ...extra,
+              });
+
+              if (notaFinal) {
+                await admin
+                  .from("chat_conversas")
+                  .update({ nps_nota: notaFinal, nps_comentario: textoMsg })
+                  .eq("id", conversaNps.id);
+
+                const agradecimento =
+                  "Obrigado pela sua avaliação! 🙏\nSua opinião é muito importante para nós. 😊";
+                await enviarTexto(numero, agradecimento);
+                await admin.from("chat_mensagens").insert({
+                  conversa_id: conversaNps.id,
+                  tipo: "bot",
+                  conteudo: agradecimento,
+                  remetente: "bot",
+                });
+                console.log("[whatsapp-meta-webhook] NPS registrado:", notaFinal, conversaNps.id);
+              } else {
+                const reenvio = "Por favor, responda apenas com um número de 1 a 5. 😊";
+                await enviarTexto(numero, reenvio);
+                await admin.from("chat_mensagens").insert({
+                  conversa_id: conversaNps.id,
+                  tipo: "bot",
+                  conteudo: reenvio,
+                  remetente: "bot",
+                });
+                console.log("[whatsapp-meta-webhook] resposta de NPS inválida:", conversaNps.id);
+              }
+              continue;
+            }
+
+            // 3º) Nada pendente → nova conversa na fila
+            const agora = new Date().toISOString();
+            const { data: nova } = await admin
+              .from("chat_conversas")
+              .insert({
+                numero_cliente: numero,
+                nome_cliente: nome,
+                canal: "whatsapp_meta",
+                status: "aguardando",
+                iniciado_em: agora,
+                updated_at: agora,
+              })
+              .select("id, status, atendente_id, nome_cliente, iniciado_em")
+              .single();
+            conversa = nova as any;
+          }
+          if (!conversa) continue;
 
           await salvarMensagem(conversa.id, texto, tipo, extra);
 
