@@ -359,6 +359,10 @@ Deno.serve(async (req) => {
                     ? notaBotao
                     : null;
 
+              if (mediaId && mediaTipo) {
+                extra.media_url = await processarMidiaMeta(mediaId, mediaTipo, conversaNps.id);
+              }
+
               await admin.from("chat_mensagens").insert({
                 conversa_id: conversaNps.id,
                 tipo,
