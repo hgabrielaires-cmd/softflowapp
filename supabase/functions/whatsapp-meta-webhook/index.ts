@@ -73,6 +73,72 @@ async function enviarTexto(numero: string, texto: string) {
   }
 }
 
+const EXT_MAP: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "video/mp4": "mp4",
+  "video/3gpp": "3gp",
+  "audio/ogg": "ogg",
+  "audio/mpeg": "mp3",
+  "audio/mp4": "m4a",
+  "audio/amr": "amr",
+  "application/pdf": "pdf",
+};
+
+/** Baixa a mídia da Meta e guarda no bucket chat-midias, devolvendo a URL do objeto. */
+async function processarMidiaMeta(
+  mediaId: string,
+  mimeType: string,
+  conversaId: string,
+): Promise<string | null> {
+  try {
+    const cfg = await getConfig();
+    const accessToken = cfg?.access_token;
+    if (!accessToken) {
+      console.error("[meta-media] access_token ausente");
+      return null;
+    }
+
+    const infoRes = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const info = await infoRes.json();
+    const mediaUrl = info?.url;
+    if (!mediaUrl) {
+      console.error("[meta-media] URL não encontrada para", mediaId);
+      return null;
+    }
+
+    const mediaRes = await fetch(mediaUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!mediaRes.ok) {
+      console.error("[meta-media] erro no download:", mediaRes.status);
+      return null;
+    }
+    const buffer = await mediaRes.arrayBuffer();
+
+    const ext = EXT_MAP[mimeType] || mimeType?.split("/")[1]?.split(";")[0] || "bin";
+    const path = `${conversaId}/${Date.now()}.${ext}`;
+
+    const { error } = await admin.storage
+      .from("chat-midias")
+      .upload(path, buffer, { contentType: mimeType, upsert: false });
+    if (error) {
+      console.error("[meta-media] erro no storage:", error.message);
+      return null;
+    }
+
+    const { data: urlData } = admin.storage.from("chat-midias").getPublicUrl(path);
+    console.log("[meta-media] ✅ salvo:", path);
+    return urlData.publicUrl;
+  } catch (err) {
+    console.error("[meta-media] exceção:", err);
+    return null;
+  }
+}
+
 async function jaProcessada(messageId: string | null) {
   if (!messageId) return false;
   const { data } = await admin
@@ -220,25 +286,60 @@ Deno.serve(async (req) => {
           // Texto da mensagem (texto simples ou resposta de botão)
           let texto = "";
           let tipo = "texto";
+          let mediaId: string | null = null;
+          let mediaTipo: string | null = null;
+          let mediaNome: string | null = null;
           const extra: Record<string, unknown> = { evolution_message_id: wamid };
 
-          if (msg.type === "interactive" || msg.type === "button") {
-            texto =
-              msg?.interactive?.button_reply?.title ??
-              msg?.button?.text ??
-              msg?.interactive?.button_reply?.id ??
-              msg?.button?.payload ??
-              "";
-          } else if (msg.type === "text") {
-            texto = msg?.text?.body ?? "";
-          } else if (["image", "audio", "document", "video"].includes(msg.type)) {
-            texto = `[${msg.type}]`;
-            tipo = msg.type;
-            extra.media_tipo = msg.type;
-            extra.media_nome = msg?.[msg.type]?.filename ?? null;
-          } else {
-            continue;
+          switch (msg.type) {
+            case "interactive":
+            case "button":
+              texto =
+                msg?.interactive?.button_reply?.title ??
+                msg?.interactive?.list_reply?.title ??
+                msg?.button?.text ??
+                msg?.interactive?.button_reply?.id ??
+                msg?.button?.payload ??
+                "";
+              break;
+            case "text":
+              texto = msg?.text?.body ?? "";
+              break;
+            case "image":
+              tipo = "imagem";
+              texto = msg?.image?.caption ?? "";
+              mediaTipo = msg?.image?.mime_type ?? "image/jpeg";
+              mediaId = msg?.image?.id ?? null;
+              break;
+            case "sticker":
+              tipo = "imagem";
+              mediaTipo = msg?.sticker?.mime_type ?? "image/webp";
+              mediaId = msg?.sticker?.id ?? null;
+              break;
+            case "video":
+              tipo = "video";
+              texto = msg?.video?.caption ?? "";
+              mediaTipo = msg?.video?.mime_type ?? "video/mp4";
+              mediaId = msg?.video?.id ?? null;
+              break;
+            case "audio":
+              tipo = "audio";
+              mediaTipo = msg?.audio?.mime_type ?? "audio/ogg";
+              mediaId = msg?.audio?.id ?? null;
+              break;
+            case "document":
+              tipo = "documento";
+              texto = msg?.document?.caption ?? "";
+              mediaNome = msg?.document?.filename ?? "documento";
+              mediaTipo = msg?.document?.mime_type ?? "application/octet-stream";
+              mediaId = msg?.document?.id ?? null;
+              break;
+            default:
+              continue;
           }
+
+          if (mediaTipo) extra.media_tipo = mediaTipo;
+          if (mediaNome) extra.media_nome = mediaNome;
 
           // 1º) Conversa ativa (inclui aguardando_cliente) → só adiciona a mensagem
           let conversa = await acharConversa(numero);
@@ -257,6 +358,10 @@ Deno.serve(async (req) => {
                   : notaBotao >= 1 && notaBotao <= 5
                     ? notaBotao
                     : null;
+
+              if (mediaId && mediaTipo) {
+                extra.media_url = await processarMidiaMeta(mediaId, mediaTipo, conversaNps.id);
+              }
 
               await admin.from("chat_mensagens").insert({
                 conversa_id: conversaNps.id,
@@ -313,6 +418,10 @@ Deno.serve(async (req) => {
             conversa = nova as any;
           }
           if (!conversa) continue;
+
+          if (mediaId && mediaTipo) {
+            extra.media_url = await processarMidiaMeta(mediaId, mediaTipo, conversa.id);
+          }
 
           await salvarMensagem(conversa.id, texto, tipo, extra);
 
