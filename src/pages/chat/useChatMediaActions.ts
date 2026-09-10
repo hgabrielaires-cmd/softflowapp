@@ -25,6 +25,7 @@ export function useChatMediaActions() {
       atendenteId,
       numero,
       instanceName,
+      canal,
     }: {
       conversaId: string;
       file: File;
@@ -32,6 +33,7 @@ export function useChatMediaActions() {
       atendenteId: string;
       numero: string;
       instanceName?: string;
+      canal?: string | null;
     }) => {
       // 1. Upload to storage
       const timestamp = Date.now();
@@ -48,23 +50,40 @@ export function useChatMediaActions() {
 
       const { data: signedData, error: signedError } = await supabase.storage
         .from("chat-midias")
-        .createSignedUrl(path, 3600);
+        .createSignedUrl(path, 60 * 60 * 24);
       if (signedError) throw new Error("Erro ao gerar link da mídia: " + signedError.message);
 
-      // 3. Send via Evolution API
+      // 3. Send via WhatsApp (Meta oficial ou Evolution)
       const mediatype = getEvolutionMediaType(file);
-      const { error: sendError } = await supabase.functions.invoke("evolution-api", {
-        body: {
-          action: "send_media",
-          instance_name: instanceName,
-          number: numero,
-          mediatype,
-          media: signedData.signedUrl,
-          fileName: file.name,
-          caption: caption || undefined,
-        },
-      });
-      if (sendError) console.error("Erro ao enviar mídia WhatsApp:", sendError);
+      if (canal === "whatsapp_meta") {
+        const { data, error } = await supabase.functions.invoke("whatsapp-meta", {
+          body: {
+            action: "send_media",
+            to: numero,
+            mediatype,
+            link: signedData.signedUrl,
+            filename: file.name,
+            caption: caption || undefined,
+          },
+        });
+        if (error) throw new Error("Erro ao enviar mídia: " + error.message);
+        if (data && (data as any).ok === false) {
+          throw new Error((data as any).error || "Erro na API Meta ao enviar mídia");
+        }
+      } else {
+        const { error: sendError } = await supabase.functions.invoke("evolution-api", {
+          body: {
+            action: "send_media",
+            instance_name: instanceName,
+            number: numero,
+            mediatype,
+            media: signedData.signedUrl,
+            fileName: file.name,
+            caption: caption || undefined,
+          },
+        });
+        if (sendError) throw new Error("Erro ao enviar mídia: " + sendError.message);
+      }
 
       // 4. Save message in DB
       const tipo = getMediaType(file);

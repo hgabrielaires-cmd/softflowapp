@@ -255,6 +255,44 @@ Deno.serve(async (req) => {
         return json({ ok: true, data, message_id: data?.messages?.[0]?.id });
       }
 
+      case "send_media": {
+        const numeroLimpo = String(body?.to || "").replace(/\D/g, "");
+        const to = numeroLimpo.startsWith("55") ? numeroLimpo : `55${numeroLimpo}`;
+        const link = String(body?.link || "");
+        const caption = body?.caption ? String(body.caption) : undefined;
+        const filename = body?.filename ? String(body.filename) : "arquivo";
+        const raw = String(body?.mediatype || "document");
+        const tipo = ["image", "video", "audio", "document"].includes(raw) ? raw : "document";
+
+        if (!numeroLimpo || numeroLimpo.length < 10) return json({ ok: false, error: "Número inválido" });
+        if (!link.startsWith("http")) return json({ ok: false, error: "Link da mídia inválido" });
+
+        const media: Record<string, unknown> = { link };
+        if (tipo !== "audio" && caption) media.caption = caption;
+        if (tipo === "document") media.filename = filename;
+
+        const res = await fetch(`${GRAPH}/${cfg.phone_number_id}/messages`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            to,
+            type: tipo,
+            [tipo]: media,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          console.error("[meta] ERRO send_media:", JSON.stringify(data));
+          return json({
+            ok: false,
+            error: data?.error?.error_user_msg || data?.error?.message || "Erro Meta",
+            details: data,
+          });
+        }
+        return json({ ok: true, message_id: data?.messages?.[0]?.id });
+      }
+
       case "send_text": {
         const to = String(body?.to || "").replace(/\D/g, "");
         const text = String(body?.text || "");
