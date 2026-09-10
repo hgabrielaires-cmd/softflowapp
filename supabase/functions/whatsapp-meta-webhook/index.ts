@@ -20,7 +20,7 @@ async function getConfig() {
 async function acharConversa(numero: string) {
   const { data } = await admin
     .from("chat_conversas")
-    .select("id, status, atendente_id, nome_cliente, iniciado_em")
+    .select("id, status, atendente_id, nome_cliente, iniciado_em, created_at")
     .in("numero_cliente", normalizarNumero(numero))
     .eq("canal", "whatsapp_meta")
     .neq("status", "encerrado")
@@ -33,7 +33,7 @@ async function acharConversa(numero: string) {
 async function acharNpsPendente(numero: string) {
   const { data } = await admin
     .from("chat_conversas")
-    .select("id, nps_enviado, nps_nota, canal")
+    .select("id, nps_enviado, nps_nota, canal, encerrado_em")
     .in("numero_cliente", normalizarNumero(numero))
     .eq("status", "encerrado")
     .eq("nps_enviado", true)
@@ -43,6 +43,7 @@ async function acharNpsPendente(numero: string) {
     .limit(1);
   return data?.[0] ?? null;
 }
+
 
 /** Envia texto simples pela Cloud API da Meta. */
 async function enviarTexto(numero: string, texto: string) {
