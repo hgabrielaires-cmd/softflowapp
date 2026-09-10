@@ -36,6 +36,16 @@ interface TemplateMeta {
 
 const VAR_REGEX = /\{\{(\d+)\}\}/g;
 
+/** Grava o número no mesmo formato que a Meta devolve: 55 + DDD + 8 dígitos. */
+function normalizarNumeroParaMeta(numero: string): string {
+  const limpo = (numero || "").replace(/\D/g, "");
+  const semPais = limpo.startsWith("55") && limpo.length >= 12 ? limpo.slice(2) : limpo;
+  const ddd = semPais.slice(0, 2);
+  let local = semPais.slice(2);
+  if (local.length === 9 && local.startsWith("9")) local = local.slice(1);
+  return "55" + ddd + local;
+}
+
 
 export default function NovaConversaMetaDrawer({ open, onOpenChange, onConversaCriada }: Props) {
   const { user, profile } = useAuth();
@@ -164,7 +174,7 @@ export default function NovaConversaMetaDrawer({ open, onOpenChange, onConversaC
         .from("chat_conversas")
         .insert({
           protocolo,
-          numero_cliente: numero,
+          numero_cliente: normalizarNumeroParaMeta(numero),
           nome_cliente: contato?.nome || empresa.nome_fantasia,
           cliente_id: empresa.id,
           contato_id: contato?.id || null,

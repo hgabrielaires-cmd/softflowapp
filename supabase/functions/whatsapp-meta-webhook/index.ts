@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { normalizarNumero } from "../_shared/telefone.ts";
 
 const admin = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -15,17 +16,6 @@ async function getConfig() {
   return ((data as any)?.config ?? {}) as Record<string, string>;
 }
 
-/** Gera as variações de formato de um número (com/sem 55, com +55). */
-function normalizarNumero(numero: string): string[] {
-  const limpo = (numero || "").replace(/\D/g, "");
-  const variantes = new Set<string>();
-  if (!limpo) return [];
-  variantes.add(limpo);
-  if (!limpo.startsWith("55")) variantes.add("55" + limpo);
-  if (limpo.startsWith("55")) variantes.add(limpo.slice(2));
-  variantes.add("+55" + limpo.replace(/^55/, ""));
-  return Array.from(variantes);
-}
 
 async function acharConversa(numero: string) {
   const { data } = await admin

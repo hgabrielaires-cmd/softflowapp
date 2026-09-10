@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { normalizarNumero } from "../_shared/telefone.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -271,7 +272,7 @@ serve(async (req) => {
     const { data: conversa } = await supabase
       .from("chat_conversas")
       .select("*")
-      .eq("numero_cliente", numero)
+      .in("numero_cliente", normalizarNumero(numero))
       .not("status", "in", '("encerrado","fora_horario")')
       .order("created_at", { ascending: false })
       .limit(1)
@@ -360,7 +361,7 @@ serve(async (req) => {
     const { data: conversasNpsPendentes } = await supabase
       .from("chat_conversas")
       .select("id, nps_enviado, nps_nota, canal_instancia")
-      .eq("numero_cliente", numero)
+      .in("numero_cliente", normalizarNumero(numero))
       .eq("status", "encerrado")
       .eq("nps_enviado", true)
       .is("nps_nota", null)
