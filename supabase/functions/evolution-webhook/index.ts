@@ -360,7 +360,7 @@ serve(async (req) => {
     // Fetch ALL pending NPS conversations for this number (not just one)
     const { data: conversasNpsPendentes } = await supabase
       .from("chat_conversas")
-      .select("id, nps_enviado, nps_nota, canal_instancia")
+      .select("id, nps_enviado, nps_nota, canal_instancia, encerrado_em")
       .in("numero_cliente", normalizarNumero(numero))
       .eq("status", "encerrado")
       .eq("nps_enviado", true)
@@ -369,6 +369,7 @@ serve(async (req) => {
       .order("encerrado_em", { ascending: false });
 
     const conversaNps = conversasNpsPendentes?.[0] || null;
+
 
     if (conversaNps) {
       // Save the client's message in the most recent closed conversation
