@@ -174,7 +174,7 @@ export default function NovaConversaMetaDrawer({ open, onOpenChange, onConversaC
         .from("chat_conversas")
         .insert({
           protocolo,
-          numero_cliente: numero,
+          numero_cliente: normalizarNumeroParaMeta(numero),
           nome_cliente: contato?.nome || empresa.nome_fantasia,
           cliente_id: empresa.id,
           contato_id: contato?.id || null,
