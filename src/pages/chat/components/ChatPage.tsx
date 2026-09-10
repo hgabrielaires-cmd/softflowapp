@@ -155,6 +155,7 @@ export default function ChatPage() {
               atendenteId: user.id,
               numero: conversaAtual.numero_cliente,
               instanceName: conversaAtual.canal_instancia || undefined,
+              canal: conversaAtual.canal,
             });
           }}
           onIniciarAtendimento={() => {
