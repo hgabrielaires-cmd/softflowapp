@@ -73,6 +73,72 @@ async function enviarTexto(numero: string, texto: string) {
   }
 }
 
+const EXT_MAP: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "video/mp4": "mp4",
+  "video/3gpp": "3gp",
+  "audio/ogg": "ogg",
+  "audio/mpeg": "mp3",
+  "audio/mp4": "m4a",
+  "audio/amr": "amr",
+  "application/pdf": "pdf",
+};
+
+/** Baixa a mídia da Meta e guarda no bucket chat-midias, devolvendo a URL do objeto. */
+async function processarMidiaMeta(
+  mediaId: string,
+  mimeType: string,
+  conversaId: string,
+): Promise<string | null> {
+  try {
+    const cfg = await getConfig();
+    const accessToken = cfg?.access_token;
+    if (!accessToken) {
+      console.error("[meta-media] access_token ausente");
+      return null;
+    }
+
+    const infoRes = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const info = await infoRes.json();
+    const mediaUrl = info?.url;
+    if (!mediaUrl) {
+      console.error("[meta-media] URL não encontrada para", mediaId);
+      return null;
+    }
+
+    const mediaRes = await fetch(mediaUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!mediaRes.ok) {
+      console.error("[meta-media] erro no download:", mediaRes.status);
+      return null;
+    }
+    const buffer = await mediaRes.arrayBuffer();
+
+    const ext = EXT_MAP[mimeType] || mimeType?.split("/")[1]?.split(";")[0] || "bin";
+    const path = `${conversaId}/${Date.now()}.${ext}`;
+
+    const { error } = await admin.storage
+      .from("chat-midias")
+      .upload(path, buffer, { contentType: mimeType, upsert: false });
+    if (error) {
+      console.error("[meta-media] erro no storage:", error.message);
+      return null;
+    }
+
+    const { data: urlData } = admin.storage.from("chat-midias").getPublicUrl(path);
+    console.log("[meta-media] ✅ salvo:", path);
+    return urlData.publicUrl;
+  } catch (err) {
+    console.error("[meta-media] exceção:", err);
+    return null;
+  }
+}
+
 async function jaProcessada(messageId: string | null) {
   if (!messageId) return false;
   const { data } = await admin
