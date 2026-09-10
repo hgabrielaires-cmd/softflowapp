@@ -415,6 +415,10 @@ Deno.serve(async (req) => {
           }
           if (!conversa) continue;
 
+          if (mediaId && mediaTipo) {
+            extra.media_url = await processarMidiaMeta(mediaId, mediaTipo, conversa.id);
+          }
+
           await salvarMensagem(conversa.id, texto, tipo, extra);
 
           // Qualquer resposta do cliente ativa o atendimento com o atendente dono da conversa
