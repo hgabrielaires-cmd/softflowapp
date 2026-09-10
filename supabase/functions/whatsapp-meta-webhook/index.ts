@@ -679,7 +679,41 @@ Deno.serve(async (req) => {
             }
           }
 
+          // Autocorreção: conversa aguardando/fora de horário que ficou fora da fila
+          if (conversa.status === "aguardando" || conversa.status === "fora_horario") {
+            const { data: naFila } = await admin
+              .from("chat_fila")
+              .select("id")
+              .eq("conversa_id", conversa.id)
+              .maybeSingle();
+
+            if (!naFila) {
+              if (conversa.setor_id) {
+                await salvarMensagem(conversa.id, texto, tipo, extra);
+                await admin.from("chat_fila").upsert({
+                  conversa_id: conversa.id,
+                  setor_id: conversa.setor_id,
+                  filial_id: conversa.filial_id ?? null,
+                  status: "aguardando",
+                }, { onConflict: "conversa_id" });
+                console.log("[whatsapp-meta-webhook] conversa reenfileirada:", conversa.id);
+                continue;
+              }
+
+              // Sem setor definido → retoma o fluxo do bot na escolha do departamento
+              await salvarMensagem(conversa.id, texto, tipo, extra);
+              await admin
+                .from("chat_conversas")
+                .update({ status: "bot", bot_estado: { passo: 2 }, updated_at: new Date().toISOString() })
+                .eq("id", conversa.id);
+              await perguntarDepartamento(numero, conversa.id);
+              console.log("[whatsapp-meta-webhook] fluxo do bot retomado (sem setor):", conversa.id);
+              continue;
+            }
+          }
+
           await salvarMensagem(conversa.id, texto, tipo, extra);
+
 
           // Qualquer resposta do cliente ativa o atendimento com o atendente dono da conversa
           await ativarAtendimento(conversa, nome, numero);
