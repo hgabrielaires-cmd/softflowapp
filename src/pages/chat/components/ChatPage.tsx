@@ -22,7 +22,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function ChatPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, roles } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -278,7 +278,27 @@ export default function ChatPage() {
             }
           }}
         />
+
+        <ExcluirAtendimentoDialog
+          open={showExcluir}
+          onClose={() => setShowExcluir(false)}
+          conversa={conversaAtual as ChatConversa | null}
+          isPending={actions.excluirAtendimento.isPending}
+          onConfirm={(motivo) => {
+            if (!conversaAtual || !user?.id) return;
+            actions.excluirAtendimento.mutate(
+              { conversaId: conversaAtual.id, userId: user.id, userName, motivo },
+              {
+                onSuccess: () => {
+                  setShowExcluir(false);
+                  setSelectedConversa(null);
+                },
+              }
+            );
+          }}
+        />
       </div>
+
 
 
       {encerrando && (
