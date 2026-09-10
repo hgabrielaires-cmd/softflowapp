@@ -10,6 +10,8 @@ import NovaConversaDialog from "./NovaConversaDialog";
 import NovaConversaMetaDrawer from "./NovaConversaMetaDrawer";
 import EncerrarAtendimentoDialog from "./EncerrarAtendimentoDialog";
 import EncerramentoAtendimento from "./EncerramentoAtendimento";
+import ExcluirAtendimentoDialog from "./ExcluirAtendimentoDialog";
+import { useCrudPermissions } from "@/hooks/useCrudPermissions";
 import { useChatConversas, useChatMensagens } from "../useChatQueries";
 import { useChatActions } from "../useChatActions";
 import { useChatMediaActions } from "../useChatMediaActions";
@@ -31,7 +33,9 @@ export default function ChatPage() {
   const [showEncerrar, setShowEncerrar] = useState(false);
   const [showNovaConversa, setShowNovaConversa] = useState(false);
   const [showNovaConversaMeta, setShowNovaConversaMeta] = useState(false);
+  const [showExcluir, setShowExcluir] = useState(false);
   const [encerrando, setEncerrando] = useState(false);
+  const { canExcluir: podeExcluir } = useCrudPermissions("chat_atendimento", roles);
 
   const { data: conversas = [] } = useChatConversas(tab, user?.id, search);
   const { data: mensagens = [] } = useChatMensagens(selectedConversa?.id || null);
@@ -187,6 +191,8 @@ export default function ChatPage() {
             setSelectedConversa(null);
             setTab("meus");
           }}
+          podeExcluir={podeExcluir}
+          onExcluirAtendimento={() => setShowExcluir(true)}
         />
 
         <div className="w-[320px] flex-shrink-0 hidden xl:block">
