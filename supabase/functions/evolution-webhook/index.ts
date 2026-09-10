@@ -320,7 +320,29 @@ serve(async (req) => {
       }
     }
 
-    if (conversa) {
+    // ── Conversa encerrada nas últimas 24h aguardando resposta de NPS ──
+    const { data: conversasNpsPendentes } = await supabase
+      .from("chat_conversas")
+      .select("id, nps_enviado, nps_nota, canal_instancia, encerrado_em")
+      .in("numero_cliente", normalizarNumero(numero))
+      .eq("status", "encerrado")
+      .eq("nps_enviado", true)
+      .is("nps_nota", null)
+      .gte("encerrado_em", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .order("encerrado_em", { ascending: false });
+
+    const conversaNps = conversasNpsPendentes?.[0] || null;
+
+    // Se o encerramento com NPS é mais recente que a conversa ativa,
+    // a resposta pertence ao NPS — não reabrir/alimentar a conversa antiga
+    const npsTemPrioridade = !!conversaNps && (
+      !conversa ||
+      new Date(conversaNps.encerrado_em as string).getTime() >
+        new Date((conversa as any).created_at).getTime()
+    );
+
+    if (conversa && !npsTemPrioridade) {
+
       // ── Existing conversation ──
       // Download and persist media if present
       let finalMediaUrl: string | null = null;
