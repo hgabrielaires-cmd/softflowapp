@@ -400,7 +400,9 @@ serve(async (req) => {
           await supabase
             .from("chat_conversas")
             .update({ nps_nota: nota, nps_comentario: conteudo.trim() })
-            .eq("id", cId);
+            .eq("id", cId)
+            .eq("status", "encerrado");
+
         }
 
         const agradecimento = "Obrigado pela sua avaliação! Sua opinião é muito importante para nós. 🙏😊";
