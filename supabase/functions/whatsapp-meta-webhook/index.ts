@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { normalizarNumero } from "../_shared/telefone.ts";
 
 const admin = createClient(
   Deno.env.get("SUPABASE_URL")!,
