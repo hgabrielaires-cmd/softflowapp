@@ -139,7 +139,7 @@ export function useChatActions() {
       });
 
       // Send WhatsApp greeting
-      const saudacao = `😃 Olá! Meu nome é *${userName}* e estarei te auxiliando no atendimento.`;
+      const saudacao = `😃 Olá! Meu nome é *${userName}* e estarei te auxiliando no atendimento. Como posso ajudar?`;
       await enviarTextoWhatsApp({ canal, numero, texto: saudacao, instanceName });
 
       await supabase.from("chat_mensagens").insert({

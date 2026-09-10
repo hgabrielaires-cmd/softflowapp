@@ -50,7 +50,7 @@ export function useChatMediaActions() {
 
       const { data: signedData, error: signedError } = await supabase.storage
         .from("chat-midias")
-        .createSignedUrl(path, 60 * 60 * 24);
+        .createSignedUrl(path, 60 * 60 * 24 * 7);
       if (signedError) throw new Error("Erro ao gerar link da mídia: " + signedError.message);
 
       // 3. Send via WhatsApp (Meta oficial ou Evolution)
