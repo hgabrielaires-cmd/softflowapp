@@ -344,11 +344,20 @@ Deno.serve(async (req) => {
 
           // 1º) Conversa ativa (inclui aguardando_cliente) → só adiciona a mensagem
           let conversa = await acharConversa(numero);
+          const npsPendente = await acharNpsPendente(numero);
 
-          if (!conversa) {
-            // 2º) NPS pendente nas últimas 24h → registra a nota, sem abrir conversa nova
-            const conversaNps = await acharNpsPendente(numero);
-            if (conversaNps) {
+          // Se o encerramento com NPS é mais recente que a conversa ativa,
+          // a resposta pertence ao NPS (não reabrir/alimentar a conversa antiga)
+          const npsTemPrioridade = !!npsPendente && (
+            !conversa ||
+            new Date(npsPendente.encerrado_em as string).getTime() >
+              new Date((conversa as any).created_at).getTime()
+          );
+
+          if (npsTemPrioridade) {
+            const conversaNps = npsPendente!;
+            {
+
               const textoMsg = (texto || "").trim();
               const notaTexto = parseInt(textoMsg[0]);
               const tituloBotao = msg?.interactive?.button_reply?.title ?? msg?.button?.text ?? null;
