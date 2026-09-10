@@ -374,6 +374,9 @@ export type Database = {
           contato_id: string | null
           created_at: string | null
           encerrado_em: string | null
+          excluido_em: string | null
+          excluido_motivo: string | null
+          excluido_por: string | null
           filial_id: string | null
           id: string
           iniciado_em: string | null
@@ -402,6 +405,9 @@ export type Database = {
           contato_id?: string | null
           created_at?: string | null
           encerrado_em?: string | null
+          excluido_em?: string | null
+          excluido_motivo?: string | null
+          excluido_por?: string | null
           filial_id?: string | null
           id?: string
           iniciado_em?: string | null
@@ -430,6 +436,9 @@ export type Database = {
           contato_id?: string | null
           created_at?: string | null
           encerrado_em?: string | null
+          excluido_em?: string | null
+          excluido_motivo?: string | null
+          excluido_por?: string | null
           filial_id?: string | null
           id?: string
           iniciado_em?: string | null

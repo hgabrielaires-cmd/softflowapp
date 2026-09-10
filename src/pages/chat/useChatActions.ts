@@ -392,5 +392,48 @@ export function useChatActions() {
     onError: (e) => toast.error("Erro: " + e.message),
   });
 
-  return { enviarMensagem, iniciarAtendimento, encerrarConversa, transferirConversa, finalizarTriagem };
+  const excluirAtendimento = useMutation({
+    mutationFn: async ({
+      conversaId,
+      userId,
+      userName,
+      motivo,
+    }: {
+      conversaId: string;
+      userId: string;
+      userName: string;
+      motivo: string;
+    }) => {
+      const agora = new Date().toISOString();
+
+      const { error } = await supabase
+        .from("chat_conversas")
+        .update({
+          status: "encerrado",
+          encerrado_em: agora,
+          excluido_em: agora,
+          excluido_por: userId,
+          excluido_motivo: motivo,
+          updated_at: agora,
+        } as any)
+        .eq("id", conversaId);
+      if (error) throw error;
+
+      await supabase.from("chat_mensagens").insert({
+        conversa_id: conversaId,
+        tipo: "sistema",
+        conteudo: `Atendimento excluído por ${userName}. Motivo: ${motivo}`,
+        remetente: "sistema",
+      });
+
+      await supabase.from("chat_fila").delete().eq("conversa_id", conversaId);
+    },
+    onSuccess: () => {
+      toast.success("Atendimento excluído e removido da fila");
+      invalidate();
+    },
+    onError: (e: any) => toast.error("Erro ao excluir: " + e.message),
+  });
+
+  return { enviarMensagem, iniciarAtendimento, encerrarConversa, transferirConversa, finalizarTriagem, excluirAtendimento };
 }

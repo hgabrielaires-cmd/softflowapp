@@ -131,6 +131,13 @@ const MENU_TREE: MenuNode[] = [
     key: "menu.tickets", label: "Tickets", description: "Gestão de tickets de suporte",
     icon: <Ticket className="h-4 w-4" />,
   },
+  {
+    key: "menu.chat", label: "Chat de Atendimento", description: "Atendimento via chat/WhatsApp",
+    icon: <Headphones className="h-4 w-4" />,
+    children: [
+      { key: "crud.chat_atendimento.excluir", label: "Excluir atendimento", description: "Permite excluir atendimentos da fila informando o motivo", icon: <Trash2 className="h-4 w-4" /> },
+    ],
+  },
   // Cadastros extras
   {
     key: "menu.fornecedores", label: "Fornecedores", description: "Cadastro de fornecedores",
