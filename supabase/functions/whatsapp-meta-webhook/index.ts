@@ -20,7 +20,7 @@ async function getConfig() {
 async function acharConversa(numero: string) {
   const { data } = await admin
     .from("chat_conversas")
-    .select("id, status, atendente_id, nome_cliente, iniciado_em")
+    .select("id, status, atendente_id, nome_cliente, iniciado_em, created_at")
     .in("numero_cliente", normalizarNumero(numero))
     .eq("canal", "whatsapp_meta")
     .neq("status", "encerrado")
@@ -33,7 +33,7 @@ async function acharConversa(numero: string) {
 async function acharNpsPendente(numero: string) {
   const { data } = await admin
     .from("chat_conversas")
-    .select("id, nps_enviado, nps_nota, canal")
+    .select("id, nps_enviado, nps_nota, canal, encerrado_em")
     .in("numero_cliente", normalizarNumero(numero))
     .eq("status", "encerrado")
     .eq("nps_enviado", true)
@@ -43,6 +43,7 @@ async function acharNpsPendente(numero: string) {
     .limit(1);
   return data?.[0] ?? null;
 }
+
 
 /** Envia texto simples pela Cloud API da Meta. */
 async function enviarTexto(numero: string, texto: string) {
@@ -343,11 +344,20 @@ Deno.serve(async (req) => {
 
           // 1º) Conversa ativa (inclui aguardando_cliente) → só adiciona a mensagem
           let conversa = await acharConversa(numero);
+          const npsPendente = await acharNpsPendente(numero);
 
-          if (!conversa) {
-            // 2º) NPS pendente nas últimas 24h → registra a nota, sem abrir conversa nova
-            const conversaNps = await acharNpsPendente(numero);
-            if (conversaNps) {
+          // Se o encerramento com NPS é mais recente que a conversa ativa,
+          // a resposta pertence ao NPS (não reabrir/alimentar a conversa antiga)
+          const npsTemPrioridade = !!npsPendente && (
+            !conversa ||
+            new Date(npsPendente.encerrado_em as string).getTime() >
+              new Date((conversa as any).created_at).getTime()
+          );
+
+          if (npsTemPrioridade) {
+            const conversaNps = npsPendente!;
+            {
+
               const textoMsg = (texto || "").trim();
               const notaTexto = parseInt(textoMsg[0]);
               const tituloBotao = msg?.interactive?.button_reply?.title ?? msg?.button?.text ?? null;
@@ -375,7 +385,8 @@ Deno.serve(async (req) => {
                 await admin
                   .from("chat_conversas")
                   .update({ nps_nota: notaFinal, nps_comentario: textoMsg })
-                  .eq("id", conversaNps.id);
+                  .eq("id", conversaNps.id)
+                  .eq("status", "encerrado");
 
                 const agradecimento =
                   "Obrigado pela sua avaliação! 🙏\nSua opinião é muito importante para nós. 😊";
@@ -400,7 +411,9 @@ Deno.serve(async (req) => {
               }
               continue;
             }
+          }
 
+          if (!conversa) {
             // 3º) Nada pendente → nova conversa na fila
             const agora = new Date().toISOString();
             const { data: nova } = await admin
@@ -413,10 +426,11 @@ Deno.serve(async (req) => {
                 iniciado_em: agora,
                 updated_at: agora,
               })
-              .select("id, status, atendente_id, nome_cliente, iniciado_em")
+              .select("id, status, atendente_id, nome_cliente, iniciado_em, created_at")
               .single();
             conversa = nova as any;
           }
+
           if (!conversa) continue;
 
           if (mediaId && mediaTipo) {
