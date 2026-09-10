@@ -20,7 +20,7 @@ async function getConfig() {
 async function acharConversa(numero: string) {
   const { data } = await admin
     .from("chat_conversas")
-    .select("id, status, atendente_id, nome_cliente, iniciado_em, created_at")
+    .select("id, status, atendente_id, nome_cliente, iniciado_em, created_at, bot_estado, setor_id, filial_id")
     .in("numero_cliente", normalizarNumero(numero))
     .eq("canal", "whatsapp_meta")
     .neq("status", "encerrado")
@@ -71,6 +71,178 @@ async function enviarTexto(numero: string, texto: string) {
     if (!res.ok) console.error("[whatsapp-meta-webhook] falha ao enviar:", res.status, (await res.text()).slice(0, 300));
   } catch (e) {
     console.error("[whatsapp-meta-webhook] erro ao enviar texto:", e);
+  }
+}
+
+
+/** Configuração geral do chat (mensagens + horários). */
+async function getChatConfig() {
+  const { data } = await admin
+    .from("chat_configuracoes")
+    .select("*")
+    .limit(1)
+    .maybeSingle();
+  return (data ?? {}) as any;
+}
+
+/** Envia qualquer payload (texto, interativo, mídia) pela Cloud API da Meta. */
+async function enviarMensagemMeta(numero: string, conteudo: Record<string, unknown>): Promise<boolean> {
+  try {
+    const cfg = await getConfig();
+    if (!cfg?.access_token || !cfg?.phone_number_id) {
+      console.error("[meta] credenciais ausentes");
+      return false;
+    }
+    const digits = (numero || "").replace(/\D/g, "");
+    const to = digits.startsWith("55") ? digits : `55${digits}`;
+    const res = await fetch(`https://graph.facebook.com/v19.0/${cfg.phone_number_id}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${cfg.access_token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ messaging_product: "whatsapp", to, ...conteudo }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      console.error("[meta] erro envio:", JSON.stringify(data).slice(0, 400));
+      return false;
+    }
+    console.log("[meta] ✅ enviado:", data?.messages?.[0]?.id);
+    return true;
+  } catch (err) {
+    console.error("[meta] exceção:", err);
+    return false;
+  }
+}
+
+/** Modo de operação no horário de Brasília. */
+function getModoHorario(config: any): "atendimento" | "plantao" | "fechado" {
+  const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  const dia = brt.getUTCDay().toString();
+  const horaAtual = `${String(brt.getUTCHours()).padStart(2, "0")}:${String(brt.getUTCMinutes()).padStart(2, "0")}`;
+  const d = config?.horarios_por_dia?.[dia];
+  if (!d) return "fechado";
+  if (d.atendimento?.ativo && horaAtual >= d.atendimento.inicio && horaAtual < d.atendimento.fim) return "atendimento";
+  if (d.plantao?.ativo && horaAtual >= d.plantao.inicio && horaAtual <= d.plantao.fim) return "plantao";
+  return "fechado";
+}
+
+/** Opções de departamento configuradas no fluxo do bot. */
+async function getOpcoesSetor() {
+  const { data } = await admin
+    .from("chat_bot_fluxo")
+    .select("pergunta, opcoes")
+    .eq("ordem", 2)
+    .eq("ativo", true)
+    .limit(1)
+    .maybeSingle();
+  const opcoes = (((data as any)?.opcoes ?? []) as any[])
+    .filter((o) => o?.setor_id && o?.texto);
+  return { pergunta: (data as any)?.pergunta ?? "*Para qual departamento você precisa de atendimento?*", opcoes };
+}
+
+async function salvarBot(conversaId: string, conteudo: string) {
+  await admin.from("chat_mensagens").insert({
+    conversa_id: conversaId,
+    tipo: "bot",
+    conteudo,
+    remetente: "bot",
+  });
+}
+
+/** Pergunta o departamento com botões (até 3) ou lista interativa. */
+async function perguntarDepartamento(numero: string, conversaId: string) {
+  const { pergunta, opcoes } = await getOpcoesSetor();
+  if (!opcoes.length) return false;
+
+  if (opcoes.length <= 3) {
+    await enviarMensagemMeta(numero, {
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: { text: pergunta },
+        action: {
+          buttons: opcoes.map((o) => ({
+            type: "reply",
+            reply: { id: `setor_${o.setor_id}`, title: String(o.texto).substring(0, 20) },
+          })),
+        },
+      },
+    });
+  } else {
+    await enviarMensagemMeta(numero, {
+      type: "interactive",
+      interactive: {
+        type: "list",
+        body: { text: pergunta },
+        action: {
+          button: "Escolher",
+          sections: [{
+            title: "Departamentos",
+            rows: opcoes.slice(0, 10).map((o) => ({
+              id: `setor_${o.setor_id}`,
+              title: String(o.texto).substring(0, 24),
+            })),
+          }],
+        },
+      },
+    });
+  }
+  await salvarBot(conversaId, pergunta);
+  return true;
+}
+
+/** Coloca a conversa na fila do setor escolhido e avisa o cliente. */
+async function encaminharParaFila(conversa: any, numero: string, setorId: string, setorNome: string) {
+  const config = await getChatConfig();
+  const modo = getModoHorario(config);
+  const foraHorario = modo === "fechado";
+
+  await admin
+    .from("chat_conversas")
+    .update({
+      setor_id: setorId,
+      status: foraHorario ? "fora_horario" : "aguardando",
+      bot_estado: { passo: 3, concluido: true },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", conversa.id);
+
+  await admin.from("chat_fila").upsert({
+    conversa_id: conversa.id,
+    setor_id: setorId,
+    filial_id: conversa.filial_id ?? null,
+    status: "aguardando",
+  }, { onConflict: "conversa_id" });
+
+  let msg: string;
+  if (modo === "atendimento") {
+    msg = config?.mensagem_aguardando ||
+      "Aguarde um instante, nossa equipe já vai lhe atender. 🤗";
+  } else if (modo === "plantao") {
+    msg = config?.mensagem_plantao || config?.mensagem_aguardando ||
+      "Estamos em horário de Plantão 🚨";
+  } else {
+    msg = config?.mensagem_fora_horario ||
+      "Olá! No momento estamos fora do horário de atendimento. Retornaremos em breve!";
+  }
+
+  await enviarMensagemMeta(numero, { type: "text", text: { body: msg } });
+  await salvarBot(conversa.id, msg);
+
+  // Notifica atendentes do setor
+  const { data: atendentes } = await admin
+    .from("profiles")
+    .select("user_id")
+    .eq("setor_id", setorId)
+    .eq("active", true);
+  for (const a of atendentes ?? []) {
+    await admin.from("notificacoes").insert({
+      destinatario_user_id: (a as any).user_id,
+      criado_por: (a as any).user_id,
+      titulo: "💬 Nova conversa na fila",
+      mensagem: `${conversa.nome_cliente || numero} aguarda atendimento no setor ${setorNome}`,
+      tipo: "chat",
+      metadata: { conversa_id: conversa.id, link: "/chat" },
+    });
   }
 }
 
@@ -414,27 +586,97 @@ Deno.serve(async (req) => {
           }
 
           if (!conversa) {
-            // 3º) Nada pendente → nova conversa na fila
+            // 3º) Nada pendente → inicia o fluxo do bot
             const agora = new Date().toISOString();
+            const config = await getChatConfig();
             const { data: nova } = await admin
               .from("chat_conversas")
               .insert({
                 numero_cliente: numero,
-                nome_cliente: nome,
+                nome_cliente: null,
                 canal: "whatsapp_meta",
-                status: "aguardando",
+                status: "bot",
+                bot_estado: { passo: 1 },
+                filial_id: config?.filial_id ?? null,
                 iniciado_em: agora,
                 updated_at: agora,
               })
-              .select("id, status, atendente_id, nome_cliente, iniciado_em, created_at")
+              .select("id, status, atendente_id, nome_cliente, iniciado_em, created_at, bot_estado, setor_id, filial_id")
               .single();
             conversa = nova as any;
-          }
+            if (!conversa) continue;
 
-          if (!conversa) continue;
+            if (mediaId && mediaTipo) {
+              extra.media_url = await processarMidiaMeta(mediaId, mediaTipo, conversa.id);
+            }
+            await salvarMensagem(conversa.id, texto, tipo, extra);
+
+            const boasVindas = config?.mensagem_boas_vindas ||
+              "Olá! Bem-vindo(a) à *Softplus Tecnologia*! 🤗\n\n*Qual o nome da sua empresa?*";
+            await enviarMensagemMeta(numero, { type: "text", text: { body: boasVindas } });
+            await salvarBot(conversa.id, boasVindas);
+            continue;
+          }
 
           if (mediaId && mediaTipo) {
             extra.media_url = await processarMidiaMeta(mediaId, mediaTipo, conversa.id);
+          }
+
+          // ── Fluxo do bot ──
+          if (conversa.status === "bot") {
+            const passo = Number((conversa as any).bot_estado?.passo ?? 1);
+            const textoMsg = (texto || "").trim();
+
+            if (passo === 1) {
+              await admin
+                .from("chat_conversas")
+                .update({
+                  nome_cliente: textoMsg || nome,
+                  bot_estado: { passo: 2 },
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", conversa.id);
+              await salvarMensagem(conversa.id, texto, tipo, extra);
+              const ok = await perguntarDepartamento(numero, conversa.id);
+              if (!ok) {
+                // sem departamentos configurados → vai direto para a fila geral
+                await admin.from("chat_conversas").update({ status: "aguardando" }).eq("id", conversa.id);
+              }
+              continue;
+            }
+
+            if (passo === 2) {
+              await salvarMensagem(conversa.id, texto, tipo, extra);
+              const { opcoes } = await getOpcoesSetor();
+              const replyId: string =
+                msg?.interactive?.button_reply?.id ??
+                msg?.interactive?.list_reply?.id ??
+                msg?.button?.payload ??
+                "";
+              let escolhido = opcoes.find((o) => replyId === `setor_${o.setor_id}` || replyId === o.setor_id);
+              if (!escolhido) {
+                const idxNum = parseInt(textoMsg[0]);
+                if (idxNum >= 1 && idxNum <= opcoes.length) escolhido = opcoes[idxNum - 1];
+              }
+              if (!escolhido) {
+                escolhido = opcoes.find(
+                  (o) => String(o.texto).toLowerCase() === textoMsg.toLowerCase(),
+                );
+              }
+
+              if (!escolhido) {
+                await perguntarDepartamento(numero, conversa.id);
+                continue;
+              }
+
+              await encaminharParaFila(
+                { ...conversa, nome_cliente: conversa.nome_cliente || textoMsg },
+                numero,
+                escolhido.setor_id,
+                String(escolhido.texto),
+              );
+              continue;
+            }
           }
 
           await salvarMensagem(conversa.id, texto, tipo, extra);
