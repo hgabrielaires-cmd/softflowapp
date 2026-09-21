@@ -11,6 +11,23 @@ export function usePainelAtividadeActions() {
     queryClient.invalidateQueries({ queryKey: ["painel_atividade_execucao"] });
   }
 
+  function atualizarExecucaoNoCache(execucao: AtividadeExecucao) {
+    queryClient.setQueriesData<Record<string, AtividadeExecucao[]>>(
+      { queryKey: ["painel_atividade_execucao"] },
+      (atual) => {
+        if (!atual) return { [execucao.card_id]: [execucao] };
+        const execucoesDoCard = atual[execucao.card_id] || [];
+        const existe = execucoesDoCard.some((item) => item.atividade_id === execucao.atividade_id);
+        return {
+          ...atual,
+          [execucao.card_id]: existe
+            ? execucoesDoCard.map((item) => item.atividade_id === execucao.atividade_id ? execucao : item)
+            : [...execucoesDoCard, execucao],
+        };
+      }
+    );
+  }
+
   /** Iniciar execução de uma atividade */
   async function iniciarAtividade(cardId: string, atividadeId: string, etapaId: string | null): Promise<boolean> {
     try {
@@ -33,7 +50,7 @@ export function usePainelAtividadeActions() {
       }
 
       const now = new Date().toISOString();
-      const { error } = await supabase
+      const { data: execucao, error } = await supabase
         .from("painel_atividade_execucao")
         .upsert(
           {
@@ -46,9 +63,12 @@ export function usePainelAtividadeActions() {
             updated_at: now,
           },
           { onConflict: "card_id,atividade_id" }
-        );
+        )
+        .select("*")
+        .single();
       if (error) throw error;
 
+      atualizarExecucaoNoCache(execucao as AtividadeExecucao);
       invalidateExecucao();
       toast.success("Atividade iniciada!");
       return true;
@@ -100,7 +120,7 @@ export function usePainelAtividadeActions() {
         emAtraso = now.getTime() > limiteMs;
       }
 
-      const { error } = await supabase
+      const { data: execucao, error } = await supabase
         .from("painel_atividade_execucao")
         .upsert(
           {
@@ -114,9 +134,12 @@ export function usePainelAtividadeActions() {
             updated_at: now.toISOString(),
           },
           { onConflict: "card_id,atividade_id" }
-        );
+        )
+        .select("*")
+        .single();
       if (error) throw error;
 
+      atualizarExecucaoNoCache(execucao as AtividadeExecucao);
       invalidateExecucao();
       toast.success("Atividade concluída!");
       return true;
