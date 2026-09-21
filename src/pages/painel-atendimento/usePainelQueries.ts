@@ -285,19 +285,28 @@ export function usePainelQueries(profile: any) {
     queryFn: async () => {
       const cardIds = cards.map((c) => c.id);
       const map: Record<string, AtividadeExecucao[]> = {};
-      // Busca em lotes por card para não bater no limite de 1000 linhas do PostgREST
+      // Busca em lotes por card e pagina cada lote: o backend limita cada resposta
+      // a 1000 registros mesmo quando range(0, 9999) é solicitado.
       const CHUNK = 50;
+      const PAGE_SIZE = 1000;
       for (let i = 0; i < cardIds.length; i += CHUNK) {
         const slice = cardIds.slice(i, i + CHUNK);
-        const { data } = await supabase
-          .from("painel_atividade_execucao")
-          .select("*")
-          .in("card_id", slice)
-          .range(0, 9999);
-        (data || []).forEach((r: any) => {
-          if (!map[r.card_id]) map[r.card_id] = [];
-          map[r.card_id].push(r as AtividadeExecucao);
-        });
+        let from = 0;
+        while (true) {
+          const { data, error } = await supabase
+            .from("painel_atividade_execucao")
+            .select("*")
+            .in("card_id", slice)
+            .order("id")
+            .range(from, from + PAGE_SIZE - 1);
+          if (error) throw error;
+          (data || []).forEach((r: any) => {
+            if (!map[r.card_id]) map[r.card_id] = [];
+            map[r.card_id].push(r as AtividadeExecucao);
+          });
+          if (!data || data.length < PAGE_SIZE) break;
+          from += PAGE_SIZE;
+        }
       }
       return map;
     },
