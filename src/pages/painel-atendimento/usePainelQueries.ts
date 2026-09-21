@@ -283,14 +283,22 @@ export function usePainelQueries(profile: any) {
     queryKey: ["painel_atividade_execucao", cards.map(c => c.id).join(",")],
     enabled: cards.length > 0,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("painel_atividade_execucao")
-        .select("*");
+      const cardIds = cards.map((c) => c.id);
       const map: Record<string, AtividadeExecucao[]> = {};
-      (data || []).forEach((r: any) => {
-        if (!map[r.card_id]) map[r.card_id] = [];
-        map[r.card_id].push(r as AtividadeExecucao);
-      });
+      // Busca em lotes por card para não bater no limite de 1000 linhas do PostgREST
+      const CHUNK = 50;
+      for (let i = 0; i < cardIds.length; i += CHUNK) {
+        const slice = cardIds.slice(i, i + CHUNK);
+        const { data } = await supabase
+          .from("painel_atividade_execucao")
+          .select("*")
+          .in("card_id", slice)
+          .range(0, 9999);
+        (data || []).forEach((r: any) => {
+          if (!map[r.card_id]) map[r.card_id] = [];
+          map[r.card_id].push(r as AtividadeExecucao);
+        });
+      }
       return map;
     },
   });
