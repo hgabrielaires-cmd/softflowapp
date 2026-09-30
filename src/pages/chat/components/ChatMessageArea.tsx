@@ -19,6 +19,8 @@ import { format } from "date-fns";
 import ChatInputArea from "./ChatInputArea";
 import { ChatMedia } from "./ChatMedia";
 import { toast } from "sonner";
+import { UserPlus } from "lucide-react";
+import { useContatoDaConversa, CadastrarContatoDialog } from "./ChatContatoNome";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -94,6 +96,8 @@ export default function ChatMessageArea({
     enabled: !!conversa?.id && !!userId,
   });
 
+  const { data: contatoInfo, isLoading: carregandoContato } = useContatoDaConversa(conversa);
+  const [cadastrarContatoOpen, setCadastrarContatoOpen] = useState(false);
   const [modoNota, setModoNota] = useState(false);
   const [imagemFull, setImagemFull] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -261,19 +265,25 @@ export default function ChatMessageArea({
         <div className="border-b border-border px-4 py-3 flex items-center justify-between bg-card">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary flex-shrink-0">
-              {(conversa.nome_cliente || "?")[0].toUpperCase()}
+              {(contatoInfo?.nome || conversa.nome_cliente || "?")[0].toUpperCase()}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-foreground truncate">
-                  {conversa.nome_cliente || "Cliente"}
+                  {contatoInfo?.nome || conversa.nome_cliente || "Cliente"}
                 </h3>
                 <span className={cn("w-2 h-2 rounded-full", STATUS_COLORS[conversa.status as ChatStatus])} />
                 <span className="text-xs text-muted-foreground">
                   {STATUS_LABELS[conversa.status as ChatStatus]}
                 </span>
+                {!carregandoContato && !contatoInfo && (
+                  <Button size="sm" variant="outline" className="h-6 px-2 text-[11px] gap-1" onClick={() => setCadastrarContatoOpen(true)}>
+                    <UserPlus className="h-3 w-3" /> Cadastrar contato
+                  </Button>
+                )}
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {contatoInfo?.empresa && <span className="truncate max-w-[200px]">{contatoInfo.empresa}{contatoInfo.cargo ? ` · ${contatoInfo.cargo}` : ""} •</span>}
                 <span>{formatarTelefone(conversa.numero_cliente)}</span>
                 {conversa.protocolo && <span>• {conversa.protocolo}</span>}
                 {conversa.setor && (
@@ -495,6 +505,9 @@ export default function ChatMessageArea({
             />
           )}
         </div>
+      )}
+      {conversa && (
+        <CadastrarContatoDialog open={cadastrarContatoOpen} onOpenChange={setCadastrarContatoOpen} conversa={conversa} />
       )}
     </div>
   );
