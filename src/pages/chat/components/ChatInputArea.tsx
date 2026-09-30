@@ -167,12 +167,16 @@ export default function ChatInputArea({
   async function iniciarGravacao() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      // WhatsApp Meta não aceita webm: priorizar ogg/opus ou mp4
+      const candidatos = ["audio/ogg;codecs=opus", "audio/mp4", "audio/mpeg", "audio/webm;codecs=opus"];
+      const mime = candidatos.find((m) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(m)) || "";
+      const recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
       chunks.current = [];
 
       recorder.ondataavailable = (e) => { chunks.current.push(e.data); };
       recorder.onstop = () => {
-        const blob = new Blob(chunks.current, { type: "audio/webm" });
+        const tipo = (recorder.mimeType || mime || "audio/webm").split(";")[0];
+        const blob = new Blob(chunks.current, { type: tipo });
         setAudioBlob(blob);
         setAudioUrl(URL.createObjectURL(blob));
         stream.getTracks().forEach((t) => t.stop());
@@ -199,7 +203,9 @@ export default function ChatInputArea({
 
   function enviarAudio() {
     if (!audioBlob) return;
-    const file = new File([audioBlob], "audio.webm", { type: "audio/webm" });
+    const tipo = audioBlob.type || "audio/webm";
+    const ext = tipo.includes("ogg") ? "ogg" : tipo.includes("mp4") ? "m4a" : tipo.includes("mpeg") ? "mp3" : "webm";
+    const file = new File([audioBlob], `audio.${ext}`, { type: tipo });
     onSendMedia(file, "");
     cancelarAudio();
   }
