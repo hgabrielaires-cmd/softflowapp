@@ -147,14 +147,20 @@ export default function ChatConversaList({
                   {(c.nome_cliente || "?")[0].toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-sm font-medium truncate text-foreground">
-                      {c.nome_cliente || formatarTelefone(c.numero_cliente)}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                      {tempoRelativo(c.updated_at)}
-                    </span>
-                  </div>
+                  {(() => {
+                    const raw = (c.contato as any) as any;
+                    const contato = Array.isArray(raw) ? raw[0] : raw;
+                    return (
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-sm font-medium truncate text-foreground">
+                          {contato?.nome || c.nome_cliente || formatarTelefone(c.numero_cliente)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                          {tempoRelativo(c.updated_at)}
+                        </span>
+                      </div>
+                    );
+                  })()}
                   <p className="text-xs text-muted-foreground truncate mt-0.5">
                     {formatarTelefone(c.numero_cliente)}
                   </p>
@@ -163,16 +169,6 @@ export default function ChatConversaList({
                       🏢 {(c.cliente as any).nome_fantasia}
                     </p>
                   )}
-                  {(() => {
-                    const raw = (c.contato as any) as any;
-                    const contato = Array.isArray(raw) ? raw[0] : raw;
-                    return contato?.nome ? (
-                      <p className="text-[10px] text-foreground/80 truncate flex items-center gap-1">
-                        👤 {contato.nome}
-                        {contato.cargo ? ` · ${contato.cargo}` : ""}
-                      </p>
-                    ) : null;
-                  })()}
                   <div className="flex items-center gap-1.5 mt-1">
                     <span className={cn("w-2 h-2 rounded-full flex-shrink-0", STATUS_COLORS[c.status as ChatStatus] || "bg-gray-400")} />
                     <span className="text-[10px] text-muted-foreground">
