@@ -28,6 +28,7 @@ export interface ChatConversa {
   setor?: { id: string; nome: string } | null;
   atendente?: { user_id: string; full_name: string | null; avatar_url: string | null } | null;
   cliente?: { id: string; nome_fantasia: string; cnpj_cpf: string } | null;
+  contato?: { id: string; nome: string; cargo: string | null } | { id: string; nome: string; cargo: string | null }[] | null;
   ultima_mensagem?: ChatMensagem | null;
   mensagens_nao_lidas?: number;
 }
