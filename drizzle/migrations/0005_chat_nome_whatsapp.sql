@@ -1,0 +1,1 @@
+ALTER TABLE public.chat_conversas ADD COLUMN IF NOT EXISTS nome_whatsapp text;

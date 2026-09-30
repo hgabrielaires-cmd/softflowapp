@@ -381,6 +381,7 @@ export type Database = {
           id: string
           iniciado_em: string | null
           nome_cliente: string | null
+          nome_whatsapp: string | null
           nps_comentario: string | null
           nps_enviado: boolean | null
           nps_nota: number | null
@@ -412,6 +413,7 @@ export type Database = {
           id?: string
           iniciado_em?: string | null
           nome_cliente?: string | null
+          nome_whatsapp?: string | null
           nps_comentario?: string | null
           nps_enviado?: boolean | null
           nps_nota?: number | null
@@ -443,6 +445,7 @@ export type Database = {
           id?: string
           iniciado_em?: string | null
           nome_cliente?: string | null
+          nome_whatsapp?: string | null
           nps_comentario?: string | null
           nps_enviado?: boolean | null
           nps_nota?: number | null

@@ -235,9 +235,12 @@ export default function ChatClientePanel({ conversa, onSelectHistorico, onLeaveC
 
     if (existing && existing.length > 0) return;
 
+    // Nome da pessoa = nome do perfil do WhatsApp (nome_cliente é a empresa informada no bot)
+    const nomePessoa = ((conversa as any).nome_whatsapp as string | null)?.trim();
+    if (!nomePessoa) return; // sem nome da pessoa: o atendente cadastra pelo botão "Cadastrar contato"
     await supabase.from("cliente_contatos").insert({
       cliente_id: clienteId,
-      nome: conversa.nome_cliente || "Contato via Chat",
+      nome: nomePessoa,
       telefone: normalizeBRPhone(conversa.numero_cliente),
       decisor: false,
       ativo: true,
