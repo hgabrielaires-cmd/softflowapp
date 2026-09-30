@@ -163,6 +163,12 @@ export default function ChatConversaList({
                       🏢 {(c.cliente as any).nome_fantasia}
                     </p>
                   )}
+                  {(c.contato as any)?.nome && (
+                    <p className="text-[10px] text-foreground/80 truncate flex items-center gap-1">
+                      👤 {(c.contato as any).nome}
+                      {(c.contato as any)?.cargo ? ` · ${(c.contato as any).cargo}` : ""}
+                    </p>
+                  )}
                   <div className="flex items-center gap-1.5 mt-1">
                     <span className={cn("w-2 h-2 rounded-full flex-shrink-0", STATUS_COLORS[c.status as ChatStatus] || "bg-gray-400")} />
                     <span className="text-[10px] text-muted-foreground">
