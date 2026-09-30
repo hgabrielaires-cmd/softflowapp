@@ -12,7 +12,8 @@ export function useChatConversas(tab: string, userId: string | undefined, search
           *,
           setor:setores(id, nome),
           atendente:profiles!chat_conversas_atendente_id_fkey(user_id, full_name, avatar_url),
-          cliente:clientes!chat_conversas_cliente_id_fkey(id, nome_fantasia, cnpj_cpf)
+          cliente:clientes!chat_conversas_cliente_id_fkey(id, nome_fantasia, cnpj_cpf),
+          contato:cliente_contatos(id, nome, cargo)
         `)
         .order("updated_at", { ascending: false })
         .limit(50);
