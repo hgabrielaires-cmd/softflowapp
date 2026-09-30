@@ -60,7 +60,7 @@ export function CadastrarContatoDialog({ open, onOpenChange, conversa }: { open:
 
   useEffect(() => {
     if (!open) return;
-    setNome(""); setCargo(""); setBusca("");
+    setNome(((conversa as any).nome_whatsapp as string) || ""); setCargo(""); setBusca("");
     const cid = (conversa as any).cliente_id as string | null;
     if (cid) {
       supabase.from("clientes").select("id, nome_fantasia").eq("id", cid).maybeSingle().then(({ data }) => setEmpresa(data));
