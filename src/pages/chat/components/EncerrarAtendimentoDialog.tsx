@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChatConversa } from "../types";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface Props {
   open: boolean;
@@ -60,66 +61,61 @@ export default function EncerrarAtendimentoDialog({ open, onClose, conversa, onC
       });
   }, [roles.join(","), isAdmin]);
 
+  // Novo contato (quando o telefone não tem cadastro na empresa escolhida)
+  const [nomeContato, setNomeContato] = useState("");
+  const [cargoContato, setCargoContato] = useState("");
+  const [salvandoContato, setSalvandoContato] = useState(false);
+
   // Pre-fill when dialog opens
   useEffect(() => {
     if (open && conversa) {
       setTitulo((conversa as any).titulo_atendimento || "");
-      if (conversa.cliente_id && conversa.cliente) {
-        setEmpresaId(conversa.cliente_id);
-        setEmpresaNome((conversa.cliente as any)?.nome_fantasia || null);
-      } else {
-        setEmpresaId(null);
-        setEmpresaNome(null);
-      }
+      setNomeContato(((conversa as any).nome_whatsapp as string) || "");
+      setCargoContato("");
+      setEmpresaId(null);
+      setEmpresaNome(null);
       setTermoBusca("");
       setResultados([]);
     }
   }, [open, conversa]);
 
-  // Load empresas vinculadas ao contato pelo telefone
+  // Empresas em que este telefone já está cadastrado como contato
   useEffect(() => {
     if (!open || !conversa?.numero_cliente) {
       setEmpresasContato([]);
       return;
     }
-    // Only load if no empresa linked yet
-    if (conversa.cliente_id) {
-      setEmpresasContato([]);
-      return;
-    }
-
     const loadEmpresas = async () => {
       setLoadingContato(true);
       const limpo = conversa.numero_cliente.replace(/\D/g, "");
-      if (limpo.length < 8) {
-        setEmpresasContato([]);
-        setLoadingContato(false);
-        return;
-      }
       const ultimos8 = limpo.slice(-8);
-
-      const { data: contatos } = await supabase
-        .from("cliente_contatos")
-        .select("cliente_id, clientes(id, nome_fantasia, cnpj_cpf)")
-        .ilike("telefone", `%${ultimos8}%`)
-        .eq("ativo", true)
-        .limit(20);
-
-      if (contatos && contatos.length > 0) {
-        const empresasMap = new Map<string, any>();
-        for (const c of contatos) {
+      let lista: any[] = [];
+      if (ultimos8.length === 8) {
+        const { data: contatos } = await supabase
+          .from("cliente_contatos")
+          .select("id, telefone, cliente_id, clientes(id, nome_fantasia, cnpj_cpf)")
+          .ilike("telefone", `%${ultimos8.slice(0, 4)}%${ultimos8.slice(4)}%`)
+          .eq("ativo", true)
+          .limit(50);
+        const mapa = new Map<string, any>();
+        for (const c of contatos || []) {
           const cli = c.clientes as any;
-          if (cli?.id && !empresasMap.has(cli.id)) {
-            empresasMap.set(cli.id, { id: cli.id, nome_fantasia: cli.nome_fantasia, cnpj_cpf: cli.cnpj_cpf });
-          }
+          if ((c.telefone || "").replace(/\D/g, "").slice(-8) !== ultimos8) continue;
+          if (cli?.id && !mapa.has(cli.id)) mapa.set(cli.id, { id: cli.id, nome_fantasia: cli.nome_fantasia, cnpj_cpf: cli.cnpj_cpf, contato_id: c.id });
         }
-        setEmpresasContato(Array.from(empresasMap.values()));
-      } else {
-        setEmpresasContato([]);
+        lista = Array.from(mapa.values());
+      }
+      setEmpresasContato(lista);
+      // Uma única empresa: vincula automaticamente. Várias: seleção obrigatória.
+      if (lista.length === 1) {
+        setEmpresaId(lista[0].id);
+        setEmpresaNome(lista[0].nome_fantasia);
+      } else if (lista.length === 0 && conversa.cliente_id && conversa.cliente) {
+        setEmpresaId(conversa.cliente_id);
+        setEmpresaNome((conversa.cliente as any)?.nome_fantasia || null);
       }
       setLoadingContato(false);
     };
-
     loadEmpresas();
   }, [open, conversa?.numero_cliente, conversa?.cliente_id]);
 
@@ -164,7 +160,39 @@ export default function EncerrarAtendimentoDialog({ open, onClose, conversa, onC
     setEmpresaNome(null);
   }
 
-  const podeConfirmar = !!empresaId && titulo.trim().length >= 5;
+  const contatoExistente = empresasContato.find((e) => e.id === empresaId) || null;
+  const precisaCriarContato = !!empresaId && !contatoExistente && !loadingContato;
+  const podeConfirmar =
+    !!empresaId && titulo.trim().length >= 5 && !loadingContato &&
+    (!precisaCriarContato || nomeContato.trim().length >= 2);
+
+  async function confirmar() {
+    if (!conversa || !empresaId) return;
+    setSalvandoContato(true);
+    try {
+      let contatoId = contatoExistente?.contato_id as string | undefined;
+      if (!contatoId) {
+        const { data, error } = await supabase
+          .from("cliente_contatos")
+          .insert({
+            cliente_id: empresaId,
+            nome: nomeContato.trim(),
+            cargo: cargoContato.trim() || null,
+            telefone: conversa.numero_cliente.replace(/\D/g, ""),
+          })
+          .select("id")
+          .single();
+        if (error) throw error;
+        contatoId = data.id;
+      }
+      await supabase.from("chat_conversas").update({ contato_id: contatoId, cliente_id: empresaId }).eq("id", conversa.id);
+      onConfirm(empresaId, titulo.trim());
+    } catch (e: any) {
+      toast.error("Erro ao cadastrar contato: " + e.message);
+    } finally {
+      setSalvandoContato(false);
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -187,7 +215,7 @@ export default function EncerrarAtendimentoDialog({ open, onClose, conversa, onC
                 <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="text-sm font-medium flex-1 truncate">{empresaNome}</span>
                 <Badge variant="outline" className="text-[10px] text-green-600 border-green-300">✓</Badge>
-                <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={limparEmpresa}>
+                <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={limparEmpresa} disabled={empresasContato.length === 1}>
                   <X className="h-3 w-3" />
                 </Button>
               </div>
@@ -219,7 +247,10 @@ export default function EncerrarAtendimentoDialog({ open, onClose, conversa, onC
                   </div>
                 )}
 
-                {empresasContato.length === 0 && !loadingContato && !conversa?.cliente_id && (
+                {empresasContato.length > 1 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">Este contato está em mais de uma empresa: selecione qual foi atendida.</p>
+                )}
+                {empresasContato.length === 0 && !loadingContato && (
                   <p className="text-xs text-muted-foreground italic">
                     Nenhuma empresa vinculada a este contato.
                   </p>
@@ -274,6 +305,20 @@ export default function EncerrarAtendimentoDialog({ open, onClose, conversa, onC
             )}
           </div>
 
+          {precisaCriarContato && (
+            <div className="space-y-2 rounded-lg border border-dashed p-3">
+              <p className="text-xs text-muted-foreground">Este telefone não tem contato cadastrado nesta empresa. Cadastre para encerrar.</p>
+              <div className="space-y-1">
+                <Label>Nome do contato <span className="text-destructive">*</span></Label>
+                <Input value={nomeContato} onChange={(e) => setNomeContato(e.target.value)} placeholder="Nome da pessoa" />
+              </div>
+              <div className="space-y-1">
+                <Label>Cargo</Label>
+                <Input value={cargoContato} onChange={(e) => setCargoContato(e.target.value)} />
+              </div>
+            </div>
+          )}
+
           {/* Título */}
           <div className="space-y-2">
             <Label>Título do atendimento <span className="text-destructive">*</span></Label>
@@ -293,8 +338,8 @@ export default function EncerrarAtendimentoDialog({ open, onClose, conversa, onC
           <Button variant="outline" onClick={onClose} disabled={isPending}>Cancelar</Button>
           <Button
             variant="destructive"
-            onClick={() => onConfirm(empresaId!, titulo.trim())}
-            disabled={!podeConfirmar || isPending}
+            onClick={confirmar}
+            disabled={!podeConfirmar || isPending || salvandoContato}
           >
             {isPending ? "Encerrando..." : "Confirmar Encerramento"}
           </Button>
