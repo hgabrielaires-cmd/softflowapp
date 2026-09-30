@@ -506,6 +506,9 @@ export default function ChatMessageArea({
           )}
         </div>
       )}
+      {conversa && (
+        <CadastrarContatoDialog open={cadastrarContatoOpen} onOpenChange={setCadastrarContatoOpen} conversa={conversa} />
+      )}
     </div>
   );
 }
