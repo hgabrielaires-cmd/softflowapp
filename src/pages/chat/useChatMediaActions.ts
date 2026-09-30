@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { converterAudioParaMp3 } from "@/lib/audioToMp3";
 
 function getMediaType(file: File): "imagem" | "audio" | "documento" {
   if (file.type.startsWith("image/")) return "imagem";
@@ -35,6 +36,14 @@ export function useChatMediaActions() {
       instanceName?: string;
       canal?: string | null;
     }) => {
+      // WhatsApp oficial só aceita ogg/opus, mp3, aac, amr ou mp4 real: converter gravações para MP3
+      if (canal === "whatsapp_meta" && file.type.startsWith("audio/") && !/mpeg|ogg|aac|amr/.test(file.type)) {
+        try {
+          file = await converterAudioParaMp3(file);
+        } catch (e) {
+          throw new Error("Não foi possível converter o áudio para envio no WhatsApp");
+        }
+      }
       // 1. Upload to storage
       const timestamp = Date.now();
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
