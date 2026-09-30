@@ -456,6 +456,14 @@ Deno.serve(async (req) => {
             continue;
           }
 
+          // Guarda o nome de perfil do WhatsApp (nome da pessoa) nas conversas deste número
+          if (nome) {
+            await supabase
+              .from("chat_conversas")
+              .update({ nome_whatsapp: nome })
+              .in("numero_cliente", normalizarNumero(numero));
+          }
+
           // Texto da mensagem (texto simples ou resposta de botão)
           let texto = "";
           let tipo = "texto";

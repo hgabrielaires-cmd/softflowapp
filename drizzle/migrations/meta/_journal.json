@@ -36,6 +36,13 @@
       "when": 1789049432158,
       "tag": "0004_chat_conversas_exclusao",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790788751494,
+      "tag": "0005_chat_nome_whatsapp",
+      "breakpoints": true
     }
   ]
 }
