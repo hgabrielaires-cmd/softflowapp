@@ -476,6 +476,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "chat_conversas_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "cliente_contatos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "chat_conversas_filial_id_fkey"
             columns: ["filial_id"]
             isOneToOne: false
