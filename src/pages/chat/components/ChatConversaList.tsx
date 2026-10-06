@@ -29,9 +29,9 @@ export default function ChatConversaList({
   const triagemCount = counts.triagem || 0;
 
   return (
-    <div className="flex flex-col h-full border-r border-border bg-card">
+    <div className="flex flex-col h-full min-h-0 min-w-0 md:border-r border-border bg-card">
       {/* Header */}
-      <div className="p-3 border-b border-border space-y-2">
+      <div className="shrink-0 p-3 border-b border-border space-y-2">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5 text-primary" />
           <h2 className="font-semibold text-foreground">Chat</h2>
@@ -44,7 +44,7 @@ export default function ChatConversaList({
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-emerald-600 hover:text-emerald-700"
+              className="h-10 w-10 md:h-7 md:w-7 text-emerald-600 hover:text-emerald-700"
               title="Nova conversa oficial (Meta)"
               onClick={onNovaConversaMeta}
             >
@@ -53,7 +53,7 @@ export default function ChatConversaList({
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="h-10 w-10 md:h-7 md:w-7"
               title="Nova conversa"
               onClick={onNovaConversa}
             >
@@ -67,7 +67,7 @@ export default function ChatConversaList({
             placeholder="Buscar conversa..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-9 h-9 text-sm"
+            className="pl-9 h-10 text-base md:h-9 md:text-sm"
           />
         </div>
 
@@ -93,9 +93,9 @@ export default function ChatConversaList({
 
       {/* Tabs */}
       <Tabs value={tab === "triagem" ? "triagem" : tab} onValueChange={onTabChange} className="px-2 pt-2">
-        <TabsList className="w-full h-8">
+        <TabsList className="w-full h-11 md:h-8">
           {CHAT_TABS.map((t) => (
-            <TabsTrigger key={t.value} value={t.value} className="text-xs flex-1 h-7">
+            <TabsTrigger key={t.value} value={t.value} className="text-xs flex-1 min-w-0 px-1 h-10 md:h-7">
               {t.label}
               {(counts[t.value] || 0) > 0 && (
                 <span className="ml-1 text-[10px] bg-muted rounded-full px-1">
@@ -123,7 +123,7 @@ export default function ChatConversaList({
       )}
 
       {/* List */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-1 space-y-0.5">
           {conversas.length === 0 && (
             <p className="text-center text-muted-foreground text-sm py-8">

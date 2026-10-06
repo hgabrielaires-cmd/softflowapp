@@ -1369,9 +1369,10 @@ function NotificationBell({ profile, roles }: { profile: Profile | null; roles: 
 
 interface AppLayoutProps {
   children: ReactNode;
+  chatLayout?: boolean;
 }
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({ children, chatLayout = false }: AppLayoutProps) {
   const { profile, roles, signOut } = useAuth();
   const { permissions } = useMenuPermissions(roles);
   const navigate = useNavigate();
@@ -1390,7 +1391,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className={cn("flex bg-background", chatLayout ? "h-[100dvh] min-h-0 overflow-hidden" : "min-h-screen")}>
       {/* Desktop Sidebar */}
       <aside className={cn(
         "hidden lg:flex flex-col flex-shrink-0 bg-sidebar border-r border-sidebar-border",
@@ -1410,9 +1411,9 @@ export function AppLayout({ children }: AppLayoutProps) {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* Topbar */}
-        <header className="h-12 border-b border-border bg-background/95 backdrop-blur sticky top-0 z-30 flex items-center px-4 gap-3">
+        <header className="h-12 shrink-0 border-b border-border bg-background/95 backdrop-blur sticky top-0 z-30 flex items-center px-4 gap-3">
           <Button variant="ghost" size="icon" className="h-8 w-8 lg:flex hidden" onClick={() => setCollapsed((c) => !c)}>
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>
@@ -1474,13 +1475,13 @@ export function AppLayout({ children }: AppLayoutProps) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 sm:p-6 overflow-auto">
+        <main className={cn("flex-1 min-h-0", chatLayout ? "flex overflow-hidden" : "p-4 sm:p-6 overflow-auto")}>
           {children}
         </main>
       </div>
 
       {/* Chat Interno Flutuante */}
-      <ChatInternoWidget />
+      <div className={cn(chatLayout && "hidden md:contents")}><ChatInternoWidget /></div>
     </div>
   );
 }
