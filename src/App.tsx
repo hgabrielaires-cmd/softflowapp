@@ -61,6 +61,7 @@ const FinanceiroParametros = React.lazy(() => import("./pages/financeiro-paramet
 const FinanceiroDespesas = React.lazy(() => import("./pages/financeiro-despesas"));
 const DespesasAuditoria = React.lazy(() => import("./pages/financeiro-despesas/DespesasAuditoria"));
 const AuditoriaGeral = React.lazy(() => import("./pages/relatorios/AuditoriaGeral"));
+const DiagnosticoCapacidade = React.lazy(() => import("./pages/relatorios/DiagnosticoCapacidade"));
 const ContasFinanceiras = React.lazy(() => import("./pages/financeiro-contas"));
 const DRE = React.lazy(() => import("./pages/financeiro-dre"));
 
@@ -264,6 +265,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <DespesasAuditoria />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/relatorios/diagnostico-capacidade"
+              element={
+                <ProtectedRoute>
+                  <DiagnosticoCapacidade />
                 </ProtectedRoute>
               }
             />
