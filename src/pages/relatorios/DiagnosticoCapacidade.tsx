@@ -1,7 +1,5 @@
 import { useState } from "react";
-import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,16 +8,11 @@ import { Loader2, Activity, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 export default function DiagnosticoCapacidade() {
-  const { isAdmin } = useAuth() as any;
   const [contexto, setContexto] = useState("");
   const [metricas, setMetricas] = useState("");
   const [logs, setLogs] = useState("");
   const [analise, setAnalise] = useState("");
   const [loading, setLoading] = useState(false);
-
-  if (isAdmin === false) {
-    return <div className="p-6 text-muted-foreground">Acesso restrito a administradores.</div>;
-  }
 
   const carregarArquivo = async (e: React.ChangeEvent<HTMLInputElement>, set: (v: string) => void) => {
     const f = e.target.files?.[0];
@@ -84,8 +77,8 @@ export default function DiagnosticoCapacidade() {
             <CardTitle>Resultado</CardTitle>
             <CardDescription>Análise gerada por IA — confirme antes de agir.</CardDescription>
           </CardHeader>
-          <CardContent className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown>{analise}</ReactMarkdown>
+          <CardContent className="whitespace-pre-wrap text-sm leading-relaxed">
+            {analise.replace(/\*\*/g, "")}
           </CardContent>
         </Card>
       )}

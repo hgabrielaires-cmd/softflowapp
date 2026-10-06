@@ -123,6 +123,7 @@ const navGroups: NavGroup[] = [
     groupIcon: <BarChart3 className="h-4 w-4" />,
     items: [
       { icon: <FileText className="h-4 w-4" />, label: "Auditoria", to: "/relatorios/auditoria", permKey: "menu.relatorios_auditoria" },
+      { icon: <BarChart3 className="h-4 w-4" />, label: "Diagnóstico de Capacidade", to: "/relatorios/diagnostico-capacidade", permKey: "menu.admin_diagnostico_capacidade" },
     ],
   },
   {
