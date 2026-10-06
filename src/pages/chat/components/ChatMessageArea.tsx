@@ -263,8 +263,8 @@ export default function ChatMessageArea({
           </Button>
         </div>
       ) : (
-        <div className="shrink-0 border-b border-border px-3 py-2 md:px-4 md:py-3 flex flex-wrap items-center justify-between gap-2 bg-card">
-          <div className="flex flex-1 items-center gap-2 md:gap-3 min-w-0">
+        <div className="shrink-0 border-b border-border px-3 py-2 md:px-4 md:py-3 flex flex-col gap-2 bg-card">
+          <div className="flex w-full items-center gap-2 md:gap-3 min-w-0">
             <Button size="icon" variant="ghost" className="h-10 w-10 shrink-0 md:hidden" onClick={onBack} aria-label="Voltar às conversas" title="Voltar às conversas">
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -298,7 +298,7 @@ export default function ChatMessageArea({
               </div>
             </div>
           </div>
-          <div className="flex w-full md:w-auto flex-wrap items-center justify-end gap-2 [&>button]:min-h-10 md:[&>button]:min-h-0">
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 [&>button]:min-h-10 md:[&>button]:min-h-0">
             <Button size="icon" variant="ghost" className="h-10 w-10 md:h-8 md:w-8" onClick={() => setBuscaAtiva(true)} title="Buscar mensagens" aria-label="Buscar mensagens">
               <Search className="h-4 w-4" />
             </Button>
