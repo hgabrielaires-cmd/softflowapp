@@ -357,7 +357,7 @@ export default function ChatInputArea({
     return (
       <div className="border-t border-border p-3 bg-card">
         <div className="flex items-center gap-3">
-          <audio controls src={audioUrl} className="flex-1 h-8" />
+          <audio controls src={audioUrl} className="flex-1 min-w-0 w-full h-10" />
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cancelarAudio}>
             <X className="h-4 w-4" />
           </Button>
@@ -433,10 +433,10 @@ export default function ChatInputArea({
       )}
 
       {/* Toolbar */}
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex flex-wrap items-center gap-2 mb-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" disabled={uploading}>
+            <Button variant="ghost" size="sm" className="h-10 md:h-7 text-xs gap-1" disabled={uploading}>
               <Paperclip className="h-3 w-3" />
               Mídia
               <ChevronDown className="h-3 w-3" />
@@ -458,7 +458,7 @@ export default function ChatInputArea({
         <Button
           variant={modoNota ? "secondary" : "ghost"}
           size="sm"
-          className="h-7 text-xs gap-1"
+          className="h-10 md:h-7 text-xs gap-1"
           onClick={() => setModoNota(!modoNota)}
           disabled={uploading}
         >
@@ -470,7 +470,7 @@ export default function ChatInputArea({
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7"
+          className="h-10 w-10 md:h-7 md:w-7"
           onClick={iniciarGravacao}
           disabled={uploading}
           title="Gravar áudio"
@@ -518,14 +518,15 @@ export default function ChatInputArea({
             onKeyDown={handleKeyDown}
             disabled={uploading}
             className={cn(
-              "flex-1 min-h-[40px] max-h-[120px] resize-none text-sm",
+              "flex-1 min-w-0 min-h-[44px] max-h-[120px] resize-none text-base md:text-sm",
               modoNota && "border-yellow-400 bg-yellow-50"
             )}
             rows={1}
           />
           <Button
             size="icon"
-            className="h-9 w-9 flex-shrink-0"
+            className="h-11 w-11 md:h-9 md:w-9 flex-shrink-0"
+            aria-label="Enviar mensagem"
             disabled={uploading || (midiaPreview ? false : !texto.trim())}
             onClick={midiaPreview ? enviarComPreview : handleSubmit}
           >

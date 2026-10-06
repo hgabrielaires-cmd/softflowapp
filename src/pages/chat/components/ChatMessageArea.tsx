@@ -71,12 +71,13 @@ interface Props {
   onExcluirAtendimento?: () => void;
   podeExcluir?: boolean;
   isLoading?: boolean;
+  onBack?: () => void;
 }
 
 export default function ChatMessageArea({
   conversa, mensagens, userId, userName,
   onSend, onSendMedia, onIniciarAtendimento, onEncerrar, onTransferir, onLeaveConversation, onFinalizarTriagem,
-  onExcluirAtendimento, podeExcluir, isLoading,
+   onExcluirAtendimento, podeExcluir, isLoading, onBack,
 }: Props) {
   const { profile } = useAuth();
   const qc = useQueryClient();
@@ -224,14 +225,14 @@ export default function ChatMessageArea({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-background min-w-0">
+    <div className="flex-1 flex flex-col bg-background min-w-0 min-h-0">
       {/* Header */}
       {buscaAtiva ? (
-        <div className="border-b border-border px-3 py-2.5 flex items-center gap-2 bg-card">
+        <div className="shrink-0 border-b border-border px-2 sm:px-3 py-2.5 flex items-center gap-1 sm:gap-2 bg-card">
           <Button size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0" onClick={fecharBusca}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               ref={buscaInputRef}
@@ -239,7 +240,7 @@ export default function ChatMessageArea({
               onChange={(e) => setTermoBusca(e.target.value)}
               onKeyDown={handleSearchKeyDown}
               placeholder="Buscar nas mensagens..."
-              className="pl-8 h-8 text-sm"
+              className="pl-8 h-10 text-base md:h-8 md:text-sm"
             />
           </div>
           {termoAtivo && (
@@ -262,27 +263,30 @@ export default function ChatMessageArea({
           </Button>
         </div>
       ) : (
-        <div className="border-b border-border px-4 py-3 flex items-center justify-between bg-card">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary flex-shrink-0">
+        <div className="shrink-0 border-b border-border px-3 py-2 md:px-4 md:py-3 flex flex-col gap-2 bg-card">
+          <div className="flex w-full items-center gap-2 md:gap-3 min-w-0">
+            <Button size="icon" variant="ghost" className="h-10 w-10 shrink-0 md:hidden" onClick={onBack} aria-label="Voltar às conversas" title="Voltar às conversas">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="hidden md:flex w-10 h-10 rounded-full bg-primary/10 items-center justify-center text-sm font-semibold text-primary flex-shrink-0">
               {(contatoInfo?.nome || conversa.nome_cliente || "?")[0].toUpperCase()}
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-foreground truncate">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <h3 className="w-full md:w-auto md:max-w-[240px] font-semibold text-foreground truncate">
                   {contatoInfo?.nome || (conversa as any).nome_whatsapp || conversa.nome_cliente || "Cliente"}
                 </h3>
-                <span className={cn("w-2 h-2 rounded-full", STATUS_COLORS[conversa.status as ChatStatus])} />
+                <span className={cn("w-2 h-2 shrink-0 rounded-full", STATUS_COLORS[conversa.status as ChatStatus])} />
                 <span className="text-xs text-muted-foreground">
                   {STATUS_LABELS[conversa.status as ChatStatus]}
                 </span>
                 {!carregandoContato && !contatoInfo && (
-                  <Button size="sm" variant="outline" className="h-6 px-2 text-[11px] gap-1" onClick={() => setCadastrarContatoOpen(true)}>
+                  <Button size="sm" variant="outline" className="h-8 md:h-6 px-2 text-[11px] gap-1" onClick={() => setCadastrarContatoOpen(true)}>
                     <UserPlus className="h-3 w-3" /> Cadastrar contato
                   </Button>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground mt-1">
                 {contatoInfo?.empresa && <span className="truncate max-w-[200px]">{contatoInfo.empresa}{contatoInfo.cargo ? ` · ${contatoInfo.cargo}` : ""} •</span>}
                 <span>{formatarTelefone(conversa.numero_cliente)}</span>
                 {conversa.protocolo && <span>• {conversa.protocolo}</span>}
@@ -294,8 +298,8 @@ export default function ChatMessageArea({
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setBuscaAtiva(true)} title="Buscar mensagens">
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 [&>button]:min-h-10 md:[&>button]:min-h-0">
+            <Button size="icon" variant="ghost" className="h-10 w-10 md:h-8 md:w-8" onClick={() => setBuscaAtiva(true)} title="Buscar mensagens" aria-label="Buscar mensagens">
               <Search className="h-4 w-4" />
             </Button>
             {podeExcluir && conversa.status !== "encerrado" && (
@@ -382,7 +386,7 @@ export default function ChatMessageArea({
       )}
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div ref={scrollRef} className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden overscroll-contain p-3 md:p-4 space-y-3">
         {mensagens.map((msg) => {
           const isAtendente = msg.remetente === "atendente";
           const isBot = msg.remetente === "bot";
@@ -394,7 +398,7 @@ export default function ChatMessageArea({
           const renderConteudo = (texto: string | null, className?: string) => {
             if (!texto) return null;
             return (
-              <p className={cn("text-sm whitespace-pre-wrap", className)}>
+              <p className={cn("text-sm whitespace-pre-wrap [overflow-wrap:anywhere]", className)}>
                 {termoAtivo ? highlightTexto(texto, termoBusca) : texto}
               </p>
             );
@@ -403,7 +407,7 @@ export default function ChatMessageArea({
           if (isSistema || msg.tipo === "sistema") {
             return (
               <div key={msg.id} id={`msg-${msg.id}`} className="flex justify-center">
-                <span className="text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
+                <span className="max-w-full break-words text-center text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
                   {msg.conteudo} • {hora}
                 </span>
               </div>
@@ -413,8 +417,8 @@ export default function ChatMessageArea({
           if (isNota) {
             return (
               <div key={msg.id} id={`msg-${msg.id}`} className={cn("flex justify-center", isCurrentMatch && "ring-2 ring-yellow-400 rounded-lg")}>
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2 max-w-[70%]">
-                  <div className="flex items-center gap-1 text-xs text-yellow-700 mb-1">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 md:px-4 py-2 min-w-0 max-w-[92%] md:max-w-[70%]">
+                  <div className="flex flex-wrap items-center gap-1 text-xs text-yellow-700 mb-1">
                     <Lock className="h-3 w-3" />
                     <span className="font-medium">Nota interna</span>
                     <span>• {(msg.atendente as any)?.full_name || "Atendente"} • {hora}</span>
@@ -428,7 +432,7 @@ export default function ChatMessageArea({
           if (isBot) {
             return (
               <div key={msg.id} id={`msg-${msg.id}`} className={cn("flex justify-center", isCurrentMatch && "ring-2 ring-yellow-400 rounded-lg")}>
-                <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-2 max-w-[70%]">
+                <div className="bg-purple-50 border border-purple-200 rounded-lg px-3 md:px-4 py-2 min-w-0 max-w-[92%] md:max-w-[70%]">
                   <div className="text-xs text-purple-600 mb-1">🤖 Bot • {hora}</div>
                   {renderConteudo(msg.conteudo, "text-purple-900 italic")}
                 </div>
@@ -439,9 +443,9 @@ export default function ChatMessageArea({
           return (
             <div key={msg.id} id={`msg-${msg.id}`} className={cn("flex", isAtendente ? "justify-end" : "justify-start")}>
               <div className={cn(
-                "max-w-[70%] rounded-2xl px-4 py-2",
+                "min-w-0 max-w-[92%] md:max-w-[70%] rounded-2xl px-3 md:px-4 py-2",
                 isAtendente
-                  ? "bg-[hsl(var(--primary))] text-primary-foreground rounded-br-md"
+                  ? "bg-primary text-primary-foreground rounded-br-md"
                   : "bg-muted text-foreground rounded-bl-md",
                 isCurrentMatch && "ring-2 ring-yellow-400"
               )}>
@@ -486,7 +490,7 @@ export default function ChatMessageArea({
 
       {/* Input */}
       {(podeComentar || podeIniciar) && conversa.status !== "encerrado" && (
-        <div>
+        <div className="shrink-0 pb-[env(safe-area-inset-bottom)] bg-card">
           {!podeComentar && podeIniciar ? (
             <div className="border-t border-border p-3 bg-card">
               <p className="text-sm text-center text-muted-foreground">Inicie o atendimento para responder</p>

@@ -20,6 +20,7 @@ import { useNotificacaoChat } from "@/hooks/useNotificacaoChat";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 
 export default function ChatPage() {
   const { user, profile, roles } = useAuth();
@@ -110,9 +111,9 @@ export default function ChatPage() {
   const userName = (profile as any)?.full_name || "Atendente";
 
   return (
-    <AppLayout>
-      <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-        <div className="w-[280px] flex-shrink-0">
+    <AppLayout chatLayout>
+      <div className="flex h-full w-full min-h-0 min-w-0 overflow-hidden">
+        <div className={cn("w-full min-h-0 shrink-0 md:w-[280px]", selectedConversa ? "hidden md:block" : "block")}>
           <ChatConversaList
             conversas={conversas as ChatConversa[]}
             tab={tab}
@@ -127,7 +128,9 @@ export default function ChatPage() {
           />
         </div>
 
+        <div className={cn("min-h-0 min-w-0 flex-1", selectedConversa ? "flex" : "hidden md:flex")}>
         <ChatMessageArea
+          onBack={() => setSelectedConversa(null)}
           isLoading={actions.iniciarAtendimento.isPending}
           conversa={conversaAtual as ChatConversa | null}
           mensagens={mensagens as any[]}
@@ -195,6 +198,7 @@ export default function ChatPage() {
           podeExcluir={podeExcluir}
           onExcluirAtendimento={() => setShowExcluir(true)}
         />
+        </div>
 
         <div className="w-[320px] flex-shrink-0 hidden xl:block">
           <ChatClientePanel
