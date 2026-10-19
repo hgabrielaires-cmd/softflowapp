@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { FooterPublico } from "@/components/FooterPublico";
 
 const Terms = () => {
   useEffect(() => {
@@ -107,6 +108,7 @@ const Terms = () => {
           </p>
         </div>
       </div>
+      <FooterPublico />
     </div>
   );
 };
