@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { normalizarNumero } from "../_shared/telefone.ts";
 
 const GRAPH = "https://graph.facebook.com/v19.0";
 
@@ -18,7 +19,28 @@ function json(body: unknown, status = 200) {
   });
 }
 
-async function getConfig(admin: ReturnType<typeof createClient>): Promise<MetaConfig | null> {
+async function getConfig(
+  admin: ReturnType<typeof createClient>,
+  phoneNumberId?: string | null,
+  conversaId?: string | null,
+  to?: string | null,
+): Promise<MetaConfig | null> {
+  let pnid = phoneNumberId || null;
+  if (!pnid && conversaId) {
+    const { data: c } = await admin.from("chat_conversas").select("meta_phone_number_id").eq("id", conversaId).maybeSingle();
+    pnid = (c as any)?.meta_phone_number_id ?? null;
+  }
+  if (!pnid && to) {
+    const { data: cs } = await admin.from("chat_conversas").select("meta_phone_number_id")
+      .eq("canal", "whatsapp_meta").in("numero_cliente", normalizarNumero(String(to).replace(/\D/g, "")))
+      .not("meta_phone_number_id", "is", null).order("updated_at", { ascending: false }).limit(1);
+    pnid = (cs as any)?.[0]?.meta_phone_number_id ?? null;
+  }
+  let q = admin.from("whatsapp_meta_numeros").select("*").eq("ativo", true);
+  q = pnid ? q.eq("phone_number_id", pnid) : q.order("padrao", { ascending: false }).order("created_at");
+  const { data: rows } = await q.limit(1);
+  const n = (rows as any)?.[0];
+  if (n?.access_token) return { phone_number_id: n.phone_number_id, waba_id: n.waba_id, access_token: n.access_token, verify_token: "", phone_number: n.phone_number };
   const { data } = await admin
     .from("integracoes_config")
     .select("config")
@@ -27,6 +49,54 @@ async function getConfig(admin: ReturnType<typeof createClient>): Promise<MetaCo
   const cfg = (data as any)?.config;
   if (!cfg?.access_token || !cfg?.phone_number_id) return null;
   return cfg as MetaConfig;
+}
+
+const META_APP_ID = "2182059352731360";
+
+async function conectarNumero(admin: ReturnType<typeof createClient>, body: any) {
+  const code = String(body?.code || "");
+  const phoneNumberId = String(body?.phone_number_id || "");
+  const wabaId = String(body?.waba_id || "");
+  const apelido = String(body?.apelido || "").trim();
+  const coexistencia = body?.coexistencia !== false;
+  if (!code || !phoneNumberId || !wabaId || !apelido) return json({ ok: false, error: "Dados da conexão incompletos" }, 400);
+  const secret = Deno.env.get("META_APP_SECRET");
+  if (!secret) return json({ ok: false, error: "META_APP_SECRET não configurado" });
+
+  const tokenRes = await fetch(`${GRAPH}/oauth/access_token?` + new URLSearchParams({ client_id: META_APP_ID, client_secret: secret, code }));
+  const tokenData = await tokenRes.json();
+  const accessToken = tokenData?.access_token;
+  if (!accessToken) return json({ ok: false, error: "A Meta recusou o código", detail: tokenData });
+  const h = { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" };
+
+  // Inscreve o app nos webhooks da conta
+  const sub = await fetch(`${GRAPH}/${wabaId}/subscribed_apps`, { method: "POST", headers: h }).then((r) => r.json()).catch((e) => ({ error: String(e) }));
+
+  // Coexistência: não registra o número; inicia sincronização de contatos e histórico
+  const sync: Record<string, unknown> = {};
+  if (coexistencia) {
+    for (const t of ["smb_app_state_sync", "history"]) {
+      sync[t] = await fetch(`${GRAPH}/${phoneNumberId}/smb_app_data`, {
+        method: "POST", headers: h, body: JSON.stringify({ messaging_product: "whatsapp", sync_type: t }),
+      }).then((r) => r.json()).catch((e) => ({ error: String(e) }));
+    }
+  } else {
+    sync.register = await fetch(`${GRAPH}/${phoneNumberId}/register`, {
+      method: "POST", headers: h, body: JSON.stringify({ messaging_product: "whatsapp", pin: String(Math.floor(100000 + Math.random() * 900000)) }),
+    }).then((r) => r.json()).catch((e) => ({ error: String(e) }));
+  }
+
+  const info = await fetch(`${GRAPH}/${phoneNumberId}?fields=display_phone_number,verified_name`, { headers: h }).then((r) => r.json()).catch(() => ({}));
+
+  if (body?.padrao) await admin.from("whatsapp_meta_numeros").update({ padrao: false }).neq("phone_number_id", phoneNumberId);
+  const { error } = await admin.from("whatsapp_meta_numeros").upsert({
+    phone_number_id: phoneNumberId, waba_id: wabaId, access_token: accessToken, apelido,
+    filial_id: body?.filial_id || null, padrao: !!body?.padrao, ativo: true, coexistencia,
+    phone_number: info?.display_phone_number ?? null, display_name: info?.verified_name ?? null, status: "connected",
+  }, { onConflict: "phone_number_id" });
+  if (error) return json({ ok: false, error: error.message });
+  console.log("[meta] número conectado", phoneNumberId, JSON.stringify({ sub, sync }));
+  return json({ ok: true, phone_number: info?.display_phone_number, display_name: info?.verified_name, subscribed: sub, sync });
 }
 
 Deno.serve(async (req) => {
@@ -54,7 +124,12 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action || "");
-    const cfg = await getConfig(admin);
+    if (action === "connect_number") {
+      const { data: isAdm } = await anon.rpc("is_admin", { _user_id: claimsData.claims.sub });
+      if (!isAdm) return json({ ok: false, error: "Apenas administradores" }, 403);
+      return await conectarNumero(admin, body);
+    }
+    const cfg = await getConfig(admin, body?.phone_number_id, body?.conversa_id, body?.to);
     if (!cfg) return json({ ok: false, error: "Integração WhatsApp Meta não configurada" });
 
     const headers = {

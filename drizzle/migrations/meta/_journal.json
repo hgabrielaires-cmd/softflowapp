@@ -43,6 +43,13 @@
       "when": 1790788751494,
       "tag": "0005_chat_nome_whatsapp",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792431878320,
+      "tag": "0006_whatsapp_meta_numeros",
+      "breakpoints": true
     }
   ]
 }

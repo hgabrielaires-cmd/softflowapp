@@ -1,6 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { normalizarNumero } from "../_shared/telefone.ts";
+import { AsyncLocalStorage } from "node:async_hooks";
+
+// Número Meta (phone_number_id) que recebeu o evento atual — isola requisições simultâneas
+const ctx = new AsyncLocalStorage<{ pnid: string | null }>();
 
 const admin = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -8,6 +12,12 @@ const admin = createClient(
 );
 
 async function getConfig() {
+  const pnid = ctx.getStore()?.pnid ?? null;
+  let q = admin.from("whatsapp_meta_numeros").select("*").eq("ativo", true);
+  q = pnid ? q.eq("phone_number_id", pnid) : q.order("padrao", { ascending: false }).order("created_at");
+  const { data: rows } = await q.limit(1);
+  const n = (rows as any)?.[0];
+  if (n?.access_token) return { phone_number_id: n.phone_number_id, waba_id: n.waba_id, access_token: n.access_token, phone_number: n.phone_number ?? "" } as Record<string, string>;
   const { data } = await admin
     .from("integracoes_config")
     .select("config")
@@ -400,7 +410,7 @@ async function validSignature(appSecret: string, rawBody: string, signature: str
   }
 }
 
-Deno.serve(async (req) => {
+const handler = async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const url = new URL(req.url);
@@ -437,6 +447,38 @@ Deno.serve(async (req) => {
     for (const entry of body?.entry ?? []) {
       for (const change of entry?.changes ?? []) {
         const value = change?.value ?? {};
+        const store = ctx.getStore();
+        if (store) store.pnid = value?.metadata?.phone_number_id ?? null;
+
+        // Coexistência: desconexão / reconexão da conta
+        if (change?.field === "account_update") {
+          const ev = String(value?.event || "");
+          const status = /DISCONNECT|REMOVED|BANNED|OFFBOARD/i.test(ev) ? "disconnected" : (/RECONNECT|ONBOARD|CONNECTED/i.test(ev) ? "connected" : null);
+          console.log("[whatsapp-meta-webhook] account_update:", ev, entry?.id);
+          if (status && entry?.id) await admin.from("whatsapp_meta_numeros").update({ status }).eq("waba_id", String(entry.id));
+          continue;
+        }
+
+        // Coexistência: mensagens enviadas pelo celular (WhatsApp Business App)
+        if (change?.field === "smb_message_echoes") {
+          for (const m of value?.message_echoes ?? []) {
+            const numeroCli = String(m?.to || "").replace(/\D/g, "");
+            if (!numeroCli || await jaProcessada(m?.id ?? null)) continue;
+            const conv = await acharConversa(numeroCli);
+            if (!conv) continue;
+            const textoEcho = m?.text?.body ?? m?.[m?.type]?.caption ?? `[${m?.type || "mensagem"} enviada pelo celular]`;
+            await admin.from("chat_mensagens").insert({
+              conversa_id: conv.id, tipo: "texto", conteudo: textoEcho,
+              remetente: "atendente", evolution_message_id: m?.id ?? null, lida: true,
+            });
+            await admin.from("chat_conversas").update({ updated_at: new Date().toISOString() }).eq("id", conv.id);
+          }
+          continue;
+        }
+        if (change?.field === "history" || change?.field === "smb_app_state_sync") {
+          console.log("[whatsapp-meta-webhook] sincronização coexistência:", change.field);
+          continue;
+        }
 
         // Status de entrega
         for (const st of value?.statuses ?? []) {
@@ -606,6 +648,7 @@ Deno.serve(async (req) => {
                 status: "bot",
                 bot_estado: { passo: 1 },
                 filial_id: config?.filial_id ?? null,
+                meta_phone_number_id: ctx.getStore()?.pnid ?? null,
                 iniciado_em: agora,
                 updated_at: agora,
               })
@@ -739,4 +782,6 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-});
+};
+
+Deno.serve((req) => ctx.run({ pnid: null }, () => handler(req)));

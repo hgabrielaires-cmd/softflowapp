@@ -380,6 +380,7 @@ export type Database = {
           filial_id: string | null
           id: string
           iniciado_em: string | null
+          meta_phone_number_id: string | null
           nome_cliente: string | null
           nome_whatsapp: string | null
           nps_comentario: string | null
@@ -412,6 +413,7 @@ export type Database = {
           filial_id?: string | null
           id?: string
           iniciado_em?: string | null
+          meta_phone_number_id?: string | null
           nome_cliente?: string | null
           nome_whatsapp?: string | null
           nps_comentario?: string | null
@@ -444,6 +446,7 @@ export type Database = {
           filial_id?: string | null
           id?: string
           iniciado_em?: string | null
+          meta_phone_number_id?: string | null
           nome_cliente?: string | null
           nome_whatsapp?: string | null
           nps_comentario?: string | null
@@ -6827,6 +6830,65 @@ export type Database = {
           source?: string
         }
         Relationships: []
+      }
+      whatsapp_meta_numeros: {
+        Row: {
+          access_token: string
+          apelido: string
+          ativo: boolean
+          coexistencia: boolean
+          created_at: string
+          display_name: string | null
+          filial_id: string | null
+          id: string
+          padrao: boolean
+          phone_number: string | null
+          phone_number_id: string
+          status: string
+          updated_at: string
+          waba_id: string
+        }
+        Insert: {
+          access_token: string
+          apelido: string
+          ativo?: boolean
+          coexistencia?: boolean
+          created_at?: string
+          display_name?: string | null
+          filial_id?: string | null
+          id?: string
+          padrao?: boolean
+          phone_number?: string | null
+          phone_number_id: string
+          status?: string
+          updated_at?: string
+          waba_id: string
+        }
+        Update: {
+          access_token?: string
+          apelido?: string
+          ativo?: boolean
+          coexistencia?: boolean
+          created_at?: string
+          display_name?: string | null
+          filial_id?: string | null
+          id?: string
+          padrao?: boolean
+          phone_number?: string | null
+          phone_number_id?: string
+          status?: string
+          updated_at?: string
+          waba_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_meta_numeros_filial_id_fkey"
+            columns: ["filial_id"]
+            isOneToOne: false
+            referencedRelation: "filiais"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
