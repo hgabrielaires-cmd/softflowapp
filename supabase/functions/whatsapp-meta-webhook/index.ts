@@ -499,11 +499,16 @@ const handler = async (req: Request) => {
           }
 
           // Guarda o nome de perfil do WhatsApp (nome da pessoa) nas conversas deste número
+          // Passo auxiliar: nunca pode impedir o bot / atendimento de seguir
           if (nome) {
-            await admin
-              .from("chat_conversas")
-              .update({ nome_whatsapp: nome })
-              .in("numero_cliente", normalizarNumero(numero));
+            try {
+              await admin
+                .from("chat_conversas")
+                .update({ nome_whatsapp: nome })
+                .in("numero_cliente", normalizarNumero(numero));
+            } catch (e) {
+              console.error("[whatsapp-meta-webhook] falha ao salvar nome_whatsapp (ignorado):", e);
+            }
           }
 
           // Texto da mensagem (texto simples ou resposta de botão)
