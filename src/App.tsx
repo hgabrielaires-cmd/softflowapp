@@ -17,6 +17,7 @@ const NotFound = React.lazy(() => import("./pages/NotFound"));
 const Privacy = React.lazy(() => import("./pages/Privacy"));
 const Terms = React.lazy(() => import("./pages/Terms"));
 const TermosDeUso = React.lazy(() => import("./pages/TermosDeUso"));
+const PoliticaPrivacidade = React.lazy(() => import("./pages/PoliticaPrivacidade"));
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Usuarios = React.lazy(() => import("./pages/Usuarios"));
 const Perfil = React.lazy(() => import("./pages/Perfil"));
@@ -102,6 +103,7 @@ const App = () => {
             <Route path="/privacidade" element={<Privacy />} />
             <Route path="/termos" element={<Terms />} />
             <Route path="/termos-de-uso" element={<TermosDeUso />} />
+            <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
             <Route
               path="/dashboard"
               element={
