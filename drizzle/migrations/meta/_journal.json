@@ -50,6 +50,13 @@
       "when": 1792431878320,
       "tag": "0006_whatsapp_meta_numeros",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792436839404,
+      "tag": "0007_harden_rls_access_rules",
+      "breakpoints": true
     }
   ]
 }
