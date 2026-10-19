@@ -16,6 +16,7 @@ const TrocarSenha = React.lazy(() => import("./pages/TrocarSenha"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const Privacy = React.lazy(() => import("./pages/Privacy"));
 const Terms = React.lazy(() => import("./pages/Terms"));
+const TermosDeUso = React.lazy(() => import("./pages/TermosDeUso"));
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Usuarios = React.lazy(() => import("./pages/Usuarios"));
 const Perfil = React.lazy(() => import("./pages/Perfil"));
@@ -100,6 +101,7 @@ const App = () => {
             <Route path="/trocar-senha" element={<TrocarSenha />} />
             <Route path="/privacidade" element={<Privacy />} />
             <Route path="/termos" element={<Terms />} />
+            <Route path="/termos-de-uso" element={<TermosDeUso />} />
             <Route
               path="/dashboard"
               element={
