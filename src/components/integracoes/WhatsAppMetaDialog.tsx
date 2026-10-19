@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Eye, EyeOff, Loader2, CheckCircle2, Clock, PlugZap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { WhatsAppMetaNumeros } from "./WhatsAppMetaNumeros";
 
 interface Props {
   open: boolean;
@@ -107,7 +108,10 @@ export function WhatsAppMetaDialog({ open, onOpenChange, initialConfig, onSaved 
             </div>
           </div>
 
+          <WhatsAppMetaNumeros />
+
           <Separator />
+          <p className="text-xs text-muted-foreground">Configuração manual (número antigo)</p>
 
           <div className="space-y-1.5">
             <Label className="text-xs">Phone Number ID</Label>
