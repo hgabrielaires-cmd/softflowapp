@@ -500,7 +500,7 @@ const handler = async (req: Request) => {
 
           // Guarda o nome de perfil do WhatsApp (nome da pessoa) nas conversas deste número
           if (nome) {
-            await supabase
+            await admin
               .from("chat_conversas")
               .update({ nome_whatsapp: nome })
               .in("numero_cliente", normalizarNumero(numero));
