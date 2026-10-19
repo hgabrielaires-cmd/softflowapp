@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Eye, Pencil, Trash2, ArrowRightLeft, XCircle, Info } from "lucide-react";
 import logo from "@/assets/logo-softflow-azul.png";
 import { cn } from "@/lib/utils";
+import { LinksLegais } from "@/components/FooterPublico";
 
 const ATUALIZACAO = "19 de outubro de 2026";
 const DPO = "privacidade@softplustecnologia.com.br";
@@ -109,6 +110,9 @@ const PoliticaPrivacidade = () => {
           <span>CNPJ: 13.382.798/0001-25</span>
           <span>DPO: <a href={`mailto:${DPO}`} className="text-primary">{DPO}</a></span>
           <span>Última atualização: {ATUALIZACAO}</span>
+        </div>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-6">
+          <LinksLegais excluding="/politica-de-privacidade" />
         </div>
       </footer>
     </div>
