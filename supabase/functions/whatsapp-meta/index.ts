@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { normalizarNumero } from "../_shared/telefone.ts";
 
 const GRAPH = "https://graph.facebook.com/v19.0";
 
@@ -22,11 +23,18 @@ async function getConfig(
   admin: ReturnType<typeof createClient>,
   phoneNumberId?: string | null,
   conversaId?: string | null,
+  to?: string | null,
 ): Promise<MetaConfig | null> {
   let pnid = phoneNumberId || null;
   if (!pnid && conversaId) {
     const { data: c } = await admin.from("chat_conversas").select("meta_phone_number_id").eq("id", conversaId).maybeSingle();
     pnid = (c as any)?.meta_phone_number_id ?? null;
+  }
+  if (!pnid && to) {
+    const { data: cs } = await admin.from("chat_conversas").select("meta_phone_number_id")
+      .eq("canal", "whatsapp_meta").in("numero_cliente", normalizarNumero(String(to).replace(/\D/g, "")))
+      .not("meta_phone_number_id", "is", null).order("updated_at", { ascending: false }).limit(1);
+    pnid = (cs as any)?.[0]?.meta_phone_number_id ?? null;
   }
   let q = admin.from("whatsapp_meta_numeros").select("*").eq("ativo", true);
   q = pnid ? q.eq("phone_number_id", pnid) : q.order("padrao", { ascending: false }).order("created_at");
@@ -121,7 +129,7 @@ Deno.serve(async (req) => {
       if (!isAdm) return json({ ok: false, error: "Apenas administradores" }, 403);
       return await conectarNumero(admin, body);
     }
-    const cfg = await getConfig(admin, body?.phone_number_id, body?.conversa_id);
+    const cfg = await getConfig(admin, body?.phone_number_id, body?.conversa_id, body?.to);
     if (!cfg) return json({ ok: false, error: "Integração WhatsApp Meta não configurada" });
 
     const headers = {
