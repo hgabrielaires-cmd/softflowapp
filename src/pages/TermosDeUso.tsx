@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import logo from "@/assets/logo-softflow-azul.png";
 import { cn } from "@/lib/utils";
+import { LinksLegais } from "@/components/FooterPublico";
 
 const ATUALIZACAO = "19 de outubro de 2026";
 const EMAIL = "contato@softplustecnologia.com.br";
@@ -76,6 +77,9 @@ const TermosDeUso = () => {
           <span>E-mail: <a href={`mailto:${EMAIL}`} className="text-primary">{EMAIL}</a></span>
           <span>Foro: Comarca de Natal/RN</span>
           <span>Última atualização: {ATUALIZACAO}</span>
+        </div>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-6">
+          <LinksLegais excluding="/termos-de-uso" />
         </div>
       </footer>
     </div>

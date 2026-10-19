@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { FooterPublico } from "@/components/FooterPublico";
 
 const Privacy = () => {
   useEffect(() => {
@@ -123,6 +124,7 @@ const Privacy = () => {
           </p>
         </div>
       </div>
+      <FooterPublico />
     </div>
   );
 };

@@ -8,6 +8,7 @@ import { Eye, EyeOff, Lock, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 // Logo branca servida direto do public/
 import logoSoftplusAzul from "@/assets/logo-softplus-azul.png";
+import { FooterPublico } from "@/components/FooterPublico";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -195,15 +196,7 @@ export default function Login() {
             Acesso restrito. Entre em contato com o administrador para obter acesso.
           </p>
 
-          <div className="flex items-center justify-center gap-3 mt-6 text-xs text-muted-foreground">
-            <a href="/privacidade" className="hover:text-foreground transition-colors underline underline-offset-2">
-              Política de Privacidade
-            </a>
-            <span>•</span>
-            <a href="/termos" className="hover:text-foreground transition-colors underline underline-offset-2">
-              Termos de Serviço
-            </a>
-          </div>
+          <FooterPublico variant="inline" className="mt-6" />
 
           <div className="flex items-center justify-center gap-2 mt-6">
             <span className="text-xs text-muted-foreground">By
