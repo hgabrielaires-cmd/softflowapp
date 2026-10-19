@@ -6949,6 +6949,7 @@ export type Database = {
         Returns: number
       }
       get_cron_secret: { Args: never; Returns: string }
+      has_any_role: { Args: { _user_id: string }; Returns: boolean }
       has_permission: {
         Args: { _permissao: string; _user_id: string }
         Returns: boolean
@@ -6961,6 +6962,8 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_admin_or_financeiro: { Args: { _user_id: string }; Returns: boolean }
+      is_admin_or_gestor: { Args: { _user_id: string }; Returns: boolean }
       is_chat_participant: {
         Args: { _conversa_id: string; _user_id: string }
         Returns: boolean
